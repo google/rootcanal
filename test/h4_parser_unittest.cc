@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "model/devices/h4_parser.h"
+#include "model/hci/h4_parser.h"
 
 #include <gtest/gtest.h>
 

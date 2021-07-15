@@ -171,7 +171,7 @@ void TestModel::AddRemote(const std::string& server, int port,
   AddLinkLayerConnection(dev, phy_type);
 }
 
-void TestModel::AddHciConnection(std::shared_ptr<HciSocketDevice> dev) {
+void TestModel::AddHciConnection(std::shared_ptr<HciDevice> dev) {
   size_t index = Add(std::static_pointer_cast<Device>(dev));
   std::string addr = "da:4c:10:de:17:";  // Da HCI dev
   std::stringstream stream;
