@@ -24,10 +24,8 @@
 #include <type_traits>  // for remove_extent_t
 #include <utility>      // for move
 
-#include "include/phy.h"                             // for Phy, Phy::Type
-#include "model/devices/hci_socket_device.h"         // for HciSocketDevice
-#include "model/devices/link_layer_socket_device.h"  // for LinkLayerSocketDevice
-#include "os/log.h"                                  // for LOG_WARN, LOG_INFO
+#include "include/phy.h"  // for Phy, Phy::Type
+#include "os/log.h"       // for LOG_WARN, LOG_INFO
 
 namespace rootcanal {
 
@@ -43,7 +41,7 @@ TestModel::TestModel(
 
     std::function<void(AsyncUserId)> cancel_tasks_from_user,
     std::function<void(AsyncTaskId)> cancel,
-    std::function<std::shared_ptr<AsyncDataChannel>(const std::string&, int)>
+    std::function<std::shared_ptr<Device>(const std::string&, int, Phy::Type)>
         connect_to_remote)
     : get_user_id_(std::move(get_user_id)),
       schedule_task_(std::move(event_scheduler)),
@@ -144,12 +142,10 @@ void TestModel::DelDeviceFromPhy(size_t dev_index, size_t phy_index) {
                  });
 }
 
-void TestModel::AddLinkLayerConnection(std::shared_ptr<AsyncDataChannel> socket,
+void TestModel::AddLinkLayerConnection(std::shared_ptr<Device> dev,
                                        Phy::Type phy_type) {
   LOG_INFO("Adding a new link layer connection of type: %s",
            phy_type == Phy::Type::BR_EDR ? "BR_EDR" : "LOW_ENERGY");
-  std::shared_ptr<Device> dev = LinkLayerSocketDevice::Create(socket, phy_type);
-
   int index = Add(dev);
   AsyncUserId user_id = get_user_id_();
 
@@ -159,39 +155,23 @@ void TestModel::AddLinkLayerConnection(std::shared_ptr<AsyncDataChannel> socket,
     }
   }
 
-  dev->RegisterCloseCallback([this, socket, index, user_id] {
-    schedule_task_(user_id, std::chrono::milliseconds(0),
-                   [this, socket, index, user_id]() {
-                     OnConnectionClosed(socket, index, user_id);
-                   });
+  dev->RegisterCloseCallback([this, index, user_id] {
+    schedule_task_(
+        user_id, std::chrono::milliseconds(0),
+        [this, index, user_id]() { OnConnectionClosed(index, user_id); });
   });
-}
-
-void TestModel::IncomingLinkLayerConnection(
-    std::shared_ptr<AsyncDataChannel> socket) {
-  LOG_INFO("A new link layer connection has arrived.");
-  AddLinkLayerConnection(socket, Phy::Type::BR_EDR);
-}
-
-void TestModel::IncomingLinkBleLayerConnection(
-    std::shared_ptr<AsyncDataChannel> socket) {
-  LOG_INFO("A new low energery link layer (BLE) connection has arrived.");
-  AddLinkLayerConnection(socket, Phy::Type::LOW_ENERGY);
 }
 
 void TestModel::AddRemote(const std::string& server, int port,
                           Phy::Type phy_type) {
-  LOG_INFO("Connecting to %s:%d", server.c_str(), port);
-  std::shared_ptr<AsyncDataChannel> socket = connect_to_remote_(server, port);
-  if (!socket->Connected()) {
+  auto dev = connect_to_remote_(server, port, phy_type);
+  if (dev == nullptr) {
     return;
   }
-  AddLinkLayerConnection(socket, phy_type);
+  AddLinkLayerConnection(dev, phy_type);
 }
 
-void TestModel::IncomingHciConnection(std::shared_ptr<AsyncDataChannel> socket,
-                                      std::string properties_filename) {
-  auto dev = HciSocketDevice::Create(socket, properties_filename);
+void TestModel::AddHciConnection(std::shared_ptr<HciSocketDevice> dev) {
   size_t index = Add(std::static_pointer_cast<Device>(dev));
   std::string addr = "da:4c:10:de:17:";  // Da HCI dev
   std::stringstream stream;
@@ -209,21 +189,18 @@ void TestModel::IncomingHciConnection(std::shared_ptr<AsyncDataChannel> socket,
     return schedule_task_(user_id, delay, std::move(task_callback));
   });
   dev->RegisterTaskCancel(cancel_task_);
-  dev->RegisterCloseCallback([this, socket, index, user_id] {
-    schedule_task_(user_id, std::chrono::milliseconds(0),
-                   [this, socket, index, user_id]() {
-                     OnConnectionClosed(socket, index, user_id);
-                   });
+  dev->RegisterCloseCallback([this, index, user_id] {
+    schedule_task_(
+        user_id, std::chrono::milliseconds(0),
+        [this, index, user_id]() { OnConnectionClosed(index, user_id); });
   });
 }
 
-void TestModel::OnConnectionClosed(std::shared_ptr<AsyncDataChannel> socket,
-                                   size_t index, AsyncUserId user_id) {
+void TestModel::OnConnectionClosed(size_t index, AsyncUserId user_id) {
   if (index >= devices_.size() || devices_[index] == nullptr) {
     LOG_WARN("Unknown device %zu", index);
     return;
   }
-  socket->Close();
 
   cancel_tasks_from_user_(user_id);
   devices_[index]->UnregisterPhyLayers();
