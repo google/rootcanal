@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Android Open Source Project
+ * Copyright 2021 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,32 @@
 
 #pragma once
 
-#include <memory>  // for shared_ptr, make_...
+#include <chrono>
+#include <cstdint>
+#include <fstream>
 
-#include "model/hci/h4_data_channel_packetizer.h"  // for H4DataChannelP...
-#include "model/hci/hci_transport.h"               // for HciTransport
-#include "net/async_data_channel.h"                // for AsyncDataChannel
+#include "model/hci/h4.h"
+#include "model/hci/hci_transport.h"
 
 namespace rootcanal {
 
-using android::net::AsyncDataChannel;
+enum class PacketDirection : uint8_t {
+  CONTROLLER_TO_HOST = 0,
+  HOST_TO_CONTROLLER = 1,
+};
 
-class HciSocketTransport : public HciTransport {
+class HciSniffer : public HciTransport {
  public:
-  HciSocketTransport(std::shared_ptr<AsyncDataChannel> socket);
-  ~HciSocketTransport() = default;
+  HciSniffer(std::shared_ptr<HciTransport> transport)
+      : transport_(transport), start_(std::chrono::steady_clock::now()) {}
+  ~HciSniffer() = default;
 
   static std::shared_ptr<HciTransport> Create(
-      std::shared_ptr<AsyncDataChannel> socket) {
-    return std::make_shared<HciSocketTransport>(socket);
+      std::shared_ptr<HciTransport> transport) {
+    return std::make_shared<HciSniffer>(transport);
   }
+
+  void Open(const char* filename);
 
   void SendEvent(const std::vector<uint8_t>& packet) override;
 
@@ -55,16 +62,12 @@ class HciSocketTransport : public HciTransport {
   void Close() override;
 
  private:
-  void SendHci(PacketType packet_type, const std::vector<uint8_t>& packet);
+  void AppendRecord(PacketDirection direction, PacketType type,
+                    const std::vector<uint8_t>& packet);
 
-  std::shared_ptr<AsyncDataChannel> socket_;
-  H4DataChannelPacketizer h4_{socket_,
-                              [](const std::vector<uint8_t>&) {},
-                              [](const std::vector<uint8_t>&) {},
-                              [](const std::vector<uint8_t>&) {},
-                              [](const std::vector<uint8_t>&) {},
-                              [](const std::vector<uint8_t>&) {},
-                              [] {}};
+  std::ofstream output_;
+  std::shared_ptr<HciTransport> transport_;
+  std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
 }  // namespace rootcanal

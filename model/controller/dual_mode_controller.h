@@ -109,6 +109,9 @@ class DualModeController : public Device {
   // Set the device's address.
   void SetAddress(Address address) override;
 
+  // Get the device's address.
+  const Address& GetAddress();
+
   // Controller commands. For error codes, see the Bluetooth Core Specification,
   // Version 4.2, Volume 2, Part D (page 370).
 
