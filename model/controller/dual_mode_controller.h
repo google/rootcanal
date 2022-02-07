@@ -29,7 +29,9 @@
 #include "link_layer_controller.h"
 #include "model/devices/device.h"
 #include "model/setup/async_manager.h"
+#ifndef ROOTCANAL_LMP
 #include "security_manager.h"
+#endif /* !ROOTCANAL_LMP */
 
 namespace rootcanal {
 
@@ -645,7 +647,9 @@ class DualModeController : public Device {
 
   bluetooth::hci::LoopbackMode loopback_mode_;
 
+#ifndef ROOTCANAL_LMP
   SecurityManager security_manager_;
+#endif /* ROOTCANAL_LMP */
 
   DualModeController(const DualModeController& cmdPckt) = delete;
   DualModeController& operator=(const DualModeController& cmdPckt) = delete;

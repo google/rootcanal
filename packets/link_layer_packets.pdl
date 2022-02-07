@@ -57,6 +57,8 @@ enum PacketType : 8 {
     SCO_CONNECTION_RESPONSE = 0x31,
     SCO_DISCONNECT = 0x32,
     RSSI_WRAPPER = 0x33,
+
+    LMP = 0x34,
 }
 
 packet LinkLayerPacket {
@@ -410,5 +412,9 @@ packet ScoDisconnect : LinkLayerPacket (type = SCO_DISCONNECT) {
 
 packet RssiWrapper : LinkLayerPacket (type = RSSI_WRAPPER) {
   rssi : 8,
+  _payload_,
+}
+
+packet Lmp : LinkLayerPacket (type = LMP) {
   _payload_,
 }

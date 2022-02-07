@@ -24,7 +24,14 @@
 #include "model/devices/device_properties.h"
 #include "model/setup/async_manager.h"
 #include "packets/link_layer_packets.h"
+
+#ifdef ROOTCANAL_LMP
+extern "C" {
+struct LinkManager;
+}
+#else
 #include "security_manager.h"
+#endif /* ROOTCANAL_LMP */
 
 namespace rootcanal {
 
@@ -37,8 +44,7 @@ class LinkLayerController {
  public:
   static constexpr size_t kIrkSize = 16;
 
-  LinkLayerController(const DeviceProperties& properties)
-      : properties_(properties) {}
+  LinkLayerController(const DeviceProperties& properties);
   ErrorCode SendCommandToRemoteByAddress(
       OpCode opcode, bluetooth::packet::PacketView<true> args,
       const Address& remote);
@@ -49,6 +55,9 @@ class LinkLayerController {
   ErrorCode SendScoToRemote(bluetooth::hci::ScoView sco_packet);
   ErrorCode SendAclToRemote(bluetooth::hci::AclView acl_packet);
 
+#ifdef ROOTCANAL_LMP
+  void ForwardToLm(bluetooth::hci::CommandView command);
+#else
   void StartSimplePairing(const Address& address);
   void AuthenticateRemoteStage1(const Address& address,
                                 PairingType pairing_type);
@@ -86,6 +95,7 @@ class LinkLayerController {
   ErrorCode SetConnectionEncryption(uint16_t handle, uint8_t encryption_enable);
   void HandleAuthenticationRequest(const Address& address, uint16_t handle);
   ErrorCode AuthenticationRequested(uint16_t handle);
+#endif /* ROOTCANAL_LMP */
 
   ErrorCode AcceptConnectionRequest(const Address& addr, bool try_role_switch);
   void MakePeripheralConnection(const Address& addr, bool try_role_switch);
@@ -393,18 +403,26 @@ class LinkLayerController {
                              uint8_t rssi);
   void IncomingInquiryResponsePacket(
       model::packets::LinkLayerPacketView packet);
+#ifdef ROOTCANAL_LMP
+  void IncomingLmpPacket(model::packets::LinkLayerPacketView packet);
+#else
   void IncomingIoCapabilityRequestPacket(
       model::packets::LinkLayerPacketView packet);
   void IncomingIoCapabilityResponsePacket(
       model::packets::LinkLayerPacketView packet);
   void IncomingIoCapabilityNegativeResponsePacket(
       model::packets::LinkLayerPacketView packet);
+  void IncomingKeypressNotificationPacket(
+      model::packets::LinkLayerPacketView packet);
+  void IncomingPasskeyPacket(model::packets::LinkLayerPacketView packet);
+  void IncomingPasskeyFailedPacket(model::packets::LinkLayerPacketView packet);
+  void IncomingPinRequestPacket(model::packets::LinkLayerPacketView packet);
+  void IncomingPinResponsePacket(model::packets::LinkLayerPacketView packet);
+#endif /* ROOTCANAL_LMP */
   void IncomingIsoPacket(model::packets::LinkLayerPacketView packet);
   void IncomingIsoConnectionRequestPacket(
       model::packets::LinkLayerPacketView packet);
   void IncomingIsoConnectionResponsePacket(
-      model::packets::LinkLayerPacketView packet);
-  void IncomingKeypressNotificationPacket(
       model::packets::LinkLayerPacketView packet);
   void IncomingLeAdvertisementPacket(model::packets::LinkLayerPacketView packet,
                                      uint8_t rssi);
@@ -427,10 +445,6 @@ class LinkLayerController {
   void IncomingPagePacket(model::packets::LinkLayerPacketView packet);
   void IncomingPageRejectPacket(model::packets::LinkLayerPacketView packet);
   void IncomingPageResponsePacket(model::packets::LinkLayerPacketView packet);
-  void IncomingPasskeyPacket(model::packets::LinkLayerPacketView packet);
-  void IncomingPasskeyFailedPacket(model::packets::LinkLayerPacketView packet);
-  void IncomingPinRequestPacket(model::packets::LinkLayerPacketView packet);
-  void IncomingPinResponsePacket(model::packets::LinkLayerPacketView packet);
   void IncomingReadRemoteLmpFeatures(
       model::packets::LinkLayerPacketView packet);
   void IncomingReadRemoteLmpFeaturesResponse(
@@ -527,8 +541,11 @@ class LinkLayerController {
   uint8_t le_peer_address_type_{};
 
   // Classic state
-
+#ifdef ROOTCANAL_LMP
+  std::unique_ptr<const LinkManager, void (*)(const LinkManager*)> lm_;
+#else
   SecurityManager security_manager_{10};
+#endif /* ROOTCANAL_LMP */
   std::chrono::steady_clock::time_point last_inquiry_;
   model::packets::InquiryType inquiry_mode_{
       model::packets::InquiryType::STANDARD};
