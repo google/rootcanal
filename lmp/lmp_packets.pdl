@@ -1,0 +1,202 @@
+little_endian_packets
+
+enum Opcode : 7 {
+  NAME_REQ = 0x1,
+  NAME_RES = 0x2,
+  ACCEPTED = 0x3,
+  NOT_ACCEPTED = 0x4,
+  CLK_OFFSET_REQ = 0x5,
+  CLK_OFFSET_RES = 0x6,
+  DETACH = 0x7,
+  IN_RAND = 0x8,
+  COMB_KEY = 0x9,
+  UNIT_KEY = 10,
+  AU_RAND = 11,
+  SRES = 12,
+  TEMP_RAND = 13,
+  TEMP_KEY = 14,
+  ENCRYPTION_MODE_REQ = 15,
+  ENCRYPTION_KEY_SIZE_REQ = 16,
+  START_ENCRYPTION_REQ = 17,
+  STOP_ENCRYPTION_REQ = 18,
+  SWITCH_REQ = 19,
+  HOLD = 20,
+  HOLD_REQ = 21,
+  SNIFF_REQ = 23,
+  UNSNIFF_REQ = 24,
+  INCR_POWER_REQ = 31,
+  DECR_POWER_REQ = 32,
+  MAX_POWER = 33,
+  MIN_POWER = 34,
+  AUTO_RATE = 35,
+  PREFERRED_RATE = 36,
+  VERSION_REQ = 37,
+  VERSION_RES = 38,
+  FEATURES_REQ = 39,
+  FEATURES_RES = 40,
+  QUALITY_OF_SERVICE = 41,
+  QUALITY_OF_SERVICE_REQ = 42,
+  SCO_LINK_REQ = 43,
+  REMOVE_SCO_LINK_REQ = 44,
+  MAX_SLOT = 45,
+  MAX_SLOT_REQ = 46,
+  TIMING_ACCURACY_REQ = 47,
+  TIMING_ACCURACY_RES = 48,
+  SETYP_COMPLETE = 49,
+  USE_SEMI_PERMANENT_KEY = 50,
+  HOST_CONNECTION_REQ = 51,
+  SLOT_OFFSET = 52,
+  PAGE_MODE_REQ = 53,
+  PAGE_SCAN_MODE_REQ = 54,
+  SUPERVISION_TIMEOUT = 55,
+  TEST_ACTIVATE = 56,
+  TEST_CONTROL = 57,
+  ENCRYPTION_KEY_SIZE_MASK_REQ = 58,
+  ENCRYPTION_KEY_SIZE_MASK_RES = 59,
+  SET_AFH = 60,
+  ENCAPSULATED_HEADER = 61,
+  ENCAPSULATED_PAYLOAD = 62,
+  SIMPLE_PAIRING_CONFIRM = 63,
+  SIMPLE_PAIRING_NUMBER = 64,
+  DHKEY_CHECK = 65,
+  PAUSE_ENCRYPTION_AES_REQ = 66,
+  ESCAPED = 0x7f,
+}
+
+enum ExtendedOpcode : 8 {
+  ACCEPTED = 0x1,
+  NOT_ACCEPTED = 0x2,
+  FEATURES_REQ = 0x3,
+  FEATURES_RES = 0x4,
+  CLK_ADJ = 0x5,
+  CLK_ADJ_ACK = 0x6,
+  CLK_ADJ_REQ = 0x7,
+  PACKET_TYPE_TABLE_REQ = 11,
+  ESCO_LINK_REQ = 12,
+  REMOVE_ESCO_LINK_REQ = 13,
+  CHANNEL_CLASSIFICATION_REQ = 16,
+  CHANNEL_CLASSIFICATION = 17,
+  SNIFF_SUBRATING_REQ = 21,
+  SNIFF_SUBRATING_RES = 22,
+  PAUSE_ENCRYPTION_REQ = 23,
+  RESUME_ENCRYPTION_REQ = 24,
+  IO_CAPABILITY_REQ = 25,
+  IO_CAPABILITY_RES = 26,
+  NUMERIC_COMPARAISON_FAILED = 27,
+  PASSKEY_FAILED = 28,
+  OOB_FAILED = 29,
+  KEYPRESS_NOTIFICATION = 30,
+  POWER_CONTROL_REQ = 31,
+  POWER_CONTROL_RES = 32,
+  PING_REQ = 33,
+  PING_RES = 34,
+  SAM_SET_TYPE0 = 35,
+  SAM_DEFINE_MAP = 36,
+  SAM_SWITCH = 37,
+}
+
+packet Packet {
+  transaction_id: 1,
+  opcode: Opcode,
+  _payload_,
+}
+
+packet ExtendedPacket : Packet(opcode = ESCAPED) {
+  extended_opcode: ExtendedOpcode,
+  _payload_,
+}
+
+packet Accepted : Packet(opcode = ACCEPTED) {
+  _fixed_ = 0 : 1,
+  accepted_opcode: Opcode,
+}
+
+packet NotAccepted : Packet(opcode = NOT_ACCEPTED) {
+  _fixed_ = 0 : 1,
+  not_accepted_opcode: Opcode,
+  error_code: 8,
+}
+
+packet AcceptedExt : ExtendedPacket(extended_opcode = ACCEPTED) {
+  _fixed_ = 0 : 1,
+  accepted_opcode: Opcode,
+  accepted_extended_opcode: ExtendedOpcode,
+}
+
+packet IoCapabilityReq : ExtendedPacket(extended_opcode = IO_CAPABILITY_REQ) {
+  io_capabilities: 8,
+  oob_authentication_data: 8,
+  authentication_requirement: 8,
+}
+
+packet IoCapabilityRes : ExtendedPacket(extended_opcode = IO_CAPABILITY_RES) {
+  io_capabilities: 8,
+  oob_authentication_data: 8,
+  authentication_requirement: 8,
+}
+
+packet EncapsulatedHeader : Packet(opcode = ENCAPSULATED_HEADER) {
+  major_type: 8,
+  minor_type: 8,
+  payload_length: 8,
+}
+
+packet EncapsulatedPayload : Packet(opcode = ENCAPSULATED_PAYLOAD) {
+  data: 8[16],
+}
+
+packet SimplePairingConfirm : Packet(opcode = SIMPLE_PAIRING_CONFIRM) {
+  commitment_value: 8[16],
+}
+
+packet SimplePairingNumber : Packet(opcode = SIMPLE_PAIRING_NUMBER) {
+  nonce: 8[16],
+}
+
+packet DhkeyCheck : Packet(opcode = DHKEY_CHECK) {
+  confirmation_value: 8[16],
+}
+
+packet AuRand : Packet(opcode = AU_RAND) {
+  random_number: 8[16],
+}
+
+packet Sres : Packet(opcode = SRES) {
+  authentication_rsp: 8[4],
+}
+
+packet NumericComparaisonFailed: ExtendedPacket(extended_opcode = NUMERIC_COMPARAISON_FAILED) {}
+
+packet InRand : Packet(opcode = IN_RAND) {
+  random_number: 8[16],
+}
+
+packet CombKey : Packet(opcode = COMB_KEY) {
+  random_number: 8[16],
+}
+
+packet EncryptionModeReq : Packet(opcode = ENCRYPTION_MODE_REQ) {
+  encryption_mode: 8,
+}
+
+packet EncryptionKeySizeReq : Packet(opcode = ENCRYPTION_KEY_SIZE_REQ) {
+  key_size: 8,
+}
+
+packet StartEncryptionReq : Packet(opcode = START_ENCRYPTION_REQ) {
+  random_number: 8[16]
+}
+
+packet StopEncryptionReq : Packet(opcode = STOP_ENCRYPTION_REQ) {}
+
+packet FeaturesReqExt : ExtendedPacket(extended_opcode = FEATURES_REQ) {
+  features_page: 8,
+  max_supported_page: 8,
+  extended_features: 8[8],
+}
+
+packet FeaturesResExt : ExtendedPacket(extended_opcode = FEATURES_RES) {
+  features_page: 8,
+  max_supported_page: 8,
+  extended_features: 8[8],
+}
