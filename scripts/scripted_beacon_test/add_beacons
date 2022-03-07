@@ -1,0 +1,10 @@
+wait 1
+add scripted_beacon be:ac:01:55:00:01 scripts/scripted_beacon_test/test_events.pb /tmp/logs/scripted_beacon_test/beacon.pb
+add_device_to_phy 1 1
+add scripted_beacon be:ac:01:55:00:02 scripts/scripted_beacon_test/no_permission.pb /tmp/logs/scripted_beacon_test/no_permission.pb
+add_device_to_phy 2 1
+add scripted_beacon be:ac:01:55:00:02 scripts/scripted_beacon_test/grant_permission.pb /tmp/logs/scripted_beacon_test/grant_permission.pb
+add_device_to_phy 3 1
+list
+wait 10
+quit
