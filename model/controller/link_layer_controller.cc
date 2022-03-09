@@ -84,7 +84,7 @@ ErrorCode LinkLayerController::SendLeCommandToRemoteByAddress(
     OpCode opcode, const Address& remote, const Address& local) {
   switch (opcode) {
     case (OpCode::LE_READ_REMOTE_FEATURES):
-      SendLinkLayerPacket(
+      SendLeLinkLayerPacket(
           model::packets::LeReadRemoteFeaturesBuilder::Create(local, remote));
       break;
     default:
@@ -1777,7 +1777,7 @@ void LinkLayerController::IncomingLeReadRemoteFeatures(
              incoming.GetDestinationAddress().ToString().c_str(),
              incoming.GetSourceAddress().ToString().c_str());
   }
-  SendLinkLayerPacket(
+  SendLeLinkLayerPacket(
       model::packets::LeReadRemoteFeaturesResponseBuilder::Create(
           incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
           properties_.GetLeSupportedFeatures(), static_cast<uint8_t>(status)));
