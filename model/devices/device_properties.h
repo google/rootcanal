@@ -453,14 +453,17 @@ class DeviceProperties {
   Address le_address_{};
   uint8_t le_address_type_{};
 
-  uint16_t le_advertising_interval_min_{};
-  uint16_t le_advertising_interval_max_{};
-  uint8_t le_advertising_own_address_type_{};
-  uint8_t le_advertising_peer_address_type_{};
+  // Note: the advertising parameters are initially set to the default
+  // values of the parameters of the HCI command LE Set Advertising Parameters.
+  uint16_t le_advertising_interval_min_{0x0800}; // 1.28s
+  uint16_t le_advertising_interval_max_{0x0800}; // 1.28s
+  uint8_t le_advertisement_type_{0x0}; // ADV_IND
+  uint8_t le_advertising_own_address_type_{0x0}; // Public Device Address
+  uint8_t le_advertising_peer_address_type_{0x0}; // Public Device Address
   Address le_advertising_peer_address_{};
-  uint8_t le_advertising_channel_map_{};
-  uint8_t le_advertising_filter_policy_{};
-  uint8_t le_advertisement_type_{};
+  uint8_t le_advertising_channel_map_{0x7}; // All channels enabled
+  uint8_t le_advertising_filter_policy_{0x0}; // Process scan and connection
+                                              // requests from all devices
   std::vector<uint8_t> le_advertisement_;
   std::vector<uint8_t> le_scan_response_;
 
