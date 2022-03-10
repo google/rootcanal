@@ -455,13 +455,6 @@ class LinkLayerController {
  private:
   const DeviceProperties& properties_;
   AclConnectionHandler connections_;
-  // Add timestamps?
-  std::vector<std::shared_ptr<model::packets::LinkLayerPacketBuilder>>
-      commands_awaiting_responses_;
-
-  // Timing related state
-  std::vector<AsyncTaskId> controller_events_;
-  std::chrono::milliseconds timer_period_ = std::chrono::milliseconds(100);
 
   // Callbacks to schedule tasks.
   std::function<AsyncTaskId(std::chrono::milliseconds, const TaskCallback&)>
@@ -487,8 +480,6 @@ class LinkLayerController {
   uint32_t key_id_ = 1;
 
   // LE state
-  std::vector<uint8_t> le_event_mask_;
-
   std::vector<std::tuple<Address, uint8_t>> le_connect_list_;
   struct ResolvingListEntry {
     Address address;
