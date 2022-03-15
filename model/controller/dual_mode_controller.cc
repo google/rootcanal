@@ -355,7 +355,7 @@ void DualModeController::HandleAcl(
     std::vector<bluetooth::hci::CompletedPackets> completed_packets;
     bluetooth::hci::CompletedPackets cp;
     cp.connection_handle_ = handle;
-    cp.host_num_of_completed_packets_ = kNumCommandPackets;
+    cp.host_num_of_completed_packets_ = 1;
     completed_packets.push_back(cp);
     send_event_(bluetooth::hci::NumberOfCompletedPacketsBuilder::Create(
         completed_packets));
@@ -379,7 +379,7 @@ void DualModeController::HandleSco(
     std::vector<bluetooth::hci::CompletedPackets> completed_packets;
     bluetooth::hci::CompletedPackets cp;
     cp.connection_handle_ = handle;
-    cp.host_num_of_completed_packets_ = kNumCommandPackets;
+    cp.host_num_of_completed_packets_ = 1;
     completed_packets.push_back(cp);
     if (properties_.GetSynchronousFlowControl()) {
       send_event_(bluetooth::hci::NumberOfCompletedPacketsBuilder::Create(
