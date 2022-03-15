@@ -24,30 +24,12 @@
 #include <type_traits>  // for remove_extent_t
 #include <utility>      // for move
 
-#include "include/phy.h"
-#include "include/phy.h"  // for Phy, Phy::Type
-#include "model/devices/hci_socket_device.h"
-#include "model/devices/link_layer_socket_device.h"
-#include "os/log.h"
-// TODO: Remove when registration works
-#include "model/devices/beacon.h"                    // for Beacon
-#include "model/devices/beacon_swarm.h"              // for BeaconSwarm
-#include "model/devices/car_kit.h"                   // for CarKit
-#include "model/devices/classic.h"                   // for Classic
+#include "include/phy.h"                             // for Phy, Phy::Type
 #include "model/devices/hci_socket_device.h"         // for HciSocketDevice
-#include "model/devices/keyboard.h"                  // for Keyboard
-#include "model/devices/link_layer_socket_device.h"  // for LinkLayerSocketD...
-#include "model/devices/remote_loopback_device.h"    // for RemoteLoopbackDe...
-#include "model/devices/scripted_beacon.h"           // for ScriptedBeacon
-#include "model/devices/sniffer.h"                   // for Sniffer
-#include "model/setup/phy_layer_factory.h"           // for PhyLayerFactory
-#include "model/setup/test_channel_transport.h"      // for AsyncDataChannel
-#include "net/async_data_channel.h"                  // for AsyncDataChannel
+#include "model/devices/link_layer_socket_device.h"  // for LinkLayerSocketDevice
 #include "os/log.h"                                  // for LOG_WARN, LOG_INFO
-#include "packets/link_layer_packets.h"              // for LinkLayerPacketView
 
 namespace rootcanal {
-class Device;
 
 TestModel::TestModel(
     std::function<AsyncUserId()> get_user_id,
@@ -70,15 +52,6 @@ TestModel::TestModel(
       cancel_tasks_from_user_(std::move(cancel_tasks_from_user)),
       connect_to_remote_(std::move(connect_to_remote)) {
   model_user_id_ = get_user_id_();
-  // TODO: Remove when registration works!
-  example_devices_.push_back(std::make_shared<Beacon>());
-  example_devices_.push_back(std::make_shared<BeaconSwarm>());
-  example_devices_.push_back(std::make_shared<Keyboard>());
-  example_devices_.push_back(std::make_shared<CarKit>());
-  example_devices_.push_back(std::make_shared<Classic>());
-  example_devices_.push_back(std::make_shared<Sniffer>());
-  example_devices_.push_back(std::make_shared<ScriptedBeacon>());
-  example_devices_.push_back(std::make_shared<RemoteLoopbackDevice>());
 }
 
 void TestModel::SetTimerPeriod(std::chrono::milliseconds new_period) {

@@ -39,14 +39,6 @@ class DeviceBoutique {
   // Call the constructor that matches arg[0], then call dev->Initialize(args).
   static std::shared_ptr<Device> Create(const std::vector<std::string>& args);
 
-  template <typename D>
-  struct Registrar {
-    explicit Registrar(std::string const& name) {
-      DeviceBoutique::Register(name, &D::Create);
-    }
-    static Registrar<D> registrar_;
-  };
-
  private:
   static std::unordered_map<std::string,
                             std::function<std::shared_ptr<Device>()>>&

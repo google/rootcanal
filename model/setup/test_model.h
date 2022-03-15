@@ -25,7 +25,6 @@
 #include <vector>      // for vector
 
 #include "hci/address.h"                       // for Address
-#include "model/devices/device_properties.h"   // for Address
 #include "model/setup/async_manager.h"         // for AsyncUserId, AsyncTaskId
 #include "net/async_data_channel.h"            // for AsyncDataChannel
 #include "net/async_data_channel_connector.h"  // for AsyncDataChannelConnector
@@ -35,6 +34,8 @@
 
 namespace rootcanal {
 class Device;
+
+using ::bluetooth::hci::Address;
 
 using android::net::AsyncDataChannel;
 using android::net::AsyncDataChannelConnector;
@@ -131,7 +132,6 @@ class TestModel {
   AsyncTaskId timer_tick_task_{kInvalidTaskId};
   std::chrono::milliseconds timer_period_{};
 
-  std::vector<std::shared_ptr<Device>> example_devices_;
   std::shared_ptr<AsyncDataChannelConnector> socket_connector_;
 };
 
