@@ -20,14 +20,19 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
-#include "net/async_data_channel.h"  // for AsyncDataChannel
-#include "os/log.h"                  // for LOG_INFO, LOG_ERROR, LOG_WARN
+#include "model/devices/hci_socket_device.h"         // for HciSocketDevice
+#include "model/devices/link_layer_socket_device.h"  // for LinkLayerSocketDevice
+#include "net/async_data_channel.h"                  // for AsyncDataChannel
+#include "net/async_data_channel_connector.h"  // for AsyncDataChannelConnector
+#include "os/log.h"  // for LOG_INFO, LOG_ERROR, LOG_WARN
 
 namespace android {
 namespace bluetooth {
 namespace root_canal {
 
 using rootcanal::AsyncTaskId;
+using rootcanal::HciSocketDevice;
+using rootcanal::LinkLayerSocketDevice;
 using rootcanal::TaskCallback;
 
 void TestEnvironment::initialize(std::promise<void> barrier) {
@@ -52,7 +57,8 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
   SetUpTestChannel();
   SetUpHciServer([this](std::shared_ptr<AsyncDataChannel> socket,
                         AsyncDataChannelServer* srv) {
-    test_model_.IncomingHciConnection(socket, controller_properties_file_);
+    test_model_.AddHciConnection(
+        HciSocketDevice::Create(socket, controller_properties_file_));
     srv->StartListening();
   });
   SetUpLinkLayerServer();
@@ -81,7 +87,9 @@ void TestEnvironment::SetUpLinkBleLayerServer() {
   remote_link_layer_transport_.SetUp(
       link_ble_socket_server_, [this](std::shared_ptr<AsyncDataChannel> socket,
                                       AsyncDataChannelServer* srv) {
-        test_model_.IncomingLinkBleLayerConnection(socket);
+        auto phy_type = Phy::Type::LOW_ENERGY;
+        test_model_.AddLinkLayerConnection(
+            LinkLayerSocketDevice::Create(socket, phy_type), phy_type);
         srv->StartListening();
       });
 
@@ -94,7 +102,9 @@ void TestEnvironment::SetUpLinkLayerServer() {
   remote_link_layer_transport_.SetUp(
       link_socket_server_, [this](std::shared_ptr<AsyncDataChannel> socket,
                                   AsyncDataChannelServer* srv) {
-        test_model_.IncomingLinkLayerConnection(socket);
+        auto phy_type = Phy::Type::BR_EDR;
+        test_model_.AddLinkLayerConnection(
+            LinkLayerSocketDevice::Create(socket, phy_type), phy_type);
         srv->StartListening();
       });
 
@@ -103,9 +113,11 @@ void TestEnvironment::SetUpLinkLayerServer() {
   });
 }
 
-std::shared_ptr<AsyncDataChannel> TestEnvironment::ConnectToRemoteServer(
-    const std::string& server, int port) {
-  return connector_->ConnectToRemoteServer(server, port);
+std::shared_ptr<Device> TestEnvironment::ConnectToRemoteServer(
+    const std::string& server, int port, Phy::Type phy_type) {
+  auto socket = connector_->ConnectToRemoteServer(server, port);
+  if (!socket->Connected()) return nullptr;
+  return LinkLayerSocketDevice::Create(socket, phy_type);
 }
 
 void TestEnvironment::SetUpTestChannel() {

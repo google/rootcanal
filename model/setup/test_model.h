@@ -25,19 +25,15 @@
 #include <vector>      // for vector
 
 #include "hci/address.h"                       // for Address
-#include "model/devices/device_properties.h"   // for Address
+#include "model/devices/hci_socket_device.h"   // for HciSocketDevice
 #include "model/setup/async_manager.h"         // for AsyncUserId, AsyncTaskId
-#include "net/async_data_channel.h"            // for AsyncDataChannel
-#include "net/async_data_channel_connector.h"  // for AsyncDataChannelConnector
 #include "phy.h"                               // for Phy, Phy::Type
 #include "phy_layer_factory.h"                 // for PhyLayerFactory
-#include "test_channel_transport.h"            // for AsyncDataChannel
 
 namespace rootcanal {
 class Device;
 
-using android::net::AsyncDataChannel;
-using android::net::AsyncDataChannelConnector;
+using ::bluetooth::hci::Address;
 
 class TestModel {
  public:
@@ -51,7 +47,7 @@ class TestModel {
           periodicEvtScheduler,
       std::function<void(AsyncUserId)> cancel_user_tasks,
       std::function<void(AsyncTaskId)> cancel,
-      std::function<std::shared_ptr<AsyncDataChannel>(const std::string&, int)>
+      std::function<std::shared_ptr<Device>(const std::string&, int, Phy::Type)>
           connect_to_remote);
   ~TestModel() = default;
 
@@ -79,17 +75,11 @@ class TestModel {
   void DelDeviceFromPhy(size_t device_index, size_t phy_index);
 
   // Handle incoming remote connections
-  void AddLinkLayerConnection(std::shared_ptr<AsyncDataChannel> socket_fd,
-                              Phy::Type phy_type);
-  void IncomingLinkLayerConnection(std::shared_ptr<AsyncDataChannel> socket_fd);
-  void IncomingLinkBleLayerConnection(
-      std::shared_ptr<AsyncDataChannel> socket_fd);
-  void IncomingHciConnection(std::shared_ptr<AsyncDataChannel> socket_fd,
-                             std::string properties_filename = "");
+  void AddLinkLayerConnection(std::shared_ptr<Device> dev, Phy::Type phy_type);
+  void AddHciConnection(std::shared_ptr<HciSocketDevice> dev);
 
   // Handle closed remote connections (both hci & link layer)
-  void OnConnectionClosed(std::shared_ptr<AsyncDataChannel> socket_fd,
-                          size_t index, AsyncUserId user_id);
+  void OnConnectionClosed(size_t index, AsyncUserId user_id);
 
   // Connect to a remote device
   void AddRemote(const std::string& server, int port, Phy::Type phy_type);
@@ -124,15 +114,12 @@ class TestModel {
       schedule_periodic_task_;
   std::function<void(AsyncTaskId)> cancel_task_;
   std::function<void(AsyncUserId)> cancel_tasks_from_user_;
-  std::function<std::shared_ptr<AsyncDataChannel>(const std::string&, int)>
+  std::function<std::shared_ptr<Device>(const std::string&, int, Phy::Type)>
       connect_to_remote_;
 
   AsyncUserId model_user_id_;
   AsyncTaskId timer_tick_task_{kInvalidTaskId};
   std::chrono::milliseconds timer_period_{};
-
-  std::vector<std::shared_ptr<Device>> example_devices_;
-  std::shared_ptr<AsyncDataChannelConnector> socket_connector_;
 };
 
 }  // namespace rootcanal
