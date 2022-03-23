@@ -13,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#include <backtrace/Backtrace.h>
-#include <backtrace/backtrace_constants.h>
 #include <client/linux/handler/exception_handler.h>
 #include <gflags/gflags.h>
+#include <unwindstack/AndroidUnwinder.h>
 
 #include <future>
+#include <optional>
 
 #include "model/setup/async_manager.h"
 #include "net/posix/posix_async_socket_connector.h"
@@ -48,32 +48,28 @@ extern "C" const char* __asan_default_options() {
 
 bool crash_callback(const void* crash_context, size_t crash_context_size,
                     void* /* context */) {
-  pid_t tid = BACKTRACE_CURRENT_THREAD;
+  std::optional<pid_t> tid;
   if (crash_context_size >=
       sizeof(google_breakpad::ExceptionHandler::CrashContext)) {
     auto* ctx =
         static_cast<const google_breakpad::ExceptionHandler::CrashContext*>(
             crash_context);
-    tid = ctx->tid;
+    *tid = ctx->tid;
     int signal_number = ctx->siginfo.si_signo;
     LOG_ERROR("Process crashed, signal: %s[%d], tid: %d",
               strsignal(signal_number), signal_number, ctx->tid);
   } else {
     LOG_ERROR("Process crashed, signal: unknown, tid: unknown");
   }
-  std::unique_ptr<Backtrace> backtrace(
-      Backtrace::Create(BACKTRACE_CURRENT_PROCESS, tid));
-  if (backtrace == nullptr) {
-    LOG_ERROR("Failed to create backtrace object");
-    return false;
-  }
-  if (!backtrace->Unwind(0)) {
-    LOG_ERROR("backtrace->Unwind failed");
+  unwindstack::AndroidLocalUnwinder unwinder;
+  unwindstack::AndroidUnwinderData data;
+  if (!unwinder.Unwind(tid, data)) {
+    LOG_ERROR("Unwind failed");
     return false;
   }
   LOG_ERROR("Backtrace:");
-  for (size_t i = 0; i < backtrace->NumFrames(); i++) {
-    LOG_ERROR("%s", backtrace->FormatFrameData(i).c_str());
+  for (const auto& frame : data.frames) {
+    LOG_ERROR("%s", unwinder.FormatFrame(frame).c_str());
   }
   return true;
 }
