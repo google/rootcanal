@@ -26,16 +26,12 @@ namespace rootcanal {
 bool Sniffer::registered_ =
     DeviceBoutique::Register("sniffer", &Sniffer::Create);
 
-Sniffer::Sniffer() {}
-
-void Sniffer::Initialize(const vector<std::string>& args) {
-  if (args.size() < 2) return;
-
-  if (Address::FromString(args[1], device_to_sniff_)) {
-    properties_.SetAddress(device_to_sniff_);
+Sniffer::Sniffer(const vector<std::string>& args) {
+  if (args.size() >= 2) {
+    if (Address::FromString(args[1], device_to_sniff_)) {
+      properties_.SetAddress(device_to_sniff_);
+    }
   }
-
-  if (args.size() < 3) return;
 }
 
 void Sniffer::TimerTick() {}

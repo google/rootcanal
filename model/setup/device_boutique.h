@@ -34,14 +34,16 @@ class DeviceBoutique {
 
   // Register a constructor for a device type.
   static bool Register(const std::string& device_type,
-                       const std::function<std::shared_ptr<Device>()> method);
+                       const std::function<std::shared_ptr<Device>(
+                           const std::vector<std::string>&)>
+                           method);
 
-  // Call the constructor that matches arg[0], then call dev->Initialize(args).
+  // Call the function that matches arg[0] with args
   static std::shared_ptr<Device> Create(const std::vector<std::string>& args);
 
  private:
-  static std::unordered_map<std::string,
-                            std::function<std::shared_ptr<Device>()>>&
+  static std::unordered_map<std::string, std::function<std::shared_ptr<Device>(
+                                             const std::vector<std::string>&)>>&
   GetMap();
 };
 

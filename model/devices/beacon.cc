@@ -40,6 +40,17 @@ Beacon::Beacon() {
                                  'c'});
 }
 
+Beacon::Beacon(const vector<std::string>& args) : Beacon() {
+  if (args.size() >= 2) {
+    Address addr{};
+    if (Address::FromString(args[1], addr)) properties_.SetLeAddress(addr);
+  }
+
+  if (args.size() >= 3) {
+    SetAdvertisementInterval(std::chrono::milliseconds(std::stoi(args[2])));
+  }
+}
+
 std::string Beacon::GetTypeString() const { return "beacon"; }
 
 std::string Beacon::ToString() const {
@@ -47,17 +58,6 @@ std::string Beacon::ToString() const {
       GetTypeString() + "@" + properties_.GetLeAddress().ToString();
 
   return dev;
-}
-
-void Beacon::Initialize(const vector<std::string>& args) {
-  if (args.size() < 2) return;
-
-  Address addr{};
-  if (Address::FromString(args[1], addr)) properties_.SetLeAddress(addr);
-
-  if (args.size() < 3) return;
-
-  SetAdvertisementInterval(std::chrono::milliseconds(std::stoi(args[2])));
 }
 
 void Beacon::TimerTick() {

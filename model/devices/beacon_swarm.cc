@@ -24,7 +24,7 @@ namespace rootcanal {
 bool BeaconSwarm::registered_ =
     DeviceBoutique::Register("beacon_swarm", &BeaconSwarm::Create);
 
-BeaconSwarm::BeaconSwarm() {
+BeaconSwarm::BeaconSwarm(const vector<std::string>& args) : Beacon(args) {
   advertising_interval_ms_ = std::chrono::milliseconds(1280);
   properties_.SetLeAdvertisementType(0x03 /* NON_CONNECT */);
   properties_.SetLeAdvertisement({
@@ -58,17 +58,6 @@ BeaconSwarm::BeaconSwarm() {
   properties_.SetLeScanResponse({0x06,  // Length
                                  0x08 /* TYPE_NAME_SHORT */, 'c', 'b', 'e', 'a',
                                  'c'});
-}
-
-void BeaconSwarm::Initialize(const vector<std::string>& args) {
-  if (args.size() < 2) return;
-
-  Address addr{};
-  if (Address::FromString(args[1], addr)) properties_.SetLeAddress(addr);
-
-  if (args.size() < 3) return;
-
-  SetAdvertisementInterval(std::chrono::milliseconds(std::stoi(args[2])));
 }
 
 void BeaconSwarm::TimerTick() {

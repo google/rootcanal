@@ -28,7 +28,7 @@ class RemoteLoopbackDevice : public Device {
   RemoteLoopbackDevice();
   virtual ~RemoteLoopbackDevice() = default;
 
-  static std::shared_ptr<Device> Create() {
+  static std::shared_ptr<Device> Create(const std::vector<std::string>&) {
     return std::make_shared<RemoteLoopbackDevice>();
   }
 
@@ -37,8 +37,6 @@ class RemoteLoopbackDevice : public Device {
   }
 
   virtual std::string ToString() const override;
-
-  virtual void Initialize(const std::vector<std::string>& args) override;
 
   virtual void IncomingPacket(
       model::packets::LinkLayerPacketView packet) override;

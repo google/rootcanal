@@ -26,14 +26,12 @@ namespace rootcanal {
 class Classic : public Device {
  public:
   Classic();
+  Classic(const std::vector<std::string>& args);
   ~Classic() = default;
 
-  static std::shared_ptr<Device> Create() {
-    return std::make_shared<Classic>();
+  static std::shared_ptr<Device> Create(const std::vector<std::string>& args) {
+    return std::make_shared<Classic>(args);
   }
-
-  // Initialize the device based on the values of |args|.
-  virtual void Initialize(const std::vector<std::string>& args) override;
 
   // Return a string representation of the type of device.
   virtual std::string GetTypeString() const override { return "classic"; }

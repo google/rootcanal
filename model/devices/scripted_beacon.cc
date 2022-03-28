@@ -37,7 +37,8 @@ using std::chrono::system_clock;
 namespace rootcanal {
 bool ScriptedBeacon::registered_ =
     DeviceBoutique::Register("scripted_beacon", &ScriptedBeacon::Create);
-ScriptedBeacon::ScriptedBeacon() {
+
+ScriptedBeacon::ScriptedBeacon(const vector<std::string>& args) : Beacon(args) {
   advertising_interval_ms_ = std::chrono::milliseconds(1280);
   properties_.SetLeAdvertisementType(0x02 /* SCANNABLE */);
   properties_.SetLeAdvertisement({
@@ -75,31 +76,20 @@ ScriptedBeacon::ScriptedBeacon() {
                                  0x08,  // TYPE_NAME_SHORT
                                  'g', 'b', 'e', 'a'});
   LOG_INFO("Scripted_beacon registered %s", registered_ ? "true" : "false");
-}
 
-bool has_time_elapsed(steady_clock::time_point time_point) {
-  return steady_clock::now() > time_point;
-}
-
-void ScriptedBeacon::Initialize(const vector<std::string>& args) {
-  if (args.size() < 2) {
-    LOG_ERROR(
-        "Initialization failed, need mac address, playback and playback events "
-        "file arguments");
-    return;
-  }
-
-  Address addr{};
-  if (Address::FromString(args[1], addr)) properties_.SetLeAddress(addr);
-
-  if (args.size() < 4) {
+  if (args.size() >= 4) {
+    config_file_ = args[2];
+    events_file_ = args[3];
+    set_state(PlaybackEvent::INITIALIZED);
+  } else {
     LOG_ERROR(
         "Initialization failed, need playback and playback events file "
         "arguments");
   }
-  config_file_ = args[2];
-  events_file_ = args[3];
-  set_state(PlaybackEvent::INITIALIZED);
+}
+
+bool has_time_elapsed(steady_clock::time_point time_point) {
+  return steady_clock::now() > time_point;
 }
 
 void ScriptedBeacon::populate_event(PlaybackEvent* event,

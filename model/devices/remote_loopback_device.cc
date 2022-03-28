@@ -35,13 +35,6 @@ std::string RemoteLoopbackDevice::ToString() const {
   return GetTypeString() + " (no address)";
 }
 
-void RemoteLoopbackDevice::Initialize(const std::vector<std::string>& args) {
-  if (args.size() < 2) return;
-
-  Address addr{};
-  if (Address::FromString(args[1], addr)) properties_.SetAddress(addr);
-}
-
 void RemoteLoopbackDevice::IncomingPacket(
     model::packets::LinkLayerPacketView packet) {
   // TODO: Check sender?

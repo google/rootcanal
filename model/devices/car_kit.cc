@@ -81,16 +81,16 @@ CarKit::CarKit() : Device(kCarKitPropertiesFile) {
   });
 }
 
-void CarKit::Initialize(const vector<std::string>& args) {
-  if (args.size() < 2) return;
+CarKit::CarKit(const vector<std::string>& args) : CarKit() {
+  if (args.size() >= 2) {
+    Address addr{};
+    if (Address::FromString(args[1], addr)) properties_.SetAddress(addr);
+    LOG_INFO("%s SetAddress %s", ToString().c_str(), addr.ToString().c_str());
+  }
 
-  Address addr{};
-  if (Address::FromString(args[1], addr)) properties_.SetAddress(addr);
-  LOG_INFO("%s SetAddress %s", ToString().c_str(), addr.ToString().c_str());
-
-  if (args.size() < 3) return;
-
-  properties_.SetClockOffset(std::stoi(args[2]));
+  if (args.size() >= 3) {
+    properties_.SetClockOffset(std::stoi(args[2]));
+  }
 }
 
 void CarKit::TimerTick() { link_layer_controller_.TimerTick(); }

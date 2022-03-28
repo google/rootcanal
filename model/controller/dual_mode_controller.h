@@ -62,8 +62,6 @@ class DualModeController : public Device {
   ~DualModeController() = default;
 
   // Device methods.
-  virtual void Initialize(const std::vector<std::string>& args) override;
-
   virtual std::string GetTypeString() const override;
 
   virtual void IncomingPacket(
