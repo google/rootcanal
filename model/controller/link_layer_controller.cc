@@ -3395,7 +3395,7 @@ void LinkLayerController::LeSetupIsoDataPath(
 
 void LinkLayerController::LeRemoveIsoDataPath(
     uint16_t /* connection_handle */,
-    bluetooth::hci::DataPathDirection /* data_path_direction */) {}
+    bluetooth::hci::RemoveDataPathDirection /* remove_data_path_direction */) {}
 
 void LinkLayerController::HandleLeEnableEncryption(
     uint16_t handle, std::array<uint8_t, 8> rand, uint16_t ediv,

@@ -2299,7 +2299,8 @@ void DualModeController::LeRemoveIsoDataPath(CommandView command) {
       gd_hci::LeRemoveIsoDataPathView::Create(std::move(iso_command_view));
   ASSERT(command_view.IsValid());
   link_layer_controller_.LeRemoveIsoDataPath(
-      command_view.GetConnectionHandle(), command_view.GetDataPathDirection());
+      command_view.GetConnectionHandle(),
+      command_view.GetRemoveDataPathDirection());
 }
 
 void DualModeController::LeReadRemoteFeatures(CommandView command) {
