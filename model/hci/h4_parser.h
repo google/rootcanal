@@ -23,7 +23,7 @@
 #include <ostream>     // for operator<<, ostream
 #include <vector>      // for vector
 
-#include "model/devices/hci_protocol.h"  // for PacketReadCallback
+#include "model/hci/hci_protocol.h"  // for PacketReadCallback
 
 namespace rootcanal {
 

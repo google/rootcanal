@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#include "model/devices/h4_parser.h"  // for H4Parser, PacketType, H4Pars...
+#include "model/hci/h4_parser.h"  // for H4Parser, PacketType, H4Pars...
 
 #include <stddef.h>  // for size_t
 
@@ -23,8 +23,8 @@
 #include <utility>     // for move
 #include <vector>      // for vector
 
-#include "model/devices/hci_protocol.h"  // for PacketReadCallback
-#include "os/log.h"                      // for LOG_ALWAYS_FATAL, LOG_INFO
+#include "model/hci/hci_protocol.h"  // for PacketReadCallback
+#include "os/log.h"                  // for LOG_ALWAYS_FATAL, LOG_INFO
 
 namespace rootcanal {
 

@@ -16,43 +16,47 @@
 
 #pragma once
 
-#include <cstdint>     // for uint8_t
-#include <functional>  // for __base, function
-#include <memory>      // for shared_ptr, make_...
-#include <string>      // for string
-#include <vector>      // for vector
+#include <memory>  // for shared_ptr, make_...
 
-#include "model/controller/dual_mode_controller.h"     // for DualModeController
-#include "model/devices/h4_data_channel_packetizer.h"  // for ClientDisconnectC...
-#include "model/devices/hci_protocol.h"                // for PacketReadCallback
-#include "net/async_data_channel.h"                    // for AsyncDataChannel
+#include "model/hci/h4_data_channel_packetizer.h"  // for H4DataChannelP...
+#include "model/hci/hci_transport.h"               // for HciTransport
+#include "net/async_data_channel.h"                // for AsyncDataChannel
 
 namespace rootcanal {
 
 using android::net::AsyncDataChannel;
 
-class HciSocketDevice : public DualModeController {
+class HciSocketTransport : public HciTransport {
  public:
-  HciSocketDevice(std::shared_ptr<AsyncDataChannel> socket,
-                  const std::string& properties_filename);
-  ~HciSocketDevice() = default;
+  HciSocketTransport(std::shared_ptr<AsyncDataChannel> socket);
+  ~HciSocketTransport() = default;
 
-  static std::shared_ptr<HciSocketDevice> Create(
-      std::shared_ptr<AsyncDataChannel> socket,
-      const std::string& properties_filename) {
-    return std::make_shared<HciSocketDevice>(socket, properties_filename);
+  static std::shared_ptr<HciSocketTransport> Create(
+      std::shared_ptr<AsyncDataChannel> socket) {
+    return std::make_shared<HciSocketTransport>(socket);
   }
 
-  std::string GetTypeString() const override { return "hci_socket_device"; }
+  void SendEvent(const std::vector<uint8_t>& packet) override;
+
+  void SendAcl(const std::vector<uint8_t>& packet) override;
+
+  void SendSco(const std::vector<uint8_t>& packet) override;
+
+  void SendIso(const std::vector<uint8_t>& packet) override;
+
+  void RegisterCallbacks(PacketCallback command_callback,
+                         PacketCallback acl_callback,
+                         PacketCallback sco_callback,
+                         PacketCallback iso_callback,
+                         CloseCallback close_callback) override;
 
   void TimerTick() override;
-
-  void SendHci(PacketType packet_type,
-               const std::shared_ptr<std::vector<uint8_t>> packet);
 
   void Close() override;
 
  private:
+  void SendHci(PacketType packet_type, const std::vector<uint8_t>& packet);
+
   std::shared_ptr<AsyncDataChannel> socket_;
   H4DataChannelPacketizer h4_{socket_,
                               [](const std::vector<uint8_t>&) {},

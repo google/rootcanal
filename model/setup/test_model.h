@@ -25,7 +25,7 @@
 #include <vector>      // for vector
 
 #include "hci/address.h"                       // for Address
-#include "model/devices/hci_socket_device.h"   // for HciSocketDevice
+#include "model/devices/hci_device.h"          // for HciDevice
 #include "model/setup/async_manager.h"         // for AsyncUserId, AsyncTaskId
 #include "phy.h"                               // for Phy, Phy::Type
 #include "phy_layer_factory.h"                 // for PhyLayerFactory
@@ -76,7 +76,7 @@ class TestModel {
 
   // Handle incoming remote connections
   void AddLinkLayerConnection(std::shared_ptr<Device> dev, Phy::Type phy_type);
-  void AddHciConnection(std::shared_ptr<HciSocketDevice> dev);
+  void AddHciConnection(std::shared_ptr<HciDevice> dev);
 
   // Handle closed remote connections (both hci & link layer)
   void OnConnectionClosed(size_t index, AsyncUserId user_id);

@@ -20,8 +20,8 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
-#include "model/devices/hci_socket_device.h"         // for HciSocketDevice
 #include "model/devices/link_layer_socket_device.h"  // for LinkLayerSocketDevice
+#include "model/hci/hci_socket_transport.h"          // for HciSocketTransport
 #include "net/async_data_channel.h"                  // for AsyncDataChannel
 #include "net/async_data_channel_connector.h"  // for AsyncDataChannelConnector
 #include "os/log.h"  // for LOG_INFO, LOG_ERROR, LOG_WARN
@@ -31,7 +31,8 @@ namespace bluetooth {
 namespace root_canal {
 
 using rootcanal::AsyncTaskId;
-using rootcanal::HciSocketDevice;
+using rootcanal::HciDevice;
+using rootcanal::HciSocketTransport;
 using rootcanal::LinkLayerSocketDevice;
 using rootcanal::TaskCallback;
 
@@ -57,8 +58,9 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
   SetUpTestChannel();
   SetUpHciServer([this](std::shared_ptr<AsyncDataChannel> socket,
                         AsyncDataChannelServer* srv) {
+    auto transport = HciSocketTransport::Create(socket);
     test_model_.AddHciConnection(
-        HciSocketDevice::Create(socket, controller_properties_file_));
+        HciDevice::Create(transport, controller_properties_file_));
     srv->StartListening();
   });
   SetUpLinkLayerServer();

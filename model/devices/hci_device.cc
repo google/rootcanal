@@ -1,0 +1,104 @@
+/*
+ * Copyright 2022 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "hci_device.h"
+
+#include "os/log.h"
+
+namespace rootcanal {
+
+HciDevice::HciDevice(std::shared_ptr<HciTransport> transport,
+                     const std::string& properties_filename)
+    : DualModeController(properties_filename), transport_(transport) {
+  advertising_interval_ms_ = std::chrono::milliseconds(1000);
+
+  page_scan_delay_ms_ = std::chrono::milliseconds(600);
+
+  properties_.SetPageScanRepetitionMode(0);
+  properties_.SetClassOfDevice(0x600420);
+  properties_.SetExtendedInquiryData({
+      12,  // length
+      9,   // Type: Device Name
+      'g',
+      'D',
+      'e',
+      'v',
+      'i',
+      'c',
+      'e',
+      '-',
+      'h',
+      'c',
+      'i',
+
+  });
+  properties_.SetName({
+      'g',
+      'D',
+      'e',
+      'v',
+      'i',
+      'c',
+      'e',
+      '-',
+      'H',
+      'C',
+      'I',
+  });
+
+  RegisterEventChannel([this](std::shared_ptr<std::vector<uint8_t>> packet) {
+    transport_->SendEvent(*packet);
+  });
+  RegisterAclChannel([this](std::shared_ptr<std::vector<uint8_t>> packet) {
+    transport_->SendAcl(*packet);
+  });
+  RegisterScoChannel([this](std::shared_ptr<std::vector<uint8_t>> packet) {
+    transport_->SendSco(*packet);
+  });
+  RegisterIsoChannel([this](std::shared_ptr<std::vector<uint8_t>> packet) {
+    transport_->SendIso(*packet);
+  });
+
+  transport_->RegisterCallbacks(
+      [this](const std::shared_ptr<std::vector<uint8_t>> command) {
+        HandleCommand(command);
+      },
+      [this](const std::shared_ptr<std::vector<uint8_t>> acl) {
+        HandleAcl(acl);
+      },
+      [this](const std::shared_ptr<std::vector<uint8_t>> sco) {
+        HandleSco(sco);
+      },
+      [this](const std::shared_ptr<std::vector<uint8_t>> iso) {
+        HandleIso(iso);
+      },
+      [this]() {
+        LOG_INFO("HCI transport closed");
+        Close();
+      });
+}
+
+void HciDevice::TimerTick() {
+  transport_->TimerTick();
+  DualModeController::TimerTick();
+}
+
+void HciDevice::Close() {
+  transport_->Close();
+  DualModeController::Close();
+}
+
+}  // namespace rootcanal
