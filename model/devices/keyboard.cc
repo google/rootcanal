@@ -24,7 +24,7 @@ namespace rootcanal {
 bool Keyboard::registered_ =
     DeviceBoutique::Register("keyboard", &Keyboard::Create);
 
-Keyboard::Keyboard() {
+Keyboard::Keyboard(const vector<std::string>& args) : Beacon(args) {
   properties_.SetLeAdvertisementType(0x00 /* CONNECTABLE */);
   properties_.SetLeAdvertisement(
       {0x11,  // Length
@@ -62,17 +62,6 @@ Keyboard::Keyboard() {
 }
 
 std::string Keyboard::GetTypeString() const { return "keyboard"; }
-
-void Keyboard::Initialize(const vector<std::string>& args) {
-  if (args.size() < 2) return;
-
-  Address addr{};
-  if (Address::FromString(args[1], addr)) properties_.SetLeAddress(addr);
-
-  if (args.size() < 3) return;
-
-  SetAdvertisementInterval(std::chrono::milliseconds(std::stoi(args[2])));
-}
 
 void Keyboard::TimerTick() {
   if (!connected_) {

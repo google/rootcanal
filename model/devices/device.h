@@ -40,9 +40,6 @@ class Device {
         properties_(properties_filename) {}
   virtual ~Device() = default;
 
-  // Initialize the device based on the values of |args|.
-  virtual void Initialize(const std::vector<std::string>& args) = 0;
-
   // Return a string representation of the type of device.
   virtual std::string GetTypeString() const = 0;
 

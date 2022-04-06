@@ -22,10 +22,11 @@ using std::vector;
 
 namespace rootcanal {
 
-std::unordered_map<std::string, std::function<std::shared_ptr<Device>()>>&
+std::unordered_map<std::string, std::function<std::shared_ptr<Device>(
+                                    const vector<std::string>&)>>&
 DeviceBoutique::GetMap() {
-  static std::unordered_map<std::string,
-                            std::function<std::shared_ptr<Device>()>>
+  static std::unordered_map<std::string, std::function<std::shared_ptr<Device>(
+                                             const vector<std::string>&)>>
       impl;
   return impl;
 }
@@ -33,9 +34,10 @@ DeviceBoutique::GetMap() {
 // Register a constructor for a device type.
 bool DeviceBoutique::Register(
     const std::string& device_type,
-    const std::function<std::shared_ptr<Device>()> device_constructor) {
+    const std::function<std::shared_ptr<Device>(const vector<std::string>&)>
+        method) {
   LOG_INFO("Registering %s", device_type.c_str());
-  GetMap()[device_type] = device_constructor;
+  GetMap()[device_type] = method;
   return true;
 }
 
@@ -43,15 +45,14 @@ std::shared_ptr<Device> DeviceBoutique::Create(
     const vector<std::string>& args) {
   ASSERT(!args.empty());
 
-  if (GetMap().find(args[0]) == GetMap().end()) {
+  auto device = GetMap().find(args[0]);
+
+  if (device == GetMap().end()) {
     LOG_WARN("No constructor registered for %s", args[0].c_str());
     return std::shared_ptr<Device>(nullptr);
   }
 
-  std::shared_ptr<Device> new_device = GetMap()[args[0]]();
-  if (new_device != nullptr) new_device->Initialize(args);
-
-  return new_device;
+  return device->second(args);
 }
 
 }  // namespace rootcanal

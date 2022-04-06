@@ -28,12 +28,12 @@ namespace rootcanal {
 class CarKit : public Device {
  public:
   CarKit();
+  CarKit(const std::vector<std::string>& args);
   ~CarKit() = default;
 
-  static std::shared_ptr<CarKit> Create() { return std::make_shared<CarKit>(); }
-
-  // Initialize the device based on the values of |args|.
-  virtual void Initialize(const std::vector<std::string>& args) override;
+  static std::shared_ptr<CarKit> Create(const std::vector<std::string>& args) {
+    return std::make_shared<CarKit>(args);
+  }
 
   // Return a string representation of the type of device.
   virtual std::string GetTypeString() const override { return "car_kit"; }

@@ -48,8 +48,6 @@ class LinkLayerSocketDevice : public Device {
     return "link_layer_socket_device";
   }
 
-  virtual void Initialize(const std::vector<std::string>&) override {}
-
   virtual void IncomingPacket(
       model::packets::LinkLayerPacketView packet) override;
 

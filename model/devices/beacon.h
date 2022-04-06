@@ -27,18 +27,18 @@ namespace rootcanal {
 class Beacon : public Device {
  public:
   Beacon();
+  Beacon(const std::vector<std::string>& args);
   virtual ~Beacon() = default;
 
-  static std::shared_ptr<Device> Create() { return std::make_shared<Beacon>(); }
+  static std::shared_ptr<Device> Create(const std::vector<std::string>& args) {
+    return std::make_shared<Beacon>(args);
+  }
 
   // Return a string representation of the type of device.
   virtual std::string GetTypeString() const override;
 
   // Return a string representation of the device.
   virtual std::string ToString() const override;
-
-  // Set the address and advertising interval from string args.
-  virtual void Initialize(const std::vector<std::string>& args) override;
 
   virtual void IncomingPacket(
       model::packets::LinkLayerPacketView packet) override;

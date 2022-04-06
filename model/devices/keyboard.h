@@ -26,18 +26,15 @@ namespace rootcanal {
 
 class Keyboard : public Beacon {
  public:
-  Keyboard();
+  Keyboard(const std::vector<std::string>& args);
   virtual ~Keyboard() = default;
 
-  static std::shared_ptr<Device> Create() {
-    return std::make_shared<Keyboard>();
+  static std::shared_ptr<Device> Create(const std::vector<std::string>& args) {
+    return std::make_shared<Keyboard>(args);
   }
 
   // Return a string representation of the type of device.
   virtual std::string GetTypeString() const override;
-
-  // Initialize the device based on the values of |args|.
-  virtual void Initialize(const std::vector<std::string>& args) override;
 
   virtual void IncomingPacket(
       model::packets::LinkLayerPacketView packet) override;

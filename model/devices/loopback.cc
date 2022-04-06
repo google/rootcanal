@@ -44,6 +44,17 @@ Loopback::Loopback() {
                                  'l', 'o', 'o', 'p'});
 }
 
+Loopback::Loopback(const vector<std::string>& args) : Loopback() {
+  if (args.size() >= 2) {
+    Address addr{};
+    if (Address::FromString(args[1], addr)) properties_.SetLeAddress(addr);
+  }
+
+  if (args.size() >= 3) {
+    SetAdvertisementInterval(std::chrono::milliseconds(std::stoi(args[2])));
+  }
+}
+
 std::string Loopback::GetTypeString() const { return "loopback"; }
 
 std::string Loopback::ToString() const {
@@ -51,17 +62,6 @@ std::string Loopback::ToString() const {
       GetTypeString() + "@" + properties_.GetLeAddress().ToString();
 
   return dev;
-}
-
-void Loopback::Initialize(const vector<std::string>& args) {
-  if (args.size() < 2) return;
-
-  Address addr{};
-  if (Address::FromString(args[1], addr)) properties_.SetLeAddress(addr);
-
-  if (args.size() < 3) return;
-
-  SetAdvertisementInterval(std::chrono::milliseconds(std::stoi(args[2])));
 }
 
 void Loopback::TimerTick() {}

@@ -40,15 +40,15 @@ Classic::Classic() {
   page_scan_delay_ms_ = std::chrono::milliseconds(600);
 }
 
-void Classic::Initialize(const vector<std::string>& args) {
-  if (args.size() < 2) return;
+Classic::Classic(const vector<std::string>& args) : Classic() {
+  if (args.size() >= 2) {
+    Address addr{};
+    if (Address::FromString(args[1], addr)) properties_.SetAddress(addr);
+  }
 
-  Address addr{};
-  if (Address::FromString(args[1], addr)) properties_.SetAddress(addr);
-
-  if (args.size() < 3) return;
-
-  properties_.SetClockOffset(std::stoi(args[2]));
+  if (args.size() >= 3) {
+    properties_.SetClockOffset(std::stoi(args[2]));
+  }
 }
 
 }  // namespace rootcanal

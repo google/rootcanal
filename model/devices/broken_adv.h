@@ -26,14 +26,12 @@ namespace rootcanal {
 class BrokenAdv : public Device {
  public:
   BrokenAdv();
+  BrokenAdv(const std::vector<std::string>& args);
   ~BrokenAdv() = default;
 
-  static std::shared_ptr<Device> Create() {
-    return std::make_shared<BrokenAdv>();
+  static std::shared_ptr<Device> Create(const std::vector<std::string>& args) {
+    return std::make_shared<BrokenAdv>(args);
   }
-
-  // Initialize the device based on the values of |args|.
-  virtual void Initialize(const std::vector<std::string>& args) override;
 
   // Return a string representation of the type of device.
   virtual std::string GetTypeString() const override { return "broken_adv"; }

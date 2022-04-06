@@ -26,18 +26,15 @@ namespace rootcanal {
 // Pretend to be a lot of beacons by changing the advertising address.
 class BeaconSwarm : public Beacon {
  public:
-  BeaconSwarm();
+  BeaconSwarm(const std::vector<std::string>& args);
   virtual ~BeaconSwarm() = default;
 
-  static std::shared_ptr<Device> Create() {
-    return std::make_shared<BeaconSwarm>();
+  static std::shared_ptr<Device> Create(const std::vector<std::string>& args) {
+    return std::make_shared<BeaconSwarm>(args);
   }
 
   // Return a string representation of the type of device.
   virtual std::string GetTypeString() const override { return "beacon_swarm"; }
-
-  // Set the address and advertising interval from string args.
-  virtual void Initialize(const std::vector<std::string>& args) override;
 
   virtual void TimerTick() override;
 

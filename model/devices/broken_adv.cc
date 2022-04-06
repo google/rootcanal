@@ -51,15 +51,15 @@ BrokenAdv::BrokenAdv() {
   page_scan_delay_ms_ = std::chrono::milliseconds(600);
 }
 
-void BrokenAdv::Initialize(const vector<std::string>& args) {
-  if (args.size() < 2) return;
+BrokenAdv::BrokenAdv(const vector<std::string>& args) : BrokenAdv() {
+  if (args.size() >= 2) {
+    Address addr{};
+    if (Address::FromString(args[1], addr)) properties_.SetLeAddress(addr);
+  }
 
-  Address addr{};
-  if (Address::FromString(args[1], addr)) properties_.SetLeAddress(addr);
-
-  if (args.size() < 3) return;
-
-  SetAdvertisementInterval(std::chrono::milliseconds(std::stoi(args[2])));
+  if (args.size() >= 3) {
+    SetAdvertisementInterval(std::chrono::milliseconds(std::stoi(args[2])));
+  }
 }
 
 // Mostly return the correct length

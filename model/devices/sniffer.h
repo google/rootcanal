@@ -29,15 +29,12 @@ using ::bluetooth::hci::Address;
 
 class Sniffer : public Device {
  public:
-  Sniffer();
+  Sniffer(const std::vector<std::string>& args);
   ~Sniffer() = default;
 
-  static std::shared_ptr<Sniffer> Create() {
-    return std::make_shared<Sniffer>();
+  static std::shared_ptr<Sniffer> Create(const std::vector<std::string>& args) {
+    return std::make_shared<Sniffer>(args);
   }
-
-  // Initialize the device based on the values of |args|.
-  virtual void Initialize(const std::vector<std::string>& args) override;
 
   // Return a string representation of the type of device.
   virtual std::string GetTypeString() const override { return "sniffer"; }

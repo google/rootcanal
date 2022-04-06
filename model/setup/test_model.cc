@@ -173,13 +173,12 @@ void TestModel::AddRemote(const std::string& server, int port,
 
 void TestModel::AddHciConnection(std::shared_ptr<HciDevice> dev) {
   size_t index = Add(std::static_pointer_cast<Device>(dev));
-  std::string addr = "da:4c:10:de:17:";  // Da HCI dev
-  std::stringstream stream;
-  stream << std::setfill('0') << std::setw(2) << std::hex << (index % 256);
-  addr += stream.str();
 
-  dev->Initialize({"IgnoredTypeName", addr});
-  LOG_INFO("initialized %s", addr.c_str());
+  uint8_t raw[] = {0xda, 0x4c, 0x10, 0xde, 0x17, uint8_t(index)};  // Da HCI dev
+  auto addr = Address{{raw[5], raw[4], raw[3], raw[2], raw[1], raw[0]}};
+  dev->SetAddress(addr);
+
+  LOG_INFO("initialized %s", addr.ToString().c_str());
   for (size_t i = 0; i < phys_.size(); i++) {
     AddDeviceToPhy(index, i);
   }

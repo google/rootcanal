@@ -30,11 +30,11 @@ namespace rootcanal {
 // Pretend to be a lot of beacons by advertising from a file.
 class ScriptedBeacon : public Beacon {
  public:
-  ScriptedBeacon();
+  ScriptedBeacon(const std::vector<std::string>& args);
   virtual ~ScriptedBeacon() = default;
 
-  static std::shared_ptr<Device> Create() {
-    return std::make_shared<ScriptedBeacon>();
+  static std::shared_ptr<Device> Create(const std::vector<std::string>& args) {
+    return std::make_shared<ScriptedBeacon>(args);
   }
 
   // Return a string representation of the type of device.
@@ -45,9 +45,6 @@ class ScriptedBeacon : public Beacon {
   virtual std::string ToString() const override {
     return "scripted_beacon " + config_file_;
   }
-
-  // Set the address and advertising interval from string args.
-  void Initialize(const std::vector<std::string>& args) override;
 
   void TimerTick() override;
 
