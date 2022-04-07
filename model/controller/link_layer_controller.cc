@@ -799,7 +799,7 @@ void LinkLayerController::IncomingInquiryResponsePacket(
           (bluetooth::hci::PageScanRepetitionMode)
               inquiry_response.GetPageScanRepetitionMode();
 
-      std::vector<bluetooth::hci::InquiryResult> responses;
+      std::vector<bluetooth::hci::InquiryResponse> responses;
       responses.emplace_back();
       responses.back().bd_addr_ = inquiry_response.GetSourceAddress();
       responses.back().page_scan_repetition_mode_ = page_scan_repetition_mode;
@@ -820,7 +820,7 @@ void LinkLayerController::IncomingInquiryResponsePacket(
           (bluetooth::hci::PageScanRepetitionMode)
               inquiry_response.GetPageScanRepetitionMode();
 
-      std::vector<bluetooth::hci::InquiryResultWithRssi> responses;
+      std::vector<bluetooth::hci::InquiryResponseWithRssi> responses;
       responses.emplace_back();
       responses.back().address_ = inquiry_response.GetSourceAddress();
       responses.back().page_scan_repetition_mode_ = page_scan_repetition_mode;
@@ -1825,7 +1825,7 @@ void LinkLayerController::IncomingLeScanResponsePacket(
     if (adv_type != model::packets::AdvertisementType::SCAN_RESPONSE) {
       return;
     }
-    bluetooth::hci::LeAdvertisingReportRaw report;
+    bluetooth::hci::LeAdvertisingResponseRaw report;
     report.event_type_ = bluetooth::hci::AdvertisingEventType::SCAN_RESPONSE;
     report.address_ = incoming.GetSourceAddress();
     report.address_type_ =
@@ -1845,7 +1845,7 @@ void LinkLayerController::IncomingLeScanResponsePacket(
       properties_.IsUnmasked(EventCode::LE_META_EVENT) &&
       properties_.GetLeEventSupported(
           bluetooth::hci::SubeventCode::EXTENDED_ADVERTISING_REPORT)) {
-    bluetooth::hci::LeExtendedAdvertisingReport report{};
+    bluetooth::hci::LeExtendedAdvertisingResponse report{};
     report.address_ = incoming.GetSourceAddress();
     report.address_type_ =
         static_cast<bluetooth::hci::DirectAdvertisingAddressType>(address_type);
