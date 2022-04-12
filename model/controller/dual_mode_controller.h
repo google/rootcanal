@@ -586,6 +586,9 @@ class DualModeController : public Device {
   void LeSetupIsoDataPath(CommandView packet_view);
   void LeRemoveIsoDataPath(CommandView packet_view);
 
+  // 7.8.115
+  void LeSetHostFeature(CommandView packet_view);
+
   // Vendor-specific Commands
 
   void LeVendorSleepMode(CommandView args);

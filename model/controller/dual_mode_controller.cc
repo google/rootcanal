@@ -199,6 +199,7 @@ DualModeController::DualModeController(const std::string& properties_filename,
   SET_SUPPORTED(DELETE_STORED_LINK_KEY, DeleteStoredLinkKey);
   SET_SUPPORTED(REMOTE_NAME_REQUEST, RemoteNameRequest);
   SET_SUPPORTED(LE_SET_EVENT_MASK, LeSetEventMask);
+  SET_SUPPORTED(LE_SET_HOST_FEATURE, LeSetHostFeature);
   SET_SUPPORTED(LE_READ_BUFFER_SIZE_V1, LeReadBufferSize);
   SET_SUPPORTED(LE_READ_BUFFER_SIZE_V2, LeReadBufferSizeV2);
   SET_SUPPORTED(LE_READ_LOCAL_SUPPORTED_FEATURES, LeReadLocalSupportedFeatures);
@@ -1598,6 +1599,19 @@ void DualModeController::LeSetEventMask(CommandView command) {
       kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
+void DualModeController::LeSetHostFeature(CommandView command) {
+  auto command_view = gd_hci::LeSetHostFeatureView::Create(command);
+  ASSERT(command_view.IsValid());
+  // TODO: if the controller has active connections, return COMMAND_DISALLOED
+  ErrorCode error_code = properties_.SetLeHostFeature(
+                             static_cast<uint8_t>(command_view.GetBitNumber()),
+                             static_cast<uint8_t>(command_view.GetBitValue()))
+                             ? ErrorCode::SUCCESS
+                             : ErrorCode::UNSUPORTED_FEATURE_OR_PARAMETER_VALUE;
+  send_event_(bluetooth::hci::LeSetHostFeatureCompleteBuilder::Create(
+      kNumCommandPackets, error_code));
+}
+
 void DualModeController::LeReadBufferSize(CommandView command) {
   auto command_view = gd_hci::LeReadBufferSizeV1View::Create(command);
   ASSERT(command_view.IsValid());
@@ -1652,6 +1666,11 @@ void DualModeController::LeSetResovalablePrivateAddressTimeout(
 void DualModeController::LeReadLocalSupportedFeatures(CommandView command) {
   auto command_view = gd_hci::LeReadLocalSupportedFeaturesView::Create(command);
   ASSERT(command_view.IsValid());
+  LOG_INFO(
+      "%s | LeReadLocalSupportedFeatures (%016llx)",
+      properties_.GetAddress().ToString().c_str(),
+      static_cast<unsigned long long>(properties_.GetLeSupportedFeatures()));
+
   send_event_(
       bluetooth::hci::LeReadLocalSupportedFeaturesCompleteBuilder::Create(
           kNumCommandPackets, ErrorCode::SUCCESS,
