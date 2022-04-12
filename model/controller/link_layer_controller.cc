@@ -28,6 +28,7 @@ using bluetooth::hci::Address;
 using bluetooth::hci::AddressType;
 using bluetooth::hci::AddressWithType;
 using bluetooth::hci::EventCode;
+using bluetooth::hci::SubeventCode;
 
 using namespace model::packets;
 using model::packets::PacketType;
@@ -1557,20 +1558,37 @@ uint16_t LinkLayerController::HandleLeConnection(AddressWithType address,
                                                  uint16_t connection_interval,
                                                  uint16_t connection_latency,
                                                  uint16_t supervision_timeout) {
-  // TODO: Choose between LeConnectionComplete and LeEnhancedConnectionComplete
+  // Note: the HCI_LE_Connection_Complete event is not sent if the
+  // HCI_LE_Enhanced_Connection_Complete event (see Section 7.7.65.10) is
+  // unmasked.
+
   uint16_t handle = connections_.CreateLeConnection(address, own_address);
   if (handle == kReservedHandle) {
     LOG_WARN("No pending connection for connection from %s",
              address.ToString().c_str());
     return kReservedHandle;
   }
-  if (properties_.IsUnmasked(EventCode::LE_META_EVENT)) {
+
+  if (properties_.IsUnmasked(EventCode::LE_META_EVENT) &&
+      properties_.GetLeEventSupported(
+          SubeventCode::ENHANCED_CONNECTION_COMPLETE)) {
+    send_event_(bluetooth::hci::LeEnhancedConnectionCompleteBuilder::Create(
+        ErrorCode::SUCCESS, handle, static_cast<bluetooth::hci::Role>(role),
+        address.GetAddressType(), address.GetAddress(),
+        Address(),  // TODO local resolvable private address, if applicable
+        Address(),  // TODO Peer resolvable private address, if applicable
+        connection_interval, connection_latency, supervision_timeout,
+        static_cast<bluetooth::hci::ClockAccuracy>(0x00)));
+  } else if (properties_.IsUnmasked(EventCode::LE_META_EVENT) &&
+             properties_.GetLeEventSupported(
+                 SubeventCode::CONNECTION_COMPLETE)) {
     send_event_(bluetooth::hci::LeConnectionCompleteBuilder::Create(
         ErrorCode::SUCCESS, handle, static_cast<bluetooth::hci::Role>(role),
         address.GetAddressType(), address.GetAddress(), connection_interval,
         connection_latency, supervision_timeout,
         static_cast<bluetooth::hci::ClockAccuracy>(0x00)));
   }
+
   if (own_address.GetAddress() == le_connecting_rpa_) {
     le_connecting_rpa_ = Address::kEmpty;
   }
