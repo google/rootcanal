@@ -1380,10 +1380,10 @@ void LinkLayerController::IncomingLeAdvertisementPacket(
   // Connect
   if ((le_peer_address_ == address &&
        le_peer_address_type_ == static_cast<uint8_t>(address_type)) ||
-      (LeConnectListContainsDevice(address,
-                                   static_cast<uint8_t>(address_type))) ||
+      (LeFilterAcceptListContainsDevice(address,
+                                        static_cast<uint8_t>(address_type))) ||
       (resolved &&
-       LeConnectListContainsDevice(
+       LeFilterAcceptListContainsDevice(
            resolved_address, static_cast<uint8_t>(resolved_address_type)))) {
     if (!connections_.CreatePendingLeConnection(AddressWithType(
             address, static_cast<bluetooth::hci::AddressType>(address_type)))) {
@@ -3054,7 +3054,7 @@ ErrorCode LinkLayerController::SetLeExtendedAdvertisingParameters(
       break;
     case bluetooth::hci::AdvertisingFilterPolicy::LISTED_SCAN:
       scanning_filter_policy =
-          bluetooth::hci::LeScanningFilterPolicy::CONNECT_LIST_ONLY;
+          bluetooth::hci::LeScanningFilterPolicy::FILTER_ACCEPT_LIST_ONLY;
       break;
     case bluetooth::hci::AdvertisingFilterPolicy::LISTED_CONNECT:
       scanning_filter_policy =
@@ -3062,7 +3062,7 @@ ErrorCode LinkLayerController::SetLeExtendedAdvertisingParameters(
       break;
     case bluetooth::hci::AdvertisingFilterPolicy::LISTED_SCAN_AND_CONNECT:
       scanning_filter_policy = bluetooth::hci::LeScanningFilterPolicy::
-          CONNECT_LIST_AND_INITIATORS_IDENTITY;
+          FILTER_ACCEPT_LIST_AND_INITIATORS_IDENTITY;
       break;
   }
 
@@ -3176,8 +3176,8 @@ ErrorCode LinkLayerController::LeRemoteConnectionParameterRequestNegativeReply(
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::LeConnectListClear() {
-  if (ConnectListBusy()) {
+ErrorCode LinkLayerController::LeFilterAcceptListClear() {
+  if (FilterAcceptListBusy()) {
     return ErrorCode::COMMAND_DISALLOWED;
   }
 
@@ -3203,9 +3203,9 @@ ErrorCode LinkLayerController::LeResolvingListClear() {
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::LeConnectListAddDevice(Address addr,
-                                                      uint8_t addr_type) {
-  if (ConnectListBusy()) {
+ErrorCode LinkLayerController::LeFilterAcceptListAddDevice(Address addr,
+                                                           uint8_t addr_type) {
+  if (FilterAcceptListBusy()) {
     return ErrorCode::COMMAND_DISALLOWED;
   }
   std::tuple<Address, uint8_t> new_tuple = std::make_tuple(addr, addr_type);
@@ -3214,7 +3214,7 @@ ErrorCode LinkLayerController::LeConnectListAddDevice(Address addr,
       return ErrorCode::SUCCESS;
     }
   }
-  if (LeConnectListFull()) {
+  if (LeFilterAcceptListFull()) {
     return ErrorCode::MEMORY_CAPACITY_EXCEEDED;
   }
   le_connect_list_.emplace_back(new_tuple);
@@ -3570,17 +3570,17 @@ bool LinkLayerController::ListBusy(uint16_t ignore) {
   return false;
 }
 
-bool LinkLayerController::ConnectListBusy() {
-  return ListBusy(properties_.GetLeConnectListIgnoreReasons());
+bool LinkLayerController::FilterAcceptListBusy() {
+  return ListBusy(properties_.GetLeFilterAcceptListIgnoreReasons());
 }
 
 bool LinkLayerController::ResolvingListBusy() {
   return ListBusy(properties_.GetLeResolvingListIgnoreReasons());
 }
 
-ErrorCode LinkLayerController::LeConnectListRemoveDevice(Address addr,
-                                                         uint8_t addr_type) {
-  if (ConnectListBusy()) {
+ErrorCode LinkLayerController::LeFilterAcceptListRemoveDevice(
+    Address addr, uint8_t addr_type) {
+  if (FilterAcceptListBusy()) {
     return ErrorCode::COMMAND_DISALLOWED;
   }
   std::tuple<Address, uint8_t> erase_tuple = std::make_tuple(addr, addr_type);
@@ -3606,8 +3606,8 @@ ErrorCode LinkLayerController::LeResolvingListRemoveDevice(Address addr,
   return ErrorCode::SUCCESS;
 }
 
-bool LinkLayerController::LeConnectListContainsDevice(Address addr,
-                                                      uint8_t addr_type) {
+bool LinkLayerController::LeFilterAcceptListContainsDevice(Address addr,
+                                                           uint8_t addr_type) {
   std::tuple<Address, uint8_t> sought_tuple = std::make_tuple(addr, addr_type);
   for (size_t i = 0; i < le_connect_list_.size(); i++) {
     if (le_connect_list_[i] == sought_tuple) {
@@ -3628,8 +3628,8 @@ bool LinkLayerController::LeResolvingListContainsDevice(Address addr,
   return false;
 }
 
-bool LinkLayerController::LeConnectListFull() {
-  return le_connect_list_.size() >= properties_.GetLeConnectListSize();
+bool LinkLayerController::LeFilterAcceptListFull() {
+  return le_connect_list_.size() >= properties_.GetLeFilterAcceptListSize();
 }
 
 bool LinkLayerController::LeResolvingListFull() {

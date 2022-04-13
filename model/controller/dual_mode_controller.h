@@ -464,16 +464,16 @@ class DualModeController : public Device {
   void LeConnectionCancel(CommandView args);
 
   // 7.8.14
-  void LeReadConnectListSize(CommandView args);
+  void LeReadFilterAcceptListSize(CommandView args);
 
   // 7.8.15
-  void LeClearConnectList(CommandView args);
+  void LeClearFilterAcceptList(CommandView args);
 
   // 7.8.16
-  void LeAddDeviceToConnectList(CommandView args);
+  void LeAddDeviceToFilterAcceptList(CommandView args);
 
   // 7.8.17
-  void LeRemoveDeviceFromConnectList(CommandView args);
+  void LeRemoveDeviceFromFilterAcceptList(CommandView args);
 
   // 7.8.21
   void LeReadRemoteFeatures(CommandView args);

@@ -387,7 +387,7 @@ class DeviceProperties {
   void SetLeEventMask(uint64_t mask) { le_event_mask_ = mask; }
 
   // Specification Version 4.2, Volume 2, Part E, Section 7.8.14
-  uint8_t GetLeConnectListSize() const { return le_connect_list_size_; }
+  uint8_t GetLeFilterAcceptListSize() const { return le_connect_list_size_; }
 
   // Specification Version 4.2, Volume 2, Part E, Section 7.8.27
   uint64_t GetLeSupportedStates() const { return le_supported_states_; }
@@ -403,7 +403,7 @@ class DeviceProperties {
   uint16_t GetLeResolvingListIgnoreReasons() const {
     return le_resolving_list_ignore_reasons_;
   }
-  uint16_t GetLeConnectListIgnoreReasons() const {
+  uint16_t GetLeFilterAcceptListIgnoreReasons() const {
     return le_connect_list_ignore_reasons_;
   }
 

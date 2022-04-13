@@ -206,8 +206,8 @@ LeAdvertiser::GetScanResponse(bluetooth::hci::Address scanned,
   }
   switch (filter_policy_) {
     case bluetooth::hci::LeScanningFilterPolicy::
-        CONNECT_LIST_AND_INITIATORS_IDENTITY:
-    case bluetooth::hci::LeScanningFilterPolicy::CONNECT_LIST_ONLY:
+        FILTER_ACCEPT_LIST_AND_INITIATORS_IDENTITY:
+    case bluetooth::hci::LeScanningFilterPolicy::FILTER_ACCEPT_LIST_ONLY:
       LOG_WARN("ScanResponses don't handle connect list filters");
       return nullptr;
     case bluetooth::hci::LeScanningFilterPolicy::CHECK_INITIATORS_IDENTITY:

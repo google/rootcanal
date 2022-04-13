@@ -186,12 +186,12 @@ class LinkLayerController {
 
   bool ListBusy(uint16_t ignore_mask);
 
-  bool ConnectListBusy();
-  ErrorCode LeConnectListClear();
-  ErrorCode LeConnectListAddDevice(Address addr, uint8_t addr_type);
-  ErrorCode LeConnectListRemoveDevice(Address addr, uint8_t addr_type);
-  bool LeConnectListContainsDevice(Address addr, uint8_t addr_type);
-  bool LeConnectListFull();
+  bool FilterAcceptListBusy();
+  ErrorCode LeFilterAcceptListClear();
+  ErrorCode LeFilterAcceptListAddDevice(Address addr, uint8_t addr_type);
+  ErrorCode LeFilterAcceptListRemoveDevice(Address addr, uint8_t addr_type);
+  bool LeFilterAcceptListContainsDevice(Address addr, uint8_t addr_type);
+  bool LeFilterAcceptListFull();
   bool ResolvingListBusy();
   ErrorCode LeSetAddressResolutionEnable(bool enable);
   ErrorCode LeResolvingListClear();
