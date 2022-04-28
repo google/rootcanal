@@ -1354,7 +1354,7 @@ void LinkLayerController::IncomingLeAdvertisementPacket(
         properties_.GetLeAddress(), address));
   }
 
-  if (!le_connect_) {
+  if (!le_connect_ || le_pending_connect_) {
     return;
   }
   if (!(adv_type == model::packets::AdvertisementType::ADV_IND ||
@@ -1422,7 +1422,7 @@ void LinkLayerController::IncomingLeAdvertisementPacket(
     LOG_INFO("Connecting to %s (type %hhx) own_address %s (type %hhx)",
              incoming.GetSourceAddress().ToString().c_str(), address_type,
              own_address.ToString().c_str(), le_address_type_);
-    le_connect_ = false;
+    le_pending_connect_ = true;
     le_scan_enable_ = bluetooth::hci::OpCode::NONE;
 
     SendLeLinkLayerPacket(model::packets::LeConnectBuilder::Create(
@@ -1552,12 +1552,11 @@ void LinkLayerController::IncomingScoDisconnect(
   }
 }
 
-uint16_t LinkLayerController::HandleLeConnection(AddressWithType address,
-                                                 AddressWithType own_address,
-                                                 uint8_t role,
-                                                 uint16_t connection_interval,
-                                                 uint16_t connection_latency,
-                                                 uint16_t supervision_timeout) {
+uint16_t LinkLayerController::HandleLeConnection(
+    AddressWithType address, AddressWithType own_address, uint8_t role,
+    uint16_t connection_interval, uint16_t connection_latency,
+    uint16_t supervision_timeout,
+    bool send_le_channel_selection_algorithm_event) {
   // Note: the HCI_LE_Connection_Complete event is not sent if the
   // HCI_LE_Enhanced_Connection_Complete event (see Section 7.7.65.10) is
   // unmasked.
@@ -1587,6 +1586,19 @@ uint16_t LinkLayerController::HandleLeConnection(AddressWithType address,
         address.GetAddressType(), address.GetAddress(), connection_interval,
         connection_latency, supervision_timeout,
         static_cast<bluetooth::hci::ClockAccuracy>(0x00)));
+  }
+
+  // Note: the HCI_LE_Connection_Complete event is immediately followed by
+  // an HCI_LE_Channel_Selection_Algorithm event if the connection is created
+  // using the LE_Extended_Create_Connection command (see Section 7.7.8.66).
+  if (send_le_channel_selection_algorithm_event &&
+      properties_.IsUnmasked(EventCode::LE_META_EVENT) &&
+      properties_.GetLeEventSupported(
+          SubeventCode::CHANNEL_SELECTION_ALGORITHM)) {
+    // The selection channel algorithm probably will have no impact
+    // on emulation.
+    send_event_(bluetooth::hci::LeChannelSelectionAlgorithmBuilder::Create(
+        handle, bluetooth::hci::ChannelSelectionAlgorithm::ALGORITHM_1));
   }
 
   if (own_address.GetAddress() == le_connecting_rpa_) {
@@ -1643,7 +1655,7 @@ void LinkLayerController::IncomingLeConnectPacket(
           static_cast<bluetooth::hci::AddressType>(connect.GetAddressType())),
       my_address, static_cast<uint8_t>(bluetooth::hci::Role::PERIPHERAL),
       connection_interval, connect.GetLeConnectionLatency(),
-      connect.GetLeConnectionSupervisionTimeout());
+      connect.GetLeConnectionSupervisionTimeout(), false);
 
   SendLeLinkLayerPacket(model::packets::LeConnectCompleteBuilder::Create(
       incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
@@ -1676,7 +1688,10 @@ void LinkLayerController::IncomingLeConnectCompletePacket(
           static_cast<bluetooth::hci::AddressType>(le_address_type_)),
       static_cast<uint8_t>(bluetooth::hci::Role::CENTRAL),
       complete.GetLeConnectionInterval(), complete.GetLeConnectionLatency(),
-      complete.GetLeConnectionSupervisionTimeout());
+      complete.GetLeConnectionSupervisionTimeout(), le_extended_connect_);
+  le_connect_ = false;
+  le_extended_connect_ = false;
+  le_pending_connect_ = false;
 }
 
 void LinkLayerController::IncomingLeConnectionParameterRequest(
@@ -3663,6 +3678,8 @@ void LinkLayerController::Reset() {
   LeDisableAdvertisingSets();
   le_scan_enable_ = bluetooth::hci::OpCode::NONE;
   le_connect_ = false;
+  le_extended_connect_ = false;
+  le_pending_connect_ = false;
   if (inquiry_timer_task_id_ != kInvalidTaskId) {
     CancelScheduledTask(inquiry_timer_task_id_);
     inquiry_timer_task_id_ = kInvalidTaskId;

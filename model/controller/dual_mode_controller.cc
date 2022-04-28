@@ -1828,7 +1828,7 @@ void DualModeController::LeCreateConnection(CommandView command) {
   link_layer_controller_.SetLeMaximumCeLength(
       command_view.GetMaximumCeLength());
 
-  auto status = link_layer_controller_.SetLeConnect(true);
+  auto status = link_layer_controller_.SetLeConnect(true, false);
 
   send_event_(bluetooth::hci::LeCreateConnectionStatusBuilder::Create(
       status, kNumCommandPackets));
@@ -1906,7 +1906,7 @@ void DualModeController::LeConnectionCancel(CommandView command) {
       gd_hci::LeConnectionManagementCommandView::Create(
           gd_hci::AclCommandView::Create(command)));
   ASSERT(command_view.IsValid());
-  ErrorCode status = link_layer_controller_.SetLeConnect(false);
+  ErrorCode status = link_layer_controller_.SetLeConnect(false, false);
   send_event_(bluetooth::hci::LeCreateConnectionCancelCompleteBuilder::Create(
       kNumCommandPackets, status));
 
@@ -2135,7 +2135,7 @@ void DualModeController::LeExtendedCreateConnection(CommandView command) {
   link_layer_controller_.SetLeMinimumCeLength(params[0].min_ce_length_);
   link_layer_controller_.SetLeMaximumCeLength(params[0].max_ce_length_);
 
-  auto status = link_layer_controller_.SetLeConnect(true);
+  auto status = link_layer_controller_.SetLeConnect(true, true);
 
   send_event_(bluetooth::hci::LeExtendedCreateConnectionStatusBuilder::Create(
       status, kNumCommandPackets));

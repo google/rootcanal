@@ -182,7 +182,8 @@ class LinkLayerController {
   uint16_t HandleLeConnection(AddressWithType addr, AddressWithType own_addr,
                               uint8_t role, uint16_t connection_interval,
                               uint16_t connection_latency,
-                              uint16_t supervision_timeout);
+                              uint16_t supervision_timeout,
+                              bool send_le_channel_selection_algorithm_event);
 
   bool ListBusy(uint16_t ignore_mask);
 
@@ -283,11 +284,13 @@ class LinkLayerController {
   void SetLeAddressType(bluetooth::hci::OwnAddressType le_address_type) {
     le_address_type_ = le_address_type;
   }
-  ErrorCode SetLeConnect(bool le_connect) {
+  ErrorCode SetLeConnect(bool le_connect, bool extended) {
     if (le_connect_ == le_connect) {
       return ErrorCode::COMMAND_DISALLOWED;
     }
     le_connect_ = le_connect;
+    le_extended_connect_ = extended;
+    le_pending_connect_ = false;
     return ErrorCode::SUCCESS;
   }
   void SetLeConnectionIntervalMin(uint16_t min) {
@@ -503,6 +506,8 @@ class LinkLayerController {
   bluetooth::hci::OwnAddressType le_address_type_{};
 
   bool le_connect_{false};
+  bool le_extended_connect_{false};
+  bool le_pending_connect_{false};
   uint16_t le_connection_interval_min_{};
   uint16_t le_connection_interval_max_{};
   uint16_t le_connection_latency_{};
