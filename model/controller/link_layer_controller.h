@@ -367,6 +367,8 @@ class LinkLayerController {
       uint8_t retransmission_effort, uint16_t packet_types);
   ErrorCode RejectSynchronousConnection(Address bd_addr, uint16_t reason);
 
+  bool HasAclConnection();
+
   void HandleIso(bluetooth::hci::IsoView iso);
 
  protected:
