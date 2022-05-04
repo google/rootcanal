@@ -3396,6 +3396,10 @@ ErrorCode LinkLayerController::LeResolvingListAddDevice(
   return ErrorCode::SUCCESS;
 }
 
+bool LinkLayerController::HasAclConnection() {
+  return (connections_.GetAclHandles().size() > 0);
+}
+
 void LinkLayerController::LeSetPrivacyMode(uint8_t address_type, Address addr,
                                            uint8_t mode) {
   // set mode for addr
