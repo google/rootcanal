@@ -1676,13 +1676,18 @@ void DualModeController::LeSetEventMask(CommandView command) {
 void DualModeController::LeSetHostFeature(CommandView command) {
   auto command_view = gd_hci::LeSetHostFeatureView::Create(command);
   ASSERT(command_view.IsValid());
-  // TODO: if the controller has active connections, return COMMAND_DISALLOED
-  ErrorCode error_code =
-      properties_.SetLeHostFeature(
-          static_cast<uint8_t>(command_view.GetBitNumber()),
-          static_cast<uint8_t>(command_view.GetBitValue()))
-          ? ErrorCode::SUCCESS
-          : ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+
+  ErrorCode error_code = ErrorCode::SUCCESS;
+  if (link_layer_controller_.HasAclConnection()) {
+    error_code = ErrorCode::COMMAND_DISALLOWED;
+  } else {
+    bool bit_was_set = properties_.SetLeHostFeature(
+        static_cast<uint8_t>(command_view.GetBitNumber()),
+        static_cast<uint8_t>(command_view.GetBitValue()));
+    if (!bit_was_set) {
+      error_code = ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+    }
+  }
   send_event_(bluetooth::hci::LeSetHostFeatureCompleteBuilder::Create(
       kNumCommandPackets, error_code));
 }
