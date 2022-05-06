@@ -16,11 +16,13 @@
 
 #include "test_environment.h"
 
+#include <filesystem>  // for exists
 #include <type_traits>  // for remove_extent_t
 #include <utility>      // for move
 #include <vector>       // for vector
 
 #include "model/devices/link_layer_socket_device.h"  // for LinkLayerSocketDevice
+#include "model/hci/hci_sniffer.h"                   // for HciSniffer
 #include "model/hci/hci_socket_transport.h"          // for HciSocketTransport
 #include "net/async_data_channel.h"                  // for AsyncDataChannel
 #include "net/async_data_channel_connector.h"  // for AsyncDataChannelConnector
@@ -32,6 +34,7 @@ namespace root_canal {
 
 using rootcanal::AsyncTaskId;
 using rootcanal::HciDevice;
+using rootcanal::HciSniffer;
 using rootcanal::HciSocketTransport;
 using rootcanal::LinkLayerSocketDevice;
 using rootcanal::TaskCallback;
@@ -59,8 +62,19 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
   SetUpHciServer([this](std::shared_ptr<AsyncDataChannel> socket,
                         AsyncDataChannelServer* srv) {
     auto transport = HciSocketTransport::Create(socket);
-    test_model_.AddHciConnection(
-        HciDevice::Create(transport, controller_properties_file_));
+    if (enable_hci_sniffer_) {
+      transport = HciSniffer::Create(transport);
+    }
+    auto device = HciDevice::Create(transport, controller_properties_file_);
+    test_model_.AddHciConnection(device);
+    if (enable_hci_sniffer_) {
+      auto filename = device->GetAddress().ToString() + ".pcap";
+      for (auto i = 0; std::filesystem::exists(filename); i++) {
+        filename =
+            device->GetAddress().ToString() + "_" + std::to_string(i) + ".pcap";
+      }
+      std::static_pointer_cast<HciSniffer>(transport)->Open(filename.c_str());
+    }
     srv->StartListening();
   });
   SetUpLinkLayerServer();
