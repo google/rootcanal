@@ -28,8 +28,8 @@ using ::bluetooth::hci::AddressWithType;
 // Model the connection of a device to the controller.
 class AclConnection {
  public:
-  AclConnection(AddressWithType addr, AddressWithType own_addr,
-                Phy::Type phy_type);
+  AclConnection(AddressWithType address, AddressWithType own_address,
+                AddressWithType resolved_address, Phy::Type phy_type);
 
   virtual ~AclConnection() = default;
 
@@ -43,13 +43,16 @@ class AclConnection {
 
   AddressWithType GetOwnAddress() const;
 
-  void SetOwnAddress(AddressWithType own_addr);
+  void SetOwnAddress(AddressWithType address);
+
+  AddressWithType GetResolvedAddress() const;
 
   Phy::Type GetPhyType() const;
 
  private:
   AddressWithType address_;
   AddressWithType own_address_;
+  AddressWithType resolved_address_;
   Phy::Type type_{Phy::Type::BR_EDR};
 
   // State variables

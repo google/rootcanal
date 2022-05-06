@@ -36,6 +36,7 @@ struct LinkManager;
 namespace rootcanal {
 
 using ::bluetooth::hci::Address;
+using ::bluetooth::hci::AddressType;
 using ::bluetooth::hci::ErrorCode;
 using ::bluetooth::hci::OpCode;
 
@@ -199,20 +200,20 @@ class LinkLayerController {
 
   bool FilterAcceptListBusy();
   ErrorCode LeFilterAcceptListClear();
-  ErrorCode LeFilterAcceptListAddDevice(Address addr, uint8_t addr_type);
-  ErrorCode LeFilterAcceptListRemoveDevice(Address addr, uint8_t addr_type);
-  bool LeFilterAcceptListContainsDevice(Address addr, uint8_t addr_type);
+  ErrorCode LeFilterAcceptListAddDevice(Address addr, AddressType addr_type);
+  ErrorCode LeFilterAcceptListRemoveDevice(Address addr, AddressType addr_type);
+  bool LeFilterAcceptListContainsDevice(Address addr, AddressType addr_type);
   bool LeFilterAcceptListFull();
   bool ResolvingListBusy();
   ErrorCode LeSetAddressResolutionEnable(bool enable);
   ErrorCode LeResolvingListClear();
-  ErrorCode LeResolvingListAddDevice(Address addr, uint8_t addr_type,
+  ErrorCode LeResolvingListAddDevice(Address addr, AddressType addr_type,
                                      std::array<uint8_t, kIrkSize> peerIrk,
                                      std::array<uint8_t, kIrkSize> localIrk);
-  ErrorCode LeResolvingListRemoveDevice(Address addr, uint8_t addr_type);
-  bool LeResolvingListContainsDevice(Address addr, uint8_t addr_type);
+  ErrorCode LeResolvingListRemoveDevice(Address addr, AddressType addr_type);
+  bool LeResolvingListContainsDevice(Address addr, AddressType addr_type);
   bool LeResolvingListFull();
-  void LeSetPrivacyMode(uint8_t address_type, Address addr, uint8_t mode);
+  void LeSetPrivacyMode(AddressType address_type, Address addr, uint8_t mode);
 
   void LeReadIsoTxSync(uint16_t handle);
   void LeSetCigParameters(
@@ -499,10 +500,14 @@ class LinkLayerController {
   uint32_t key_id_ = 1;
 
   // LE state
-  std::vector<std::tuple<Address, uint8_t>> le_connect_list_;
+  struct ConnectListEntry {
+    Address address;
+    AddressType address_type;
+  };
+  std::vector<ConnectListEntry> le_connect_list_;
   struct ResolvingListEntry {
     Address address;
-    uint8_t address_type;
+    AddressType address_type;
     std::array<uint8_t, kIrkSize> peer_irk;
     std::array<uint8_t, kIrkSize> local_irk;
   };
