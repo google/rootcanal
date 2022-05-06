@@ -23,21 +23,13 @@
 #include <ostream>     // for operator<<, ostream
 #include <vector>      // for vector
 
+#include "model/hci/h4.h"            // for PacketType
 #include "model/hci/hci_protocol.h"  // for PacketReadCallback
 
 namespace rootcanal {
 
 using HciPacketReadyCallback = std::function<void(void)>;
 using ClientDisconnectCallback = std::function<void()>;
-
-enum class PacketType : uint8_t {
-  UNKNOWN = 0,
-  COMMAND = 1,
-  ACL = 2,
-  SCO = 3,
-  EVENT = 4,
-  ISO = 5,
-};
 
 // An H4 Parser can parse H4 Packets and will invoke the proper callback
 // once a packet has been parsed.
