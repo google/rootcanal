@@ -17,9 +17,14 @@
 #include "acl_connection.h"
 
 namespace rootcanal {
-AclConnection::AclConnection(AddressWithType addr, AddressWithType own_addr,
+AclConnection::AclConnection(AddressWithType address,
+                             AddressWithType own_address,
+                             AddressWithType resolved_address,
                              Phy::Type phy_type)
-    : address_(addr), own_address_(own_addr), type_(phy_type) {}
+    : address_(address),
+      own_address_(own_address),
+      resolved_address_(resolved_address),
+      type_(phy_type) {}
 
 void AclConnection::Encrypt() { encrypted_ = true; };
 
@@ -31,8 +36,12 @@ void AclConnection::SetAddress(AddressWithType address) { address_ = address; }
 
 AddressWithType AclConnection::GetOwnAddress() const { return own_address_; }
 
-void AclConnection::SetOwnAddress(AddressWithType own_addr) {
-  own_address_ = own_addr;
+AddressWithType AclConnection::GetResolvedAddress() const {
+  return resolved_address_;
+}
+
+void AclConnection::SetOwnAddress(AddressWithType address) {
+  own_address_ = address;
 }
 
 Phy::Type AclConnection::GetPhyType() const { return type_; }

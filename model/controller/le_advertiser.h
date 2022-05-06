@@ -40,13 +40,14 @@ class LeAdvertiser {
                   const std::vector<uint8_t>& scan_response,
                   std::chrono::steady_clock::duration interval);
 
-  void InitializeExtended(unsigned advertising_handle,
-                          bluetooth::hci::AddressType address_type,
-                          bluetooth::hci::AddressWithType peer_address,
-                          bluetooth::hci::LeScanningFilterPolicy filter_policy,
-                          model::packets::AdvertisementType type,
-                          std::chrono::steady_clock::duration interval,
-                          uint8_t tx_power);
+  void InitializeExtended(
+      unsigned advertising_handle, bluetooth::hci::OwnAddressType address_type,
+      bluetooth::hci::AddressWithType public_address,
+      bluetooth::hci::AddressWithType peer_address,
+      bluetooth::hci::LeScanningFilterPolicy filter_policy,
+      model::packets::AdvertisementType type,
+      std::chrono::steady_clock::duration interval, uint8_t tx_power,
+      const std::function<bluetooth::hci::Address()>& get_address);
 
   void SetAddress(bluetooth::hci::Address address);
 
@@ -80,7 +81,13 @@ class LeAdvertiser {
   bluetooth::hci::AddressWithType GetAddress() const;
 
  private:
+  std::function<bluetooth::hci::Address()> default_get_address_ = []() {
+    return bluetooth::hci::Address::kEmpty;
+  };
+  std::function<bluetooth::hci::Address()>& get_address_ = default_get_address_;
   bluetooth::hci::AddressWithType address_{};
+  bluetooth::hci::AddressWithType public_address_{};
+  bluetooth::hci::OwnAddressType own_address_type_;
   bluetooth::hci::AddressWithType
       peer_address_{};  // For directed advertisements
   bluetooth::hci::LeScanningFilterPolicy filter_policy_{};

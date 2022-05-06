@@ -70,27 +70,35 @@ bool AclConnectionHandler::CancelPendingConnection(Address addr) {
   }
   classic_connection_pending_ = false;
   pending_connection_address_ = Address::kEmpty;
+  pending_le_connection_resolved_address_ = AddressWithType();
   return true;
 }
 
-bool AclConnectionHandler::CreatePendingLeConnection(AddressWithType addr) {
-  bool device_connected = false;
+bool AclConnectionHandler::CreatePendingLeConnection(
+    AddressWithType peer, AddressWithType resolved_peer,
+    AddressWithType local_address) {
   for (auto pair : acl_connections_) {
     auto connection = std::get<AclConnection>(pair);
-    if (connection.GetAddress() == addr) {
-      device_connected = true;
+    if (connection.GetAddress() == peer ||
+        connection.GetResolvedAddress() == resolved_peer) {
+      LOG_INFO("%s: %s is already connected", __func__,
+               peer.ToString().c_str());
+      if (connection.GetResolvedAddress() == resolved_peer) {
+        LOG_INFO("%s: allowing a second connection with %s", __func__,
+                 resolved_peer.ToString().c_str());
+      } else {
+        return false;
+      }
     }
-  }
-  if (device_connected) {
-    LOG_INFO("%s: %s is already connected", __func__, addr.ToString().c_str());
-    return false;
   }
   if (le_connection_pending_) {
     LOG_INFO("%s: connection already pending", __func__);
     return false;
   }
   le_connection_pending_ = true;
-  pending_le_connection_address_ = addr;
+  pending_le_connection_address_ = peer;
+  pending_le_connection_own_address_ = local_address;
+  pending_le_connection_resolved_address_ = resolved_peer;
   return true;
 }
 
@@ -105,6 +113,8 @@ bool AclConnectionHandler::CancelPendingLeConnection(AddressWithType addr) {
   le_connection_pending_ = false;
   pending_le_connection_address_ =
       AddressWithType{Address::kEmpty, AddressType::PUBLIC_DEVICE_ADDRESS};
+  pending_le_connection_resolved_address_ =
+      AddressWithType{Address::kEmpty, AddressType::PUBLIC_DEVICE_ADDRESS};
   return true;
 }
 
@@ -117,7 +127,7 @@ uint16_t AclConnectionHandler::CreateConnection(Address addr,
         AclConnection{
             AddressWithType{addr, AddressType::PUBLIC_DEVICE_ADDRESS},
             AddressWithType{own_addr, AddressType::PUBLIC_DEVICE_ADDRESS},
-            Phy::Type::BR_EDR});
+            AddressWithType(), Phy::Type::BR_EDR});
     return handle;
   }
   return kReservedHandle;
@@ -125,10 +135,12 @@ uint16_t AclConnectionHandler::CreateConnection(Address addr,
 
 uint16_t AclConnectionHandler::CreateLeConnection(AddressWithType addr,
                                                   AddressWithType own_addr) {
+  AddressWithType resolved_peer = pending_le_connection_resolved_address_;
   if (CancelPendingLeConnection(addr)) {
     uint16_t handle = GetUnusedHandle();
     acl_connections_.emplace(
-        handle, AclConnection{addr, own_addr, Phy::Type::LOW_ENERGY});
+        handle,
+        AclConnection{addr, own_addr, resolved_peer, Phy::Type::LOW_ENERGY});
     return handle;
   }
   return kReservedHandle;
@@ -184,6 +196,12 @@ AddressWithType AclConnectionHandler::GetOwnAddress(uint16_t handle) const {
   return acl_connections_.at(handle).GetOwnAddress();
 }
 
+AddressWithType AclConnectionHandler::GetResolvedAddress(
+    uint16_t handle) const {
+  ASSERT_LOG(HasHandle(handle), "Unknown handle %hd", handle);
+  return acl_connections_.at(handle).GetResolvedAddress();
+}
+
 void AclConnectionHandler::Encrypt(uint16_t handle) {
   if (!HasHandle(handle)) {
     return;
@@ -196,15 +214,6 @@ bool AclConnectionHandler::IsEncrypted(uint16_t handle) const {
     return false;
   }
   return acl_connections_.at(handle).IsEncrypted();
-}
-
-void AclConnectionHandler::SetAddress(uint16_t handle,
-                                      AddressWithType address) {
-  if (!HasHandle(handle)) {
-    return;
-  }
-  auto connection = acl_connections_.at(handle);
-  connection.SetAddress(address);
 }
 
 Phy::Type AclConnectionHandler::GetPhyType(uint16_t handle) const {
