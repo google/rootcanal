@@ -764,14 +764,19 @@ void LinkLayerController::IncomingDisconnectPacket(
              peer.ToString().c_str());
     return;
   }
+#ifdef ROOTCANAL_LMP
+  auto is_br_edr = connections_.GetPhyType(handle) == Phy::Type::BR_EDR;
+#endif
   ASSERT_LOG(connections_.Disconnect(handle),
              "GetHandle() returned invalid handle %hx", handle);
 
   uint8_t reason = disconnect.GetReason();
   SendDisconnectionCompleteEvent(handle, reason);
 #ifdef ROOTCANAL_LMP
-  ASSERT(link_manager_remove_link(
-      lm_.get(), reinterpret_cast<uint8_t(*)[6]>(peer.data())));
+  if (is_br_edr) {
+    ASSERT(link_manager_remove_link(
+        lm_.get(), reinterpret_cast<uint8_t(*)[6]>(peer.data())));
+  }
 #endif
 }
 
@@ -2937,8 +2942,9 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, uint8_t reason) {
   }
 
   const AddressWithType remote = connections_.GetAddress(handle);
+  auto is_br_edr = connections_.GetPhyType(handle) == Phy::Type::BR_EDR;
 
-  if (connections_.GetPhyType(handle) == Phy::Type::BR_EDR) {
+  if (is_br_edr) {
     LOG_INFO("Disconnecting ACL connection with %s", remote.ToString().c_str());
 
     uint16_t sco_handle = connections_.GetScoHandle(remote.GetAddress());
@@ -2964,8 +2970,11 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, uint8_t reason) {
   connections_.Disconnect(handle);
   SendDisconnectionCompleteEvent(handle, reason);
 #ifdef ROOTCANAL_LMP
-  ASSERT(link_manager_remove_link(
-      lm_.get(), reinterpret_cast<uint8_t(*)[6]>(remote.GetAddress().data())));
+  if (is_br_edr) {
+    ASSERT(link_manager_remove_link(
+        lm_.get(),
+        reinterpret_cast<uint8_t(*)[6]>(remote.GetAddress().data())));
+  }
 #endif
   return ErrorCode::SUCCESS;
 }
