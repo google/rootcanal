@@ -100,7 +100,7 @@ class TestModel {
   void Reset();
 
  private:
-  std::vector<PhyLayerFactory> phys_;
+  std::vector<std::shared_ptr<PhyLayerFactory>> phys_;
   std::vector<std::shared_ptr<Device>> devices_;
   std::string list_string_;
 
