@@ -92,13 +92,13 @@ void TestModel::Del(size_t dev_index) {
   schedule_task_(model_user_id_, std::chrono::milliseconds(0),
                  [this, dev_index]() {
                    devices_[dev_index]->UnregisterPhyLayers();
-                   devices_[dev_index].reset();
+                   devices_[dev_index] = nullptr;
                  });
 }
 
 size_t TestModel::AddPhy(Phy::Type phy_type) {
   size_t factory_id = phys_.size();
-  phys_.push_back(std::make_shared<PhyLayerFactory>(phy_type, factory_id));
+  phys_.emplace_back(phy_type, factory_id);
   return factory_id;
 }
 
@@ -107,11 +107,9 @@ void TestModel::DelPhy(size_t phy_index) {
     LOG_WARN("Unknown phy at index %zu", phy_index);
     return;
   }
-  schedule_task_(model_user_id_, std::chrono::milliseconds(0),
-                 [this, phy_index]() {
-                   phys_[phy_index]->UnregisterAllPhyLayers();
-                   phys_[phy_index].reset();
-                 });
+  schedule_task_(
+      model_user_id_, std::chrono::milliseconds(0),
+      [this, phy_index]() { phys_[phy_index].UnregisterAllPhyLayers(); });
 }
 
 void TestModel::AddDeviceToPhy(size_t dev_index, size_t phy_index) {
@@ -124,13 +122,9 @@ void TestModel::AddDeviceToPhy(size_t dev_index, size_t phy_index) {
     return;
   }
   auto dev = devices_[dev_index];
-  std::weak_ptr<Device> weak_dev = dev;
-  dev->RegisterPhyLayer(phys_[phy_index]->GetPhyLayer(
-      [weak_dev](model::packets::LinkLayerPacketView packet) {
-        auto device = weak_dev.lock();
-        if (device != nullptr) {
-          device->IncomingPacket(std::move(packet));
-        }
+  dev->RegisterPhyLayer(phys_[phy_index].GetPhyLayer(
+      [dev](model::packets::LinkLayerPacketView packet) {
+        dev->IncomingPacket(std::move(packet));
       },
       dev_index));
 }
@@ -147,8 +141,8 @@ void TestModel::DelDeviceFromPhy(size_t dev_index, size_t phy_index) {
   schedule_task_(model_user_id_, std::chrono::milliseconds(0),
                  [this, dev_index, phy_index]() {
                    devices_[dev_index]->UnregisterPhyLayer(
-                       phys_[phy_index]->GetType(),
-                       phys_[phy_index]->GetFactoryId());
+                       phys_[phy_index].GetType(),
+                       phys_[phy_index].GetFactoryId());
                  });
 }
 
@@ -160,7 +154,7 @@ void TestModel::AddLinkLayerConnection(std::shared_ptr<Device> dev,
   AsyncUserId user_id = get_user_id_();
 
   for (size_t i = 0; i < phys_.size(); i++) {
-    if (phy_type == phys_[i]->GetType()) {
+    if (phy_type == phys_[i].GetType()) {
       AddDeviceToPhy(index, i);
     }
   }
@@ -212,7 +206,8 @@ void TestModel::OnConnectionClosed(size_t index, AsyncUserId user_id) {
   }
 
   cancel_tasks_from_user_(user_id);
-  Del(index);
+  devices_[index]->UnregisterPhyLayers();
+  devices_[index] = nullptr;
 }
 
 void TestModel::SetDeviceAddress(size_t index, Address address) {
@@ -237,11 +232,7 @@ const std::string& TestModel::List() {
   list_string_ += " Phys: \r\n";
   for (size_t i = 0; i < phys_.size(); i++) {
     list_string_ += "  " + std::to_string(i) + ":";
-    if (phys_[i] == nullptr) {
-      list_string_ += " deleted \r\n";
-    } else {
-      list_string_ += phys_[i]->ToString() + " \r\n";
-    }
+    list_string_ += phys_[i].ToString() + " \r\n";
   }
   return list_string_;
 }
