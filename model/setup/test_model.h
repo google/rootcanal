@@ -49,7 +49,7 @@ class TestModel {
       std::function<void(AsyncTaskId)> cancel,
       std::function<std::shared_ptr<Device>(const std::string&, int, Phy::Type)>
           connect_to_remote);
-  ~TestModel() = default;
+  ~TestModel();
 
   TestModel(TestModel& model) = delete;
   TestModel& operator=(const TestModel& model) = delete;
