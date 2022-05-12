@@ -364,6 +364,7 @@ class AsyncManager::AsyncTaskManager {
     std::chrono::steady_clock::time_point time;
     bool periodic;
     std::chrono::milliseconds period{};
+    std::mutex in_callback; // Taken when the callback is active
     TaskCallback callback;
     AsyncTaskId task_id;
     AsyncUserId user_id;
@@ -381,8 +382,22 @@ class AsyncManager::AsyncTaskManager {
     if (tasks_by_id_.count(async_task_id) == 0) {
       return false;
     }
-    task_queue_.erase(tasks_by_id_[async_task_id]);
-    tasks_by_id_.erase(async_task_id);
+
+    // Now make sure we are not running this task.
+    // 2 cases:
+    // - This is called from thread_, this means a running
+    //   scheduled task is actually unregistering. All bets are off.
+    // - Another thread is calling us, let's make sure the task is not active.
+    if (thread_.get_id() != std::this_thread::get_id()) {
+      auto task = tasks_by_id_[async_task_id];
+      const std::lock_guard<std::mutex> lock(task->in_callback);
+      task_queue_.erase(task);
+      tasks_by_id_.erase(async_task_id);
+    } else {
+      task_queue_.erase(tasks_by_id_[async_task_id]);
+      tasks_by_id_.erase(async_task_id);
+    }
+
     return true;
   }
 
@@ -437,11 +452,12 @@ class AsyncManager::AsyncTaskManager {
   void ThreadRoutine() {
     while (running_) {
       TaskCallback callback;
+      std::shared_ptr<Task> task_p;
       bool run_it = false;
       {
         std::unique_lock<std::mutex> guard(internal_mutex_);
         if (!task_queue_.empty()) {
-          std::shared_ptr<Task> task_p = *(task_queue_.begin());
+          task_p = *(task_queue_.begin());
           if (task_p->time < std::chrono::steady_clock::now()) {
             run_it = true;
             callback = task_p->callback;
@@ -458,6 +474,7 @@ class AsyncManager::AsyncTaskManager {
         }
       }
       if (run_it) {
+        const std::lock_guard<std::mutex> lock(task_p->in_callback);
         callback();
       }
       {

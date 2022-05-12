@@ -52,6 +52,10 @@ TestModel::TestModel(
   model_user_id_ = get_user_id_();
 }
 
+TestModel::~TestModel() {
+  StopTimer();
+}
+
 void TestModel::SetTimerPeriod(std::chrono::milliseconds new_period) {
   timer_period_ = new_period;
 

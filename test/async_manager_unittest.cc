@@ -33,6 +33,7 @@
 #include <ratio>               // for ratio
 #include <string>              // for string
 #include <tuple>               // for tuple
+#include <thread>
 
 #include "osi/include/osi.h"  // for OSI_NO_INTR
 
@@ -123,6 +124,7 @@ class AsyncManagerSocketTest : public ::testing::Test {
 
   void SetUp() override {
     memset(server_buffer_, 0, kBufferSize);
+    memset(client_buffer_, 0, kBufferSize);
 
     socket_fd_ = StartServer();
 
@@ -137,7 +139,7 @@ class AsyncManagerSocketTest : public ::testing::Test {
   void TearDown() override {
     async_manager_.StopWatchingFileDescriptor(socket_fd_);
     close(socket_fd_);
-    ASSERT_TRUE(CheckBufferEquals());
+    ASSERT_EQ(std::string_view(server_buffer_, kBufferSize), std::string_view(client_buffer_, kBufferSize));
   }
 
   int ConnectClient() {
@@ -213,6 +215,46 @@ TEST_F(AsyncManagerSocketTest, CanUnsubscribeInCallback) {
 
   SUCCEED();
   close(socket_cli_fd);
+}
+
+
+TEST_F(AsyncManagerSocketTest, CanUnsubscribeTaskFromWithinTask) {
+  Event running;
+  using namespace std::chrono_literals;
+  async_manager_.ExecAsyncPeriodically(1, 1ms, 2ms, [&running, this]() {
+     EXPECT_TRUE(async_manager_.CancelAsyncTask(1)) << "We were scheduled, so cancel should return true";
+     EXPECT_FALSE(async_manager_.CancelAsyncTask(1)) << "We were not scheduled, so cancel should return false";
+     running.set(true);
+  });
+
+  EXPECT_TRUE(running.wait_for(10ms));
+}
+
+
+TEST_F(AsyncManagerSocketTest, UnsubScribeWaitsUntilCompletion) {
+  using namespace std::chrono_literals;
+  Event running;
+  bool cancel_done = false;
+  bool task_complete = false;
+  async_manager_.ExecAsyncPeriodically(1, 1ms, 2ms, [&running, &cancel_done, &task_complete]() {
+      // Let the other thread now we are in the callback..
+      running.set(true);
+      // Wee bit of a hack that relies on timing..
+      std::this_thread::sleep_for(20ms);
+      EXPECT_FALSE(cancel_done) << "Task cancellation did not wait for us to complete!";
+      task_complete = true;
+  });
+
+  EXPECT_TRUE(running.wait_for(10ms));
+  auto start = std::chrono::system_clock::now();
+
+  // There is a 20ms wait.. so we know that this should take some time.
+  EXPECT_TRUE(async_manager_.CancelAsyncTask(1)) << "We were scheduled, so cancel should return true";
+  cancel_done = true;
+  EXPECT_TRUE(task_complete) << "We managed to cancel a task while it was not yet finished.";
+  auto end = std::chrono::system_clock::now();
+  auto passed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  EXPECT_GT(passed_ms.count(), 10);
 }
 
 TEST_F(AsyncManagerSocketTest, NoEventsAfterUnsubscribe) {
