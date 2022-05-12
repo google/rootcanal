@@ -77,18 +77,18 @@ class AsyncManager {
                                     std::chrono::milliseconds period,
                                     const TaskCallback& callback);
 
-  // Cancels the/every future occurrence of the action specified by this id. It
-  // is guaranteed that the associated callback will not be called after this
-  // method returns (it could be called during the execution of the method).
-  // The calling thread may block until the scheduling thread acknowledges the
-  // cancellation.
+  // Cancels the/every future occurrence of the action specified by this id.
+  // The following invariants will hold:
+  // - The task will not be invoked after this method returns
+  // - If the task is currently running it will block until the task is
+  //   completed, unless cancel is called from the running task.
   bool CancelAsyncTask(AsyncTaskId async_task_id);
 
-  // Cancels the/every future occurrence of the action specified by this id. It
-  // is guaranteed that the associated callback will not be called after this
-  // method returns (it could be called during the execution of the method).
-  // The calling thread may block until the scheduling thread acknowledges the
-  // cancellation.
+  // Cancels the/every future occurrence of the action specified by this id.
+  // The following invariants will hold:
+  // - The task will not be invoked after this method returns
+  // - If the task is currently running it will block until the task is
+  //   completed, unless cancel is called from the running task.
   bool CancelAsyncTasksFromUser(AsyncUserId user_id);
 
   // Execs the given code in a synchronized manner. It is guaranteed that code
