@@ -85,7 +85,7 @@ class Device {
   void RegisterCloseCallback(std::function<void()>);
 
  protected:
-  std::vector<std::weak_ptr<PhyLayer>> phy_layers_;
+  std::vector<std::shared_ptr<PhyLayer>> phy_layers_;
 
   std::chrono::steady_clock::time_point last_advertisement_;
 

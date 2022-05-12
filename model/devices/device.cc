@@ -31,8 +31,7 @@ void Device::RegisterPhyLayer(std::shared_ptr<PhyLayer> phy) {
 }
 
 void Device::UnregisterPhyLayers() {
-  for (auto weak_phy : phy_layers_) {
-    auto phy = weak_phy.lock();
+  for (auto phy : phy_layers_) {
     if (phy != nullptr) {
       phy->Unregister();
     }
@@ -41,8 +40,7 @@ void Device::UnregisterPhyLayers() {
 }
 
 void Device::UnregisterPhyLayer(Phy::Type phy_type, uint32_t factory_id) {
-  for (auto& weak_phy : phy_layers_) {
-    auto phy = weak_phy.lock();
+  for (auto& phy : phy_layers_) {
     if (phy != nullptr && phy->IsFactoryId(factory_id) &&
         phy->GetType() == phy_type) {
       phy->Unregister();
@@ -61,8 +59,7 @@ bool Device::IsAdvertisementAvailable() const {
 void Device::SendLinkLayerPacket(
     std::shared_ptr<model::packets::LinkLayerPacketBuilder> to_send,
     Phy::Type phy_type) {
-  for (auto weak_phy : phy_layers_) {
-    auto phy = weak_phy.lock();
+  for (auto phy : phy_layers_) {
     if (phy != nullptr && phy->GetType() == phy_type) {
       phy->Send(to_send);
     }
@@ -71,8 +68,7 @@ void Device::SendLinkLayerPacket(
 
 void Device::SendLinkLayerPacket(model::packets::LinkLayerPacketView to_send,
                                  Phy::Type phy_type) {
-  for (auto weak_phy : phy_layers_) {
-    auto phy = weak_phy.lock();
+  for (auto phy : phy_layers_) {
     if (phy != nullptr && phy->GetType() == phy_type) {
       phy->Send(to_send);
     }
