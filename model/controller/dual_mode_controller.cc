@@ -2024,10 +2024,13 @@ void DualModeController::LeAddDeviceToFilterAcceptList(CommandView command) {
           gd_hci::AclCommandView::Create(command)));
   ASSERT(command_view.IsValid());
 
-  uint8_t addr_type = static_cast<uint8_t>(command_view.GetAddressType());
-  Address address = command_view.GetAddress();
-  ErrorCode result =
-      link_layer_controller_.LeFilterAcceptListAddDevice(address, addr_type);
+  ErrorCode result = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  if (command_view.GetAddressType() !=
+      bluetooth::hci::FilterAcceptListAddressType::ANONYMOUS_ADVERTISERS) {
+    result = link_layer_controller_.LeFilterAcceptListAddDevice(
+        command_view.GetAddress(), static_cast<bluetooth::hci::AddressType>(
+                                       command_view.GetAddressType()));
+  }
   send_event_(
       bluetooth::hci::LeAddDeviceToFilterAcceptListCompleteBuilder::Create(
           kNumCommandPackets, result));
@@ -2040,12 +2043,18 @@ void DualModeController::LeRemoveDeviceFromFilterAcceptList(
           gd_hci::AclCommandView::Create(command)));
   ASSERT(command_view.IsValid());
 
-  uint8_t addr_type = static_cast<uint8_t>(command_view.GetAddressType());
-  Address address = command_view.GetAddress();
-  link_layer_controller_.LeFilterAcceptListRemoveDevice(address, addr_type);
+  ErrorCode status = ErrorCode::SUCCESS;
+  if (command_view.GetAddressType() !=
+      bluetooth::hci::FilterAcceptListAddressType::ANONYMOUS_ADVERTISERS) {
+    link_layer_controller_.LeFilterAcceptListAddDevice(
+        command_view.GetAddress(), static_cast<bluetooth::hci::AddressType>(
+                                       command_view.GetAddressType()));
+  } else {
+    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
   send_event_(
       bluetooth::hci::LeRemoveDeviceFromFilterAcceptListCompleteBuilder::Create(
-          kNumCommandPackets, ErrorCode::SUCCESS));
+          kNumCommandPackets, status));
 }
 
 void DualModeController::LeClearResolvingList(CommandView command) {
@@ -2116,14 +2125,18 @@ void DualModeController::LeAddDeviceToResolvingList(CommandView command) {
   auto command_view = gd_hci::LeAddDeviceToResolvingListView::Create(
       gd_hci::LeSecurityCommandView::Create(command));
   ASSERT(command_view.IsValid());
-
-  auto addr_type =
-      static_cast<uint8_t>(command_view.GetPeerIdentityAddressType());
-  Address address = command_view.GetPeerIdentityAddress();
-
+  AddressType peer_address_type;
+  switch (command_view.GetPeerIdentityAddressType()) {
+    case bluetooth::hci::PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS:
+      peer_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
+      break;
+    case bluetooth::hci::PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS:
+      peer_address_type = AddressType::RANDOM_DEVICE_ADDRESS;
+      break;
+  }
   auto status = link_layer_controller_.LeResolvingListAddDevice(
-      address, addr_type, command_view.GetPeerIrk(),
-      command_view.GetLocalIrk());
+      command_view.GetPeerIdentityAddress(), peer_address_type,
+      command_view.GetPeerIrk(), command_view.GetLocalIrk());
   send_event_(bluetooth::hci::LeAddDeviceToResolvingListCompleteBuilder::Create(
       kNumCommandPackets, status));
 }
@@ -2133,10 +2146,17 @@ void DualModeController::LeRemoveDeviceFromResolvingList(CommandView command) {
       gd_hci::LeSecurityCommandView::Create(command));
   ASSERT(command_view.IsValid());
 
-  uint8_t addr_type =
-      static_cast<uint8_t>(command_view.GetPeerIdentityAddressType());
-  Address address = command_view.GetPeerIdentityAddress();
-  link_layer_controller_.LeResolvingListRemoveDevice(address, addr_type);
+  AddressType peer_address_type;
+  switch (command_view.GetPeerIdentityAddressType()) {
+    case bluetooth::hci::PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS:
+      peer_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
+      break;
+    case bluetooth::hci::PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS:
+      peer_address_type = AddressType::RANDOM_DEVICE_ADDRESS;
+      break;
+  }
+  link_layer_controller_.LeResolvingListRemoveDevice(
+      command_view.GetPeerIdentityAddress(), peer_address_type);
   send_event_(
       bluetooth::hci::LeRemoveDeviceFromResolvingListCompleteBuilder::Create(
           kNumCommandPackets, ErrorCode::SUCCESS));
@@ -2225,11 +2245,18 @@ void DualModeController::LeSetPrivacyMode(CommandView command) {
       gd_hci::LeSecurityCommandView::Create(command));
   ASSERT(command_view.IsValid());
 
-  uint8_t peer_identity_address_type =
-      static_cast<uint8_t>(command_view.GetPeerIdentityAddressType());
   Address peer_identity_address = command_view.GetPeerIdentityAddress();
   uint8_t privacy_mode = static_cast<uint8_t>(command_view.GetPrivacyMode());
 
+  AddressType peer_identity_address_type;
+  switch (command_view.GetPeerIdentityAddressType()) {
+    case bluetooth::hci::PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS:
+      peer_identity_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
+      break;
+    case bluetooth::hci::PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS:
+      peer_identity_address_type = AddressType::RANDOM_DEVICE_ADDRESS;
+      break;
+  }
   if (link_layer_controller_.LeResolvingListContainsDevice(
           peer_identity_address, peer_identity_address_type)) {
     link_layer_controller_.LeSetPrivacyMode(
