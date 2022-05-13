@@ -38,12 +38,16 @@ void LeAdvertiser::Initialize(AddressWithType address,
 }
 
 void LeAdvertiser::InitializeExtended(
-    unsigned advertising_handle, AddressType address_type,
-    AddressWithType peer_address, LeScanningFilterPolicy filter_policy,
+    unsigned advertising_handle, OwnAddressType address_type,
+    AddressWithType public_address, AddressWithType peer_address,
+    LeScanningFilterPolicy filter_policy,
     model::packets::AdvertisementType type,
-    std::chrono::steady_clock::duration interval, uint8_t tx_power) {
+    std::chrono::steady_clock::duration interval, uint8_t tx_power,
+    const std::function<bluetooth::hci::Address()>& get_address) {
+  get_address_ = get_address;
+  own_address_type_ = address_type;
+  public_address_ = public_address;
   advertising_handle_ = advertising_handle;
-  address_ = AddressWithType(address_.GetAddress(), address_type);
   peer_address_ = peer_address;
   filter_policy_ = filter_policy;
   type_ = type;
@@ -98,6 +102,34 @@ void LeAdvertiser::EnableExtended(std::chrono::milliseconds duration_ms) {
   Duration adv_direct_ind_interval_high = 3750us;  // 3.75ms
   Duration duration = duration_ms;
   TimePoint now = std::chrono::steady_clock::now();
+
+  bluetooth::hci::Address resolvable_address = get_address_();
+  switch (own_address_type_) {
+    case bluetooth::hci::OwnAddressType::PUBLIC_DEVICE_ADDRESS:
+      address_ = public_address_;
+      break;
+    case bluetooth::hci::OwnAddressType::RANDOM_DEVICE_ADDRESS:
+      address_ = AddressWithType(address_.GetAddress(),
+                                 AddressType::RANDOM_DEVICE_ADDRESS);
+      break;
+    case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_PUBLIC_ADDRESS:
+      if (resolvable_address != Address::kEmpty) {
+        address_ = AddressWithType(resolvable_address,
+                                   AddressType::RANDOM_DEVICE_ADDRESS);
+      } else {
+        address_ = public_address_;
+      }
+      break;
+    case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS:
+      if (resolvable_address != Address::kEmpty) {
+        address_ = AddressWithType(resolvable_address,
+                                   AddressType::RANDOM_DEVICE_ADDRESS);
+      } else {
+        address_ = AddressWithType(address_.GetAddress(),
+                                   AddressType::RANDOM_DEVICE_ADDRESS);
+      }
+      break;
+  }
 
   switch (type_) {
     // [Vol 6] Part B. 4.4.2.4.3 High duty cycle connectable directed
