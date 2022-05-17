@@ -1584,9 +1584,10 @@ uint16_t LinkLayerController::HandleLeConnection(AddressWithType address,
     AddressType peer_address_type = address.GetAddressType();
     if (peer_resolved_address != AddressWithType()) {
       peer_resolvable_private_address = address.GetAddress();
-      if (address.GetAddressType() == AddressType::PUBLIC_DEVICE_ADDRESS) {
+      if (peer_resolved_address.GetAddressType() ==
+          AddressType::PUBLIC_DEVICE_ADDRESS) {
         peer_address_type = AddressType::PUBLIC_IDENTITY_ADDRESS;
-      } else if (address.GetAddressType() ==
+      } else if (peer_resolved_address.GetAddressType() ==
                  AddressType::RANDOM_DEVICE_ADDRESS) {
         peer_address_type = AddressType::RANDOM_IDENTITY_ADDRESS;
       } else {
