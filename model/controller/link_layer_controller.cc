@@ -1699,7 +1699,8 @@ uint16_t LinkLayerController::HandleLeConnection(
       connection_address = peer_resolved_address.GetAddress();
     }
     Address local_resolved_address = own_address.GetAddress();
-    if (local_resolved_address == properties_.GetAddress()) {
+    if (local_resolved_address == properties_.GetAddress() ||
+        local_resolved_address == properties_.GetLeAddress()) {
       local_resolved_address = Address::kEmpty;
     }
 
