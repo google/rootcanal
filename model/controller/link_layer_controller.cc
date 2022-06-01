@@ -2182,12 +2182,6 @@ void LinkLayerController::IncomingPagePacket(
              incoming.GetSourceAddress().ToString().c_str());
   }
 
-#ifdef ROOTCANAL_LMP
-  ASSERT(link_manager_add_link(lm_.get(),
-                               reinterpret_cast<const uint8_t(*)[6]>(
-                                   incoming.GetSourceAddress().data())));
-#endif
-
   bluetooth::hci::Address source_address{};
   bluetooth::hci::Address::FromString(page.GetSourceAddress().ToString(),
                                       source_address);
@@ -2226,6 +2220,11 @@ void LinkLayerController::IncomingPageResponsePacket(
     LOG_WARN("No free handles");
     return;
   }
+#ifdef ROOTCANAL_LMP
+  ASSERT(link_manager_add_link(
+      lm_.get(), reinterpret_cast<const uint8_t(*)[6]>(peer.data())));
+#endif /* ROOTCANAL_LMP */
+
   if (properties_.IsUnmasked(EventCode::CONNECTION_COMPLETE)) {
     send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
         ErrorCode::SUCCESS, handle, incoming.GetSourceAddress(),
@@ -2851,6 +2850,11 @@ void LinkLayerController::MakePeripheralConnection(const Address& addr,
     LOG_INFO("CreateConnection failed");
     return;
   }
+#ifdef ROOTCANAL_LMP
+  ASSERT(link_manager_add_link(
+      lm_.get(), reinterpret_cast<const uint8_t(*)[6]>(addr.data())));
+#endif /* ROOTCANAL_LMP */
+
   LOG_INFO("CreateConnection returned handle 0x%x", handle);
   if (properties_.IsUnmasked(EventCode::CONNECTION_COMPLETE)) {
     send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
@@ -2894,10 +2898,6 @@ ErrorCode LinkLayerController::CreateConnection(const Address& addr, uint16_t,
           addr, properties_.GetAuthenticationEnable() == 1)) {
     return ErrorCode::CONTROLLER_BUSY;
   }
-#ifdef ROOTCANAL_LMP
-  ASSERT(link_manager_add_link(
-      lm_.get(), reinterpret_cast<const uint8_t(*)[6]>(addr.data())));
-#endif
 
   SendLinkLayerPacket(model::packets::PageBuilder::Create(
       properties_.GetAddress(), addr, properties_.GetClassOfDevice(),
