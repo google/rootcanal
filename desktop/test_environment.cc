@@ -73,7 +73,8 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
         filename =
             device->GetAddress().ToString() + "_" + std::to_string(i) + ".pcap";
       }
-      std::static_pointer_cast<HciSniffer>(transport)->Open(filename.c_str());
+      auto file = std::make_shared<std::ofstream>(filename, std::ios::binary);
+      std::static_pointer_cast<HciSniffer>(transport)->SetOutputStream(file);
     }
     srv->StartListening();
   });
