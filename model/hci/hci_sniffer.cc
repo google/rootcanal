@@ -23,9 +23,7 @@ using namespace std::literals;
 
 namespace rootcanal {
 
-void HciSniffer::Open(const char* filename) {
-  output_.open(filename, std::ios::binary);
-
+static void writeHeader(std::ostream* stream) {
   // https://tools.ietf.org/id/draft-gharris-opsawg-pcap-00.xml#file-header
   uint32_t magic_number = 0xa1b2c3d4;
   uint16_t major_version = 2;
@@ -36,13 +34,26 @@ void HciSniffer::Open(const char* filename) {
   uint32_t linktype = 201;  // http://www.tcpdump.org/linktypes.html
                             // LINKTYPE_BLUETOOTH_HCI_H4_WITH_PHDR
 
-  output_.write((char*)&magic_number, 4);
-  output_.write((char*)&major_version, 2);
-  output_.write((char*)&minor_version, 2);
-  output_.write((char*)&reserved1, 4);
-  output_.write((char*)&reserved2, 4);
-  output_.write((char*)&snaplen, 4);
-  output_.write((char*)&linktype, 4);
+  stream->write((char*)&magic_number, 4);
+  stream->write((char*)&major_version, 2);
+  stream->write((char*)&minor_version, 2);
+  stream->write((char*)&reserved1, 4);
+  stream->write((char*)&reserved2, 4);
+  stream->write((char*)&snaplen, 4);
+  stream->write((char*)&linktype, 4);
+}
+
+HciSniffer::HciSniffer(std::shared_ptr<HciTransport> transport,
+                       std::shared_ptr<std::ostream> outputStream)
+    : transport_(transport), start_(std::chrono::steady_clock::now()) {
+  SetOutputStream(outputStream);
+}
+
+void HciSniffer::SetOutputStream(std::shared_ptr<std::ostream> outputStream) {
+  output_ = outputStream;
+  if (output_) {
+    writeHeader(output_.get());
+  }
 }
 
 void HciSniffer::AppendRecord(PacketDirection packet_direction,
@@ -60,13 +71,14 @@ void HciSniffer::AppendRecord(PacketDirection packet_direction,
   uint32_t direction = static_cast<uint32_t>(packet_direction);
   uint8_t idc = static_cast<uint8_t>(packet_type);
 
-  output_.write((char*)&seconds, 4);
-  output_.write((char*)&microseconds, 4);
-  output_.write((char*)&captured_packet_length, 4);
-  output_.write((char*)&original_packet_length, 4);
-  output_.write((char*)&direction, 4);
-  output_.write((char*)&idc, 1);
-  output_.write((char*)packet.data(), packet.size());
+  output_->write((char*)&seconds, 4);
+  output_->write((char*)&microseconds, 4);
+  output_->write((char*)&captured_packet_length, 4);
+  output_->write((char*)&original_packet_length, 4);
+  output_->write((char*)&direction, 4);
+  output_->write((char*)&idc, 1);
+  output_->write((char*)packet.data(), packet.size());
+  output_->flush();
 }
 
 void HciSniffer::RegisterCallbacks(PacketCallback command_callback,
@@ -103,7 +115,7 @@ void HciSniffer::TimerTick() { transport_->TimerTick(); }
 
 void HciSniffer::Close() {
   transport_->Close();
-  output_.close();
+  output_->flush();
 }
 
 void HciSniffer::SendEvent(const std::vector<uint8_t>& packet) {

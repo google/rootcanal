@@ -19,6 +19,8 @@
 #include <chrono>
 #include <cstdint>
 #include <fstream>
+#include <memory>
+#include <ostream>
 
 #include "model/hci/h4.h"
 #include "model/hci/hci_transport.h"
@@ -30,18 +32,22 @@ enum class PacketDirection : uint8_t {
   HOST_TO_CONTROLLER = 1,
 };
 
+// A Hci Transport that logs all the in and out going
+// packets to a stream.
 class HciSniffer : public HciTransport {
  public:
-  HciSniffer(std::shared_ptr<HciTransport> transport)
-      : transport_(transport), start_(std::chrono::steady_clock::now()) {}
+  HciSniffer(std::shared_ptr<HciTransport> transport,
+             std::shared_ptr<std::ostream> outputStream = nullptr);
   ~HciSniffer() = default;
 
   static std::shared_ptr<HciTransport> Create(
-      std::shared_ptr<HciTransport> transport) {
-    return std::make_shared<HciSniffer>(transport);
+      std::shared_ptr<HciTransport> transport,
+      std::shared_ptr<std::ostream> outputStream = nullptr) {
+    return std::make_shared<HciSniffer>(transport, outputStream);
   }
 
-  void Open(const char* filename);
+  // Sets and initializes the output stream
+  void SetOutputStream(std::shared_ptr<std::ostream> outputStream);
 
   void SendEvent(const std::vector<uint8_t>& packet) override;
 
@@ -65,7 +71,7 @@ class HciSniffer : public HciTransport {
   void AppendRecord(PacketDirection direction, PacketType type,
                     const std::vector<uint8_t>& packet);
 
-  std::ofstream output_;
+  std::shared_ptr<std::ostream> output_;
   std::shared_ptr<HciTransport> transport_;
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
