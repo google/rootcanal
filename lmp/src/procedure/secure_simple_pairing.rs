@@ -375,12 +375,12 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
             AuthenticationMethod::NumericComparaison => {
                 send_commitment(ctx, true).await;
 
-                let _user_confirmation = user_confirmation_request(ctx).await?;
+                user_confirmation_request(ctx).await?;
                 Ok(())
             }
             AuthenticationMethod::PasskeyEntry => {
                 if initiator.io_capability == hci::IoCapability::KeyboardOnly {
-                    let _user_passkey = user_passkey_request(ctx).await?;
+                    user_passkey_request(ctx).await?;
                 } else {
                     ctx.send_hci_event(
                         hci::UserPasskeyNotificationBuilder {
@@ -397,7 +397,7 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
             }
             AuthenticationMethod::OutOfBand => {
                 if initiator.oob_data_present != hci::OobDataPresent::NotPresent {
-                    let _remote_oob_data = remote_oob_data_request(ctx).await?;
+                    remote_oob_data_request(ctx).await?;
                 }
 
                 send_commitment(ctx, false).await;
