@@ -6,7 +6,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 
 use crate::either::Either;
 use crate::packets::{hci, lmp};
-use crate::procedure::Context;
+use crate::procedure::{authentication, Context};
 
 use crate::num_hci_command_packets;
 
@@ -458,6 +458,23 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
         .build(),
     );
 
+    // Link Key Calculation
+    let link_key = [0; 16];
+    let auth_result = authentication::send_challenge(ctx, 0, link_key).await;
+    authentication::receive_challenge(ctx, link_key).await;
+
+    if auth_result.is_err() {
+        return Err(());
+    }
+    ctx.send_hci_event(
+        hci::LinkKeyNotificationBuilder {
+            bd_addr: ctx.peer_address(),
+            key_type: hci::KeyType::AuthenticatedP192,
+            link_key,
+        }
+        .build(),
+    );
+
     Ok(())
 }
 
@@ -616,6 +633,23 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReqPacket) ->
         .build(),
     );
 
+    // Link Key Calculation
+    let link_key = [0; 16];
+    authentication::receive_challenge(ctx, link_key).await;
+    let auth_result = authentication::send_challenge(ctx, 0, link_key).await;
+
+    if auth_result.is_err() {
+        return Err(());
+    }
+    ctx.send_hci_event(
+        hci::LinkKeyNotificationBuilder {
+            bd_addr: ctx.peer_address(),
+            key_type: hci::KeyType::AuthenticatedP192,
+            link_key,
+        }
+        .build(),
+    );
+
     Ok(())
 }
 
@@ -639,7 +673,7 @@ mod tests {
             assert!(size < limit)
         }
 
-        assert_max_size(procedure, 250);
+        assert_max_size(procedure, 300);
     }
 
     #[test]
