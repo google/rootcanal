@@ -4,11 +4,9 @@
   "ScoDataPacketSize": "255",
   "NumAclDataPackets": "10",
   "NumScoDataPackets": "10",
-  "Version": "4",
+  "Version": "12",
   "Revision": "0",
-  "LmpPalVersion": "0",
+  "LmpPalVersion": "12",
   "ManufacturerName": "0",
   "LmpPalSubversion": "0",
-  "MaximumPageNumber": "0",
-  "BdAddress": "123456"
 }
