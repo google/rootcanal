@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <memory>
@@ -73,7 +72,6 @@ class HciSniffer : public HciTransport {
 
   std::shared_ptr<std::ostream> output_;
   std::shared_ptr<HciTransport> transport_;
-  std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
 }  // namespace rootcanal
