@@ -307,7 +307,7 @@ async fn remote_oob_data_request(ctx: &impl Context) -> Result<(), ()> {
 const CONFIRMATION_VALUE_SIZE: usize = 16;
 const PASSKEY_ENTRY_REPEAT_NUMBER: usize = 20;
 
-pub async fn initiate(ctx: &impl Context) -> Result<([u8; 16]), ()> {
+pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     let initiator = {
         ctx.send_hci_event(hci::IoCapabilityRequestBuilder { bd_addr: ctx.peer_address() }.build());
         let reply = ctx.receive_hci_command::<hci::IoCapabilityRequestReplyPacket>().await;
@@ -458,13 +458,10 @@ pub async fn initiate(ctx: &impl Context) -> Result<([u8; 16]), ()> {
         .build(),
     );
 
-    Ok([0; 16])
+    Ok(())
 }
 
-pub async fn respond(
-    ctx: &impl Context,
-    request: lmp::IoCapabilityReqPacket,
-) -> Result<([u8; 16]), ()> {
+pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReqPacket) -> Result<(), ()> {
     let initiator = {
         let io_capability = hci::IoCapability::from_u8(request.get_io_capabilities()).unwrap();
         let oob_data_present =
@@ -619,7 +616,7 @@ pub async fn respond(
         .build(),
     );
 
-    Ok([0; 16])
+    Ok(())
 }
 
 #[cfg(test)]
