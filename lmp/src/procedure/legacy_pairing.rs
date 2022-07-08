@@ -5,7 +5,7 @@ use crate::procedure::Context;
 
 use crate::num_hci_command_packets;
 
-pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
+pub async fn initiate(ctx: &impl Context) -> Result<([u8; 16]), ()> {
     ctx.send_hci_event(hci::PinCodeRequestBuilder { bd_addr: ctx.peer_address() }.build());
 
     let _pin_code = ctx.receive_hci_command::<hci::PinCodeRequestReplyPacket>().await;
@@ -30,10 +30,10 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
 
     let _ = ctx.receive_lmp_packet::<lmp::CombKeyPacket>().await;
 
-    Ok(())
+    Ok([0; 16])
 }
 
-pub async fn respond(ctx: &impl Context, _request: lmp::InRandPacket) -> Result<(), ()> {
+pub async fn respond(ctx: &impl Context, _request: lmp::InRandPacket) -> Result<([u8; 16]), ()> {
     ctx.send_hci_event(hci::PinCodeRequestBuilder { bd_addr: ctx.peer_address() }.build());
 
     let _pin_code = ctx.receive_hci_command::<hci::PinCodeRequestReplyPacket>().await;
@@ -55,5 +55,5 @@ pub async fn respond(ctx: &impl Context, _request: lmp::InRandPacket) -> Result<
 
     ctx.send_lmp_packet(lmp::CombKeyBuilder { transaction_id: 0, random_number: [0; 16] }.build());
 
-    Ok(())
+    Ok([0; 16])
 }
