@@ -6,7 +6,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 
 use crate::either::Either;
 use crate::packets::{hci, lmp};
-use crate::procedure::{authentication, Context};
+use crate::procedure::{authentication, features, Context};
 
 use crate::num_hci_command_packets;
 
@@ -23,8 +23,48 @@ fn has_mitm(requirements: hci::AuthenticationRequirements) -> bool {
 
 enum AuthenticationMethod {
     OutOfBand,
-    NumericComparaison,
+    NumericComparaisonJustWork,
+    NumericComparaisonUserConfirm,
     PasskeyEntry,
+}
+
+const P192_PUBLIC_KEY_SIZE: usize = 48;
+const P256_PUBLIC_KEY_SIZE: usize = 64;
+
+enum PublicKey {
+    P192([u8; P192_PUBLIC_KEY_SIZE]),
+    P256([u8; P256_PUBLIC_KEY_SIZE]),
+}
+
+impl PublicKey {
+    fn generate(key_size: usize) -> Option<PublicKey> {
+        match key_size {
+            P192_PUBLIC_KEY_SIZE => Some(PublicKey::P192([0; P192_PUBLIC_KEY_SIZE])),
+            P256_PUBLIC_KEY_SIZE => Some(PublicKey::P256([0; P256_PUBLIC_KEY_SIZE])),
+            _ => None,
+        }
+    }
+
+    fn as_slice(&self) -> &[u8] {
+        match self {
+            PublicKey::P192(inner) => inner,
+            PublicKey::P256(inner) => inner,
+        }
+    }
+
+    fn as_mut_slice(&mut self) -> &mut [u8] {
+        match self {
+            PublicKey::P192(inner) => inner,
+            PublicKey::P256(inner) => inner,
+        }
+    }
+
+    fn get_size(&self) -> usize {
+        match self {
+            PublicKey::P192(_) => P192_PUBLIC_KEY_SIZE,
+            PublicKey::P256(_) => P256_PUBLIC_KEY_SIZE,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -47,20 +87,37 @@ fn authentication_method(
     } else if !has_mitm(initiator.authentication_requirements)
         && !has_mitm(responder.authentication_requirements)
     {
-        AuthenticationMethod::NumericComparaison
+        AuthenticationMethod::NumericComparaisonJustWork
     } else if (initiator.io_capability == KeyboardOnly
         && responder.io_capability != NoInputNoOutput)
         || (responder.io_capability == KeyboardOnly && initiator.io_capability != NoInputNoOutput)
     {
         AuthenticationMethod::PasskeyEntry
+    } else if initiator.io_capability == DisplayYesNo && responder.io_capability == DisplayYesNo {
+        AuthenticationMethod::NumericComparaisonUserConfirm
     } else {
-        AuthenticationMethod::NumericComparaison
+        AuthenticationMethod::NumericComparaisonJustWork
     }
 }
 
-const P192_PUBLIC_KEY_SIZE: usize = 48;
+// Bluetooth Core, Vol 3, Part C, 5.2.2.6
+fn link_key_type(auth_method: AuthenticationMethod, public_key: PublicKey) -> hci::KeyType {
+    use hci::KeyType::*;
+    use AuthenticationMethod::*;
 
-async fn send_public_key(ctx: &impl Context, transaction_id: u8, key: &[u8; P192_PUBLIC_KEY_SIZE]) {
+    match (public_key, auth_method) {
+        (PublicKey::P256(_), OutOfBand | PasskeyEntry | NumericComparaisonUserConfirm) => {
+            AuthenticatedP256
+        }
+        (PublicKey::P192(_), OutOfBand | PasskeyEntry | NumericComparaisonUserConfirm) => {
+            AuthenticatedP192
+        }
+        (PublicKey::P256(_), NumericComparaisonJustWork) => UnauthenticatedP256,
+        (PublicKey::P192(_), NumericComparaisonJustWork) => UnauthenticatedP192,
+    }
+}
+
+async fn send_public_key(ctx: &impl Context, transaction_id: u8, public_key: PublicKey) {
     // TODO: handle error
     let _ = ctx
         .send_accepted_lmp_packet(
@@ -68,13 +125,13 @@ async fn send_public_key(ctx: &impl Context, transaction_id: u8, key: &[u8; P192
                 transaction_id,
                 major_type: 1,
                 minor_type: 1,
-                payload_length: P192_PUBLIC_KEY_SIZE as u8,
+                payload_length: public_key.get_size() as u8,
             }
             .build(),
         )
         .await;
 
-    for chunk in key.chunks(16) {
+    for chunk in public_key.as_slice().chunks(16) {
         // TODO: handle error
         let _ = ctx
             .send_accepted_lmp_packet(
@@ -85,16 +142,16 @@ async fn send_public_key(ctx: &impl Context, transaction_id: u8, key: &[u8; P192
     }
 }
 
-async fn receive_public_key(ctx: &impl Context, transaction_id: u8) -> [u8; P192_PUBLIC_KEY_SIZE] {
-    let _ = ctx.receive_lmp_packet::<lmp::EncapsulatedHeaderPacket>().await;
+async fn receive_public_key(ctx: &impl Context, transaction_id: u8) -> PublicKey {
+    let key_size: usize =
+        ctx.receive_lmp_packet::<lmp::EncapsulatedHeaderPacket>().await.get_payload_length().into();
+    let mut key = PublicKey::generate(key_size).unwrap();
+
     ctx.send_lmp_packet(
         lmp::AcceptedBuilder { transaction_id, accepted_opcode: lmp::Opcode::EncapsulatedHeader }
             .build(),
     );
-
-    let mut key = [0; P192_PUBLIC_KEY_SIZE];
-
-    for chunk in key.chunks_mut(16) {
+    for chunk in key.as_mut_slice().chunks_mut(16) {
         let payload = ctx.receive_lmp_packet::<lmp::EncapsulatedPayloadPacket>().await;
         chunk.copy_from_slice(payload.get_data().as_slice());
         ctx.send_lmp_packet(
@@ -363,16 +420,23 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     };
 
     // Public Key Exchange
-    {
-        let public_key = [0; P192_PUBLIC_KEY_SIZE];
-        send_public_key(ctx, 0, &public_key).await;
-        let _key = receive_public_key(ctx, 0).await;
-    }
+    let peer_public_key = {
+        use hci::LMPFeaturesPage1Bits::SecureConnectionsHostSupport;
+        let key = if features::supported_on_both_page1(ctx, SecureConnectionsHostSupport).await {
+            PublicKey::generate(P256_PUBLIC_KEY_SIZE).unwrap()
+        } else {
+            PublicKey::generate(P192_PUBLIC_KEY_SIZE).unwrap()
+        };
+        send_public_key(ctx, 0, key).await;
+        receive_public_key(ctx, 0).await
+    };
 
     // Authentication Stage 1
+    let auth_method = authentication_method(initiator, responder);
     let result: Result<(), ()> = async {
-        match authentication_method(initiator, responder) {
-            AuthenticationMethod::NumericComparaison => {
+        match auth_method {
+            AuthenticationMethod::NumericComparaisonJustWork
+            | AuthenticationMethod::NumericComparaisonUserConfirm => {
                 send_commitment(ctx, true).await;
 
                 user_confirmation_request(ctx).await?;
@@ -466,10 +530,11 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     if auth_result.is_err() {
         return Err(());
     }
+
     ctx.send_hci_event(
         hci::LinkKeyNotificationBuilder {
             bd_addr: ctx.peer_address(),
-            key_type: hci::KeyType::AuthenticatedP192,
+            key_type: link_key_type(auth_method, peer_public_key),
             link_key,
         }
         .build(),
@@ -532,16 +597,18 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReqPacket) ->
     };
 
     // Public Key Exchange
-    {
-        let public_key = [0; P192_PUBLIC_KEY_SIZE];
-        let _key = receive_public_key(ctx, 0).await;
-        send_public_key(ctx, 0, &public_key).await;
-    }
+    let peer_public_key = {
+        let peer_public_key = receive_public_key(ctx, 0).await;
+        let public_key = PublicKey::generate(peer_public_key.get_size()).unwrap();
+        send_public_key(ctx, 0, public_key).await;
+        peer_public_key
+    };
 
     // Authentication Stage 1
-
-    let negative_user_confirmation = match authentication_method(initiator, responder) {
-        AuthenticationMethod::NumericComparaison => {
+    let auth_method = authentication_method(initiator, responder);
+    let negative_user_confirmation = match auth_method {
+        AuthenticationMethod::NumericComparaisonJustWork
+        | AuthenticationMethod::NumericComparaisonUserConfirm => {
             receive_commitment(ctx, true).await;
 
             let user_confirmation = user_confirmation_request(ctx).await;
@@ -641,10 +708,11 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReqPacket) ->
     if auth_result.is_err() {
         return Err(());
     }
+
     ctx.send_hci_event(
         hci::LinkKeyNotificationBuilder {
             bd_addr: ctx.peer_address(),
-            key_type: hci::KeyType::AuthenticatedP192,
+            key_type: link_key_type(auth_method, peer_public_key),
             link_key,
         }
         .build(),
@@ -673,7 +741,7 @@ mod tests {
             assert!(size < limit)
         }
 
-        assert_max_size(procedure, 300);
+        assert_max_size(procedure, 512);
     }
 
     #[test]
