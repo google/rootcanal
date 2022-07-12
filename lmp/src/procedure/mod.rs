@@ -3,6 +3,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{self, Poll};
 
+use crate::ec::PrivateKey;
 use crate::packets::{hci, lmp};
 
 pub trait Context {
@@ -39,6 +40,12 @@ pub trait Context {
 
         SendAcceptedLmpPacketFuture(self, opcode)
     }
+
+    fn get_private_key(&self) -> Option<PrivateKey> {
+        None
+    }
+
+    fn set_private_key(&self, _key: &PrivateKey) {}
 }
 
 /// Future for Context::receive_hci_command and Context::receive_lmp_packet
