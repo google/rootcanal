@@ -39,6 +39,9 @@ void HciSniffer::SetOutputStream(std::shared_ptr<std::ostream> outputStream) {
 void HciSniffer::AppendRecord(PacketDirection packet_direction,
                               PacketType packet_type,
                               const std::vector<uint8_t>& packet) {
+  if (output_ == nullptr) {
+    return;
+  }
   pcap::WriteRecordHeader(*output_, 4 + 1 + packet.size());
 
   // http://www.tcpdump.org/linktypes.html LINKTYPE_BLUETOOTH_HCI_H4_WITH_PHDR
