@@ -1,7 +1,5 @@
 // Bluetooth Core, Vol 2, Part C, 4.2.1
 
-use num_traits::ToPrimitive;
-
 use crate::either::Either;
 use crate::num_hci_command_packets;
 use crate::packets::{hci, lmp};
@@ -9,21 +7,6 @@ use crate::procedure::features;
 use crate::procedure::legacy_pairing;
 use crate::procedure::secure_simple_pairing;
 use crate::procedure::Context;
-
-async fn secure_simple_pairing_supported(ctx: &impl Context) -> bool {
-    let ssp_bit = hci::LMPFeaturesPage1Bits::SecureSimplePairingHostSupport.to_u64().unwrap();
-    let local_supported = ctx.extended_features(1) & ssp_bit != 0;
-    // Lazy peer features
-    let peer_supported = async move {
-        let page = if let Some(page) = ctx.peer_extended_features(1) {
-            page
-        } else {
-            features::initiate(ctx, 1).await
-        };
-        page & ssp_bit != 0
-    };
-    local_supported && peer_supported.await
-}
 
 pub async fn send_challenge(
     ctx: &impl Context,
@@ -81,7 +64,7 @@ pub async fn initiate(ctx: &impl Context) {
                 .build(),
             );
 
-            let result = if secure_simple_pairing_supported(ctx).await {
+            let result = if features::supported_on_both_page1(ctx, hci::LMPFeaturesPage1Bits::SecureSimplePairingHostSupport).await {
                 secure_simple_pairing::initiate(ctx).await
             } else {
                 legacy_pairing::initiate(ctx).await
