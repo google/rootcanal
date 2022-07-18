@@ -36,6 +36,7 @@ DEFINE_string(controller_properties_file, "",
 DEFINE_string(default_commands_file, "",
               "commands file which root-canal runs it as default");
 DEFINE_bool(enable_hci_sniffer, false, "enable hci sniffer");
+DEFINE_bool(enable_baseband_sniffer, false, "enable baseband sniffer");
 
 constexpr uint16_t kTestPort = 6401;
 constexpr uint16_t kHciServerPort = 6402;
@@ -123,7 +124,7 @@ int main(int argc, char** argv) {
       std::make_shared<PosixAsyncSocketServer>(link_ble_server_port, &am),
       std::make_shared<PosixAsyncSocketConnector>(&am),
       FLAGS_controller_properties_file, FLAGS_default_commands_file,
-      FLAGS_enable_hci_sniffer);
+      FLAGS_enable_hci_sniffer, FLAGS_enable_baseband_sniffer);
   std::promise<void> barrier;
   std::future<void> barrier_future = barrier.get_future();
   root_canal.initialize(std::move(barrier));
