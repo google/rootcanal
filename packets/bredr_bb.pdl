@@ -1,0 +1,60 @@
+// http://www.whiterocker.com/bt/LINKTYPE_BLUETOOTH_BREDR_BB.html
+
+little_endian_packets
+
+enum Rate: 4 {
+  BR_GFSK = 0x0,
+  EDR_PI_2_DQPSK = 0x1,
+  EDR_8DPSK = 0x2,
+  ID_PACKET = 0xf,
+}
+
+enum Transport: 4 {
+  ANY = 0x0,
+  SCO = 0x1,
+  ESCO = 0x2,
+  ACL = 0x3,
+  CSB = 0x4,
+  ID_PACKET = 0xf,
+}
+
+packet BaseBandPacket {
+  rf_channel: 8,
+  signal_power: 8,
+  noise_power: 8,
+  access_code_offenses: 8,
+  payload_rate: Rate,
+  payload_transport: Transport,
+  corrected_header_bits: 8,
+  corrected_payload_bits: 16,
+  lower_address_part: 32,
+  reference_lap: 24,
+  reference_uap: 8,
+  bt_packet_header: 32,
+  flags: 16,
+  _payload_
+}
+
+packet DM1AclPacket : BaseBandPacket(payload_rate = BR_GFSK, payload_transport = ACL) {
+  llid: 2,
+  flow: 1,
+  _size_(_payload_) : 5,
+  _payload_,
+  crc: 16
+}
+
+packet FHSAclPacket : BaseBandPacket(payload_rate = BR_GFSK, payload_transport = ACL) {
+  parity_bits: 34,
+  lap: 24,
+  eir: 1,
+  _reserved_: 1,
+  sr: 2,
+  sp: 2,
+  uap: 8,
+  nap: 16,
+  class_of_device: 24,
+  lt_addr: 3,
+  clk: 26,
+  page_scan_mode: 3,
+  crc: 16
+}
