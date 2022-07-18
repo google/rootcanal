@@ -107,19 +107,19 @@ packet ExtendedPacket : Packet(opcode = ESCAPED) {
 }
 
 packet Accepted : Packet(opcode = ACCEPTED) {
-  _fixed_ = 0 : 1,
   accepted_opcode: Opcode,
+  _fixed_ = 0 : 1,
 }
 
 packet NotAccepted : Packet(opcode = NOT_ACCEPTED) {
-  _fixed_ = 0 : 1,
   not_accepted_opcode: Opcode,
+  _fixed_ = 0 : 1,
   error_code: 8,
 }
 
 packet AcceptedExt : ExtendedPacket(extended_opcode = ACCEPTED) {
-  _fixed_ = 0 : 1,
   accepted_opcode: Opcode,
+  _fixed_ = 0 : 1,
   accepted_extended_opcode: ExtendedOpcode,
 }
 
