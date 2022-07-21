@@ -45,10 +45,10 @@ void HciSniffer::AppendRecord(PacketDirection packet_direction,
   pcap::WriteRecordHeader(*output_, 4 + 1 + packet.size());
 
   // http://www.tcpdump.org/linktypes.html LINKTYPE_BLUETOOTH_HCI_H4_WITH_PHDR
-  uint32_t direction = static_cast<uint32_t>(packet_direction);
+  char direction[4] = {0, 0, 0, static_cast<char>(packet_direction)};
   uint8_t idc = static_cast<uint8_t>(packet_type);
 
-  output_->write((char*)&direction, 4);
+  output_->write(direction, sizeof(direction));
   output_->write((char*)&idc, 1);
   output_->write((char*)packet.data(), packet.size());
   output_->flush();
