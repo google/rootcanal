@@ -33,3 +33,22 @@ pub async fn respond(ctx: &impl Context) {
         .build(),
     );
 }
+
+pub async fn supported_on_both_page1(
+    ctx: &impl Context,
+    feature: crate::packets::hci::LMPFeaturesPage1Bits,
+) -> bool {
+    use num_traits::ToPrimitive;
+    let feature_mask = feature.to_u64().unwrap();
+    let local_supported = ctx.extended_features(1) & feature_mask != 0;
+    // Lazy peer features
+    let peer_supported = async move {
+        let page = if let Some(page) = ctx.peer_extended_features(1) {
+            page
+        } else {
+            crate::procedure::features::initiate(ctx, 1).await
+        };
+        page & feature_mask != 0
+    };
+    local_supported && peer_supported.await
+}
