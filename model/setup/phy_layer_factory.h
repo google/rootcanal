@@ -54,12 +54,14 @@ class PhyLayerFactory {
  protected:
   virtual void Send(
       std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
-      uint32_t id);
-  virtual void Send(model::packets::LinkLayerPacketView packet, uint32_t id);
+      uint32_t phy_id, uint32_t device_id);
+  virtual void Send(
+      model::packets::LinkLayerPacketView packet,
+      uint32_t phy_id, uint32_t device_id);
+  std::list<std::shared_ptr<PhyLayer>> phy_layers_;
 
  private:
   Phy::Type phy_type_;
-  std::list<std::shared_ptr<PhyLayer>> phy_layers_;
   uint32_t next_id_{1};
   const uint32_t factory_id_;
 };
