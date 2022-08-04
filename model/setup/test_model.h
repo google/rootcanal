@@ -49,7 +49,7 @@ class TestModel {
       std::function<void(AsyncTaskId)> cancel,
       std::function<std::shared_ptr<Device>(const std::string&, int, Phy::Type)>
           connect_to_remote);
-  ~TestModel();
+  virtual ~TestModel();
 
   TestModel(TestModel& model) = delete;
   TestModel& operator=(const TestModel& model) = delete;
@@ -65,6 +65,9 @@ class TestModel {
   // Add phy, return its index
   size_t AddPhy(Phy::Type phy_type);
 
+  // Allow derived classes to use custom phy layer
+  virtual std::unique_ptr<PhyLayerFactory> CreatePhy(Phy::Type phy_type, size_t phy_index);
+
   // Remove phy by index
   void DelPhy(size_t phy_index);
 
@@ -76,7 +79,8 @@ class TestModel {
 
   // Handle incoming remote connections
   void AddLinkLayerConnection(std::shared_ptr<Device> dev, Phy::Type phy_type);
-  void AddHciConnection(std::shared_ptr<HciDevice> dev);
+  // Add an HCI device, return its index
+  size_t AddHciConnection(std::shared_ptr<HciDevice> dev);
 
   // Handle closed remote connections (both hci & link layer)
   void OnConnectionClosed(size_t index, AsyncUserId user_id);
@@ -100,7 +104,7 @@ class TestModel {
   void Reset();
 
  private:
-  std::vector<PhyLayerFactory> phys_;
+  std::vector<std::unique_ptr<PhyLayerFactory>> phys_;
   std::vector<std::shared_ptr<Device>> devices_;
   std::string list_string_;
 
