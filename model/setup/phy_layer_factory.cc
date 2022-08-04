@@ -57,7 +57,7 @@ void PhyLayerFactory::UnregisterAllPhyLayers() {
 
 void PhyLayerFactory::Send(
     const std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
-    uint32_t id) {
+    uint32_t id, [[maybe_unused]] uint32_t device_id) {
   // Convert from a Builder to a View
   auto bytes = std::make_shared<std::vector<uint8_t>>();
   bluetooth::packet::BitInserter i(*bytes);
@@ -69,11 +69,11 @@ void PhyLayerFactory::Send(
       model::packets::LinkLayerPacketView::Create(packet_view);
   ASSERT(link_layer_packet_view.IsValid());
 
-  Send(link_layer_packet_view, id);
+  Send(link_layer_packet_view, id, device_id);
 }
 
 void PhyLayerFactory::Send(model::packets::LinkLayerPacketView packet,
-                           uint32_t id) {
+                           uint32_t id, [[maybe_unused]] uint32_t device_id) {
   for (const auto& phy : phy_layers_) {
     if (id != phy->GetId()) {
       phy->Receive(packet);
@@ -118,11 +118,11 @@ PhyLayerImpl::~PhyLayerImpl() {}
 
 void PhyLayerImpl::Send(
     const std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet) {
-  factory_->Send(packet, GetId());
+  factory_->Send(packet, GetId(), GetDeviceId());
 }
 
 void PhyLayerImpl::Send(model::packets::LinkLayerPacketView packet) {
-  factory_->Send(packet, GetId());
+  factory_->Send(packet, GetId(), GetDeviceId());
 }
 
 void PhyLayerImpl::Unregister() { factory_->UnregisterPhyLayer(GetId()); }
