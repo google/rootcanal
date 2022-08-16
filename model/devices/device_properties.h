@@ -33,6 +33,7 @@ using ::bluetooth::hci::EventCode;
 using ::bluetooth::hci::LLFeaturesBits;
 using ::bluetooth::hci::LMPFeaturesPage0Bits;
 using ::bluetooth::hci::LMPFeaturesPage1Bits;
+using ::bluetooth::hci::LMPFeaturesPage2Bits;
 
 static constexpr uint64_t Page0LmpFeatures() {
   LMPFeaturesPage0Bits features[] = {
@@ -95,6 +96,17 @@ static constexpr uint64_t Page0LmpFeatures() {
 static constexpr uint64_t Page1LmpFeatures() {
   LMPFeaturesPage1Bits features[] = {
       LMPFeaturesPage1Bits::SIMULTANEOUS_LE_AND_BR_HOST,
+  };
+
+  uint64_t value = 0;
+  for (unsigned i = 0; i < sizeof(features) / sizeof(*features); i++)
+    value |= static_cast<uint64_t>(features[i]);
+  return value;
+}
+
+static constexpr uint64_t Page2LmpFeatures() {
+  LMPFeaturesPage2Bits features[] = {
+      LMPFeaturesPage2Bits::SECURE_CONNECTIONS_CONTROLLER_SUPPORT,
   };
 
   uint64_t value = 0;
@@ -452,8 +464,8 @@ class DeviceProperties {
   std::vector<uint8_t> supported_codecs_;
   std::vector<uint32_t> vendor_specific_codecs_;
   std::array<uint8_t, 64> supported_commands_;
-  std::array<uint64_t, 2> extended_features_{
-      {Page0LmpFeatures(), Page1LmpFeatures()}};
+  std::array<uint64_t, 3> extended_features_{
+      {Page0LmpFeatures(), Page1LmpFeatures(), Page2LmpFeatures()}};
   ClassOfDevice class_of_device_{{0, 0, 0}};
   std::vector<uint8_t> extended_inquiry_data_;
   std::array<uint8_t, 248> name_{};
