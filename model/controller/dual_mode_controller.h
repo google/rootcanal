@@ -222,6 +222,12 @@ class DualModeController : public Device {
   // 7.1.36
   void IoCapabilityRequestNegativeReply(CommandView args);
 
+  // 7.1.45
+  void EnhancedSetupSynchronousConnection(CommandView args);
+
+  // 7.1.46
+  void EnhancedAcceptSynchronousConnection(CommandView args);
+
   // 7.1.53
   void RemoteOobExtendedDataRequestReply(CommandView args);
 
@@ -371,6 +377,9 @@ class DualModeController : public Device {
 
   // 7.3.63
   void SendKeypressNotification(CommandView args);
+
+  // 7.3.66
+  void EnhancedFlush(CommandView args);
 
   // 7.3.69
   void SetEventMaskPage2(CommandView args);
