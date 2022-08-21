@@ -1,5 +1,6 @@
 //! Link Manager implemented in Rust
 
+mod ec;
 mod either;
 mod ffi;
 mod future;
