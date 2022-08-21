@@ -5,6 +5,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{self, Poll};
 
+use crate::ec::PrivateKey;
 use crate::packets::{hci, lmp};
 
 use crate::procedure::Context;
@@ -15,6 +16,7 @@ pub struct TestContext {
     pub out_lmp_packets: RefCell<VecDeque<lmp::PacketPacket>>,
     pub hci_events: RefCell<VecDeque<hci::EventPacket>>,
     pub hci_commands: RefCell<VecDeque<hci::CommandPacket>>,
+    private_key: RefCell<Option<PrivateKey>>,
 }
 
 impl TestContext {
@@ -78,6 +80,14 @@ impl Context for TestContext {
         } else {
             0
         }
+    }
+
+    fn get_private_key(&self) -> Option<PrivateKey> {
+        self.private_key.borrow().clone()
+    }
+
+    fn set_private_key(&self, key: &PrivateKey) {
+        *self.private_key.borrow_mut() = Some(key.clone())
     }
 }
 
