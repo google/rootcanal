@@ -33,7 +33,7 @@ use rand::{thread_rng, Rng};
 use std::convert::TryInto;
 use std::marker::PhantomData;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PublicKey {
     P192([u8; P192r1::PUBLIC_KEY_SIZE]),
     P256([u8; P256r1::PUBLIC_KEY_SIZE]),
@@ -89,13 +89,13 @@ impl PublicKey {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PrivateKey {
     P192([u8; P192r1::PRIVATE_KEY_SIZE]),
     P256([u8; P256r1::PRIVATE_KEY_SIZE]),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DhKey {
     P192([u8; P192r1::PUBLIC_KEY_SIZE]),
     P256([u8; P256r1::PUBLIC_KEY_SIZE]),
