@@ -223,6 +223,24 @@ Phy::Type AclConnectionHandler::GetPhyType(uint16_t handle) const {
   return acl_connections_.at(handle).GetPhyType();
 }
 
+uint16_t AclConnectionHandler::GetAclLinkPolicySettings(uint16_t handle) const {
+  return acl_connections_.at(handle).GetLinkPolicySettings();
+};
+
+void AclConnectionHandler::SetAclLinkPolicySettings(uint16_t handle,
+                                                    uint16_t settings) {
+  acl_connections_.at(handle).SetLinkPolicySettings(settings);
+}
+
+bluetooth::hci::Role AclConnectionHandler::GetAclRole(uint16_t handle) const {
+  return acl_connections_.at(handle).GetRole();
+};
+
+void AclConnectionHandler::SetAclRole(uint16_t handle,
+                                      bluetooth::hci::Role role) {
+  acl_connections_.at(handle).SetRole(role);
+}
+
 std::unique_ptr<bluetooth::hci::LeSetCigParametersCompleteBuilder>
 AclConnectionHandler::SetCigParameters(
     uint8_t id, uint32_t sdu_interval_m_to_s, uint32_t sdu_interval_s_to_m,
