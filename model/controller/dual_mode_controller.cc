@@ -790,7 +790,7 @@ void DualModeController::EnhancedSetupSynchronousConnection(
   auto receive_bandwidth = command_view.GetReceiveBandwidth();
   if (transmit_coding_format.coding_format_ ==
           bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      transmit_coding_format.coding_format_ ==
+      input_coding_format.coding_format_ ==
           bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
       transmit_bandwidth != input_bandwidth) {
     LOG_INFO(
@@ -805,7 +805,7 @@ void DualModeController::EnhancedSetupSynchronousConnection(
   }
   if ((transmit_coding_format.coding_format_ ==
        bluetooth::hci::ScoCodingFormatValues::TRANSPARENT) !=
-      (transmit_coding_format.coding_format_ ==
+      (input_coding_format.coding_format_ ==
        bluetooth::hci::ScoCodingFormatValues::TRANSPARENT)) {
     LOG_INFO(
         "EnhancedSetupSynchronousConnection: rejected Transmit_Coding_Format "
@@ -821,7 +821,7 @@ void DualModeController::EnhancedSetupSynchronousConnection(
   // Controller shall not modify the data sent to the Host.
   if (receive_coding_format.coding_format_ ==
           bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      receive_coding_format.coding_format_ ==
+      output_coding_format.coding_format_ ==
           bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
       receive_bandwidth != output_bandwidth) {
     LOG_INFO(
@@ -836,7 +836,7 @@ void DualModeController::EnhancedSetupSynchronousConnection(
   }
   if ((receive_coding_format.coding_format_ ==
        bluetooth::hci::ScoCodingFormatValues::TRANSPARENT) !=
-      (receive_coding_format.coding_format_ ==
+      (output_coding_format.coding_format_ ==
        bluetooth::hci::ScoCodingFormatValues::TRANSPARENT)) {
     LOG_INFO(
         "EnhancedSetupSynchronousConnection: rejected Receive_Coding_Format "
@@ -935,7 +935,7 @@ void DualModeController::EnhancedAcceptSynchronousConnection(
   auto receive_bandwidth = command_view.GetReceiveBandwidth();
   if (transmit_coding_format.coding_format_ ==
           bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      transmit_coding_format.coding_format_ ==
+      input_coding_format.coding_format_ ==
           bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
       transmit_bandwidth != input_bandwidth) {
     LOG_INFO(
@@ -950,7 +950,7 @@ void DualModeController::EnhancedAcceptSynchronousConnection(
   }
   if ((transmit_coding_format.coding_format_ ==
        bluetooth::hci::ScoCodingFormatValues::TRANSPARENT) !=
-      (transmit_coding_format.coding_format_ ==
+      (input_coding_format.coding_format_ ==
        bluetooth::hci::ScoCodingFormatValues::TRANSPARENT)) {
     LOG_INFO(
         "EnhancedSetupSynchronousConnection: rejected Transmit_Coding_Format "
@@ -966,7 +966,7 @@ void DualModeController::EnhancedAcceptSynchronousConnection(
   // Controller shall not modify the data sent to the Host.
   if (receive_coding_format.coding_format_ ==
           bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      receive_coding_format.coding_format_ ==
+      output_coding_format.coding_format_ ==
           bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
       receive_bandwidth != output_bandwidth) {
     LOG_INFO(
@@ -981,7 +981,7 @@ void DualModeController::EnhancedAcceptSynchronousConnection(
   }
   if ((receive_coding_format.coding_format_ ==
        bluetooth::hci::ScoCodingFormatValues::TRANSPARENT) !=
-      (receive_coding_format.coding_format_ ==
+      (output_coding_format.coding_format_ ==
        bluetooth::hci::ScoCodingFormatValues::TRANSPARENT)) {
     LOG_INFO(
         "EnhancedSetupSynchronousConnection: rejected Receive_Coding_Format "
