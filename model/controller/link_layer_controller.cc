@@ -3068,26 +3068,47 @@ ErrorCode LinkLayerController::QosSetup(uint16_t handle, uint8_t service_type,
   return ErrorCode::COMMAND_DISALLOWED;
 }
 
-ErrorCode LinkLayerController::RoleDiscovery(uint16_t handle) {
+ErrorCode LinkLayerController::RoleDiscovery(uint16_t handle,
+                                             bluetooth::hci::Role* role) {
   if (!connections_.HasHandle(handle)) {
     return ErrorCode::UNKNOWN_CONNECTION;
   }
-
-  // TODO: Implement real logic
+  *role = connections_.GetAclRole(handle);
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::SwitchRole(Address /* bd_addr */,
-                                          uint8_t /* role */) {
-  // TODO: implement real logic
-  return ErrorCode::COMMAND_DISALLOWED;
+ErrorCode LinkLayerController::SwitchRole(Address addr,
+                                          bluetooth::hci::Role role) {
+  auto handle = connections_.GetHandleOnlyAddress(addr);
+  if (handle == rootcanal::kReservedHandle) {
+    return ErrorCode::UNKNOWN_CONNECTION;
+  }
+  connections_.SetAclRole(handle, role);
+  ScheduleTask(kNoDelayMs, [this, addr, role]() {
+    send_event_(bluetooth::hci::RoleChangeBuilder::Create(ErrorCode::SUCCESS,
+                                                          addr, role));
+  });
+  return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::WriteLinkPolicySettings(uint16_t handle,
-                                                       uint16_t) {
+ErrorCode LinkLayerController::ReadLinkPolicySettings(uint16_t handle,
+                                                      uint16_t* settings) {
   if (!connections_.HasHandle(handle)) {
     return ErrorCode::UNKNOWN_CONNECTION;
   }
+  *settings = connections_.GetAclLinkPolicySettings(handle);
+  return ErrorCode::SUCCESS;
+}
+
+ErrorCode LinkLayerController::WriteLinkPolicySettings(uint16_t handle,
+                                                       uint16_t settings) {
+  if (!connections_.HasHandle(handle)) {
+    return ErrorCode::UNKNOWN_CONNECTION;
+  }
+  if (settings > 7 /* Sniff + Hold + Role switch */) {
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+  connections_.SetAclLinkPolicySettings(handle, settings);
   return ErrorCode::SUCCESS;
 }
 

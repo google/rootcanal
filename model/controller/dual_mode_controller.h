@@ -249,6 +249,9 @@ class DualModeController : public Device {
   // 7.2.7
   void RoleDiscovery(CommandView args);
 
+  // 7.2.9
+  void ReadLinkPolicySettings(CommandView args);
+
   // 7.2.10
   void WriteLinkPolicySettings(CommandView args);
 
