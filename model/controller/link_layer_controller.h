@@ -356,8 +356,9 @@ class LinkLayerController {
   ErrorCode QosSetup(uint16_t handle, uint8_t service_type, uint32_t token_rate,
                      uint32_t peak_bandwidth, uint32_t latency,
                      uint32_t delay_variation);
-  ErrorCode RoleDiscovery(uint16_t handle);
-  ErrorCode SwitchRole(Address bd_addr, uint8_t role);
+  ErrorCode RoleDiscovery(uint16_t handle, bluetooth::hci::Role* role);
+  ErrorCode SwitchRole(Address bd_addr, bluetooth::hci::Role role);
+  ErrorCode ReadLinkPolicySettings(uint16_t handle, uint16_t* settings);
   ErrorCode WriteLinkPolicySettings(uint16_t handle, uint16_t settings);
   ErrorCode FlowSpecification(uint16_t handle, uint8_t flow_direction,
                               uint8_t service_type, uint32_t token_rate,
