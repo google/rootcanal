@@ -2285,9 +2285,9 @@ void DualModeController::Disconnect(CommandView command) {
   ASSERT(command_view.IsValid());
 
   uint16_t handle = command_view.GetConnectionHandle();
-  uint8_t reason = static_cast<uint8_t>(command_view.GetReason());
 
-  auto status = link_layer_controller_.Disconnect(handle, reason);
+  auto status = link_layer_controller_.Disconnect(
+      handle, ErrorCode(command_view.GetReason()));
 
   send_event_(bluetooth::hci::DisconnectStatusBuilder::Create(
       status, kNumCommandPackets));
