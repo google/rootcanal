@@ -59,6 +59,9 @@ enum PacketType : 8 {
     RSSI_WRAPPER = 0x33,
 
     LMP = 0x34,
+
+    PING_REQUEST = 0x35,
+    PING_RESPONSE = 0x36,
 }
 
 packet LinkLayerPacket {
@@ -417,4 +420,10 @@ packet RssiWrapper : LinkLayerPacket (type = RSSI_WRAPPER) {
 
 packet Lmp : LinkLayerPacket (type = LMP) {
   _payload_,
+}
+
+packet PingRequest : LinkLayerPacket (type = PING_REQUEST) {
+}
+
+packet PingResponse : LinkLayerPacket (type = PING_RESPONSE) {
 }

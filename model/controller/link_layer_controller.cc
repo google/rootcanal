@@ -465,6 +465,9 @@ void LinkLayerController::IncomingPacketWithRssi(
     if (connections_.GetOwnAddress(handle).GetAddress() ==
         destination_address) {
       address_matches = true;
+
+      // Update link timeout for valid ACL connections
+      connections_.ResetLinkTimer(handle);
     }
   }
 
@@ -636,6 +639,12 @@ void LinkLayerController::IncomingPacketWithRssi(
       break;
     case model::packets::PacketType::SCO_DISCONNECT:
       IncomingScoDisconnect(incoming);
+      break;
+    case model::packets::PacketType::PING_REQUEST:
+      IncomingPingRequest(incoming);
+      break;
+    case model::packets::PacketType::PING_RESPONSE:
+      // ping responses require no action
       break;
     default:
       LOG_WARN("Dropping unhandled packet of type %s",
@@ -892,7 +901,7 @@ void LinkLayerController::IncomingDisconnectPacket(
              "GetHandle() returned invalid handle %hx", handle);
 
   uint8_t reason = disconnect.GetReason();
-  SendDisconnectionCompleteEvent(handle, reason);
+  SendDisconnectionCompleteEvent(handle, ErrorCode(reason));
 #ifdef ROOTCANAL_LMP
   if (is_br_edr) {
     ASSERT(link_manager_remove_link(
@@ -1759,7 +1768,7 @@ void LinkLayerController::IncomingScoDisconnect(
 
   if (handle != kReservedHandle) {
     connections_.Disconnect(handle);
-    SendDisconnectionCompleteEvent(handle, reason);
+    SendDisconnectionCompleteEvent(handle, ErrorCode(reason));
   }
 }
 
@@ -2330,6 +2339,8 @@ void LinkLayerController::IncomingPageResponsePacket(
       lm_.get(), reinterpret_cast<const uint8_t(*)[6]>(peer.data())));
 #endif /* ROOTCANAL_LMP */
 
+  CheckExpiringConnection(handle);
+
   if (IsEventUnmasked(EventCode::CONNECTION_COMPLETE)) {
     send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
         ErrorCode::SUCCESS, handle, incoming.GetSourceAddress(),
@@ -2355,7 +2366,7 @@ void LinkLayerController::TimerTick() {
 
 void LinkLayerController::Close() {
   for (auto handle : connections_.GetAclHandles()) {
-    Disconnect(handle, static_cast<uint8_t>(ErrorCode::CONNECTION_TIMEOUT));
+    Disconnect(handle, ErrorCode::CONNECTION_TIMEOUT);
   }
 }
 
@@ -2959,6 +2970,8 @@ void LinkLayerController::MakePeripheralConnection(const Address& addr,
       lm_.get(), reinterpret_cast<const uint8_t(*)[6]>(addr.data())));
 #endif /* ROOTCANAL_LMP */
 
+  CheckExpiringConnection(handle);
+
   LOG_INFO("CreateConnection returned handle 0x%x", handle);
   if (IsEventUnmasked(EventCode::CONNECTION_COMPLETE)) {
     send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
@@ -3017,23 +3030,23 @@ ErrorCode LinkLayerController::CreateConnectionCancel(const Address& addr) {
 }
 
 void LinkLayerController::SendDisconnectionCompleteEvent(uint16_t handle,
-                                                         uint8_t reason) {
+                                                         ErrorCode reason) {
   if (IsEventUnmasked(EventCode::DISCONNECTION_COMPLETE)) {
     ScheduleTask(kNoDelayMs, [this, handle, reason]() {
       send_event_(bluetooth::hci::DisconnectionCompleteBuilder::Create(
-          ErrorCode::SUCCESS, handle, ErrorCode(reason)));
+          ErrorCode::SUCCESS, handle, reason));
     });
   }
 }
 
-ErrorCode LinkLayerController::Disconnect(uint16_t handle, uint8_t reason) {
+ErrorCode LinkLayerController::Disconnect(uint16_t handle, ErrorCode reason) {
   if (connections_.HasScoHandle(handle)) {
     const Address remote = connections_.GetScoAddress(handle);
     LOG_INFO("Disconnecting eSCO connection with %s",
              remote.ToString().c_str());
 
     SendLinkLayerPacket(model::packets::ScoDisconnectBuilder::Create(
-        GetAddress(), remote, reason));
+        GetAddress(), remote, static_cast<uint8_t>(reason)));
 
     connections_.Disconnect(handle);
     SendDisconnectionCompleteEvent(handle, reason);
@@ -3053,25 +3066,24 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, uint8_t reason) {
     uint16_t sco_handle = connections_.GetScoHandle(remote.GetAddress());
     if (sco_handle != kReservedHandle) {
       SendLinkLayerPacket(model::packets::ScoDisconnectBuilder::Create(
-          GetAddress(), remote.GetAddress(), reason));
+          GetAddress(), remote.GetAddress(), static_cast<uint8_t>(reason)));
 
       connections_.Disconnect(sco_handle);
       SendDisconnectionCompleteEvent(sco_handle, reason);
     }
 
     SendLinkLayerPacket(model::packets::DisconnectBuilder::Create(
-        GetAddress(), remote.GetAddress(), reason));
-
+        GetAddress(), remote.GetAddress(), static_cast<uint8_t>(reason)));
   } else {
     LOG_INFO("Disconnecting LE connection with %s", remote.ToString().c_str());
 
     SendLeLinkLayerPacket(model::packets::DisconnectBuilder::Create(
         connections_.GetOwnAddress(handle).GetAddress(), remote.GetAddress(),
-        reason));
+        static_cast<uint8_t>(reason)));
   }
 
   connections_.Disconnect(handle);
-  SendDisconnectionCompleteEvent(handle, reason);
+  SendDisconnectionCompleteEvent(handle, ErrorCode(reason));
 #ifdef ROOTCANAL_LMP
   if (is_br_edr) {
     ASSERT(link_manager_remove_link(
@@ -4194,6 +4206,41 @@ ErrorCode LinkLayerController::RejectSynchronousConnection(Address bd_addr,
   });
 
   return ErrorCode::SUCCESS;
+}
+
+void LinkLayerController::CheckExpiringConnection(uint16_t handle) {
+  if (!connections_.HasHandle(handle)) {
+    return;
+  }
+
+  if (connections_.HasLinkExpired(handle)) {
+    connections_.Disconnect(handle);
+    SendDisconnectionCompleteEvent(handle, ErrorCode::CONNECTION_TIMEOUT);
+    return;
+  }
+
+  if (connections_.IsLinkNearExpiring(handle)) {
+    AddressWithType my_address = connections_.GetOwnAddress(handle);
+    AddressWithType destination = connections_.GetAddress(handle);
+    SendLinkLayerPacket(model::packets::PingRequestBuilder::Create(
+        my_address.GetAddress(), destination.GetAddress()));
+    ScheduleTask(std::chrono::duration_cast<milliseconds>(
+                     connections_.TimeUntilLinkExpired(handle)),
+                 [this, handle] { CheckExpiringConnection(handle); });
+    return;
+  }
+
+  ScheduleTask(std::chrono::duration_cast<milliseconds>(
+                   connections_.TimeUntilLinkNearExpiring(handle)),
+               [this, handle] { CheckExpiringConnection(handle); });
+}
+
+void LinkLayerController::IncomingPingRequest(
+    model::packets::LinkLayerPacketView packet) {
+  auto view = model::packets::PingRequestView::Create(packet);
+  ASSERT(view.IsValid());
+  SendLinkLayerPacket(model::packets::PingResponseBuilder::Create(
+      packet.GetDestinationAddress(), packet.GetSourceAddress()));
 }
 
 }  // namespace rootcanal

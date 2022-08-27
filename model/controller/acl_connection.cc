@@ -24,7 +24,9 @@ AclConnection::AclConnection(AddressWithType address,
     : address_(address),
       own_address_(own_address),
       resolved_address_(resolved_address),
-      type_(phy_type) {}
+      type_(phy_type),
+      last_packet_timestamp_(std::chrono::steady_clock::now()),
+      timeout_(std::chrono::seconds(1)) {}
 
 void AclConnection::Encrypt() { encrypted_ = true; };
 
@@ -57,5 +59,27 @@ void AclConnection::SetLinkPolicySettings(uint16_t settings) {
 bluetooth::hci::Role AclConnection::GetRole() const { return role_; };
 
 void AclConnection::SetRole(bluetooth::hci::Role role) { role_ = role; }
+
+void AclConnection::ResetLinkTimer() {
+  last_packet_timestamp_ = std::chrono::steady_clock::now();
+}
+
+std::chrono::steady_clock::duration AclConnection::TimeUntilNearExpiring()
+    const {
+  return (last_packet_timestamp_ + timeout_ / 2) -
+         std::chrono::steady_clock::now();
+}
+
+bool AclConnection::IsNearExpiring() const {
+  return TimeUntilNearExpiring() < std::chrono::steady_clock::duration::zero();
+}
+
+std::chrono::steady_clock::duration AclConnection::TimeUntilExpired() const {
+  return (last_packet_timestamp_ + timeout_) - std::chrono::steady_clock::now();
+}
+
+bool AclConnection::HasExpired() const {
+  return TimeUntilExpired() < std::chrono::steady_clock::duration::zero();
+}
 
 }  // namespace rootcanal
