@@ -3734,7 +3734,11 @@ ErrorCode LinkLayerController::SetLeAdvertisingEnable(
     return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
   }
   advertisers_[0].Initialize(
-      own_address_with_type,
+      static_cast<bluetooth::hci::OwnAddressType>(
+          properties_.GetLeAdvertisingOwnAddressType()),
+      bluetooth::hci::AddressWithType(
+          properties_.GetAddress(),
+          bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS),
       bluetooth::hci::AddressWithType(
           properties_.GetLeAdvertisingPeerAddress(),
           static_cast<bluetooth::hci::AddressType>(
