@@ -32,7 +32,8 @@ class LeAdvertiser {
   LeAdvertiser() = default;
   virtual ~LeAdvertiser() = default;
 
-  void Initialize(bluetooth::hci::AddressWithType address,
+  void Initialize(bluetooth::hci::OwnAddressType address_type,
+                  bluetooth::hci::AddressWithType public_address,
                   bluetooth::hci::AddressWithType peer_address,
                   bluetooth::hci::LeScanningFilterPolicy filter_policy,
                   model::packets::AdvertisementType type,
