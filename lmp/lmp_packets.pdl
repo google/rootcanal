@@ -167,6 +167,8 @@ packet Sres : Packet(opcode = SRES) {
 
 packet NumericComparaisonFailed: ExtendedPacket(extended_opcode = NUMERIC_COMPARAISON_FAILED) {}
 
+packet PasskeyFailed: ExtendedPacket(extended_opcode = PASSKEY_FAILED) {}
+
 packet InRand : Packet(opcode = IN_RAND) {
   random_number: 8[16],
 }

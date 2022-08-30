@@ -695,6 +695,8 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReqPacket) ->
 
 #[cfg(test)]
 mod tests {
+    use num_traits::ToPrimitive;
+
     use crate::ec::PrivateKey;
     use crate::procedure::Context;
     use crate::test::{sequence, TestContext};
@@ -798,5 +800,41 @@ mod tests {
         let procedure = respond;
 
         include!("../../test/SP/BV-13-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_initiator_failure_on_initiating_side() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-14-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_responder_failure_on_initiating_side() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-15-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_initiator_failure_on_responding_side() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-16-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_responder_failure_on_responding_side() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-17-C.in");
     }
 }
