@@ -20,14 +20,16 @@ using namespace bluetooth::hci;
 using namespace std::literals;
 
 namespace rootcanal {
-void LeAdvertiser::Initialize(AddressWithType address,
+void LeAdvertiser::Initialize(OwnAddressType address_type,
+                              AddressWithType public_address,
                               AddressWithType peer_address,
                               LeScanningFilterPolicy filter_policy,
                               model::packets::AdvertisementType type,
                               const std::vector<uint8_t>& advertisement,
                               const std::vector<uint8_t>& scan_response,
                               std::chrono::steady_clock::duration interval) {
-  address_ = address;
+  own_address_type_ = address_type;
+  public_address_ = public_address;
   peer_address_ = peer_address;
   filter_policy_ = filter_policy;
   type_ = type;
@@ -35,6 +37,8 @@ void LeAdvertiser::Initialize(AddressWithType address,
   scan_response_ = scan_response;
   interval_ = interval;
   tx_power_ = kTxPowerUnavailable;
+  LOG_INFO("%s -> %s", public_address_.ToString().c_str(),
+           peer_address.ToString().c_str());
 }
 
 void LeAdvertiser::InitializeExtended(
@@ -54,8 +58,8 @@ void LeAdvertiser::InitializeExtended(
   interval_ = interval;
   tx_power_ = tx_power;
   LOG_INFO("%s -> %s type = %hhx interval = %d ms tx_power = 0x%hhx",
-           address_.ToString().c_str(), peer_address.ToString().c_str(), type_,
-           static_cast<int>(interval_.count()), tx_power);
+           public_address_.ToString().c_str(), peer_address.ToString().c_str(),
+           type_, static_cast<int>(interval_.count()), tx_power);
 }
 
 void LeAdvertiser::Clear() {
