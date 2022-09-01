@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "device_properties.h"
+#include "controller_properties.h"
 
 #include <fstream>
 #include <memory>
@@ -46,7 +46,7 @@ static void ParseHex64(Json::Value value, uint64_t* field) {
 
 namespace rootcanal {
 
-DeviceProperties::DeviceProperties(const std::string& file_name)
+ControllerProperties::ControllerProperties(const std::string& file_name)
     : acl_data_packet_size_(1024),
       sco_data_packet_size_(255),
       num_acl_data_packets_(10),
@@ -62,7 +62,6 @@ DeviceProperties::DeviceProperties(const std::string& file_name)
       le_resolving_list_size_(15) {
   std::string properties_raw;
 
-  ASSERT(Address::FromString("BB:BB:BB:BB:BB:AD", address_));
   ASSERT(Address::FromString("BB:BB:BB:BB:AD:1E", le_address_));
   name_ = {'D', 'e', 'f', 'a', 'u', 'l', 't'};
 
@@ -121,7 +120,7 @@ DeviceProperties::DeviceProperties(const std::string& file_name)
                &le_resolving_list_ignore_reasons_);
 }
 
-bool DeviceProperties::SetLeHostFeature(uint8_t bit_number, uint8_t bit_value) {
+bool ControllerProperties::SetLeHostFeature(uint8_t bit_number, uint8_t bit_value) {
   if (bit_number >= 64 || bit_value > 1) return false;
 
   uint64_t bit_mask = UINT64_C(1) << bit_number;
