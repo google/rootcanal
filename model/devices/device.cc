@@ -21,9 +21,7 @@
 namespace rootcanal {
 
 std::string Device::ToString() const {
-  std::string dev = GetTypeString() + "@" + properties_.GetAddress().ToString();
-
-  return dev;
+  return GetTypeString() + "@" + address_.ToString();
 }
 
 void Device::RegisterPhyLayer(std::shared_ptr<PhyLayer> phy) {
@@ -48,12 +46,6 @@ void Device::UnregisterPhyLayer(Phy::Type phy_type, uint32_t factory_id) {
       return;
     }
   }
-}
-
-bool Device::IsAdvertisementAvailable() const {
-  return (advertising_interval_ms_ > std::chrono::milliseconds(0)) &&
-         (std::chrono::steady_clock::now() >=
-          last_advertisement_ + advertising_interval_ms_);
 }
 
 void Device::SendLinkLayerPacket(
@@ -83,10 +75,6 @@ void Device::Close() {
 
 void Device::RegisterCloseCallback(std::function<void()> close_callback) {
   close_callback_ = close_callback;
-}
-
-void Device::SetAddress(Address) {
-  LOG_INFO("%s does not implement %s", GetTypeString().c_str(), __func__);
 }
 
 }  // namespace rootcanal

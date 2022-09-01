@@ -18,76 +18,56 @@
 
 #include "model/setup/device_boutique.h"
 
-using std::vector;
-
 namespace rootcanal {
+using namespace model::packets;
+using namespace std::chrono_literals;
 
 bool Beacon::registered_ = DeviceBoutique::Register("beacon", &Beacon::Create);
 
-Beacon::Beacon() {
-  advertising_interval_ms_ = std::chrono::milliseconds(1280);
-  properties_.SetLeAdvertisementType(0x03 /* NON_CONNECT */);
-  properties_.SetLeAdvertisement(
-      {0x0F,  // Length
-       0x09 /* TYPE_NAME_CMPL */, 'g', 'D', 'e', 'v', 'i', 'c', 'e', '-', 'b',
-       'e', 'a', 'c', 'o', 'n',
-       0x02,  // Length
-       0x01 /* TYPE_FLAG */,
-       0x4 /* BREDR_NOT_SPT */ | 0x2 /* GEN_DISC_FLAG */});
+Beacon::Beacon()
+    : advertising_type_(AdvertisementType::ADV_NONCONN_IND),
+      advertising_data_({
+          0x0F /* Length */, 0x09 /* TYPE_NAME_COMPLETE */, 'g', 'D', 'e', 'v',
+          'i', 'c', 'e', '-', 'b', 'e', 'a', 'c', 'o', 'n', 0x02 /* Length */,
+          0x01 /* TYPE_FLAG */,
+          0x4 /* BREDR_NOT_SUPPORTED */ | 0x2 /* GENERAL_DISCOVERABLE */
+      }),
+      scan_response_data_(
+          {0x05 /* Length */, 0x08 /* TYPE_NAME_SHORT */, 'b', 'e', 'a', 'c'}),
+      advertising_interval_(1280ms) {}
 
-  properties_.SetLeScanResponse({0x05,  // Length
-                                 0x08 /* TYPE_NAME_SHORT */, 'b', 'e', 'a',
-                                 'c'});
-}
-
-Beacon::Beacon(const vector<std::string>& args) : Beacon() {
+Beacon::Beacon(const std::vector<std::string>& args) : Beacon() {
   if (args.size() >= 2) {
-    Address addr{};
-    if (Address::FromString(args[1], addr)) properties_.SetLeAddress(addr);
+    Address::FromString(args[1], address_);
   }
 
   if (args.size() >= 3) {
-    SetAdvertisementInterval(std::chrono::milliseconds(std::stoi(args[2])));
+    advertising_interval_ = std::chrono::milliseconds(std::stoi(args[2]));
   }
-}
-
-std::string Beacon::GetTypeString() const { return "beacon"; }
-
-std::string Beacon::ToString() const {
-  std::string dev =
-      GetTypeString() + "@" + properties_.GetLeAddress().ToString();
-
-  return dev;
 }
 
 void Beacon::TimerTick() {
-  if (IsAdvertisementAvailable()) {
-    last_advertisement_ = std::chrono::steady_clock::now();
-    auto ad = model::packets::LeAdvertisementBuilder::Create(
-        properties_.GetLeAddress(), Address::kEmpty,
-        model::packets::AddressType::PUBLIC,
-        static_cast<model::packets::AdvertisementType>(
-            properties_.GetLeAdvertisementType()),
-        properties_.GetLeAdvertisement());
-    std::shared_ptr<model::packets::LinkLayerPacketBuilder> to_send =
-        std::move(ad);
-
-    SendLinkLayerPacket(to_send, Phy::Type::LOW_ENERGY);
+  std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+  if ((now - advertising_last_) >= advertising_interval_) {
+    advertising_last_ = now;
+    SendLinkLayerPacket(
+        std::move(LeAdvertisementBuilder::Create(
+            address_, Address::kEmpty, AddressType::PUBLIC, advertising_type_,
+            std::vector(advertising_data_.begin(), advertising_data_.end()))),
+        Phy::Type::LOW_ENERGY);
   }
 }
 
-void Beacon::IncomingPacket(model::packets::LinkLayerPacketView packet) {
-  if (packet.GetDestinationAddress() == properties_.GetLeAddress() &&
-      packet.GetType() == model::packets::PacketType::LE_SCAN) {
-    auto scan_response = model::packets::LeScanResponseBuilder::Create(
-        properties_.GetLeAddress(), packet.GetSourceAddress(),
-        model::packets::AddressType::PUBLIC,
-        model::packets::AdvertisementType::SCAN_RESPONSE,
-        properties_.GetLeScanResponse());
-    std::shared_ptr<model::packets::LinkLayerPacketBuilder> to_send =
-        std::move(scan_response);
-
-    SendLinkLayerPacket(to_send, Phy::Type::LOW_ENERGY);
+void Beacon::IncomingPacket(LinkLayerPacketView packet) {
+  if (packet.GetDestinationAddress() == address_ &&
+      packet.GetType() == PacketType::LE_SCAN) {
+    SendLinkLayerPacket(
+        std::move(LeAdvertisementBuilder::Create(
+            address_, packet.GetSourceAddress(), AddressType::PUBLIC,
+            AdvertisementType::SCAN_RESPONSE,
+            std::vector(scan_response_data_.begin(),
+                        scan_response_data_.end()))),
+        Phy::Type::LOW_ENERGY);
   }
 }
 

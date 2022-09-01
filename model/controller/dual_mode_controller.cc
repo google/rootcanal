@@ -70,17 +70,17 @@ void DualModeController::SendCommandCompleteUnknownOpCodeEvent(
 #ifdef ROOTCANAL_LMP
 DualModeController::DualModeController(const std::string& properties_filename,
                                        uint16_t)
-    : Device(properties_filename) {
+    : Device(), properties_(properties_filename) {
 #else
 DualModeController::DualModeController(const std::string& properties_filename,
                                        uint16_t num_keys)
-    : Device(properties_filename), security_manager_(num_keys) {
+    : Device(), properties_(properties_filename), security_manager_(num_keys) {
 #endif
   loopback_mode_ = LoopbackMode::NO_LOOPBACK;
 
   Address public_address{};
   ASSERT(Address::FromString("3C:5A:B4:04:05:06", public_address));
-  properties_.SetAddress(public_address);
+  SetAddress(public_address);
 
   link_layer_controller_.RegisterRemoteChannel(
       [this](std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
@@ -562,7 +562,7 @@ void DualModeController::ReadBdAddr(CommandView command) {
   auto command_view = gd_hci::ReadBdAddrView::Create(command);
   ASSERT(command_view.IsValid());
   send_event_(bluetooth::hci::ReadBdAddrCompleteBuilder::Create(
-      kNumCommandPackets, ErrorCode::SUCCESS, properties_.GetAddress()));
+      kNumCommandPackets, ErrorCode::SUCCESS, GetAddress()));
 }
 
 void DualModeController::ReadLocalSupportedCommands(CommandView command) {
@@ -1083,7 +1083,7 @@ void DualModeController::PinCodeRequestReply(CommandView command) {
   auto command_view = gd_hci::PinCodeRequestReplyView::Create(
       gd_hci::SecurityCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  LOG_INFO("%s", properties_.GetAddress().ToString().c_str());
+  LOG_INFO("%s", GetAddress().ToString().c_str());
 
   Address peer = command_view.GetBdAddr();
   uint8_t pin_length = command_view.GetPinCodeLength();
@@ -1106,7 +1106,7 @@ void DualModeController::PinCodeRequestNegativeReply(CommandView command) {
   auto command_view = gd_hci::PinCodeRequestNegativeReplyView::Create(
       gd_hci::SecurityCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  LOG_INFO("%s", properties_.GetAddress().ToString().c_str());
+  LOG_INFO("%s", GetAddress().ToString().c_str());
 
   Address peer = command_view.GetBdAddr();
 
@@ -1831,8 +1831,7 @@ void DualModeController::WriteScanEnable(CommandView command) {
   bool page_scan = scan_enable == gd_hci::ScanEnable::INQUIRY_AND_PAGE_SCAN ||
                    scan_enable == gd_hci::ScanEnable::PAGE_SCAN_ONLY;
 
-  LOG_INFO("%s | WriteScanEnable %s",
-           properties_.GetAddress().ToString().c_str(),
+  LOG_INFO("%s | WriteScanEnable %s", GetAddress().ToString().c_str(),
            gd_hci::ScanEnableText(scan_enable).c_str());
 
   link_layer_controller_.SetInquiryScanEnable(inquiry_scan);
@@ -2079,7 +2078,7 @@ void DualModeController::LeReadLocalSupportedFeatures(CommandView command) {
   ASSERT(command_view.IsValid());
   LOG_INFO(
       "%s | LeReadLocalSupportedFeatures (%016llx)",
-      properties_.GetAddress().ToString().c_str(),
+      GetAddress().ToString().c_str(),
       static_cast<unsigned long long>(properties_.GetLeSupportedFeatures()));
 
   send_event_(
@@ -2162,8 +2161,7 @@ void DualModeController::LeSetAdvertisingEnable(CommandView command) {
       gd_hci::LeAdvertisingCommandView::Create(command));
   ASSERT(command_view.IsValid());
 
-  LOG_INFO("%s | LeSetAdvertisingEnable (%d)",
-           properties_.GetAddress().ToString().c_str(),
+  LOG_INFO("%s | LeSetAdvertisingEnable (%d)", GetAddress().ToString().c_str(),
            command_view.GetAdvertisingEnable() == gd_hci::Enable::ENABLED);
 
   auto status = link_layer_controller_.SetLeAdvertisingEnable(
@@ -2192,8 +2190,7 @@ void DualModeController::LeSetScanEnable(CommandView command) {
       gd_hci::LeScanningCommandView::Create(command));
   ASSERT(command_view.IsValid());
 
-  LOG_INFO("%s | LeSetScanEnable (%d)",
-           properties_.GetAddress().ToString().c_str(),
+  LOG_INFO("%s | LeSetScanEnable (%d)", GetAddress().ToString().c_str(),
            command_view.GetLeScanEnable() == gd_hci::Enable::ENABLED);
 
   if (command_view.GetLeScanEnable() == gd_hci::Enable::ENABLED) {
@@ -3113,23 +3110,15 @@ void DualModeController::WriteLoopbackMode(CommandView command) {
   // ACL channel
   uint16_t acl_handle = 0x123;
   send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
-      ErrorCode::SUCCESS, acl_handle, properties_.GetAddress(),
+      ErrorCode::SUCCESS, acl_handle, GetAddress(),
       bluetooth::hci::LinkType::ACL, bluetooth::hci::Enable::DISABLED));
   // SCO channel
   uint16_t sco_handle = 0x345;
   send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
-      ErrorCode::SUCCESS, sco_handle, properties_.GetAddress(),
+      ErrorCode::SUCCESS, sco_handle, GetAddress(),
       bluetooth::hci::LinkType::SCO, bluetooth::hci::Enable::DISABLED));
   send_event_(bluetooth::hci::WriteLoopbackModeCompleteBuilder::Create(
       kNumCommandPackets, ErrorCode::SUCCESS));
-}
-
-void DualModeController::SetAddress(Address address) {
-  properties_.SetAddress(address);
-}
-
-const Address& DualModeController::GetAddress() {
-  return properties_.GetAddress();
 }
 
 }  // namespace rootcanal
