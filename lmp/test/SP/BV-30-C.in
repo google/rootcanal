@@ -1,0 +1,36 @@
+sequence! { procedure, context,
+    // ACL Connection Established
+    Lower Tester -> IUT: IoCapabilityReq {
+        transaction_id: 0,
+        io_capabilities: 0x01,
+        oob_authentication_data: 0x00,
+        authentication_requirement: 0x01,
+    }
+    IUT -> Upper Tester: IoCapabilityResponse {
+        bd_addr: context.peer_address(),
+        io_capability: IoCapability::DisplayYesNo,
+        oob_data_present: OobDataPresent::NotPresent,
+        authentication_requirements: AuthenticationRequirements::NoBondingMitmProtection,
+    }
+    IUT -> Upper Tester: IoCapabilityRequest {
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: IoCapabilityRequestNegativeReply {
+        bd_addr: context.peer_address(),
+        reason: ErrorCode::PairingNotAllowed,
+    }
+    IUT -> Upper Tester: IoCapabilityRequestNegativeReplyComplete {
+        num_hci_command_packets: 1,
+        status: ErrorCode::Success,
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Lower Tester: NotAcceptedExt {
+        transaction_id: 0,
+        not_accepted_opcode: ExtendedOpcode::IoCapabilityReq,
+        error_code: ErrorCode::PairingNotAllowed.to_u8().unwrap(),
+    }
+    IUT -> Upper Tester: SimplePairingComplete {
+        status: ErrorCode::AuthenticationFailure,
+        bd_addr: context.peer_address(),
+    }
+}

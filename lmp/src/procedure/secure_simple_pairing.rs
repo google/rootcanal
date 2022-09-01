@@ -927,4 +927,31 @@ mod tests {
 
         include!("../../test/SP/BV-27-C.in");
     }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn secure_simple_pairing_failed_responder() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-30-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn host_rejects_secure_simple_pairing_initiator() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-31-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn host_rejects_secure_simple_pairing_responder() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-32-C.in");
+    }
 }
