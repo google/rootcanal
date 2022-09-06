@@ -36,17 +36,13 @@ class Sniffer : public Device {
     return std::make_shared<Sniffer>(args);
   }
 
-  // Return a string representation of the type of device.
   virtual std::string GetTypeString() const override { return "sniffer"; }
 
   virtual void IncomingPacket(
       model::packets::LinkLayerPacketView packet) override;
 
-  virtual void TimerTick() override;
-
  private:
   static bool registered_;
-  Address device_to_sniff_{};
 };
 
 }  // namespace rootcanal

@@ -23,10 +23,6 @@ namespace rootcanal {
 HciDevice::HciDevice(std::shared_ptr<HciTransport> transport,
                      const std::string& properties_filename)
     : DualModeController(properties_filename), transport_(transport) {
-  advertising_interval_ms_ = std::chrono::milliseconds(1000);
-
-  page_scan_delay_ms_ = std::chrono::milliseconds(600);
-
   properties_.SetPageScanRepetitionMode(0);
   properties_.SetClassOfDevice(0x600420);
   properties_.SetExtendedInquiryData({
