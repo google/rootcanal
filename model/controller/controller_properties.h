@@ -137,9 +137,9 @@ static constexpr uint64_t LlFeatures() {
   return value;
 }
 
-class DeviceProperties {
+class ControllerProperties {
  public:
-  explicit DeviceProperties(const std::string& file_name = "");
+  explicit ControllerProperties(const std::string& file_name = "");
 
   // Access private configuration data
 
@@ -236,10 +236,6 @@ class DeviceProperties {
   void SetSynchronousFlowControl(bool sco_flow_control) {
     sco_flow_control_ = sco_flow_control;
   }
-
-  const Address& GetAddress() const { return address_; }
-
-  void SetAddress(const Address& address) { address_ = address; }
 
   // Specification Version 4.2, Volume 2, Part E, Section 7.4.8
   const std::vector<uint8_t>& GetSupportedCodecs() const {
@@ -469,7 +465,6 @@ class DeviceProperties {
   ClassOfDevice class_of_device_{{0, 0, 0}};
   std::vector<uint8_t> extended_inquiry_data_;
   std::array<uint8_t, 248> name_{};
-  Address address_{};
   uint8_t page_scan_repetition_mode_{};
   uint16_t clock_offset_{};
   uint8_t encryption_key_size_{10};

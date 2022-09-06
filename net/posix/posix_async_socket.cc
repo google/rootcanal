@@ -25,6 +25,10 @@
 #include "os/log.h"                     // for LOG_INFO
 #include "osi/include/osi.h"            // for OSI_NO_INTR
 
+#ifdef _WIN32
+#include "msvc-posix.h"
+#endif
+
 /* set  for very verbose debugging */
 #ifndef DEBUG
 #define DD(...) (void)0
