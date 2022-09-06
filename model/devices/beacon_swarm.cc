@@ -21,15 +21,18 @@
 using std::vector;
 
 namespace rootcanal {
+using namespace model::packets;
+using namespace std::chrono_literals;
+
 bool BeaconSwarm::registered_ =
     DeviceBoutique::Register("beacon_swarm", &BeaconSwarm::Create);
 
 BeaconSwarm::BeaconSwarm(const vector<std::string>& args) : Beacon(args) {
-  advertising_interval_ms_ = std::chrono::milliseconds(1280);
-  properties_.SetLeAdvertisementType(0x03 /* NON_CONNECT */);
-  properties_.SetLeAdvertisement({
-      0x15,  // Length
-      0x09 /* TYPE_NAME_CMPL */,
+  advertising_interval_ = 1280ms;
+  advertising_type_ = AdvertisementType::ADV_NONCONN_IND;
+  advertising_data_ = {
+      0x15 /* Length */,
+      0x09 /* TYPE_NAME_COMPLETE */,
       'g',
       'D',
       'e',
@@ -50,21 +53,19 @@ BeaconSwarm::BeaconSwarm(const vector<std::string>& args) : Beacon(args) {
       'a',
       'r',
       'm',
-      0x02,  // Length
+      0x02 /* Length */,
       0x01 /* TYPE_FLAG */,
-      0x4 /* BREDR_NOT_SPT */ | 0x2 /* GEN_DISC_FLAG */,
-  });
+      0x4 /* BREDR_NOT_SUPPORTED */ | 0x2 /* GENERAL_DISCOVERABLE */,
+  };
 
-  properties_.SetLeScanResponse({0x06,  // Length
-                                 0x08 /* TYPE_NAME_SHORT */, 'c', 'b', 'e', 'a',
-                                 'c'});
+  scan_response_data_ = {
+      0x06 /* Length */, 0x08 /* TYPE_NAME_SHORT */, 'c', 'b', 'e', 'a', 'c'};
 }
 
 void BeaconSwarm::TimerTick() {
-  Address beacon_addr = properties_.GetLeAddress();
-  uint8_t* low_order_byte = (uint8_t*)(&beacon_addr);
+  // Rotate the advertising address.
+  uint8_t* low_order_byte = address_.data();
   *low_order_byte += 1;
-  properties_.SetLeAddress(beacon_addr);
   Beacon::TimerTick();
 }
 

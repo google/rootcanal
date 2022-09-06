@@ -35,14 +35,17 @@ using std::chrono::steady_clock;
 using std::chrono::system_clock;
 
 namespace rootcanal {
+using namespace model::packets;
+using namespace std::chrono_literals;
+
 bool ScriptedBeacon::registered_ =
     DeviceBoutique::Register("scripted_beacon", &ScriptedBeacon::Create);
 
 ScriptedBeacon::ScriptedBeacon(const vector<std::string>& args) : Beacon(args) {
-  advertising_interval_ms_ = std::chrono::milliseconds(1280);
-  properties_.SetLeAdvertisementType(0x02 /* SCANNABLE */);
-  properties_.SetLeAdvertisement({
-      0x18,  // Length
+  advertising_interval_ = 1280ms;
+  advertising_type_ = AdvertisementType::ADV_SCAN_IND;
+  advertising_data_ = {
+      0x18 /* Length */,
       0x09 /* TYPE_NAME_CMPL */,
       'g',
       'D',
@@ -67,14 +70,14 @@ ScriptedBeacon::ScriptedBeacon(const vector<std::string>& args) : Beacon(args) {
       'c',
       'o',
       'n',
-      0x02,  // Length
+      0x02 /* Length */,
       0x01 /* TYPE_FLAG */,
       0x4 /* BREDR_NOT_SPT */ | 0x2 /* GEN_DISC_FLAG */,
-  });
+  };
 
-  properties_.SetLeScanResponse({0x05,  // Length
-                                 0x08,  // TYPE_NAME_SHORT
-                                 'g', 'b', 'e', 'a'});
+  scan_response_data_ = {
+      0x05 /* Length */, 0x08 /* TYPE_NAME_SHORT */, 'g', 'b', 'e', 'a'};
+
   LOG_INFO("Scripted_beacon registered %s", registered_ ? "true" : "false");
 
   if (args.size() >= 4) {
@@ -166,8 +169,8 @@ void ScriptedBeacon::TimerTick() {
       while (has_time_elapsed(next_ad_.ad_time)) {
         auto ad = model::packets::LeAdvertisementBuilder::Create(
             next_ad_.address, Address::kEmpty /* Destination */,
-            model::packets::AddressType::RANDOM,
-            model::packets::AdvertisementType::ADV_NONCONN_IND, next_ad_.ad);
+            AddressType::RANDOM, AdvertisementType::ADV_NONCONN_IND,
+            next_ad_.ad);
         SendLinkLayerPacket(std::move(ad), Phy::Type::LOW_ENERGY);
         if (packet_num_ < ble_ad_list_.advertisements().size()) {
           get_next_advertisement();
@@ -194,16 +197,16 @@ void ScriptedBeacon::TimerTick() {
 void ScriptedBeacon::IncomingPacket(
     model::packets::LinkLayerPacketView packet) {
   if (current_state_ == PlaybackEvent::INITIALIZED) {
-    if (packet.GetDestinationAddress() == properties_.GetLeAddress() &&
-        packet.GetType() == model::packets::PacketType::LE_SCAN) {
-      auto scan_response = model::packets::LeScanResponseBuilder::Create(
-          properties_.GetLeAddress(), packet.GetSourceAddress(),
-          static_cast<model::packets::AddressType>(
-              properties_.GetLeAddressType()),
-          model::packets::AdvertisementType::SCAN_RESPONSE,
-          properties_.GetLeScanResponse());
+    if (packet.GetDestinationAddress() == address_ &&
+        packet.GetType() == PacketType::LE_SCAN) {
       set_state(PlaybackEvent::SCANNED_ONCE);
-      SendLinkLayerPacket(std::move(scan_response), Phy::Type::LOW_ENERGY);
+      SendLinkLayerPacket(
+          std::move(model::packets::LeScanResponseBuilder::Create(
+              address_, packet.GetSourceAddress(), AddressType::PUBLIC,
+              AdvertisementType::SCAN_RESPONSE,
+              std::vector(scan_response_data_.begin(),
+                          scan_response_data_.end()))),
+          Phy::Type::LOW_ENERGY);
     }
   }
 }

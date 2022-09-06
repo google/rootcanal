@@ -53,6 +53,8 @@ static uint8_t GetRssi() {
   return -(rssi);
 }
 
+const Address& LinkLayerController::GetAddress() const { return address_; }
+
 void LinkLayerController::SendLeLinkLayerPacketWithRssi(
     Address source, Address dest, uint8_t rssi,
     std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet) {
@@ -65,8 +67,11 @@ void LinkLayerController::SendLeLinkLayerPacketWithRssi(
 }
 
 #ifdef ROOTCANAL_LMP
-LinkLayerController::LinkLayerController(const DeviceProperties& properties)
-    : properties_(properties), lm_(nullptr, link_manager_destroy) {
+LinkLayerController::LinkLayerController(const Address& address,
+                                         const ControllerProperties& properties)
+    : address_(address),
+      properties_(properties),
+      lm_(nullptr, link_manager_destroy) {
   auto ops = (struct LinkManagerOps){
       .user_pointer = this,
       .get_handle =
@@ -114,7 +119,7 @@ LinkLayerController::LinkLayerController(const DeviceProperties& properties)
             auto payload = std::make_unique<bluetooth::packet::RawBuilder>(
                 std::vector(data, data + len));
 
-            Address source = controller->properties_.GetAddress();
+            Address source = controller->GetAddress();
             Address dest(*to);
 
             controller->SendLinkLayerPacket(model::packets::LmpBuilder::Create(
@@ -124,8 +129,9 @@ LinkLayerController::LinkLayerController(const DeviceProperties& properties)
   lm_.reset(link_manager_create(ops));
 }
 #else
-LinkLayerController::LinkLayerController(const DeviceProperties& properties)
-    : properties_(properties) {}
+LinkLayerController::LinkLayerController(const Address& address,
+                                         const ControllerProperties& properties)
+    : address_(address), properties_(properties) {}
 #endif
 
 void LinkLayerController::SendLeLinkLayerPacket(
@@ -165,7 +171,7 @@ ErrorCode LinkLayerController::SendLeCommandToRemoteByAddress(
 ErrorCode LinkLayerController::SendCommandToRemoteByAddress(
     OpCode opcode, bluetooth::packet::PacketView<true> args,
     const Address& remote) {
-  Address local_address = properties_.GetAddress();
+  Address local_address = GetAddress();
 
   switch (opcode) {
     case (OpCode::REMOTE_NAME_REQUEST):
@@ -280,7 +286,7 @@ ErrorCode LinkLayerController::SendScoToRemote(
   }
 
   // TODO: SCO flow control
-  Address source = properties_.GetAddress();
+  Address source = GetAddress();
   Address destination = connections_.GetScoAddress(handle);
 
   auto sco_data = sco_packet.GetData();
@@ -315,7 +321,7 @@ void LinkLayerController::IncomingPacketWithRssi(
   bool address_matches = (destination_address == Address::kEmpty);
 
   // Match addresses from device properties
-  if (destination_address == properties_.GetAddress() ||
+  if (destination_address == GetAddress() ||
       destination_address == properties_.GetLeAddress()) {
     address_matches = true;
   }
@@ -805,7 +811,7 @@ void LinkLayerController::IncomingEncryptConnection(
   auto array = security_manager_.GetKey(peer);
   std::vector<uint8_t> key_vec{array.begin(), array.end()};
   SendLinkLayerPacket(model::packets::EncryptConnectionResponseBuilder::Create(
-      properties_.GetAddress(), peer, key_vec));
+      GetAddress(), peer, key_vec));
 }
 
 void LinkLayerController::IncomingEncryptConnectionResponse(
@@ -836,23 +842,20 @@ void LinkLayerController::IncomingInquiryPacket(
   switch (inquiry.GetInquiryType()) {
     case (model::packets::InquiryType::STANDARD): {
       SendLinkLayerPacket(model::packets::InquiryResponseBuilder::Create(
-          properties_.GetAddress(), peer,
-          properties_.GetPageScanRepetitionMode(),
+          GetAddress(), peer, properties_.GetPageScanRepetitionMode(),
           properties_.GetClassOfDevice(), properties_.GetClockOffset()));
     } break;
     case (model::packets::InquiryType::RSSI): {
       SendLinkLayerPacket(
           model::packets::InquiryResponseWithRssiBuilder::Create(
-              properties_.GetAddress(), peer,
-              properties_.GetPageScanRepetitionMode(),
+              GetAddress(), peer, properties_.GetPageScanRepetitionMode(),
               properties_.GetClassOfDevice(), properties_.GetClockOffset(),
               rssi));
     } break;
     case (model::packets::InquiryType::EXTENDED): {
       SendLinkLayerPacket(
           model::packets::ExtendedInquiryResponseBuilder::Create(
-              properties_.GetAddress(), peer,
-              properties_.GetPageScanRepetitionMode(),
+              GetAddress(), peer, properties_.GetPageScanRepetitionMode(),
               properties_.GetClassOfDevice(), properties_.GetClockOffset(),
               rssi, properties_.GetExtendedInquiryData()));
 
@@ -1477,7 +1480,7 @@ void LinkLayerController::IncomingLeAdvertisementPacket(
         static_cast<bluetooth::hci::OwnAddressType>(le_address_type_);
     switch (own_address_type) {
       case bluetooth::hci::OwnAddressType::PUBLIC_DEVICE_ADDRESS:
-        own_address = properties_.GetAddress();
+        own_address = GetAddress();
         break;
       case bluetooth::hci::OwnAddressType::RANDOM_DEVICE_ADDRESS:
         own_address = properties_.GetLeAddress();
@@ -1487,7 +1490,7 @@ void LinkLayerController::IncomingLeAdvertisementPacket(
           own_address = rpa;
           le_connecting_rpa_ = rpa;
         } else {
-          own_address = properties_.GetAddress();
+          own_address = GetAddress();
         }
         break;
       case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS:
@@ -1543,7 +1546,7 @@ void LinkLayerController::IncomingScoConnectionRequest(
         address.ToString().c_str());
 
     SendLinkLayerPacket(model::packets::ScoConnectionResponseBuilder::Create(
-        properties_.GetAddress(), address,
+        GetAddress(), address,
         (uint8_t)ErrorCode::SYNCHRONOUS_CONNECTION_LIMIT_EXCEEDED, 0, 0, 0, 0,
         0, 0));
     return;
@@ -1699,7 +1702,7 @@ uint16_t LinkLayerController::HandleLeConnection(
       connection_address = peer_resolved_address.GetAddress();
     }
     Address local_resolved_address = own_address.GetAddress();
-    if (local_resolved_address == properties_.GetAddress() ||
+    if (local_resolved_address == GetAddress() ||
         local_resolved_address == properties_.GetLeAddress()) {
       local_resolved_address = Address::kEmpty;
     }
@@ -2067,7 +2070,7 @@ void LinkLayerController::IncomingPinRequestPacket(
     auto wrong_pin = request.GetPinCode();
     wrong_pin[0] = wrong_pin[0]++;
     SendLinkLayerPacket(model::packets::PinResponseBuilder::Create(
-        properties_.GetAddress(), peer, wrong_pin));
+        GetAddress(), peer, wrong_pin));
     return;
   }
   if (security_manager_.AuthenticationInProgress()) {
@@ -2078,7 +2081,7 @@ void LinkLayerController::IncomingPinRequestPacket(
       auto wrong_pin = request.GetPinCode();
       wrong_pin[0] = wrong_pin[0]++;
       SendLinkLayerPacket(model::packets::PinResponseBuilder::Create(
-          properties_.GetAddress(), peer, wrong_pin));
+          GetAddress(), peer, wrong_pin));
       return;
     }
   } else {
@@ -2090,7 +2093,7 @@ void LinkLayerController::IncomingPinRequestPacket(
   if (security_manager_.GetPinRequested(peer)) {
     if (security_manager_.GetLocalPinResponseReceived(peer)) {
       SendLinkLayerPacket(model::packets::PinResponseBuilder::Create(
-          properties_.GetAddress(), peer, request.GetPinCode()));
+          GetAddress(), peer, request.GetPinCode()));
       if (security_manager_.PinCompare()) {
         LOG_INFO("Authenticating %s", peer.ToString().c_str());
         SaveKeyAndAuthenticate('L', peer);  // Legacy
@@ -2105,7 +2108,7 @@ void LinkLayerController::IncomingPinRequestPacket(
       }
     }
   } else {
-    LOG_INFO("PIN pairing %s", properties_.GetAddress().ToString().c_str());
+    LOG_INFO("PIN pairing %s", GetAddress().ToString().c_str());
     ScheduleTask(kNoDelayMs, [this, peer]() {
       security_manager_.SetPinRequested(peer);
       if (properties_.IsUnmasked(EventCode::PIN_CODE_REQUEST)) {
@@ -2143,7 +2146,7 @@ void LinkLayerController::IncomingPinResponsePacket(
   if (security_manager_.GetPinRequested(peer)) {
     if (security_manager_.GetLocalPinResponseReceived(peer)) {
       SendLinkLayerPacket(model::packets::PinResponseBuilder::Create(
-          properties_.GetAddress(), peer, request.GetPinCode()));
+          GetAddress(), peer, request.GetPinCode()));
       if (security_manager_.PinCompare()) {
         LOG_INFO("Authenticating %s", peer.ToString().c_str());
         SaveKeyAndAuthenticate('L', peer);  // Legacy
@@ -2158,7 +2161,7 @@ void LinkLayerController::IncomingPinResponsePacket(
       }
     }
   } else {
-    LOG_INFO("PIN pairing %s", properties_.GetAddress().ToString().c_str());
+    LOG_INFO("PIN pairing %s", GetAddress().ToString().c_str());
     ScheduleTask(kNoDelayMs, [this, peer]() {
       security_manager_.SetPinRequested(peer);
       if (properties_.IsUnmasked(EventCode::PIN_CODE_REQUEST)) {
@@ -2441,7 +2444,7 @@ ErrorCode LinkLayerController::LinkKeyRequestNegativeReply(
     ScheduleTask(kNoDelayMs,
                  [this, address]() { StartSimplePairing(address); });
   } else {
-    LOG_INFO("PIN pairing %s", properties_.GetAddress().ToString().c_str());
+    LOG_INFO("PIN pairing %s", GetAddress().ToString().c_str());
     ScheduleTask(kNoDelayMs, [this, address]() {
       security_manager_.SetPinRequested(address);
       if (properties_.IsUnmasked(EventCode::PIN_CODE_REQUEST)) {
@@ -2465,13 +2468,13 @@ ErrorCode LinkLayerController::IoCapabilityRequestReply(
       AuthenticateRemoteStage1(peer, pairing_type);
     });
     SendLinkLayerPacket(model::packets::IoCapabilityResponseBuilder::Create(
-        properties_.GetAddress(), peer, io_capability, oob_data_present_flag,
+        GetAddress(), peer, io_capability, oob_data_present_flag,
         authentication_requirements));
   } else {
     LOG_INFO("Requesting remote capability");
 
     SendLinkLayerPacket(model::packets::IoCapabilityRequestBuilder::Create(
-        properties_.GetAddress(), peer, io_capability, oob_data_present_flag,
+        GetAddress(), peer, io_capability, oob_data_present_flag,
         authentication_requirements));
   }
 
@@ -2488,7 +2491,7 @@ ErrorCode LinkLayerController::IoCapabilityRequestNegativeReply(
 
   SendLinkLayerPacket(
       model::packets::IoCapabilityNegativeResponseBuilder::Create(
-          properties_.GetAddress(), peer, static_cast<uint8_t>(reason)));
+          GetAddress(), peer, static_cast<uint8_t>(reason)));
 
   return ErrorCode::SUCCESS;
 }
@@ -2545,10 +2548,10 @@ void LinkLayerController::SaveKeyAndAuthenticate(uint8_t key_type,
 
 ErrorCode LinkLayerController::PinCodeRequestReply(const Address& peer,
                                                    std::vector<uint8_t> pin) {
-  LOG_INFO("%s", properties_.GetAddress().ToString().c_str());
+  LOG_INFO("%s", GetAddress().ToString().c_str());
   auto current_peer = security_manager_.GetAuthenticationAddress();
   if (peer != current_peer) {
-    LOG_INFO("%s: %s != %s", properties_.GetAddress().ToString().c_str(),
+    LOG_INFO("%s: %s != %s", GetAddress().ToString().c_str(),
              peer.ToString().c_str(), current_peer.ToString().c_str());
     security_manager_.AuthenticationRequestFinished();
     ScheduleTask(kNoDelayMs, [this, current_peer]() {
@@ -2578,8 +2581,8 @@ ErrorCode LinkLayerController::PinCodeRequestReply(const Address& peer,
       });
     }
   } else {
-    SendLinkLayerPacket(model::packets::PinRequestBuilder::Create(
-        properties_.GetAddress(), peer, pin));
+    SendLinkLayerPacket(
+        model::packets::PinRequestBuilder::Create(GetAddress(), peer, pin));
   }
   return ErrorCode::SUCCESS;
 }
@@ -2634,8 +2637,8 @@ ErrorCode LinkLayerController::UserPasskeyRequestReply(const Address& peer,
   if (security_manager_.GetAuthenticationAddress() != peer) {
     return ErrorCode::AUTHENTICATION_FAILURE;
   }
-  SendLinkLayerPacket(model::packets::PasskeyBuilder::Create(
-      properties_.GetAddress(), peer, numeric_value));
+  SendLinkLayerPacket(model::packets::PasskeyBuilder::Create(GetAddress(), peer,
+                                                             numeric_value));
   SaveKeyAndAuthenticate('P', peer);
 
   return ErrorCode::SUCCESS;
@@ -2709,7 +2712,7 @@ ErrorCode LinkLayerController::SendKeypressNotification(
   }
 
   SendLinkLayerPacket(model::packets::KeypressNotificationBuilder::Create(
-      properties_.GetAddress(), peer,
+      GetAddress(), peer,
       static_cast<model::packets::PasskeyNotificationType>(notification_type)));
   return ErrorCode::SUCCESS;
 }
@@ -2758,7 +2761,7 @@ void LinkLayerController::HandleSetConnectionEncryption(
   auto array = security_manager_.GetKey(peer);
   std::vector<uint8_t> key_vec{array.begin(), array.end()};
   SendLinkLayerPacket(model::packets::EncryptConnectionBuilder::Create(
-      properties_.GetAddress(), peer, key_vec));
+      GetAddress(), peer, key_vec));
 }
 
 ErrorCode LinkLayerController::SetConnectionEncryption(
@@ -2818,7 +2821,7 @@ ErrorCode LinkLayerController::AcceptConnectionRequest(const Address& bd_addr,
 
     // Send eSCO connection response to peer.
     SendLinkLayerPacket(model::packets::ScoConnectionResponseBuilder::Create(
-        properties_.GetAddress(), bd_addr, (uint8_t)status,
+        GetAddress(), bd_addr, (uint8_t)status,
         link_parameters.transmission_interval,
         link_parameters.retransmission_window, link_parameters.rx_packet_length,
         link_parameters.tx_packet_length, link_parameters.air_mode,
@@ -2842,10 +2845,9 @@ void LinkLayerController::MakePeripheralConnection(const Address& addr,
                                                    bool try_role_switch) {
   LOG_INFO("Sending page response to %s", addr.ToString().c_str());
   SendLinkLayerPacket(model::packets::PageResponseBuilder::Create(
-      properties_.GetAddress(), addr, try_role_switch));
+      GetAddress(), addr, try_role_switch));
 
-  uint16_t handle =
-      connections_.CreateConnection(addr, properties_.GetAddress());
+  uint16_t handle = connections_.CreateConnection(addr, GetAddress());
   if (handle == kReservedHandle) {
     LOG_INFO("CreateConnection failed");
     return;
@@ -2881,8 +2883,8 @@ void LinkLayerController::RejectPeripheralConnection(const Address& addr,
                                                      uint8_t reason) {
   LOG_INFO("Sending page reject to %s (reason 0x%02hhx)",
            addr.ToString().c_str(), reason);
-  SendLinkLayerPacket(model::packets::PageRejectBuilder::Create(
-      properties_.GetAddress(), addr, reason));
+  SendLinkLayerPacket(
+      model::packets::PageRejectBuilder::Create(GetAddress(), addr, reason));
 
   if (properties_.IsUnmasked(EventCode::CONNECTION_COMPLETE)) {
     send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
@@ -2900,8 +2902,7 @@ ErrorCode LinkLayerController::CreateConnection(const Address& addr, uint16_t,
   }
 
   SendLinkLayerPacket(model::packets::PageBuilder::Create(
-      properties_.GetAddress(), addr, properties_.GetClassOfDevice(),
-      allow_role_switch));
+      GetAddress(), addr, properties_.GetClassOfDevice(), allow_role_switch));
 
   return ErrorCode::SUCCESS;
 }
@@ -2930,7 +2931,7 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, uint8_t reason) {
              remote.ToString().c_str());
 
     SendLinkLayerPacket(model::packets::ScoDisconnectBuilder::Create(
-        properties_.GetAddress(), remote, reason));
+        GetAddress(), remote, reason));
 
     connections_.Disconnect(handle);
     SendDisconnectionCompleteEvent(handle, reason);
@@ -2950,14 +2951,14 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, uint8_t reason) {
     uint16_t sco_handle = connections_.GetScoHandle(remote.GetAddress());
     if (sco_handle != kReservedHandle) {
       SendLinkLayerPacket(model::packets::ScoDisconnectBuilder::Create(
-          properties_.GetAddress(), remote.GetAddress(), reason));
+          GetAddress(), remote.GetAddress(), reason));
 
       connections_.Disconnect(sco_handle);
       SendDisconnectionCompleteEvent(sco_handle, reason);
     }
 
     SendLinkLayerPacket(model::packets::DisconnectBuilder::Create(
-        properties_.GetAddress(), remote.GetAddress(), reason));
+        GetAddress(), remote.GetAddress(), reason));
 
   } else {
     LOG_INFO("Disconnecting LE connection with %s", remote.ToString().c_str());
@@ -3281,8 +3282,7 @@ ErrorCode LinkLayerController::SetLeExtendedAdvertisingParameters(
   advertisers_[set].InitializeExtended(
       set, own_address_type,
       bluetooth::hci::AddressWithType(
-          properties_.GetAddress(),
-          bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS),
+          GetAddress(), bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS),
       directed_address, scanning_filter_policy, ad_type,
       std::chrono::milliseconds(interval_ms), tx_power,
       [this, own_address_type, peer_address]() {
@@ -3712,7 +3712,7 @@ ErrorCode LinkLayerController::SetLeAdvertisingEnable(
                       properties_.GetLeAdvertisingIntervalMin()) *
                      0.625 / 2;
 
-  Address own_address = properties_.GetAddress();
+  Address own_address = GetAddress();
   if (properties_.GetLeAdvertisingOwnAddressType() ==
           static_cast<uint8_t>(
               bluetooth::hci::AddressType::RANDOM_DEVICE_ADDRESS) ||
@@ -3737,8 +3737,7 @@ ErrorCode LinkLayerController::SetLeAdvertisingEnable(
       static_cast<bluetooth::hci::OwnAddressType>(
           properties_.GetLeAdvertisingOwnAddressType()),
       bluetooth::hci::AddressWithType(
-          properties_.GetAddress(),
-          bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS),
+          GetAddress(), bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS),
       bluetooth::hci::AddressWithType(
           properties_.GetLeAdvertisingPeerAddress(),
           static_cast<bluetooth::hci::AddressType>(
@@ -3785,20 +3784,20 @@ ErrorCode LinkLayerController::SetLeExtendedAdvertisingEnable(
 bool LinkLayerController::ListBusy(uint16_t ignore) {
   if (le_connect_) {
     LOG_INFO("le_connect_");
-    if (!(ignore & DeviceProperties::kLeListIgnoreConnections)) {
+    if (!(ignore & ControllerProperties::kLeListIgnoreConnections)) {
       return true;
     }
   }
   if (le_scan_enable_ != bluetooth::hci::OpCode::NONE) {
     LOG_INFO("le_scan_enable");
-    if (!(ignore & DeviceProperties::kLeListIgnoreScanEnable)) {
+    if (!(ignore & ControllerProperties::kLeListIgnoreScanEnable)) {
       return true;
     }
   }
   for (auto advertiser : advertisers_) {
     if (advertiser.IsEnabled()) {
       LOG_INFO("Advertising");
-      if (!(ignore & DeviceProperties::kLeListIgnoreAdvertising)) {
+      if (!(ignore & ControllerProperties::kLeListIgnoreAdvertising)) {
         return true;
       }
     }
@@ -3932,7 +3931,7 @@ void LinkLayerController::Inquiry() {
   }
 
   SendLinkLayerPacket(model::packets::InquiryBuilder::Create(
-      properties_.GetAddress(), Address::kEmpty, inquiry_mode_));
+      GetAddress(), Address::kEmpty, inquiry_mode_));
   last_inquiry_ = now;
 }
 
@@ -3979,8 +3978,7 @@ ErrorCode LinkLayerController::AddScoConnection(uint16_t connection_handle,
 
   // Send SCO connection request to peer.
   SendLinkLayerPacket(model::packets::ScoConnectionRequestBuilder::Create(
-      properties_.GetAddress(), bd_addr,
-      connection_parameters.transmit_bandwidth,
+      GetAddress(), bd_addr, connection_parameters.transmit_bandwidth,
       connection_parameters.receive_bandwidth,
       connection_parameters.max_latency, connection_parameters.voice_setting,
       connection_parameters.retransmission_effort,
@@ -4016,8 +4014,8 @@ ErrorCode LinkLayerController::SetupSynchronousConnection(
 
   // Send eSCO connection request to peer.
   SendLinkLayerPacket(model::packets::ScoConnectionRequestBuilder::Create(
-      properties_.GetAddress(), bd_addr, transmit_bandwidth, receive_bandwidth,
-      max_latency, voice_setting, retransmission_effort, packet_types));
+      GetAddress(), bd_addr, transmit_bandwidth, receive_bandwidth, max_latency,
+      voice_setting, retransmission_effort, packet_types));
   return ErrorCode::SUCCESS;
 }
 
@@ -4051,7 +4049,7 @@ ErrorCode LinkLayerController::AcceptSynchronousConnection(
 
   // Send eSCO connection response to peer.
   SendLinkLayerPacket(model::packets::ScoConnectionResponseBuilder::Create(
-      properties_.GetAddress(), bd_addr, (uint8_t)status,
+      GetAddress(), bd_addr, (uint8_t)status,
       link_parameters.transmission_interval,
       link_parameters.retransmission_window, link_parameters.rx_packet_length,
       link_parameters.tx_packet_length, link_parameters.air_mode,
@@ -4090,7 +4088,7 @@ ErrorCode LinkLayerController::RejectSynchronousConnection(Address bd_addr,
 
   // Send eSCO connection response to peer.
   SendLinkLayerPacket(model::packets::ScoConnectionResponseBuilder::Create(
-      properties_.GetAddress(), bd_addr, reason, 0, 0, 0, 0, 0, 0));
+      GetAddress(), bd_addr, reason, 0, 0, 0, 0, 0, 0));
 
   // Schedule HCI Synchronous Connection Complete event.
   ScheduleTask(kNoDelayMs, [this, reason, bd_addr]() {
