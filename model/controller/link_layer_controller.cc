@@ -2119,7 +2119,7 @@ void LinkLayerController::IncomingLeScanResponsePacket(
 
   if (le_scan_enable_ == bluetooth::hci::OpCode::LE_SET_EXTENDED_SCAN_ENABLE &&
       IsLeEventUnmasked(SubeventCode::EXTENDED_ADVERTISING_REPORT)) {
-    bluetooth::hci::LeExtendedAdvertisingResponse report{};
+    bluetooth::hci::LeExtendedAdvertisingResponseRaw report{};
     report.address_ = incoming.GetSourceAddress();
     report.address_type_ =
         static_cast<bluetooth::hci::DirectAdvertisingAddressType>(address_type);
@@ -2132,8 +2132,8 @@ void LinkLayerController::IncomingLeScanResponsePacket(
     report.tx_power_ = 0x7F;
     report.advertising_data_ = ad;
     report.rssi_ = rssi;
-    send_event_(
-        bluetooth::hci::LeExtendedAdvertisingReportBuilder::Create({report}));
+    send_event_(bluetooth::hci::LeExtendedAdvertisingReportRawBuilder::Create(
+        {report}));
   }
 }
 
