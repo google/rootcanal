@@ -67,6 +67,11 @@ PosixAsyncSocket::PosixAsyncSocket(PosixAsyncSocket&& other) {
 PosixAsyncSocket::~PosixAsyncSocket() { Close(); }
 
 ssize_t PosixAsyncSocket::Recv(uint8_t* buffer, uint64_t bufferSize) {
+  if (fd_ == -1) {
+    // Socket was closed locally.
+    return 0;
+  }
+
   errno = 0;
   ssize_t res = 0;
   OSI_NO_INTR(res = read(fd_, buffer, bufferSize));
