@@ -37,12 +37,21 @@ namespace rootcanal {
 
 using ::bluetooth::hci::Address;
 using ::bluetooth::hci::AddressType;
+using ::bluetooth::hci::AuthenticationEnable;
+using ::bluetooth::hci::ClassOfDevice;
 using ::bluetooth::hci::ErrorCode;
 using ::bluetooth::hci::OpCode;
+using ::bluetooth::hci::PageScanRepetitionMode;
 
 class LinkLayerController {
  public:
   static constexpr size_t kIrkSize = 16;
+
+  // HCI LE Set Random Address command (Vol 4, Part E § 7.8.4).
+  ErrorCode LeSetRandomAddress(Address random_address);
+
+  // HCI LE Set Host Feature command (Vol 4, Part E § 7.8.115).
+  ErrorCode LeSetHostFeature(uint8_t bit_number, uint8_t bit_value);
 
   LinkLayerController(const Address& address,
                       const ControllerProperties& properties);
@@ -477,9 +486,236 @@ class LinkLayerController {
       model::packets::LinkLayerPacketView packet);
   void IncomingScoDisconnect(model::packets::LinkLayerPacketView packet);
 
+ public:
+  bool IsEventUnmasked(bluetooth::hci::EventCode event) const;
+  bool IsLeEventUnmasked(bluetooth::hci::SubeventCode subevent) const;
+
+  // TODO
+  // The Clock Offset should be specific to an ACL connection.
+  // Returning a proper value is not that important.
+  uint32_t GetClockOffset() const { return 0; }
+
+  // TODO
+  // The Page Scan Repetition Mode should be specific to an ACL connection or
+  // a paging session.
+  PageScanRepetitionMode GetPageScanRepetitionMode() const {
+    return page_scan_repetition_mode_;
+  }
+
+  // TODO
+  // The Encryption Key Size should be specific to an ACL connection.
+  uint8_t GetEncryptionKeySize() const { return min_encryption_key_size_; }
+
+  bool GetScoFlowControlEnable() const { return sco_flow_control_enable_; }
+  AuthenticationEnable GetAuthenticationEnable() {
+    return authentication_enable_;
+  }
+  std::array<uint8_t, 248> const& GetName() { return name_; }
+
+  uint64_t GetLeSupportedFeatures() const {
+    return properties_.le_features | le_host_supported_features_;
+  }
+
+  uint8_t GetLeAdvertisingTxPower() const { return le_advertising_tx_power_; }
+  uint16_t GetConnectionAcceptTimeout() const {
+    return connection_accept_timeout_;
+  }
+  uint16_t GetVoiceSetting() const { return voice_setting_; }
+  const ClassOfDevice& GetClassOfDevice() const { return class_of_device_; }
+
+  uint8_t GetMaxLmpFeaturesPageNumber() {
+    return properties_.lmp_features.size() - 1;
+  }
+  uint64_t GetLmpFeatures(uint8_t page_number = 0) {
+    return page_number == 1 ? host_supported_features_
+                            : properties_.lmp_features[page_number];
+  }
+
+  void SetClassOfDevice(ClassOfDevice class_of_device) {
+    class_of_device_ = class_of_device;
+  }
+  void SetClassOfDevice(uint32_t class_of_device) {
+    class_of_device_.cod[0] = class_of_device & 0xff;
+    class_of_device_.cod[1] = (class_of_device >> 8) & 0xff;
+    class_of_device_.cod[2] = (class_of_device >> 16) & 0xff;
+  }
+
+  void SetExtendedInquiryData(
+      std::vector<uint8_t> const& extended_inquiry_data) {
+    extended_inquiry_data_ = extended_inquiry_data;
+  }
+
+  void SetAuthenticationEnable(AuthenticationEnable enable) {
+    authentication_enable_ = enable;
+  }
+
+  void SetScoFlowControlEnable(bool enable) {
+    sco_flow_control_enable_ = enable;
+  }
+  void SetVoiceSetting(uint16_t voice_setting) {
+    voice_setting_ = voice_setting;
+  }
+  void SetEventMask(uint64_t event_mask) { event_mask_ = event_mask; }
+  void SetLeEventMask(uint64_t le_event_mask) {
+    le_event_mask_ = le_event_mask;
+  }
+
+  void SetName(std::vector<uint8_t> const& name);
+
+  void SetLeHostSupport(bool enable);
+  void SetSecureSimplePairingSupport(bool enable);
+  void SetSecureConnectionsSupport(bool enable);
+  void SetLeAdvertisingParameters(uint16_t interval_min, uint16_t interval_max,
+                                  uint8_t ad_type, uint8_t own_address_type,
+                                  uint8_t peer_address_type,
+                                  Address peer_address, uint8_t channel_map,
+                                  uint8_t filter_policy);
+  void SetConnectionAcceptTimeout(uint16_t timeout) {
+    connection_accept_timeout_ = timeout;
+  }
+  void SetLeScanResponseData(const std::vector<uint8_t>& data) {
+    le_scan_response_data_ = data;
+  }
+  void SetLeAdvertisingData(const std::vector<uint8_t>& data) {
+    le_advertising_data_ = data;
+  }
+
+  uint8_t GetLeAdvertisementType() const { return le_advertisement_type_; }
+
+  uint16_t GetLeAdvertisingIntervalMin() const {
+    return le_advertising_interval_min_;
+  }
+
+  uint16_t GetLeAdvertisingIntervalMax() const {
+    return le_advertising_interval_max_;
+  }
+
+  uint8_t GetLeAdvertisingOwnAddressType() const {
+    return le_advertising_own_address_type_;
+  }
+
+  uint8_t GetLeAdvertisingPeerAddressType() const {
+    return le_advertising_peer_address_type_;
+  }
+
+  Address GetLeAdvertisingPeerAddress() const {
+    return le_advertising_peer_address_;
+  }
+
+  uint8_t GetLeAdvertisingChannelMap() const {
+    return le_advertising_channel_map_;
+  }
+
+  uint8_t GetLeAdvertisingFilterPolicy() const {
+    return le_advertising_filter_policy_;
+  }
+
+  const std::vector<uint8_t>& GetLeAdvertisingData() const {
+    return le_advertising_data_;
+  }
+
+  const std::vector<uint8_t>& GetLeScanResponseData() const {
+    return le_scan_response_data_;
+  }
+
+  void SetLeAdvertisementType(uint8_t ad_type) {
+    le_advertisement_type_ = ad_type;
+  }
+
  private:
   const Address& address_;
   const ControllerProperties& properties_;
+
+  // Host Supported Features (Vol 2, Part C § 3.3 Feature Mask Definition).
+  // Page 1 of the LMP feature mask.
+  uint64_t host_supported_features_;
+  bool le_host_support_{false};
+  bool secure_simple_pairing_host_support_{false};
+  bool secure_connections_host_support_{false};
+
+  // Le Host Supported Features (Vol 4, Part E § 7.8.3).
+  // Specifies the bits indicating Host support.
+  uint64_t le_host_supported_features_;
+  bool connected_isochronous_stream_host_support_{false};
+  bool connection_subrating_host_support_{false};
+
+  // LE Random Address (Vol 4, Part E § 7.8.4).
+  Address random_address_{Address::kEmpty};
+
+  // HCI configuration parameters.
+  //
+  // Provide the current HCI Configuration Parameters as defined in section
+  // Vol 4, Part E § 6 of the core specification.
+
+  // Scan Enable (Vol 4, Part E § 6.1).
+  bool page_scan_enable_{false};
+  bool inquiry_scan_enable_{false};
+
+  // Inquiry Scan Interval and Window
+  // (Vol 4, Part E § 6.2, 6.3).
+  uint16_t inquiry_scan_interval_{0x1000};
+  uint16_t inquiry_scan_window_{0x0012};
+
+  // Page Timeout (Vol 4, Part E § 6.6).
+  uint16_t page_timeout_{0x2000};
+
+  // Connection Accept Timeout (Vol 4, Part E § 6.7).
+  uint16_t connection_accept_timeout_{0x1FA0};
+
+  // Page Scan Interval and Window
+  // (Vol 4, Part E § 6.8, 6.9).
+  uint16_t page_scan_interval_{0x0800};
+  uint16_t page_scan_window_{0x0012};
+
+  // Voice Setting (Vol 4, Part E § 6.12).
+  uint16_t voice_setting_{0x0060};
+
+  // Authentication Enable (Vol 4, Part E § 6.16).
+  AuthenticationEnable authentication_enable_;
+
+  // Default Link Policy Settings (Vol 4, Part E § 6.18).
+  uint8_t default_link_policy_settings_;
+
+  // Synchronous Flow Control Enable (Vol 4, Part E § 6.22).
+  bool sco_flow_control_enable_{false};
+
+  // Local Name (Vol 4, Part E § 6.23).
+  std::array<uint8_t, 248> name_;
+
+  // Class of Device (Vol 4, Part E § 6.26).
+  ClassOfDevice class_of_device_{{0, 0, 0}};
+
+  // Other configuration parameters.
+
+  // Min Encryption Key Size (Vol 4, Part E § 7.3.102).
+  uint8_t min_encryption_key_size_{16};
+
+  // Event Mask (Vol 4, Part E § 7.3.1) and
+  // LE Event Mask (Vol 4, Part E § 7.8.1).
+  uint64_t event_mask_{0x00001fffffffffff};
+  uint64_t le_event_mask_{0x01f};
+
+  // Page Scan Repetition Mode (Vol 2 Part B § 8.3.1 Page Scan substate).
+  // The Page Scan Repetition Mode depends on the selected Page Scan Interval.
+  PageScanRepetitionMode page_scan_repetition_mode_{PageScanRepetitionMode::R0};
+
+  std::vector<uint8_t> extended_inquiry_data_;
+  std::vector<uint8_t> le_scan_response_data_;
+  std::vector<uint8_t> le_advertising_data_;
+
+  int8_t le_advertising_tx_power_{0x00};
+
+  // Note: the advertising parameters are initially set to the default
+  // values of the parameters of the HCI command LE Set Advertising Parameters.
+  uint16_t le_advertising_interval_min_{0x0800};   // 1.28s
+  uint16_t le_advertising_interval_max_{0x0800};   // 1.28s
+  uint8_t le_advertisement_type_{0x0};             // ADV_IND
+  uint8_t le_advertising_own_address_type_{0x0};   // Public Device Address
+  uint8_t le_advertising_peer_address_type_{0x0};  // Public Device Address
+  Address le_advertising_peer_address_{};
+  uint8_t le_advertising_channel_map_{0x7};    // All channels enabled
+  uint8_t le_advertising_filter_policy_{0x0};  // Process scan and connection
+                                               // requests from all devices
 
   AclConnectionHandler connections_;
 
@@ -559,10 +795,6 @@ class LinkLayerController {
   AsyncTaskId inquiry_timer_task_id_ = kInvalidTaskId;
   uint64_t inquiry_lap_{};
   uint8_t inquiry_max_responses_{};
-  uint16_t default_link_policy_settings_ = 0;
-
-  bool page_scans_enabled_{false};
-  bool inquiry_scans_enabled_{false};
 };
 
 }  // namespace rootcanal
