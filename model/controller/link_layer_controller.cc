@@ -732,7 +732,7 @@ void LinkLayerController::IncomingRemoteNameRequestResponse(
 
   if (IsEventUnmasked(EventCode::REMOTE_NAME_REQUEST_COMPLETE)) {
     send_event_(bluetooth::hci::RemoteNameRequestCompleteBuilder::Create(
-        ErrorCode::SUCCESS, packet.GetSourceAddress(), name_));
+        ErrorCode::SUCCESS, packet.GetSourceAddress(), view.GetName()));
   }
 }
 
