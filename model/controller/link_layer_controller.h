@@ -185,7 +185,7 @@ class LinkLayerController {
 
   ErrorCode SetLeExtendedAdvertisingParameters(
       uint8_t set, uint16_t interval_min, uint16_t interval_max,
-      bluetooth::hci::LegacyAdvertisingProperties type,
+      bluetooth::hci::LegacyAdvertisingEventProperties type,
       bluetooth::hci::OwnAddressType own_address_type,
       bluetooth::hci::PeerAddressType peer_address_type, Address peer,
       bluetooth::hci::AdvertisingFilterPolicy filter_policy, uint8_t tx_power);
