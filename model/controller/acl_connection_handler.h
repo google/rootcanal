@@ -130,6 +130,14 @@ class AclConnectionHandler {
 
   std::vector<uint16_t> GetAclHandles() const;
 
+  void ResetLinkTimer(uint16_t handle);
+  std::chrono::steady_clock::duration TimeUntilLinkNearExpiring(
+      uint16_t handle) const;
+  bool IsLinkNearExpiring(uint16_t handle) const;
+  std::chrono::steady_clock::duration TimeUntilLinkExpired(
+      uint16_t handle) const;
+  bool HasLinkExpired(uint16_t handle) const;
+
  private:
   std::unordered_map<uint16_t, AclConnection> acl_connections_;
   std::unordered_map<uint16_t, ScoConnection> sco_connections_;
