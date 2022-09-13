@@ -247,13 +247,13 @@ DualModeController::DualModeController(const std::string& properties_filename,
   SET_HANDLER(LE_MULTI_ADVT, LeVendorMultiAdv);
   SET_HANDLER(LE_ADV_FILTER, LeAdvertisingFilter);
   SET_HANDLER(LE_ENERGY_INFO, LeEnergyInfo);
-  SET_SUPPORTED(LE_SET_EXTENDED_ADVERTISING_RANDOM_ADDRESS,
-                LeSetExtendedAdvertisingRandomAddress);
+  SET_SUPPORTED(LE_SET_ADVERTISING_SET_RANDOM_ADDRESS,
+                LeSetAdvertisingSetRandomAddress);
   SET_SUPPORTED(LE_SET_EXTENDED_ADVERTISING_PARAMETERS,
                 LeSetExtendedAdvertisingParameters);
   SET_SUPPORTED(LE_SET_EXTENDED_ADVERTISING_DATA, LeSetExtendedAdvertisingData);
-  SET_SUPPORTED(LE_SET_EXTENDED_ADVERTISING_SCAN_RESPONSE,
-                LeSetExtendedAdvertisingScanResponse);
+  SET_SUPPORTED(LE_SET_EXTENDED_SCAN_RESPONSE_DATA,
+                LeSetExtendedScanResponseData);
   SET_SUPPORTED(LE_SET_EXTENDED_ADVERTISING_ENABLE,
                 LeSetExtendedAdvertisingEnable);
   SET_SUPPORTED(LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH,
@@ -2086,18 +2086,18 @@ void DualModeController::LeSetAdvertisingParameters(CommandView command) {
       gd_hci::LeAdvertisingCommandView::Create(command));
   ASSERT(command_view.IsValid());
   auto peer_address = command_view.GetPeerAddress();
-  auto type = command_view.GetAdvtType();
-  if (type != bluetooth::hci::AdvertisingType::ADV_DIRECT_IND &&
+  auto type = command_view.GetAdvertisingType();
+  if (type != bluetooth::hci::AdvertisingType::ADV_DIRECT_IND_HIGH &&
       type != bluetooth::hci::AdvertisingType::ADV_DIRECT_IND_LOW) {
     peer_address = Address::kEmpty;
   }
   link_layer_controller_.SetLeAdvertisingParameters(
-      command_view.GetIntervalMin(), command_view.GetIntervalMax(),
-      static_cast<uint8_t>(type),
+      command_view.GetAdvertisingIntervalMin(),
+      command_view.GetAdvertisingIntervalMax(), static_cast<uint8_t>(type),
       static_cast<uint8_t>(command_view.GetOwnAddressType()),
       static_cast<uint8_t>(command_view.GetPeerAddressType()), peer_address,
-      command_view.GetChannelMap(),
-      static_cast<uint8_t>(command_view.GetFilterPolicy()));
+      command_view.GetAdvertisingChannelMap(),
+      static_cast<uint8_t>(command_view.GetAdvertisingFilterPolicy()));
 
   send_event_(bluetooth::hci::LeSetAdvertisingParametersCompleteBuilder::Create(
       kNumCommandPackets, ErrorCode::SUCCESS));
@@ -2860,23 +2860,21 @@ void DualModeController::LeEnergyInfo(CommandView command) {
       static_cast<uint16_t>(OpCode::LE_ENERGY_INFO));
 }
 
-void DualModeController::LeSetExtendedAdvertisingRandomAddress(
-    CommandView command) {
-  auto command_view = gd_hci::LeSetExtendedAdvertisingRandomAddressView::Create(
+void DualModeController::LeSetAdvertisingSetRandomAddress(CommandView command) {
+  auto command_view = gd_hci::LeSetAdvertisingSetRandomAddressView::Create(
       gd_hci::LeAdvertisingCommandView::Create(command));
   ASSERT(command_view.IsValid());
   link_layer_controller_.SetLeExtendedAddress(
-      command_view.GetAdvertisingHandle(),
-      command_view.GetAdvertisingRandomAddress());
+      command_view.GetAdvertisingHandle(), command_view.GetRandomAddress());
   send_event_(
-      bluetooth::hci::LeSetExtendedAdvertisingRandomAddressCompleteBuilder::
-          Create(kNumCommandPackets, ErrorCode::SUCCESS));
+      bluetooth::hci::LeSetAdvertisingSetRandomAddressCompleteBuilder::Create(
+          kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
 void DualModeController::LeSetExtendedAdvertisingParameters(
     CommandView command) {
   auto command_view =
-      gd_hci::LeSetExtendedAdvertisingLegacyParametersView::Create(
+      gd_hci::LeSetExtendedAdvertisingParametersLegacyView::Create(
           gd_hci::LeAdvertisingCommandView::Create(command));
   // TODO: Support non-legacy parameters
   ASSERT(command_view.IsValid());
@@ -2884,7 +2882,7 @@ void DualModeController::LeSetExtendedAdvertisingParameters(
       command_view.GetAdvertisingHandle(),
       command_view.GetPrimaryAdvertisingIntervalMin(),
       command_view.GetPrimaryAdvertisingIntervalMax(),
-      command_view.GetAdvertisingEventLegacyProperties(),
+      command_view.GetLegacyAdvertisingEventProperties(),
       command_view.GetOwnAddressType(), command_view.GetPeerAddressType(),
       command_view.GetPeerAddress(), command_view.GetAdvertisingFilterPolicy(),
       command_view.GetAdvertisingTxPower());
@@ -2909,23 +2907,21 @@ void DualModeController::LeSetExtendedAdvertisingData(CommandView command) {
           kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
-void DualModeController::LeSetExtendedAdvertisingScanResponse(
-    CommandView command) {
-  auto command_view = gd_hci::LeSetExtendedAdvertisingScanResponseView::Create(
+void DualModeController::LeSetExtendedScanResponseData(CommandView command) {
+  auto command_view = gd_hci::LeSetExtendedScanResponseDataView::Create(
       gd_hci::LeAdvertisingCommandView::Create(command));
   ASSERT(command_view.IsValid());
   link_layer_controller_.SetLeScanResponseData(std::vector<uint8_t>(
       command_view.GetPayload().begin() + 1, command_view.GetPayload().end()));
-  auto raw_command_view =
-      gd_hci::LeSetExtendedAdvertisingScanResponseRawView::Create(
-          gd_hci::LeAdvertisingCommandView::Create(command));
+  auto raw_command_view = gd_hci::LeSetExtendedScanResponseDataRawView::Create(
+      gd_hci::LeAdvertisingCommandView::Create(command));
   ASSERT(raw_command_view.IsValid());
   link_layer_controller_.SetLeExtendedScanResponseData(
       command_view.GetAdvertisingHandle(),
       raw_command_view.GetScanResponseData());
   send_event_(
-      bluetooth::hci::LeSetExtendedAdvertisingScanResponseCompleteBuilder::
-          Create(kNumCommandPackets, ErrorCode::SUCCESS));
+      bluetooth::hci::LeSetExtendedScanResponseDataCompleteBuilder::Create(
+          kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
 void DualModeController::LeSetExtendedAdvertisingEnable(CommandView command) {
