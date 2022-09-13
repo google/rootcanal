@@ -2426,8 +2426,11 @@ AsyncTaskId LinkLayerController::ScheduleTask(milliseconds delay_ms,
                                               const TaskCallback& callback) {
   if (schedule_task_) {
     return schedule_task_(delay_ms, callback);
-  } else {
+  } else if (delay_ms == milliseconds::zero()) {
     callback();
+    return 0;
+  } else {
+    LOG_ERROR("Unable to schedule task on delay");
     return 0;
   }
 }
@@ -4214,8 +4217,7 @@ void LinkLayerController::CheckExpiringConnection(uint16_t handle) {
   }
 
   if (connections_.HasLinkExpired(handle)) {
-    connections_.Disconnect(handle);
-    SendDisconnectionCompleteEvent(handle, ErrorCode::CONNECTION_TIMEOUT);
+    Disconnect(handle, ErrorCode::CONNECTION_TIMEOUT);
     return;
   }
 
