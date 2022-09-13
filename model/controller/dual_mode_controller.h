@@ -542,7 +542,7 @@ class DualModeController : public Device {
   void LeReadMaximumDataLength(CommandView args);
 
   // 7.8.52
-  void LeSetExtendedAdvertisingRandomAddress(CommandView args);
+  void LeSetAdvertisingSetRandomAddress(CommandView args);
 
   // 7.8.53
   void LeSetExtendedAdvertisingParameters(CommandView args);
@@ -551,7 +551,7 @@ class DualModeController : public Device {
   void LeSetExtendedAdvertisingData(CommandView args);
 
   // 7.8.55
-  void LeSetExtendedAdvertisingScanResponse(CommandView args);
+  void LeSetExtendedScanResponseData(CommandView args);
 
   // 7.8.56
   void LeSetExtendedAdvertisingEnable(CommandView args);
