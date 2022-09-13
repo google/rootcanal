@@ -3327,7 +3327,7 @@ ErrorCode LinkLayerController::SetLeExtendedScanResponseData(
 
 ErrorCode LinkLayerController::SetLeExtendedAdvertisingParameters(
     uint8_t set, uint16_t interval_min, uint16_t interval_max,
-    bluetooth::hci::LegacyAdvertisingProperties type,
+    bluetooth::hci::LegacyAdvertisingEventProperties type,
     bluetooth::hci::OwnAddressType own_address_type,
     bluetooth::hci::PeerAddressType peer_address_type, Address peer,
     bluetooth::hci::AdvertisingFilterPolicy filter_policy, uint8_t tx_power) {
@@ -3347,20 +3347,20 @@ ErrorCode LinkLayerController::SetLeExtendedAdvertisingParameters(
 
   AddressWithType directed_address{};
   switch (type) {
-    case bluetooth::hci::LegacyAdvertisingProperties::ADV_IND:
+    case bluetooth::hci::LegacyAdvertisingEventProperties::ADV_IND:
       ad_type = model::packets::AdvertisementType::ADV_IND;
       break;
-    case bluetooth::hci::LegacyAdvertisingProperties::ADV_NONCONN_IND:
+    case bluetooth::hci::LegacyAdvertisingEventProperties::ADV_NONCONN_IND:
       ad_type = model::packets::AdvertisementType::ADV_NONCONN_IND;
       break;
-    case bluetooth::hci::LegacyAdvertisingProperties::ADV_SCAN_IND:
+    case bluetooth::hci::LegacyAdvertisingEventProperties::ADV_SCAN_IND:
       ad_type = model::packets::AdvertisementType::ADV_SCAN_IND;
       break;
-    case bluetooth::hci::LegacyAdvertisingProperties::ADV_DIRECT_IND_HIGH:
+    case bluetooth::hci::LegacyAdvertisingEventProperties::ADV_DIRECT_IND_HIGH:
       ad_type = model::packets::AdvertisementType::ADV_DIRECT_IND;
       directed_address = peer_address;
       break;
-    case bluetooth::hci::LegacyAdvertisingProperties::ADV_DIRECT_IND_LOW:
+    case bluetooth::hci::LegacyAdvertisingEventProperties::ADV_DIRECT_IND_LOW:
       ad_type = model::packets::AdvertisementType::SCAN_RESPONSE;
       directed_address = peer_address;
       break;
