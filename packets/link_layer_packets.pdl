@@ -15,7 +15,7 @@ enum PacketType : 8 {
     IO_CAPABILITY_REQUEST = 0x08,
     IO_CAPABILITY_RESPONSE = 0x09,
     IO_CAPABILITY_NEGATIVE_RESPONSE = 0x0A,
-    LE_ADVERTISEMENT = 0x0B,
+    LE_LEGACY_ADVERTISING_PDU = 0x0B,
     LE_CONNECT = 0x0C,
     LE_CONNECT_COMPLETE = 0x0D,
     LE_SCAN = 0x0E,
@@ -146,18 +146,20 @@ enum AddressType : 8 {
   RANDOM_IDENTITY = 3,
 }
 
-enum AdvertisementType : 8 {
+// Legacy advertising PDU types.
+// Vol 6, Part B § 2.3.1 Advertising PDUs.
+enum LegacyAdvertisingType : 8 {
   ADV_IND = 0,          // Connectable and scannable
   ADV_DIRECT_IND = 1,   // Connectable directed, high duty cycle
   ADV_SCAN_IND = 2,     // Scannable undirected
   ADV_NONCONN_IND = 3,  // Non connectable undirected
-  SCAN_RESPONSE = 4,    // Aliased with connectable directed, low duty cycle
 }
 
-packet LeAdvertisement : LinkLayerPacket (type = LE_ADVERTISEMENT) {
-  address_type : AddressType,
-  advertisement_type : AdvertisementType,
-  data : 8[],
+packet LeLegacyAdvertisingPdu : LinkLayerPacket (type = LE_LEGACY_ADVERTISING_PDU) {
+  advertising_address_type: AddressType,
+  target_address_type: AddressType,
+  advertising_type: LegacyAdvertisingType,
+  advertising_data: 8[],
 }
 
 packet LeConnect : LinkLayerPacket (type = LE_CONNECT) {
@@ -180,7 +182,6 @@ packet LeScan : LinkLayerPacket (type = LE_SCAN) {
 
 packet LeScanResponse : LinkLayerPacket (type = LE_SCAN_RESPONSE) {
   address_type : AddressType,
-  advertisement_type : AdvertisementType,
   data : 8[],
 }
 
