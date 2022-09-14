@@ -29,7 +29,7 @@ bool BeaconSwarm::registered_ =
 
 BeaconSwarm::BeaconSwarm(const vector<std::string>& args) : Beacon(args) {
   advertising_interval_ = 1280ms;
-  advertising_type_ = AdvertisementType::ADV_NONCONN_IND;
+  advertising_type_ = LegacyAdvertisingType::ADV_NONCONN_IND;
   advertising_data_ = {
       0x15 /* Length */,
       0x09 /* TYPE_NAME_COMPLETE */,
