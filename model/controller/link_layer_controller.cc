@@ -67,6 +67,35 @@ bool LinkLayerController::IsLeEventUnmasked(SubeventCode subevent) const {
          (le_event_mask_ & bit) != 0;
 }
 
+bool LinkLayerController::LeResolvingListContainsDevice(
+    AddressType peer_identity_address_type, Address peer_identity_address) {
+  for (auto const& entry : le_resolving_list_) {
+    if (entry.peer_identity_address_type == peer_identity_address_type &&
+        entry.peer_identity_address == peer_identity_address) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool LinkLayerController::LeResolvingListContainsDevice(
+    bluetooth::hci::PeerAddressType peer_identity_address_type,
+    Address peer_identity_address) {
+  AddressType peer_address_type;
+  switch (peer_identity_address_type) {
+    case bluetooth::hci::PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS:
+      peer_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
+      break;
+    case bluetooth::hci::PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS:
+      peer_address_type = AddressType::RANDOM_DEVICE_ADDRESS;
+      break;
+  }
+
+  return LeResolvingListContainsDevice(peer_address_type,
+                                       peer_identity_address);
+}
+
 // =============================================================================
 //  General LE Coommands
 // =============================================================================
@@ -127,6 +156,122 @@ ErrorCode LinkLayerController::LeSetHostFeature(uint8_t bit_number,
     le_host_supported_features_ &= ~bit_mask;
   }
 
+  return ErrorCode::SUCCESS;
+}
+
+// =============================================================================
+//  LE Resolving List
+// =============================================================================
+
+// HCI command LE_Add_Device_To_Resolving_List (Vol 4, Part E § 7.8.38).
+ErrorCode LinkLayerController::LeAddDeviceToResolvingList(
+    AddressType peer_identity_address_type, Address peer_identity_address,
+    std::array<uint8_t, kIrkSize> peer_irk,
+    std::array<uint8_t, kIrkSize> local_irk) {
+  // This command shall not be used when address resolution is enabled in the
+  // Controller and:
+  //  • Advertising (other than periodic advertising) is enabled,
+  //  • Scanning is enabled, or
+  //  • an HCI_LE_Create_Connection, HCI_LE_Extended_Create_Connection, or
+  //    HCI_LE_Periodic_Advertising_Create_Sync command is pending.
+  if (ResolvingListBusy()) {
+    LOG_INFO(
+        "device is currently advertising, scanning, or establishing an"
+        " LE connection");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  // When a Controller cannot add a device to the list because there is no space
+  // available, it shall return the error code Memory Capacity Exceeded (0x07).
+  if (le_resolving_list_.size() >= properties_.le_resolving_list_size) {
+    LOG_INFO("resolving list is full");
+    return ErrorCode::MEMORY_CAPACITY_EXCEEDED;
+  }
+
+  // If there is an existing entry in the resolving list with the same
+  // Peer_Identity_Address and Peer_Identity_Address_Type, or with the same
+  // Peer_IRK, the Controller should return the error code Invalid HCI Command
+  // Parameters (0x12).
+  for (auto const& entry : le_resolving_list_) {
+    if ((entry.peer_identity_address_type == peer_identity_address_type &&
+         entry.peer_identity_address == peer_identity_address) ||
+        entry.peer_irk == peer_irk) {
+      LOG_INFO("device is already present in the resolving list");
+      return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+    }
+  }
+
+  le_resolving_list_.emplace_back(ResolvingListEntry{
+      peer_identity_address_type, peer_identity_address, peer_irk, local_irk});
+  return ErrorCode::SUCCESS;
+}
+
+// HCI command LE_Remove_Device_From_Resolving_List (Vol 4, Part E § 7.8.39).
+ErrorCode LinkLayerController::LeRemoveDeviceFromResolvingList(
+    AddressType peer_identity_address_type, Address peer_identity_address) {
+  // This command shall not be used when address resolution is enabled in the
+  // Controller and:
+  //  • Advertising (other than periodic advertising) is enabled,
+  //  • Scanning is enabled, or
+  //  • an HCI_LE_Create_Connection, HCI_LE_Extended_Create_Connection, or
+  //    HCI_LE_Periodic_Advertising_Create_Sync command is pending.
+  if (ResolvingListBusy()) {
+    LOG_INFO(
+        "device is currently advertising, scanning, or establishing an"
+        " LE connection");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  for (auto it = le_resolving_list_.begin(); it != le_resolving_list_.end();
+       it++) {
+    if (it->peer_identity_address_type == peer_identity_address_type &&
+        it->peer_identity_address == peer_identity_address) {
+      le_resolving_list_.erase(it);
+      return ErrorCode::SUCCESS;
+    }
+  }
+
+  // When a Controller cannot remove a device from the resolving list because
+  // it is not found, it shall return the error code
+  // Unknown Connection Identifier (0x02).
+  LOG_INFO("peer address not found in the resolving list");
+  return ErrorCode::UNKNOWN_CONNECTION;
+}
+
+// HCI command LE_Clear_Resolving_List (Vol 4, Part E § 7.8.40).
+ErrorCode LinkLayerController::LeClearResolvingList() {
+  // This command shall not be used when address resolution is enabled in the
+  // Controller and:
+  //  • Advertising (other than periodic advertising) is enabled,
+  //  • Scanning is enabled, or
+  //  • an HCI_LE_Create_Connection, HCI_LE_Extended_Create_Connection, or
+  //    HCI_LE_Periodic_Advertising_Create_Sync command is pending.
+  if (ResolvingListBusy()) {
+    LOG_INFO(
+        "device is currently advertising, scanning,"
+        " or establishing an LE connection");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  le_resolving_list_.clear();
+  return ErrorCode::SUCCESS;
+}
+
+// HCI command LE_Set_Address_Resolution_Enable (Vol 4, Part E § 7.8.44).
+ErrorCode LinkLayerController::LeSetAddressResolutionEnable(bool enable) {
+  // This command shall not be used when:
+  //  • Advertising (other than periodic advertising) is enabled,
+  //  • Scanning is enabled, or
+  //  • an HCI_LE_Create_Connection, HCI_LE_Extended_Create_Connection, or
+  //    HCI_LE_Periodic_Advertising_Create_Sync command is pending.
+  if (ResolvingListBusy()) {
+    LOG_INFO(
+        "device is currently advertising, scanning,"
+        " or establishing an LE connection");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  le_resolving_list_enabled_ = enable;
   return ErrorCode::SUCCESS;
 }
 
@@ -1608,10 +1753,10 @@ void LinkLayerController::IncomingLeLegacyAdvertisingPdu(
     for (const auto& entry : le_resolving_list_) {
       if (rpa_matches_irk(advertising_address, entry.peer_irk)) {
         LOG_INFO("Matched against IRK for %s",
-                 entry.address.ToString().c_str());
+                 entry.peer_identity_address.ToString().c_str());
         resolved = true;
-        resolved_address = entry.address;
-        resolved_address_type = entry.address_type;
+        resolved_address = entry.peer_identity_address;
+        resolved_address_type = entry.peer_identity_address_type;
         rpa = generate_rpa(entry.local_irk);
       }
     }
@@ -3430,8 +3575,9 @@ ErrorCode LinkLayerController::SetLeExtendedAdvertisingParameters(
             own_address_type ==
                 bluetooth::hci::OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS) {
           for (const auto& entry : le_resolving_list_) {
-            if (entry.address == peer_address.GetAddress() &&
-                entry.address_type == peer_address.GetAddressType()) {
+            if (entry.peer_identity_address == peer_address.GetAddress() &&
+                entry.peer_identity_address_type ==
+                    peer_address.GetAddressType()) {
               return generate_rpa(entry.local_irk);
             }
           }
@@ -3552,24 +3698,6 @@ ErrorCode LinkLayerController::LeFilterAcceptListClear() {
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::LeSetAddressResolutionEnable(bool enable) {
-  if (ResolvingListBusy()) {
-    return ErrorCode::COMMAND_DISALLOWED;
-  }
-
-  le_resolving_list_enabled_ = enable;
-  return ErrorCode::SUCCESS;
-}
-
-ErrorCode LinkLayerController::LeResolvingListClear() {
-  if (ResolvingListBusy()) {
-    return ErrorCode::COMMAND_DISALLOWED;
-  }
-
-  le_resolving_list_.clear();
-  return ErrorCode::SUCCESS;
-}
-
 ErrorCode LinkLayerController::LeFilterAcceptListAddDevice(
     Address addr, AddressType addr_type) {
   if (FilterAcceptListBusy()) {
@@ -3584,20 +3712,6 @@ ErrorCode LinkLayerController::LeFilterAcceptListAddDevice(
     return ErrorCode::MEMORY_CAPACITY_EXCEEDED;
   }
   le_connect_list_.emplace_back(ConnectListEntry{addr, addr_type});
-  return ErrorCode::SUCCESS;
-}
-
-ErrorCode LinkLayerController::LeResolvingListAddDevice(
-    Address addr, AddressType addr_type, std::array<uint8_t, kIrkSize> peerIrk,
-    std::array<uint8_t, kIrkSize> localIrk) {
-  if (ResolvingListBusy()) {
-    return ErrorCode::COMMAND_DISALLOWED;
-  }
-  if (LeResolvingListFull()) {
-    return ErrorCode::MEMORY_CAPACITY_EXCEEDED;
-  }
-  le_resolving_list_.emplace_back(
-      ResolvingListEntry{addr, addr_type, peerIrk, localIrk});
   return ErrorCode::SUCCESS;
 }
 
@@ -3961,20 +4075,6 @@ ErrorCode LinkLayerController::LeFilterAcceptListRemoveDevice(
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::LeResolvingListRemoveDevice(
-    Address addr, AddressType addr_type) {
-  if (ResolvingListBusy()) {
-    return ErrorCode::COMMAND_DISALLOWED;
-  }
-  for (size_t i = 0; i < le_resolving_list_.size(); i++) {
-    auto curr = le_resolving_list_[i];
-    if (curr.address == addr && curr.address_type == addr_type) {
-      le_resolving_list_.erase(le_resolving_list_.begin() + i);
-    }
-  }
-  return ErrorCode::SUCCESS;
-}
-
 bool LinkLayerController::LeFilterAcceptListContainsDevice(
     Address addr, AddressType addr_type) {
   for (size_t i = 0; i < le_connect_list_.size(); i++) {
@@ -3986,23 +4086,8 @@ bool LinkLayerController::LeFilterAcceptListContainsDevice(
   return false;
 }
 
-bool LinkLayerController::LeResolvingListContainsDevice(Address addr,
-                                                        AddressType addr_type) {
-  for (size_t i = 0; i < le_connect_list_.size(); i++) {
-    auto curr = le_connect_list_[i];
-    if (curr.address == addr && curr.address_type == addr_type) {
-      return true;
-    }
-  }
-  return false;
-}
-
 bool LinkLayerController::LeFilterAcceptListFull() {
   return le_connect_list_.size() >= properties_.le_filter_accept_list_size;
-}
-
-bool LinkLayerController::LeResolvingListFull() {
-  return le_resolving_list_.size() >= properties_.le_resolving_list_size;
 }
 
 void LinkLayerController::Reset() {
