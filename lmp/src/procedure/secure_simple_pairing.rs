@@ -837,4 +837,94 @@ mod tests {
 
         include!("../../test/SP/BV-17-C.in");
     }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_initiator_iut_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-18-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_responder_iut_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-19-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_initiator_lower_tester_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-20-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_responder_lower_tester_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-21-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_initiator_iut_and_lower_tester_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-22-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_responder_iut_and_lower_tester_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-23-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_initiator_iut_with_oob_auth_data_failure() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-24-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_responder_iut_with_oob_auth_data_failure() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-25-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_initiator_lower_tester_with_oob_auth_data_failure() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-26-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_responder_lower_tester_with_oob_auth_data_failure() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-27-C.in");
+    }
 }
