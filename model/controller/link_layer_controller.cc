@@ -192,7 +192,7 @@ LinkLayerController::LinkLayerController(const Address& address,
     : address_(address),
       properties_(properties),
       lm_(nullptr, link_manager_destroy) {
-  auto ops = (struct LinkManagerOps){
+  ops_ = {
       .user_pointer = this,
       .get_handle =
           [](void* user, const uint8_t(*address)[6]) {
@@ -245,7 +245,7 @@ LinkLayerController::LinkLayerController(const Address& address,
                 source, dest, std::move(payload)));
           }};
 
-  lm_.reset(link_manager_create(ops));
+  lm_.reset(link_manager_create(ops_));
 }
 #else
 LinkLayerController::LinkLayerController(const Address& address,
@@ -4001,6 +4001,9 @@ void LinkLayerController::Reset() {
   last_inquiry_ = steady_clock::now();
   page_scan_enable_ = false;
   inquiry_scan_enable_ = false;
+#ifdef ROOTCANAL_LMP
+  lm_.reset(link_manager_create(ops_));
+#endif
 }
 
 void LinkLayerController::StartInquiry(milliseconds timeout) {
