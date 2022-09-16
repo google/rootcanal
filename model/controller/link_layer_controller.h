@@ -29,6 +29,7 @@
 extern "C" {
 struct LinkManager;
 }
+#include "lmp.h"
 #else
 #include "security_manager.h"
 #endif /* ROOTCANAL_LMP */
@@ -789,6 +790,7 @@ class LinkLayerController {
   // Classic state
 #ifdef ROOTCANAL_LMP
   std::unique_ptr<const LinkManager, void (*)(const LinkManager*)> lm_;
+  struct LinkManagerOps ops_;
 #else
   SecurityManager security_manager_{10};
 #endif /* ROOTCANAL_LMP */
