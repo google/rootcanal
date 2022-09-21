@@ -111,8 +111,9 @@ impl LinkManager {
         from: hci::Address,
         packet: lmp::PacketPacket,
     ) -> Result<(), LinkManagerError> {
-        let link = self.get_link(from).ok_or(LinkManagerError::UnknownPeer)?;
-        link.ingest_lmp(packet);
+        if let Some(link) = self.get_link(from) {
+            link.ingest_lmp(packet);
+        };
         Ok(())
     }
 
@@ -123,8 +124,9 @@ impl LinkManager {
             .or_else(|| hci::command_remote_device_address(&command));
 
         if let Some(peer) = peer {
-            let link = self.get_link(peer).ok_or(LinkManagerError::UnknownPeer)?;
-            link.ingest_hci(command);
+            if let Some(link) = self.get_link(peer) {
+                link.ingest_hci(command);
+            };
             Ok(())
         } else {
             Err(LinkManagerError::UnhandledHciPacket)
