@@ -81,3 +81,27 @@ pub async fn respond(ctx: &impl Context) {
         .build(),
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::initiate;
+    use super::respond;
+    use crate::procedure::Context;
+    use crate::test::{sequence, TestContext};
+
+    #[test]
+    fn accept_encryption() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/ENC/BV-01-C.in");
+    }
+
+    #[test]
+    fn initiate_encryption() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/ENC/BV-05-C.in");
+    }
+}

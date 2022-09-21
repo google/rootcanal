@@ -1,0 +1,32 @@
+sequence! { procedure, context,
+    // ACL Connection Established
+    Lower Tester -> IUT: EncryptionModeReq {
+        transaction_id: 0,
+        encryption_mode: 0x01,
+    }
+    IUT ->Lower Tester: Accepted {
+        transaction_id: 0,
+        accepted_opcode: Opcode::EncryptionModeReq,
+    }
+    Lower Tester -> IUT: EncryptionKeySizeReq {
+        transaction_id: 0,
+        key_size: 0x10,
+    }
+    IUT -> Lower Tester: Accepted {
+        transaction_id: 0,
+        accepted_opcode: Opcode::EncryptionKeySizeReq,
+    }
+    Lower Tester -> IUT: StartEncryptionReq {
+        transaction_id: 0,
+        random_number: [0; 16],
+    }
+    IUT -> Lower Tester: Accepted {
+        transaction_id: 0,
+        accepted_opcode: Opcode::StartEncryptionReq,
+    }
+    IUT -> Upper Tester: EncryptionChange {
+        status: ErrorCode::Success,
+        connection_handle: context.peer_handle(),
+        encryption_enabled: EncryptionEnabled::On,
+    }
+}
