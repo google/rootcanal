@@ -1,0 +1,158 @@
+sequence! { procedure, context,
+    // ACL Connection Established
+    Upper Tester -> IUT: AuthenticationRequested {
+        connection_handle: context.peer_handle()
+    }
+    IUT -> Upper Tester: AuthenticationRequestedStatus {
+       num_hci_command_packets: 1,
+       status: ErrorCode::Success,
+    }
+    IUT -> Upper Tester: LinkKeyRequest {
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: LinkKeyRequestNegativeReply {
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: LinkKeyRequestNegativeReplyComplete {
+       num_hci_command_packets: 1,
+       status: ErrorCode::Success,
+       bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: IoCapabilityRequest {
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: IoCapabilityRequestReply {
+        bd_addr: context.peer_address(),
+        io_capability: IoCapability::KeyboardOnly,
+        oob_present: OobDataPresent::NotPresent,
+        authentication_requirements: AuthenticationRequirements::NoBondingMitmProtection,
+    }
+    IUT -> Upper Tester: IoCapabilityRequestReplyComplete {
+        num_hci_command_packets: 1,
+        status: ErrorCode::Success,
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Lower Tester: IoCapabilityReq {
+        transaction_id: 0,
+        io_capabilities: 0x02,
+        oob_authentication_data: 0x00,
+        authentication_requirement: 0x01,
+    }
+    Lower Tester -> IUT: IoCapabilityRes {
+        transaction_id: 0,
+        io_capabilities: 0x00,
+        oob_authentication_data: 0x00,
+        authentication_requirement: 0x01,
+    }
+    IUT -> Upper Tester: IoCapabilityResponse {
+        bd_addr: context.peer_address(),
+        io_capability: IoCapability::DisplayOnly,
+        oob_data_present: OobDataPresent::NotPresent,
+        authentication_requirements: AuthenticationRequirements::NoBondingMitmProtection,
+    }
+    // Public Key Exchange
+    IUT -> Lower Tester: EncapsulatedHeader {
+        transaction_id: 0,
+        major_type: 1,
+        minor_type: 1,
+        payload_length: 48,
+    }
+    Lower Tester -> IUT: Accepted {
+        transaction_id: 0,
+        accepted_opcode: Opcode::EncapsulatedHeader,
+    }
+    repeat 3 times with (part in local_p192_public_key(&context)) {
+        IUT -> Lower Tester: EncapsulatedPayload {
+            transaction_id: 0,
+            data: part,
+        }
+        Lower Tester -> IUT: Accepted {
+            transaction_id: 0,
+            accepted_opcode: Opcode::EncapsulatedPayload,
+        }
+    }
+    Lower Tester -> IUT: EncapsulatedHeader {
+        transaction_id: 0,
+        major_type: 1,
+        minor_type: 1,
+        payload_length: 48,
+    }
+    IUT -> Lower Tester: Accepted {
+        transaction_id: 0,
+        accepted_opcode: Opcode::EncapsulatedHeader,
+    }
+    repeat 3 times with (part in peer_p192_public_key()) {
+        Lower Tester -> IUT: EncapsulatedPayload {
+            transaction_id: 0,
+            data: part,
+        }
+        IUT -> Lower Tester: Accepted {
+            transaction_id: 0,
+            accepted_opcode: Opcode::EncapsulatedPayload,
+        }
+    }
+    // Authentication Stage 1: Passkey Entry Protocol
+    IUT -> Upper Tester: UserPasskeyRequest {
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: SendKeypressNotification {
+        bd_addr: context.peer_address(),
+        notification_type: KeypressNotificationType::EntryStarted,
+    }
+    IUT -> Lower Tester: KeypressNotification {
+        transaction_id: 0,
+        notification_type: 0x00,
+    }
+    IUT -> Upper Tester: SendKeypressNotificationComplete {
+        num_hci_command_packets: 1,
+        status: ErrorCode::Success,
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: SendKeypressNotification {
+        bd_addr: context.peer_address(),
+        notification_type: KeypressNotificationType::EntryCompleted,
+    }
+    IUT -> Lower Tester: KeypressNotification {
+        transaction_id: 0,
+        notification_type: 0x04,
+    }
+    IUT -> Upper Tester: SendKeypressNotificationComplete {
+        num_hci_command_packets: 1,
+        status: ErrorCode::Success,
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: UserPasskeyRequestReply {
+        bd_addr: context.peer_address(),
+        numeric_value: 0,
+    }
+    IUT -> Upper Tester: UserPasskeyRequestReplyComplete {
+        num_hci_command_packets: 1,
+        status: ErrorCode::Success,
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Lower Tester: SimplePairingConfirm {
+        transaction_id: 0,
+        commitment_value: [0; 16],
+    }
+    Lower Tester -> IUT: SimplePairingConfirm {
+        transaction_id: 0,
+        commitment_value: [0; 16],
+    }
+    IUT -> Lower Tester: SimplePairingNumber {
+        transaction_id: 0,
+        nonce: [0; 16],
+    }
+    Lower Tester -> IUT: NotAccepted {
+        transaction_id: 0,
+        not_accepted_opcode: Opcode::SimplePairingNumber,
+        error_code: ErrorCode::AuthenticationFailure.to_u8().unwrap(),
+    }
+    IUT -> Upper Tester: SimplePairingComplete {
+        status: ErrorCode::AuthenticationFailure,
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: AuthenticationComplete {
+        status: ErrorCode::AuthenticationFailure,
+        connection_handle: context.peer_handle(),
+    }
+}
