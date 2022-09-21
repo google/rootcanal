@@ -35,7 +35,7 @@ class LeAdvertiser {
   void Initialize(bluetooth::hci::OwnAddressType address_type,
                   bluetooth::hci::AddressWithType public_address,
                   bluetooth::hci::AddressWithType peer_address,
-                  bluetooth::hci::LeScanningFilterPolicy filter_policy,
+                  bluetooth::hci::AdvertisingFilterPolicy filter_policy,
                   bluetooth::hci::AdvertisingType type,
                   const std::vector<uint8_t>& advertisement,
                   const std::vector<uint8_t>& scan_response,
@@ -45,7 +45,7 @@ class LeAdvertiser {
       unsigned advertising_handle, bluetooth::hci::OwnAddressType address_type,
       bluetooth::hci::AddressWithType public_address,
       bluetooth::hci::AddressWithType peer_address,
-      bluetooth::hci::LeScanningFilterPolicy filter_policy,
+      bluetooth::hci::AdvertisingFilterPolicy filter_policy,
       bluetooth::hci::AdvertisingType type,
       std::chrono::steady_clock::duration interval, uint8_t tx_power,
       const std::function<bluetooth::hci::Address()>& get_address);
@@ -67,12 +67,17 @@ class LeAdvertiser {
 
   std::unique_ptr<model::packets::LinkLayerPacketBuilder> GetScanResponse(
       bluetooth::hci::Address scanned_address,
-      bluetooth::hci::Address scanner_address);
+      bluetooth::hci::Address scanner_address,
+      bool scanner_in_filter_accept_list);
 
   void Clear();
   void Disable();
   void Enable();
   void EnableExtended(std::chrono::milliseconds duration);
+
+  bluetooth::hci::AdvertisingFilterPolicy GetAdvertisingFilterPolicy() const {
+    return filter_policy_;
+  }
 
   bool IsEnabled() const;
   bool IsExtended() const;
@@ -91,7 +96,7 @@ class LeAdvertiser {
   bluetooth::hci::OwnAddressType own_address_type_;
   bluetooth::hci::AddressWithType
       peer_address_{};  // For directed advertisements
-  bluetooth::hci::LeScanningFilterPolicy filter_policy_{};
+  bluetooth::hci::AdvertisingFilterPolicy filter_policy_{};
   bluetooth::hci::AdvertisingType type_{};
   std::vector<uint8_t> advertisement_;
   std::vector<uint8_t> scan_response_;
