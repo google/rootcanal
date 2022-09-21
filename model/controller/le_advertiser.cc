@@ -24,7 +24,7 @@ void LeAdvertiser::Initialize(OwnAddressType address_type,
                               AddressWithType public_address,
                               AddressWithType peer_address,
                               LeScanningFilterPolicy filter_policy,
-                              model::packets::AdvertisementType type,
+                              AdvertisingType type,
                               const std::vector<uint8_t>& advertisement,
                               const std::vector<uint8_t>& scan_response,
                               std::chrono::steady_clock::duration interval) {
@@ -44,8 +44,7 @@ void LeAdvertiser::Initialize(OwnAddressType address_type,
 void LeAdvertiser::InitializeExtended(
     unsigned advertising_handle, OwnAddressType address_type,
     AddressWithType public_address, AddressWithType peer_address,
-    LeScanningFilterPolicy filter_policy,
-    model::packets::AdvertisementType type,
+    LeScanningFilterPolicy filter_policy, AdvertisingType type,
     std::chrono::steady_clock::duration interval, uint8_t tx_power,
     const std::function<bluetooth::hci::Address()>& get_address) {
   get_address_ = get_address;
@@ -66,7 +65,7 @@ void LeAdvertiser::Clear() {
   address_ = AddressWithType{};
   peer_address_ = AddressWithType{};
   filter_policy_ = LeScanningFilterPolicy::ACCEPT_ALL;
-  type_ = model::packets::AdvertisementType::ADV_IND;
+  type_ = AdvertisingType::ADV_IND;
   advertisement_.clear();
   scan_response_.clear();
   interval_ = 0ms;
@@ -138,14 +137,14 @@ void LeAdvertiser::EnableExtended(std::chrono::milliseconds duration_ms) {
   switch (type_) {
     // [Vol 6] Part B. 4.4.2.4.3 High duty cycle connectable directed
     // advertising
-    case model::packets::AdvertisementType::ADV_DIRECT_IND:
+    case AdvertisingType::ADV_DIRECT_IND_HIGH:
       duration = duration == 0ms ? adv_direct_ind_timeout
                                  : std::min(duration, adv_direct_ind_timeout);
       interval_ = adv_direct_ind_interval_high;
       break;
 
     // [Vol 6] Part B. 4.4.2.4.2 Low duty cycle connectable directed advertising
-    case model::packets::AdvertisementType::SCAN_RESPONSE:
+    case AdvertisingType::ADV_DIRECT_IND_LOW:
       interval_ = adv_direct_ind_interval_low;
       break;
 
@@ -169,8 +168,8 @@ bool LeAdvertiser::IsEnabled() const { return enabled_; }
 bool LeAdvertiser::IsExtended() const { return extended_; }
 
 bool LeAdvertiser::IsConnectable() const {
-  return type_ != model::packets::AdvertisementType::ADV_NONCONN_IND &&
-         type_ != model::packets::AdvertisementType::ADV_SCAN_IND;
+  return type_ != AdvertisingType::ADV_NONCONN_IND &&
+         type_ != AdvertisingType::ADV_SCAN_IND;
 }
 
 uint8_t LeAdvertiser::GetNumAdvertisingEvents() const { return num_events_; }
@@ -184,8 +183,8 @@ std::unique_ptr<bluetooth::hci::EventBuilder> LeAdvertiser::GetEvent(
 
   // [Vol 4] Part E 7.8.9   LE Set Advertising Enable command
   // [Vol 4] Part E 7.8.56  LE Set Extended Advertising Enable command
-  if (type_ == model::packets::AdvertisementType::ADV_DIRECT_IND &&
-      now >= ending_time_ && limited_) {
+  if (type_ == AdvertisingType::ADV_DIRECT_IND_HIGH && now >= ending_time_ &&
+      limited_) {
     LOG_INFO("Directed Advertising Timeout");
     enabled_ = false;
     return bluetooth::hci::LeConnectionCompleteBuilder::Create(
@@ -216,21 +215,42 @@ LeAdvertiser::GetAdvertisement(std::chrono::steady_clock::time_point now) {
     return nullptr;
   }
 
+  model::packets::LegacyAdvertisingType advertising_type;
+  switch (type_) {
+    case AdvertisingType::ADV_IND:
+      advertising_type = model::packets::LegacyAdvertisingType::ADV_IND;
+      break;
+    case AdvertisingType::ADV_DIRECT_IND_HIGH:
+    case AdvertisingType::ADV_DIRECT_IND_LOW:
+      advertising_type = model::packets::LegacyAdvertisingType::ADV_DIRECT_IND;
+      break;
+    case AdvertisingType::ADV_SCAN_IND:
+      advertising_type = model::packets::LegacyAdvertisingType::ADV_SCAN_IND;
+      break;
+    case AdvertisingType::ADV_NONCONN_IND:
+      advertising_type = model::packets::LegacyAdvertisingType::ADV_NONCONN_IND;
+      break;
+  }
+
   last_le_advertisement_ = now;
   num_events_ += (num_events_ < 255 ? 1 : 0);
   if (tx_power_ == kTxPowerUnavailable) {
-    return model::packets::LeAdvertisementBuilder::Create(
+    return model::packets::LeLegacyAdvertisingPduBuilder::Create(
         address_.GetAddress(), peer_address_.GetAddress(),
         static_cast<model::packets::AddressType>(address_.GetAddressType()),
-        type_, advertisement_);
+        static_cast<model::packets::AddressType>(
+            peer_address_.GetAddressType()),
+        advertising_type, advertisement_);
   } else {
     uint8_t tx_power_jittered = 2 + tx_power_ - (num_events_ & 0x03);
     return model::packets::RssiWrapperBuilder::Create(
         address_.GetAddress(), peer_address_.GetAddress(), tx_power_jittered,
-        model::packets::LeAdvertisementBuilder::Create(
+        model::packets::LeLegacyAdvertisingPduBuilder::Create(
             address_.GetAddress(), peer_address_.GetAddress(),
             static_cast<model::packets::AddressType>(address_.GetAddressType()),
-            type_, advertisement_));
+            static_cast<model::packets::AddressType>(
+                peer_address_.GetAddressType()),
+            advertising_type, advertisement_));
   }
 }
 
@@ -258,7 +278,7 @@ LeAdvertiser::GetScanResponse(bluetooth::hci::Address scanned,
     return model::packets::LeScanResponseBuilder::Create(
         address_.GetAddress(), peer_address_.GetAddress(),
         static_cast<model::packets::AddressType>(address_.GetAddressType()),
-        model::packets::AdvertisementType::SCAN_RESPONSE, scan_response_);
+        scan_response_);
   } else {
     uint8_t tx_power_jittered = 2 + tx_power_ - (num_events_ & 0x03);
     return model::packets::RssiWrapperBuilder::Create(
@@ -266,7 +286,7 @@ LeAdvertiser::GetScanResponse(bluetooth::hci::Address scanned,
         model::packets::LeScanResponseBuilder::Create(
             address_.GetAddress(), peer_address_.GetAddress(),
             static_cast<model::packets::AddressType>(address_.GetAddressType()),
-            model::packets::AdvertisementType::SCAN_RESPONSE, scan_response_));
+            scan_response_));
   }
 }
 

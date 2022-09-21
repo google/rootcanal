@@ -36,7 +36,7 @@ class LeAdvertiser {
                   bluetooth::hci::AddressWithType public_address,
                   bluetooth::hci::AddressWithType peer_address,
                   bluetooth::hci::LeScanningFilterPolicy filter_policy,
-                  model::packets::AdvertisementType type,
+                  bluetooth::hci::AdvertisingType type,
                   const std::vector<uint8_t>& advertisement,
                   const std::vector<uint8_t>& scan_response,
                   std::chrono::steady_clock::duration interval);
@@ -46,7 +46,7 @@ class LeAdvertiser {
       bluetooth::hci::AddressWithType public_address,
       bluetooth::hci::AddressWithType peer_address,
       bluetooth::hci::LeScanningFilterPolicy filter_policy,
-      model::packets::AdvertisementType type,
+      bluetooth::hci::AdvertisingType type,
       std::chrono::steady_clock::duration interval, uint8_t tx_power,
       const std::function<bluetooth::hci::Address()>& get_address);
 
@@ -92,7 +92,7 @@ class LeAdvertiser {
   bluetooth::hci::AddressWithType
       peer_address_{};  // For directed advertisements
   bluetooth::hci::LeScanningFilterPolicy filter_policy_{};
-  model::packets::AdvertisementType type_{};
+  bluetooth::hci::AdvertisingType type_{};
   std::vector<uint8_t> advertisement_;
   std::vector<uint8_t> scan_response_;
   std::chrono::steady_clock::duration interval_{};
