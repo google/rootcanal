@@ -440,8 +440,12 @@ class LinkLayerController {
       model::packets::LinkLayerPacketView packet);
   void IncomingIsoConnectionResponsePacket(
       model::packets::LinkLayerPacketView packet);
-  void IncomingLeAdvertisementPacket(model::packets::LinkLayerPacketView packet,
-                                     uint8_t rssi);
+
+  void IncomingLeLegacyAdvertisingPdu(
+      model::packets::LinkLayerPacketView packet, uint8_t rssi);
+  void IncomingLeExtendedAdvertisingPdu(
+      model::packets::LinkLayerPacketView packet, uint8_t rssi);
+
   void IncomingLeConnectPacket(model::packets::LinkLayerPacketView packet);
   void IncomingLeConnectCompletePacket(
       model::packets::LinkLayerPacketView packet);
@@ -520,16 +524,24 @@ class LinkLayerController {
     return properties_.le_features | le_host_supported_features_;
   }
 
-  uint8_t GetLeAdvertisingTxPower() const { return le_advertising_tx_power_; }
+  uint8_t GetLeAdvertisingTxPower() const {
+    // Return the advertising TX power for the legacy advertiser.
+    // The value is selected by the controller.
+    // TODO check the values configured for extended advertisers.
+    return le_advertising_tx_power_;
+  }
+
   uint16_t GetConnectionAcceptTimeout() const {
     return connection_accept_timeout_;
   }
+
   uint16_t GetVoiceSetting() const { return voice_setting_; }
   const ClassOfDevice& GetClassOfDevice() const { return class_of_device_; }
 
   uint8_t GetMaxLmpFeaturesPageNumber() {
     return properties_.lmp_features.size() - 1;
   }
+
   uint64_t GetLmpFeatures(uint8_t page_number = 0) {
     return page_number == 1 ? host_supported_features_
                             : properties_.lmp_features[page_number];
@@ -538,6 +550,7 @@ class LinkLayerController {
   void SetClassOfDevice(ClassOfDevice class_of_device) {
     class_of_device_ = class_of_device;
   }
+
   void SetClassOfDevice(uint32_t class_of_device) {
     class_of_device_.cod[0] = class_of_device & 0xff;
     class_of_device_.cod[1] = (class_of_device >> 8) & 0xff;
@@ -569,11 +582,11 @@ class LinkLayerController {
   void SetLeHostSupport(bool enable);
   void SetSecureSimplePairingSupport(bool enable);
   void SetSecureConnectionsSupport(bool enable);
-  void SetLeAdvertisingParameters(uint16_t interval_min, uint16_t interval_max,
-                                  uint8_t ad_type, uint8_t own_address_type,
-                                  uint8_t peer_address_type,
-                                  Address peer_address, uint8_t channel_map,
-                                  uint8_t filter_policy);
+  void SetLeAdvertisingParameters(
+      uint16_t interval_min, uint16_t interval_max,
+      bluetooth::hci::AdvertisingType advertising_type,
+      uint8_t own_address_type, uint8_t peer_address_type, Address peer_address,
+      uint8_t channel_map, uint8_t filter_policy);
   void SetConnectionAcceptTimeout(uint16_t timeout) {
     connection_accept_timeout_ = timeout;
   }
@@ -583,8 +596,6 @@ class LinkLayerController {
   void SetLeAdvertisingData(const std::vector<uint8_t>& data) {
     le_advertising_data_ = data;
   }
-
-  uint8_t GetLeAdvertisementType() const { return le_advertisement_type_; }
 
   uint16_t GetLeAdvertisingIntervalMin() const {
     return le_advertising_interval_min_;
@@ -620,10 +631,6 @@ class LinkLayerController {
 
   const std::vector<uint8_t>& GetLeScanResponseData() const {
     return le_scan_response_data_;
-  }
-
-  void SetLeAdvertisementType(uint8_t ad_type) {
-    le_advertisement_type_ = ad_type;
   }
 
  private:
@@ -707,13 +714,15 @@ class LinkLayerController {
   std::vector<uint8_t> le_scan_response_data_;
   std::vector<uint8_t> le_advertising_data_;
 
-  int8_t le_advertising_tx_power_{0x00};
+  // The value is implementation defined.
+  int8_t le_advertising_tx_power_{-10};
 
   // Note: the advertising parameters are initially set to the default
   // values of the parameters of the HCI command LE Set Advertising Parameters.
   uint16_t le_advertising_interval_min_{0x0800};   // 1.28s
   uint16_t le_advertising_interval_max_{0x0800};   // 1.28s
-  uint8_t le_advertisement_type_{0x0};             // ADV_IND
+  bluetooth::hci::AdvertisingType le_advertising_type_{
+      bluetooth::hci::AdvertisingType::ADV_IND};
   uint8_t le_advertising_own_address_type_{0x0};   // Public Device Address
   uint8_t le_advertising_peer_address_type_{0x0};  // Public Device Address
   Address le_advertising_peer_address_{};

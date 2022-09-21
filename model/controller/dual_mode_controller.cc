@@ -2093,7 +2093,7 @@ void DualModeController::LeSetAdvertisingParameters(CommandView command) {
   }
   link_layer_controller_.SetLeAdvertisingParameters(
       command_view.GetAdvertisingIntervalMin(),
-      command_view.GetAdvertisingIntervalMax(), static_cast<uint8_t>(type),
+      command_view.GetAdvertisingIntervalMax(), type,
       static_cast<uint8_t>(command_view.GetOwnAddressType()),
       static_cast<uint8_t>(command_view.GetPeerAddressType()), peer_address,
       command_view.GetAdvertisingChannelMap(),

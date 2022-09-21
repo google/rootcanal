@@ -43,7 +43,7 @@ class Beacon : public Device {
       model::packets::LinkLayerPacketView packet) override;
 
  protected:
-  model::packets::AdvertisementType advertising_type_{};
+  model::packets::LegacyAdvertisingType advertising_type_{};
   std::array<uint8_t, 31> advertising_data_{};
   std::array<uint8_t, 31> scan_response_data_{};
   std::chrono::steady_clock::duration advertising_interval_{};
