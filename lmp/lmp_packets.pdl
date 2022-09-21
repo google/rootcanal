@@ -172,6 +172,10 @@ packet NumericComparaisonFailed: ExtendedPacket(extended_opcode = NUMERIC_COMPAR
 
 packet PasskeyFailed: ExtendedPacket(extended_opcode = PASSKEY_FAILED) {}
 
+packet KeypressNotification: ExtendedPacket(extended_opcode = KEYPRESS_NOTIFICATION) {
+  notification_type: 8,
+}
+
 packet InRand : Packet(opcode = IN_RAND) {
   random_number: 8[16],
 }

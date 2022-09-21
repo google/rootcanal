@@ -954,4 +954,40 @@ mod tests {
 
         include!("../../test/SP/BV-32-C.in");
     }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_with_keypress_notification_initiator_success() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-33-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_with_keypress_notification_responder_success() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-34-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_with_keypress_notification_initiator_failure_on_responding_side() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-35-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_with_keypress_notificiation_responder_failure_on_responding_side() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-36-C.in");
+    }
 }
