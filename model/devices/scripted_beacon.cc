@@ -43,7 +43,7 @@ bool ScriptedBeacon::registered_ =
 
 ScriptedBeacon::ScriptedBeacon(const vector<std::string>& args) : Beacon(args) {
   advertising_interval_ = 1280ms;
-  advertising_type_ = AdvertisementType::ADV_SCAN_IND;
+  advertising_type_ = LegacyAdvertisingType::ADV_SCAN_IND;
   advertising_data_ = {
       0x18 /* Length */,
       0x09 /* TYPE_NAME_CMPL */,
@@ -167,10 +167,10 @@ void ScriptedBeacon::TimerTick() {
     } break;
     case PlaybackEvent::PLAYBACK_STARTED: {
       while (has_time_elapsed(next_ad_.ad_time)) {
-        auto ad = model::packets::LeAdvertisementBuilder::Create(
+        auto ad = model::packets::LeLegacyAdvertisingPduBuilder::Create(
             next_ad_.address, Address::kEmpty /* Destination */,
-            AddressType::RANDOM, AdvertisementType::ADV_NONCONN_IND,
-            next_ad_.ad);
+            AddressType::RANDOM, AddressType::PUBLIC,
+            LegacyAdvertisingType::ADV_NONCONN_IND, next_ad_.ad);
         SendLinkLayerPacket(std::move(ad), Phy::Type::LOW_ENERGY);
         if (packet_num_ < ble_ad_list_.advertisements().size()) {
           get_next_advertisement();
@@ -203,7 +203,6 @@ void ScriptedBeacon::IncomingPacket(
       SendLinkLayerPacket(
           std::move(model::packets::LeScanResponseBuilder::Create(
               address_, packet.GetSourceAddress(), AddressType::PUBLIC,
-              AdvertisementType::SCAN_RESPONSE,
               std::vector(scan_response_data_.begin(),
                           scan_response_data_.end()))),
           Phy::Type::LOW_ENERGY);
