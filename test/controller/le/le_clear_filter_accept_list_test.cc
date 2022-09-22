@@ -63,10 +63,13 @@ TEST_F(LeClearFilterAcceptListTest, LegacyAdvertisingActive) {
                 FilterAcceptListAddressType::PUBLIC, Address{1}),
             ErrorCode::SUCCESS);
 
-  controller_.SetLeAdvertisingParameters(
-      0x0800, 0x0800, AdvertisingType::ADV_IND, 0, 0, Address::kEmpty, 0x7,
-      AdvertisingFilterPolicy::LISTED_SCAN);
-  ASSERT_EQ(controller_.SetLeAdvertisingEnable(1), ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetAdvertisingParameters(
+                0x0800, 0x0800, AdvertisingType::ADV_IND,
+                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
+                Address::kEmpty, 0x7, AdvertisingFilterPolicy::LISTED_SCAN),
+            ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeClearFilterAcceptList(),
             ErrorCode::COMMAND_DISALLOWED);
