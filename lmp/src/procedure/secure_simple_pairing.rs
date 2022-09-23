@@ -695,6 +695,8 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReqPacket) ->
 
 #[cfg(test)]
 mod tests {
+    use num_traits::ToPrimitive;
+
     use crate::ec::PrivateKey;
     use crate::procedure::Context;
     use crate::test::{sequence, TestContext};
@@ -798,5 +800,194 @@ mod tests {
         let procedure = respond;
 
         include!("../../test/SP/BV-13-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_initiator_failure_on_initiating_side() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-14-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_responder_failure_on_initiating_side() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-15-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_initiator_failure_on_responding_side() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-16-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_responder_failure_on_responding_side() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-17-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_initiator_iut_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-18-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_responder_iut_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-19-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_initiator_lower_tester_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-20-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_responder_lower_tester_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-21-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_initiator_iut_and_lower_tester_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-22-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_responder_iut_and_lower_tester_with_oob_auth_data_success() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-23-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_initiator_iut_with_oob_auth_data_failure() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-24-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_responder_iut_with_oob_auth_data_failure() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-25-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_initiator_lower_tester_with_oob_auth_data_failure() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-26-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn oob_protocol_responder_lower_tester_with_oob_auth_data_failure() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-27-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn secure_simple_pairing_failed_responder() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-30-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn host_rejects_secure_simple_pairing_initiator() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-31-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn host_rejects_secure_simple_pairing_responder() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-32-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_with_keypress_notification_initiator_success() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-33-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_with_keypress_notification_responder_success() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-34-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_with_keypress_notification_initiator_failure_on_responding_side() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/SP/BV-35-C.in");
+    }
+
+    #[test]
+    #[should_panic] // TODO: make the test pass
+    fn passkey_entry_with_keypress_notificiation_responder_failure_on_responding_side() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/SP/BV-36-C.in");
     }
 }

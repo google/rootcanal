@@ -1,0 +1,41 @@
+sequence! { procedure, context,
+    // ACL Connection Established
+    Upper Tester -> IUT: AuthenticationRequested {
+        connection_handle: context.peer_handle()
+    }
+    IUT -> Upper Tester: AuthenticationRequestedStatus {
+       num_hci_command_packets: 1,
+       status: ErrorCode::Success,
+    }
+    IUT -> Upper Tester: LinkKeyRequest {
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: LinkKeyRequestNegativeReply {
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: LinkKeyRequestNegativeReplyComplete {
+       num_hci_command_packets: 1,
+       status: ErrorCode::Success,
+       bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: IoCapabilityRequest {
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: IoCapabilityRequestNegativeReply {
+        bd_addr: context.peer_address(),
+        reason: ErrorCode::HostBusy,
+    }
+    IUT -> Upper Tester: IoCapabilityRequestNegativeReplyComplete {
+        num_hci_command_packets: 1,
+        status: ErrorCode::Success,
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: SimplePairingComplete {
+        status: ErrorCode::AuthenticationFailure,
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: AuthenticationComplete {
+        status: ErrorCode::AuthenticationFailure,
+        connection_handle: context.peer_handle(),
+    }
+}

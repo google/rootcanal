@@ -1,0 +1,106 @@
+sequence! { procedure, context,
+    // ACL Connection Established
+    Upper Tester -> IUT: AuthenticationRequested {
+        connection_handle: context.peer_handle()
+    }
+    IUT -> Upper Tester: AuthenticationRequestedStatus {
+       num_hci_command_packets: 1,
+       status: ErrorCode::Success,
+    }
+    IUT -> Upper Tester: LinkKeyRequest {
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: LinkKeyRequestNegativeReply {
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: LinkKeyRequestNegativeReplyComplete {
+       num_hci_command_packets: 1,
+       status: ErrorCode::Success,
+       bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: IoCapabilityRequest {
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: IoCapabilityRequestReply {
+        bd_addr: context.peer_address(),
+        io_capability: IoCapability::DisplayYesNo,
+        oob_present: OobDataPresent::NotPresent,
+        authentication_requirements: AuthenticationRequirements::NoBondingMitmProtection,
+    }
+    IUT -> Upper Tester: IoCapabilityRequestReplyComplete {
+        num_hci_command_packets: 1,
+        status: ErrorCode::Success,
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Lower Tester: IoCapabilityReq {
+        transaction_id: 0,
+        io_capabilities: 0x01,
+        oob_authentication_data: 0x00,
+        authentication_requirement: 0x01,
+    }
+    Lower Tester -> IUT: NotAcceptedExt {
+        transaction_id: 0,
+        not_accepted_opcode: ExtendedOpcode::IoCapabilityReq,
+        error_code: 0x37,
+    }
+    IUT -> Upper Tester: SimplePairingComplete {
+        status: ErrorCode::AuthenticationFailure,
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: PinCodeRequest {
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: PinCodeRequestReply {
+        bd_addr: context.peer_address(),
+        pin_code_length: 1,
+        pin_code: "0".as_bytes(),
+    }
+    IUT -> Upper Tester: PinCodeRequestReplyComplete {
+        num_hci_command_packets: 1,
+        status: ErrorCode::Success,
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Lower Tester: InRand {
+        transaction_id: 0,
+        random_number: [0; 16],
+    }
+    Lower Tester -> IUT: Accepted {
+        transaction_id: 0,
+        accepted_opcode: Opcode::InRand,
+    }
+    IUT -> Lower Tester: CombKey {
+        transaction_id: 0,
+        random_number: [0; 16],
+    }
+    Lower Tester -> IUT: CombKey {
+        transaction_id: 0,
+        random_number: [0; 16],
+    }
+    // TODO: It's also valid to send it just
+    // before AuthenticationComplete
+    IUT -> Upper Tester: LinkKeyNotification {
+        bd_addr: context.peer_address(),
+        key_type: KeyType::AuthenticatedP192,
+        link_key: [0; 16],
+    }
+    IUT -> Lower Tester: AuRand {
+        transaction_id: 0,
+        random_number: [0; 16],
+    }
+    Lower Tester -> IUT: Sres {
+        transaction_id: 0,
+        authentication_rsp: [0; 4],
+    }
+    Lower Tester -> IUT: AuRand {
+        transaction_id: 0,
+        random_number: [0; 16],
+    }
+    IUT -> Lower Tester: Sres {
+        transaction_id: 0,
+        authentication_rsp: [0; 4],
+    }
+    IUT -> Upper Tester: AuthenticationComplete {
+        status: ErrorCode::Success,
+        connection_handle: context.peer_handle(),
+    }
+}

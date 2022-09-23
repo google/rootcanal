@@ -118,9 +118,12 @@ packet NotAccepted : Packet(opcode = NOT_ACCEPTED) {
 }
 
 packet AcceptedExt : ExtendedPacket(extended_opcode = ACCEPTED) {
-  accepted_opcode: Opcode,
-  _fixed_ = 0 : 1,
-  accepted_extended_opcode: ExtendedOpcode,
+  accepted_opcode: ExtendedOpcode,
+}
+
+packet NotAcceptedExt : ExtendedPacket(extended_opcode = NOT_ACCEPTED) {
+  not_accepted_opcode: ExtendedOpcode,
+  error_code: 8,
 }
 
 packet IoCapabilityReq : ExtendedPacket(extended_opcode = IO_CAPABILITY_REQ) {
@@ -166,6 +169,12 @@ packet Sres : Packet(opcode = SRES) {
 }
 
 packet NumericComparaisonFailed: ExtendedPacket(extended_opcode = NUMERIC_COMPARAISON_FAILED) {}
+
+packet PasskeyFailed: ExtendedPacket(extended_opcode = PASSKEY_FAILED) {}
+
+packet KeypressNotification: ExtendedPacket(extended_opcode = KEYPRESS_NOTIFICATION) {
+  notification_type: 8,
+}
 
 packet InRand : Packet(opcode = IN_RAND) {
   random_number: 8[16],
