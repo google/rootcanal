@@ -5,6 +5,8 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{self, Poll};
 
+use num_traits::ToPrimitive;
+
 use crate::ec::PrivateKey;
 use crate::packets::{hci, lmp};
 
@@ -17,11 +19,35 @@ pub struct TestContext {
     pub hci_events: RefCell<VecDeque<hci::EventPacket>>,
     pub hci_commands: RefCell<VecDeque<hci::CommandPacket>>,
     private_key: RefCell<Option<PrivateKey>>,
+    features_pages: [u64; 3],
+    peer_features_pages: [u64; 3],
 }
 
 impl TestContext {
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
+            .with_page_1_feature(hci::LMPFeaturesPage1Bits::SecureSimplePairingHostSupport)
+            .with_peer_page_1_feature(hci::LMPFeaturesPage1Bits::SecureSimplePairingHostSupport)
+    }
+
+    pub fn with_page_1_feature(mut self, feature: hci::LMPFeaturesPage1Bits) -> Self {
+        self.features_pages[1] |= feature.to_u64().unwrap();
+        self
+    }
+
+    pub fn with_page_2_feature(mut self, feature: hci::LMPFeaturesPage2Bits) -> Self {
+        self.features_pages[2] |= feature.to_u64().unwrap();
+        self
+    }
+
+    pub fn with_peer_page_1_feature(mut self, feature: hci::LMPFeaturesPage1Bits) -> Self {
+        self.peer_features_pages[1] |= feature.to_u64().unwrap();
+        self
+    }
+
+    pub fn with_peer_page_2_feature(mut self, feature: hci::LMPFeaturesPage2Bits) -> Self {
+        self.peer_features_pages[2] |= feature.to_u64().unwrap();
+        self
     }
 }
 
@@ -67,19 +93,11 @@ impl Context for TestContext {
     }
 
     fn peer_extended_features(&self, features_page: u8) -> Option<u64> {
-        if features_page == 1 {
-            Some(1)
-        } else {
-            Some(0)
-        }
+        Some(self.peer_features_pages[features_page as usize])
     }
 
     fn extended_features(&self, features_page: u8) -> u64 {
-        if features_page == 1 {
-            1
-        } else {
-            0
-        }
+        self.features_pages[features_page as usize]
     }
 
     fn get_private_key(&self) -> Option<PrivateKey> {

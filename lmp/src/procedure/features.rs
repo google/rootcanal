@@ -1,5 +1,7 @@
 // Bluetooth Core, Vol 2, Part C, 4.3.4
 
+use num_traits::ToPrimitive;
+
 use crate::packets::lmp;
 use crate::procedure::Context;
 
@@ -34,21 +36,30 @@ pub async fn respond(ctx: &impl Context) {
     );
 }
 
-pub async fn supported_on_both_page1(
-    ctx: &impl Context,
-    feature: crate::packets::hci::LMPFeaturesPage1Bits,
-) -> bool {
-    use num_traits::ToPrimitive;
-    let feature_mask = feature.to_u64().unwrap();
-    let local_supported = ctx.extended_features(1) & feature_mask != 0;
+async fn supported_on_both_page(ctx: &impl Context, page_number: u8, feature_mask: u64) -> bool {
+    let local_supported = ctx.extended_features(page_number) & feature_mask != 0;
     // Lazy peer features
     let peer_supported = async move {
-        let page = if let Some(page) = ctx.peer_extended_features(1) {
+        let page = if let Some(page) = ctx.peer_extended_features(page_number) {
             page
         } else {
-            crate::procedure::features::initiate(ctx, 1).await
+            crate::procedure::features::initiate(ctx, page_number).await
         };
         page & feature_mask != 0
     };
     local_supported && peer_supported.await
+}
+
+pub async fn supported_on_both_page1(
+    ctx: &impl Context,
+    feature: crate::packets::hci::LMPFeaturesPage1Bits,
+) -> bool {
+    supported_on_both_page(ctx, 1, feature.to_u64().unwrap()).await
+}
+
+pub async fn supported_on_both_page2(
+    ctx: &impl Context,
+    feature: crate::packets::hci::LMPFeaturesPage2Bits,
+) -> bool {
+    supported_on_both_page(ctx, 2, feature.to_u64().unwrap()).await
 }
