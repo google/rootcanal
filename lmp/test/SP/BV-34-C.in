@@ -75,6 +75,22 @@ sequence! { procedure, context,
     }
     // Authentication Stage 1: Passkey Entry Protocol
     IUT -> Upper Tester: UserPasskeyNotification { bd_addr: context.peer_address(), passkey: 0 }
+    Lower Tester -> IUT: KeypressNotification {
+        transaction_id: 0,
+        notification_type: 0x00,
+    }
+    IUT -> Upper Tester: KeypressNotification {
+         bd_addr: context.peer_address(),
+         notification_type: KeypressNotificationType::EntryStarted,
+    }
+    Lower Tester -> IUT: KeypressNotification {
+        transaction_id: 0,
+        notification_type: 0x04,
+    }
+    IUT -> Upper Tester: KeypressNotification {
+         bd_addr: context.peer_address(),
+         notification_type: KeypressNotificationType::EntryCompleted,
+    }
     repeat 20 times {
         Lower Tester -> IUT: SimplePairingConfirm {
             transaction_id: 0,
