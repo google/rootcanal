@@ -351,6 +351,8 @@ class LinkLayerController {
 
   void SetInquiryScanEnable(bool enable);
   void SetPageScanEnable(bool enable);
+  uint16_t GetPageTimeout();
+  void SetPageTimeout(uint16_t page_timeout);
 
   ErrorCode ChangeConnectionPacketType(uint16_t handle, uint16_t types);
   ErrorCode ChangeConnectionLinkKey(uint16_t handle);
@@ -840,6 +842,8 @@ class LinkLayerController {
 #else
   SecurityManager security_manager_{10};
 #endif /* ROOTCANAL_LMP */
+
+  AsyncTaskId page_timeout_task_id_ = kInvalidTaskId;
 
   std::chrono::steady_clock::time_point last_inquiry_;
   model::packets::InquiryType inquiry_mode_{

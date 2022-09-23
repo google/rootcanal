@@ -1494,7 +1494,7 @@ void DualModeController::ReadPageTimeout(CommandView command) {
   auto command_view = gd_hci::ReadPageTimeoutView::Create(
       gd_hci::DiscoveryCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  uint16_t page_timeout = 0x2000;
+  uint16_t page_timeout = link_layer_controller_.GetPageTimeout();
   send_event_(bluetooth::hci::ReadPageTimeoutCompleteBuilder::Create(
       kNumCommandPackets, ErrorCode::SUCCESS, page_timeout));
 }
@@ -1503,6 +1503,7 @@ void DualModeController::WritePageTimeout(CommandView command) {
   auto command_view = gd_hci::WritePageTimeoutView::Create(
       gd_hci::DiscoveryCommandView::Create(command));
   ASSERT(command_view.IsValid());
+  link_layer_controller_.SetPageTimeout(command_view.GetPageTimeout());
   send_event_(bluetooth::hci::WritePageTimeoutCompleteBuilder::Create(
       kNumCommandPackets, ErrorCode::SUCCESS));
 }

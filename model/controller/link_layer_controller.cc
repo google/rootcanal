@@ -2681,6 +2681,7 @@ void LinkLayerController::IncomingPageResponsePacket(
     LOG_WARN("No free handles");
     return;
   }
+  CancelScheduledTask(page_timeout_task_id_);
 #ifdef ROOTCANAL_LMP
   ASSERT(link_manager_add_link(
       lm_.get(), reinterpret_cast<const uint8_t(*)[6]>(peer.data())));
@@ -3366,6 +3367,14 @@ ErrorCode LinkLayerController::CreateConnection(const Address& addr, uint16_t,
     return ErrorCode::CONTROLLER_BUSY;
   }
 
+  page_timeout_task_id_ = ScheduleTask(
+      duration_cast<milliseconds>(page_timeout_ * microseconds(625)),
+      [this, addr] {
+        send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
+            ErrorCode::PAGE_TIMEOUT, 0xeff, addr, bluetooth::hci::LinkType::ACL,
+            bluetooth::hci::Enable::DISABLED));
+      });
+
   SendLinkLayerPacket(model::packets::PageBuilder::Create(
       GetAddress(), addr, class_of_device_, allow_role_switch));
 
@@ -3376,6 +3385,7 @@ ErrorCode LinkLayerController::CreateConnectionCancel(const Address& addr) {
   if (!connections_.CancelPendingConnection(addr)) {
     return ErrorCode::UNKNOWN_CONNECTION;
   }
+  CancelScheduledTask(page_timeout_task_id_);
   return ErrorCode::SUCCESS;
 }
 
@@ -4250,6 +4260,12 @@ void LinkLayerController::SetInquiryScanEnable(bool enable) {
 
 void LinkLayerController::SetPageScanEnable(bool enable) {
   page_scan_enable_ = enable;
+}
+
+uint16_t LinkLayerController::GetPageTimeout() { return page_timeout_; }
+
+void LinkLayerController::SetPageTimeout(uint16_t page_timeout) {
+  page_timeout_ = page_timeout;
 }
 
 ErrorCode LinkLayerController::AddScoConnection(uint16_t connection_handle,
