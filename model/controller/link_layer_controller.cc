@@ -1201,25 +1201,13 @@ void LinkLayerController::IncomingInquiryResponsePacket(
               basic_inquiry_response);
       ASSERT(inquiry_response.IsValid());
 
-      std::unique_ptr<bluetooth::packet::RawBuilder> raw_builder_ptr =
-          std::make_unique<bluetooth::packet::RawBuilder>();
-      raw_builder_ptr->AddOctets1(kNumCommandPackets);
-      raw_builder_ptr->AddAddress(inquiry_response.GetSourceAddress());
-      raw_builder_ptr->AddOctets1(inquiry_response.GetPageScanRepetitionMode());
-      raw_builder_ptr->AddOctets1(0x00);  // _reserved_
-      auto class_of_device = inquiry_response.GetClassOfDevice();
-      for (unsigned int i = 0; i < class_of_device.kLength; i++) {
-        raw_builder_ptr->AddOctets1(class_of_device.cod[i]);
-      }
-      raw_builder_ptr->AddOctets2(inquiry_response.GetClockOffset());
-      raw_builder_ptr->AddOctets1(inquiry_response.GetRssi());
-      raw_builder_ptr->AddOctets(inquiry_response.GetExtendedData());
-
-      if (IsEventUnmasked(EventCode::EXTENDED_INQUIRY_RESULT)) {
-        send_event_(bluetooth::hci::EventBuilder::Create(
-            bluetooth::hci::EventCode::EXTENDED_INQUIRY_RESULT,
-            std::move(raw_builder_ptr)));
-      }
+      send_event_(bluetooth::hci::ExtendedInquiryResultRawBuilder::Create(
+          inquiry_response.GetSourceAddress(),
+          static_cast<bluetooth::hci::PageScanRepetitionMode>(
+              inquiry_response.GetPageScanRepetitionMode()),
+          inquiry_response.GetClassOfDevice(),
+          inquiry_response.GetClockOffset(), inquiry_response.GetRssi(),
+          inquiry_response.GetExtendedData()));
     } break;
     default:
       LOG_WARN("Unhandled Incoming Inquiry Response of type %d",
