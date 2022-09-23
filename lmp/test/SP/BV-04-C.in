@@ -1,0 +1,14 @@
+sequence! { procedure, context,
+    // ACL Connection Established
+    Lower Tester -> IUT: IoCapabilityReq {
+        transaction_id: 0,
+        io_capabilities: 0x01,
+        oob_authentication_data: 0x00,
+        authentication_requirement: 0x01,
+    }
+    IUT -> Lower Tester: NotAccepted {
+        transaction_id: 0,
+        not_accepted_opcode: Opcode::IoCapabilityReq,
+        error_code: 0x37,
+    }
+}

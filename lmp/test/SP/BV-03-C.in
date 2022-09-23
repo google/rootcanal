@@ -1,0 +1,23 @@
+sequence! { procedure, context,
+    Upper Tester -> IUT: AuthenticationRequested {
+        connection_handle: context.peer_handle()
+    }
+    IUT -> Upper Tester: AuthenticationRequestedStatus {
+       num_hci_command_packets: 1,
+       status: ErrorCode::Success,
+    }
+    IUT -> Upper Tester: LinkKeyRequest {
+        bd_addr: context.peer_address(),
+    }
+    Upper Tester -> IUT: LinkKeyRequestNegativeReply {
+        bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: LinkKeyRequestNegativeReplyComplete {
+       num_hci_command_packets: 1,
+       status: ErrorCode::Success,
+       bd_addr: context.peer_address(),
+    }
+    IUT -> Upper Tester: PinCodeRequest {
+        bd_addr: context.peer_address(),
+    }
+}
