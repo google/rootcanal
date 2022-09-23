@@ -179,7 +179,8 @@ static bool ParseUintArray(Json::Value root, std::string field_name,
   }
 
   for (size_t n = 0; n < N; n++) {
-    unsigned long long parsed_value = std::stoull(value.asString(), nullptr, 0);
+    unsigned long long parsed_value =
+        std::stoull(value[static_cast<int>(n)].asString(), nullptr, 0);
     if (parsed_value > max_value) {
       LOG_INFO("invalid value for %s[%zu] is discarded: %llu > %llu",
                field_name.c_str(), n, parsed_value,
@@ -210,7 +211,8 @@ static bool ParseUintVector(Json::Value root, std::string field_name,
 
   output_value.clear();
   for (size_t n = 0; n < value.size(); n++) {
-    unsigned long long parsed_value = std::stoull(value.asString(), nullptr, 0);
+    unsigned long long parsed_value =
+        std::stoull(value[static_cast<int>(n)].asString(), nullptr, 0);
     if (parsed_value > max_value) {
       LOG_INFO("invalid value for %s[%zu] is discarded: %llu > %llu",
                field_name.c_str(), n, parsed_value,
