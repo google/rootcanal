@@ -51,6 +51,7 @@ fn generate_packets() {
         );
     }
 
+    println!("cargo:rerun-if-changed=lmp_packets.pdl");
     let output = Command::new(packetgen.as_os_str().to_str().unwrap())
         .arg("--out=".to_owned() + out_dir.as_os_str().to_str().unwrap())
         .arg("--include=.")
