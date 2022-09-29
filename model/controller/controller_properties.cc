@@ -285,9 +285,6 @@ ControllerProperties::ControllerProperties(const std::string& file_name)
   ParseUint(root, "ManufacturerName", company_identifier);
 
   ParseHex64(root["LeSupportedFeatures"], &le_features);
-  ParseUint(root, "LeConnectListIgnoreReasons", le_connect_list_ignore_reasons);
-  ParseUint(root, "LeResolvingListIgnoreReasons",
-            le_resolving_list_ignore_reasons);
 
   // Configuration options.
 

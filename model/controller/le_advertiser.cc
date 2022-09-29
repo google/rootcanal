@@ -23,7 +23,7 @@ namespace rootcanal {
 void LeAdvertiser::Initialize(OwnAddressType address_type,
                               AddressWithType public_address,
                               AddressWithType peer_address,
-                              LeScanningFilterPolicy filter_policy,
+                              AdvertisingFilterPolicy filter_policy,
                               AdvertisingType type,
                               const std::vector<uint8_t>& advertisement,
                               const std::vector<uint8_t>& scan_response,
@@ -44,7 +44,7 @@ void LeAdvertiser::Initialize(OwnAddressType address_type,
 void LeAdvertiser::InitializeExtended(
     unsigned advertising_handle, OwnAddressType address_type,
     AddressWithType public_address, AddressWithType peer_address,
-    LeScanningFilterPolicy filter_policy, AdvertisingType type,
+    AdvertisingFilterPolicy filter_policy, AdvertisingType type,
     std::chrono::steady_clock::duration interval, uint8_t tx_power,
     const std::function<bluetooth::hci::Address()>& get_address) {
   get_address_ = get_address;
@@ -64,7 +64,7 @@ void LeAdvertiser::InitializeExtended(
 void LeAdvertiser::Clear() {
   address_ = AddressWithType{};
   peer_address_ = AddressWithType{};
-  filter_policy_ = LeScanningFilterPolicy::ACCEPT_ALL;
+  filter_policy_ = AdvertisingFilterPolicy::ALL_DEVICES;
   type_ = AdvertisingType::ADV_IND;
   advertisement_.clear();
   scan_response_.clear();
@@ -256,24 +256,25 @@ LeAdvertiser::GetAdvertisement(std::chrono::steady_clock::time_point now) {
 
 std::unique_ptr<model::packets::LinkLayerPacketBuilder>
 LeAdvertiser::GetScanResponse(bluetooth::hci::Address scanned,
-                              bluetooth::hci::Address scanner) {
+                              bluetooth::hci::Address scanner,
+                              bool scanner_in_filter_accept_list) {
+  (void)scanner;
   if (scanned != address_.GetAddress() || !enabled_) {
     return nullptr;
   }
+
   switch (filter_policy_) {
-    case bluetooth::hci::LeScanningFilterPolicy::
-        FILTER_ACCEPT_LIST_AND_INITIATORS_IDENTITY:
-    case bluetooth::hci::LeScanningFilterPolicy::FILTER_ACCEPT_LIST_ONLY:
-      LOG_WARN("ScanResponses don't handle connect list filters");
-      return nullptr;
-    case bluetooth::hci::LeScanningFilterPolicy::CHECK_INITIATORS_IDENTITY:
-      if (scanner != peer_address_.GetAddress()) {
+    case bluetooth::hci::AdvertisingFilterPolicy::ALL_DEVICES:
+    case bluetooth::hci::AdvertisingFilterPolicy::LISTED_CONNECT:
+      break;
+    case bluetooth::hci::AdvertisingFilterPolicy::LISTED_SCAN:
+    case bluetooth::hci::AdvertisingFilterPolicy::LISTED_SCAN_AND_CONNECT:
+      if (!scanner_in_filter_accept_list) {
         return nullptr;
       }
       break;
-    case bluetooth::hci::LeScanningFilterPolicy::ACCEPT_ALL:
-      break;
   }
+
   if (tx_power_ == kTxPowerUnavailable) {
     return model::packets::LeScanResponseBuilder::Create(
         address_.GetAddress(), peer_address_.GetAddress(),
