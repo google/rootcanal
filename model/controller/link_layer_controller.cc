@@ -2126,15 +2126,15 @@ void LinkLayerController::IncomingLmpPacket(
 #endif /* ROOTCANAL_LMP */
 
 uint16_t LinkLayerController::HandleLeConnection(
-    AddressWithType address, AddressWithType own_address, uint8_t role,
-    uint16_t connection_interval, uint16_t connection_latency,
-    uint16_t supervision_timeout,
+    AddressWithType address, AddressWithType own_address,
+    bluetooth::hci::Role role, uint16_t connection_interval,
+    uint16_t connection_latency, uint16_t supervision_timeout,
     bool send_le_channel_selection_algorithm_event) {
   // Note: the HCI_LE_Connection_Complete event is not sent if the
   // HCI_LE_Enhanced_Connection_Complete event (see Section 7.7.65.10) is
   // unmasked.
 
-  uint16_t handle = connections_.CreateLeConnection(address, own_address);
+  uint16_t handle = connections_.CreateLeConnection(address, own_address, role);
   if (handle == kReservedHandle) {
     LOG_WARN("No pending connection for connection from %s",
              address.ToString().c_str());
@@ -2169,17 +2169,15 @@ uint16_t LinkLayerController::HandleLeConnection(
     }
 
     send_event_(bluetooth::hci::LeEnhancedConnectionCompleteBuilder::Create(
-        ErrorCode::SUCCESS, handle, static_cast<bluetooth::hci::Role>(role),
-        peer_address_type, connection_address, local_resolved_address,
-        peer_resolvable_private_address, connection_interval,
-        connection_latency, supervision_timeout,
+        ErrorCode::SUCCESS, handle, role, peer_address_type, connection_address,
+        local_resolved_address, peer_resolvable_private_address,
+        connection_interval, connection_latency, supervision_timeout,
         static_cast<bluetooth::hci::ClockAccuracy>(0x00)));
   } else if (IsLeEventUnmasked(SubeventCode::CONNECTION_COMPLETE)) {
     send_event_(bluetooth::hci::LeConnectionCompleteBuilder::Create(
-        ErrorCode::SUCCESS, handle, static_cast<bluetooth::hci::Role>(role),
-        address.GetAddressType(), address.GetAddress(), connection_interval,
-        connection_latency, supervision_timeout,
-        static_cast<bluetooth::hci::ClockAccuracy>(0x00)));
+        ErrorCode::SUCCESS, handle, role, address.GetAddressType(),
+        address.GetAddress(), connection_interval, connection_latency,
+        supervision_timeout, static_cast<bluetooth::hci::ClockAccuracy>(0x00)));
   }
 
   // Note: the HCI_LE_Connection_Complete event is immediately followed by
@@ -2250,8 +2248,8 @@ void LinkLayerController::IncomingLeConnectPacket(
       AddressWithType(
           incoming.GetSourceAddress(),
           static_cast<bluetooth::hci::AddressType>(connect.GetAddressType())),
-      my_address, static_cast<uint8_t>(bluetooth::hci::Role::PERIPHERAL),
-      connection_interval, connect.GetLeConnectionLatency(),
+      my_address, bluetooth::hci::Role::PERIPHERAL, connection_interval,
+      connect.GetLeConnectionLatency(),
       connect.GetLeConnectionSupervisionTimeout(), false);
 
   SendLeLinkLayerPacket(model::packets::LeConnectCompleteBuilder::Create(
@@ -2282,8 +2280,8 @@ void LinkLayerController::IncomingLeConnectCompletePacket(
       AddressWithType(
           incoming.GetDestinationAddress(),
           static_cast<bluetooth::hci::AddressType>(le_address_type_)),
-      static_cast<uint8_t>(bluetooth::hci::Role::CENTRAL),
-      complete.GetLeConnectionInterval(), complete.GetLeConnectionLatency(),
+      bluetooth::hci::Role::CENTRAL, complete.GetLeConnectionInterval(),
+      complete.GetLeConnectionLatency(),
       complete.GetLeConnectionSupervisionTimeout(), le_extended_connect_);
   le_connect_ = false;
   le_extended_connect_ = false;
@@ -2303,11 +2301,21 @@ void LinkLayerController::IncomingLeConnectionParameterRequest(
              peer.ToString().c_str());
     return;
   }
-  if (IsLeEventUnmasked(SubeventCode::CONNECTION_UPDATE_COMPLETE)) {
+
+  if (IsLeEventUnmasked(SubeventCode::REMOTE_CONNECTION_PARAMETER_REQUEST)) {
     send_event_(
         bluetooth::hci::LeRemoteConnectionParameterRequestBuilder::Create(
             handle, request.GetIntervalMin(), request.GetIntervalMax(),
             request.GetLatency(), request.GetTimeout()));
+  } else {
+    // If the request is being indicated to the Host and the event to the Host
+    // is masked, then the Link Layer shall issue an LL_REJECT_EXT_IND PDU with
+    // the ErrorCode set to Unsupported Remote Feature (0x1A).
+    SendLeLinkLayerPacket(
+        model::packets::LeConnectionParameterUpdateBuilder::Create(
+            request.GetDestinationAddress(), request.GetSourceAddress(),
+            static_cast<uint8_t>(ErrorCode::UNSUPPORTED_REMOTE_OR_LMP_FEATURE),
+            0, 0, 0));
   }
 }
 
@@ -3795,10 +3803,30 @@ ErrorCode LinkLayerController::LeConnectionUpdate(
     return ErrorCode::UNKNOWN_CONNECTION;
   }
 
-  SendLeLinkLayerPacket(LeConnectionParameterRequestBuilder::Create(
-      connections_.GetOwnAddress(handle).GetAddress(),
-      connections_.GetAddress(handle).GetAddress(), interval_min, interval_max,
-      latency, supervision_timeout));
+  bluetooth::hci::Role role = connections_.GetAclRole(handle);
+
+  if (role == bluetooth::hci::Role::CENTRAL) {
+    // As Central, it is allowed to directly send
+    // LL_CONNECTION_PARAM_UPDATE_IND to update the parameters.
+    SendLeLinkLayerPacket(LeConnectionParameterUpdateBuilder::Create(
+        connections_.GetOwnAddress(handle).GetAddress(),
+        connections_.GetAddress(handle).GetAddress(),
+        static_cast<uint8_t>(ErrorCode::SUCCESS), interval_max, latency,
+        supervision_timeout));
+
+    if (IsLeEventUnmasked(SubeventCode::CONNECTION_UPDATE_COMPLETE)) {
+      send_event_(bluetooth::hci::LeConnectionUpdateCompleteBuilder::Create(
+          ErrorCode::SUCCESS, handle, interval_max, latency,
+          supervision_timeout));
+    }
+  } else {
+    // Send LL_CONNECTION_PARAM_REQ and wait for LL_CONNECTION_PARAM_RSP
+    // in return.
+    SendLeLinkLayerPacket(LeConnectionParameterRequestBuilder::Create(
+        connections_.GetOwnAddress(handle).GetAddress(),
+        connections_.GetAddress(handle).GetAddress(), interval_min,
+        interval_max, latency, supervision_timeout));
+  }
 
   return ErrorCode::SUCCESS;
 }

@@ -200,7 +200,8 @@ class LinkLayerController {
   ErrorCode LeRemoteConnectionParameterRequestNegativeReply(
       uint16_t connection_handle, bluetooth::hci::ErrorCode reason);
   uint16_t HandleLeConnection(AddressWithType addr, AddressWithType own_addr,
-                              uint8_t role, uint16_t connection_interval,
+                              bluetooth::hci::Role role,
+                              uint16_t connection_interval,
                               uint16_t connection_latency,
                               uint16_t supervision_timeout,
                               bool send_le_channel_selection_algorithm_event);

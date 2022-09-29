@@ -20,11 +20,12 @@ namespace rootcanal {
 AclConnection::AclConnection(AddressWithType address,
                              AddressWithType own_address,
                              AddressWithType resolved_address,
-                             Phy::Type phy_type)
+                             Phy::Type phy_type, bluetooth::hci::Role role)
     : address_(address),
       own_address_(own_address),
       resolved_address_(resolved_address),
       type_(phy_type),
+      role_(role),
       last_packet_timestamp_(std::chrono::steady_clock::now()),
       timeout_(std::chrono::seconds(1)) {}
 
