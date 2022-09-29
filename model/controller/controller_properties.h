@@ -93,15 +93,6 @@ struct ControllerProperties {
   // Vendor Information.
   // Provide parameters returned by vendor specific commands.
   std::vector<uint8_t> le_vendor_capabilities{};
-
-  // LE Workarounds
-  uint16_t le_connect_list_ignore_reasons{0};
-  uint16_t le_resolving_list_ignore_reasons{0};
-
-  // Workaround for misbehaving stacks
-  static constexpr uint8_t kLeListIgnoreScanEnable = 0x1;
-  static constexpr uint8_t kLeListIgnoreConnections = 0x2;
-  static constexpr uint8_t kLeListIgnoreAdvertising = 0x4;
 };
 
 }  // namespace rootcanal
