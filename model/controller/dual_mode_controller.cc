@@ -2041,7 +2041,7 @@ void DualModeController::LeSetAddressResolutionEnable(CommandView command) {
       gd_hci::LeSecurityCommandView::Create(
           gd_hci::SecurityCommandView::Create(command)));
   ASSERT(command_view.IsValid());
-  auto status = link_layer_controller_.LeSetAddressResolutionEnable(
+  ErrorCode status = link_layer_controller_.LeSetAddressResolutionEnable(
       command_view.GetAddressResolutionEnable() ==
       bluetooth::hci::Enable::ENABLED);
   send_event_(
@@ -2374,9 +2374,9 @@ void DualModeController::LeClearResolvingList(CommandView command) {
   auto command_view = gd_hci::LeClearResolvingListView::Create(
       gd_hci::LeSecurityCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  link_layer_controller_.LeResolvingListClear();
+  ErrorCode status = link_layer_controller_.LeClearResolvingList();
   send_event_(bluetooth::hci::LeClearResolvingListCompleteBuilder::Create(
-      kNumCommandPackets, ErrorCode::SUCCESS));
+      kNumCommandPackets, status));
 }
 
 void DualModeController::LeReadResolvingListSize(CommandView command) {
@@ -2438,17 +2438,17 @@ void DualModeController::LeAddDeviceToResolvingList(CommandView command) {
   auto command_view = gd_hci::LeAddDeviceToResolvingListView::Create(
       gd_hci::LeSecurityCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  AddressType peer_address_type;
+  AddressType peer_identity_address_type;
   switch (command_view.GetPeerIdentityAddressType()) {
     case bluetooth::hci::PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS:
-      peer_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
+      peer_identity_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
       break;
     case bluetooth::hci::PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS:
-      peer_address_type = AddressType::RANDOM_DEVICE_ADDRESS;
+      peer_identity_address_type = AddressType::RANDOM_DEVICE_ADDRESS;
       break;
   }
-  auto status = link_layer_controller_.LeResolvingListAddDevice(
-      command_view.GetPeerIdentityAddress(), peer_address_type,
+  ErrorCode status = link_layer_controller_.LeAddDeviceToResolvingList(
+      peer_identity_address_type, command_view.GetPeerIdentityAddress(),
       command_view.GetPeerIrk(), command_view.GetLocalIrk());
   send_event_(bluetooth::hci::LeAddDeviceToResolvingListCompleteBuilder::Create(
       kNumCommandPackets, status));
@@ -2459,20 +2459,20 @@ void DualModeController::LeRemoveDeviceFromResolvingList(CommandView command) {
       gd_hci::LeSecurityCommandView::Create(command));
   ASSERT(command_view.IsValid());
 
-  AddressType peer_address_type;
+  AddressType peer_identity_address_type;
   switch (command_view.GetPeerIdentityAddressType()) {
     case bluetooth::hci::PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS:
-      peer_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
+      peer_identity_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
       break;
     case bluetooth::hci::PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS:
-      peer_address_type = AddressType::RANDOM_DEVICE_ADDRESS;
+      peer_identity_address_type = AddressType::RANDOM_DEVICE_ADDRESS;
       break;
   }
-  link_layer_controller_.LeResolvingListRemoveDevice(
-      command_view.GetPeerIdentityAddress(), peer_address_type);
+  ErrorCode status = link_layer_controller_.LeRemoveDeviceFromResolvingList(
+      peer_identity_address_type, command_view.GetPeerIdentityAddress());
   send_event_(
       bluetooth::hci::LeRemoveDeviceFromResolvingListCompleteBuilder::Create(
-          kNumCommandPackets, ErrorCode::SUCCESS));
+          kNumCommandPackets, status));
 }
 
 void DualModeController::LeSetExtendedScanParameters(CommandView command) {
@@ -2571,7 +2571,7 @@ void DualModeController::LeSetPrivacyMode(CommandView command) {
       break;
   }
   if (link_layer_controller_.LeResolvingListContainsDevice(
-          peer_identity_address, peer_identity_address_type)) {
+          peer_identity_address_type, peer_identity_address)) {
     link_layer_controller_.LeSetPrivacyMode(
         peer_identity_address_type, peer_identity_address, privacy_mode);
   }

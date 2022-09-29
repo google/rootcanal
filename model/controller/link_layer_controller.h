@@ -48,12 +48,6 @@ class LinkLayerController {
  public:
   static constexpr size_t kIrkSize = 16;
 
-  // HCI LE Set Random Address command (Vol 4, Part E § 7.8.4).
-  ErrorCode LeSetRandomAddress(Address random_address);
-
-  // HCI LE Set Host Feature command (Vol 4, Part E § 7.8.115).
-  ErrorCode LeSetHostFeature(uint8_t bit_number, uint8_t bit_value);
-
   LinkLayerController(const Address& address,
                       const ControllerProperties& properties);
 
@@ -218,15 +212,13 @@ class LinkLayerController {
   ErrorCode LeFilterAcceptListRemoveDevice(Address addr, AddressType addr_type);
   bool LeFilterAcceptListContainsDevice(Address addr, AddressType addr_type);
   bool LeFilterAcceptListFull();
+
   bool ResolvingListBusy();
-  ErrorCode LeSetAddressResolutionEnable(bool enable);
-  ErrorCode LeResolvingListClear();
-  ErrorCode LeResolvingListAddDevice(Address addr, AddressType addr_type,
-                                     std::array<uint8_t, kIrkSize> peerIrk,
-                                     std::array<uint8_t, kIrkSize> localIrk);
-  ErrorCode LeResolvingListRemoveDevice(Address addr, AddressType addr_type);
-  bool LeResolvingListContainsDevice(Address addr, AddressType addr_type);
-  bool LeResolvingListFull();
+  bool LeResolvingListContainsDevice(AddressType peer_identity_address_type,
+                                     Address peer_identity_address);
+  bool LeResolvingListContainsDevice(
+      bluetooth::hci::PeerAddressType peer_identity_address_type,
+      Address peer_identity_address);
   void LeSetPrivacyMode(AddressType address_type, Address addr, uint8_t mode);
 
   void LeReadIsoTxSync(uint16_t handle);
@@ -400,6 +392,32 @@ class LinkLayerController {
   bool HasAclConnection();
 
   void HandleIso(bluetooth::hci::IsoView iso);
+
+  // LE Commands
+
+  // HCI LE Set Random Address command (Vol 4, Part E § 7.8.4).
+  ErrorCode LeSetRandomAddress(Address random_address);
+
+  // HCI LE Set Host Feature command (Vol 4, Part E § 7.8.115).
+  ErrorCode LeSetHostFeature(uint8_t bit_number, uint8_t bit_value);
+
+  // LE Address Resolving
+
+  // HCI command LE_Add_Device_To_Resolving_List (Vol 4, Part E § 7.8.38).
+  ErrorCode LeAddDeviceToResolvingList(AddressType peer_identity_address_type,
+                                       Address peer_address,
+                                       std::array<uint8_t, kIrkSize> peer_irk,
+                                       std::array<uint8_t, kIrkSize> local_irk);
+
+  // HCI command LE_Remove_Device_From_Resolving_List (Vol 4, Part E § 7.8.39).
+  ErrorCode LeRemoveDeviceFromResolvingList(
+      AddressType peer_identity_address_type, Address peer_identity_address);
+
+  // HCI command LE_Clear_Resolving_List (Vol 4, Part E § 7.8.40).
+  ErrorCode LeClearResolvingList();
+
+  // HCI command LE_Set_Address_Resolution_Enable (Vol 4, Part E § 7.8.44).
+  ErrorCode LeSetAddressResolutionEnable(bool enable);
 
  protected:
   void SendLeLinkLayerPacketWithRssi(
@@ -761,12 +779,14 @@ class LinkLayerController {
     AddressType address_type;
   };
   std::vector<ConnectListEntry> le_connect_list_;
+
   struct ResolvingListEntry {
-    Address address;
-    AddressType address_type;
+    AddressType peer_identity_address_type;
+    Address peer_identity_address;
     std::array<uint8_t, kIrkSize> peer_irk;
     std::array<uint8_t, kIrkSize> local_irk;
   };
+
   std::vector<ResolvingListEntry> le_resolving_list_;
   bool le_resolving_list_enabled_{false};
 
@@ -803,6 +823,7 @@ class LinkLayerController {
 #else
   SecurityManager security_manager_{10};
 #endif /* ROOTCANAL_LMP */
+
   std::chrono::steady_clock::time_point last_inquiry_;
   model::packets::InquiryType inquiry_mode_{
       model::packets::InquiryType::STANDARD};
