@@ -127,20 +127,22 @@ uint16_t AclConnectionHandler::CreateConnection(Address addr,
         AclConnection{
             AddressWithType{addr, AddressType::PUBLIC_DEVICE_ADDRESS},
             AddressWithType{own_addr, AddressType::PUBLIC_DEVICE_ADDRESS},
-            AddressWithType(), Phy::Type::BR_EDR});
+            AddressWithType(), Phy::Type::BR_EDR,
+            bluetooth::hci::Role::CENTRAL});
     return handle;
   }
   return kReservedHandle;
 }
 
 uint16_t AclConnectionHandler::CreateLeConnection(AddressWithType addr,
-                                                  AddressWithType own_addr) {
+                                                  AddressWithType own_addr,
+                                                  bluetooth::hci::Role role) {
   AddressWithType resolved_peer = pending_le_connection_resolved_address_;
   if (CancelPendingLeConnection(addr)) {
     uint16_t handle = GetUnusedHandle();
-    acl_connections_.emplace(
-        handle,
-        AclConnection{addr, own_addr, resolved_peer, Phy::Type::LOW_ENERGY});
+    acl_connections_.emplace(handle,
+                             AclConnection{addr, own_addr, resolved_peer,
+                                           Phy::Type::LOW_ENERGY, role});
     return handle;
   }
   return kReservedHandle;
