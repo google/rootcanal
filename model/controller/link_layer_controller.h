@@ -104,6 +104,9 @@ class LinkLayerController {
   ErrorCode AuthenticationRequested(uint16_t handle);
 #endif /* ROOTCANAL_LMP */
 
+  std::vector<bluetooth::hci::Lap> const& ReadCurrentIacLap() const;
+  void WriteCurrentIacLap(std::vector<bluetooth::hci::Lap> iac_lap);
+
   ErrorCode AcceptConnectionRequest(const Address& addr, bool try_role_switch);
   void MakePeripheralConnection(const Address& addr, bool try_role_switch);
   ErrorCode RejectConnectionRequest(const Address& addr, uint8_t reason);
@@ -734,6 +737,9 @@ class LinkLayerController {
   ClassOfDevice class_of_device_{{0, 0, 0}};
 
   // Other configuration parameters.
+
+  // Current IAC LAP (Vol 4, Part E § 7.3.44).
+  std::vector<bluetooth::hci::Lap> current_iac_lap_list_{};
 
   // Min Encryption Key Size (Vol 4, Part E § 7.3.102).
   uint8_t min_encryption_key_size_{16};
