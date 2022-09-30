@@ -67,7 +67,8 @@ class AclConnectionHandler {
   uint16_t CreateConnection(bluetooth::hci::Address addr,
                             bluetooth::hci::Address own_addr);
   uint16_t CreateLeConnection(bluetooth::hci::AddressWithType addr,
-                              bluetooth::hci::AddressWithType own_addr);
+                              bluetooth::hci::AddressWithType own_addr,
+                              bluetooth::hci::Role role);
   bool Disconnect(uint16_t handle);
   bool HasHandle(uint16_t handle) const;
   bool HasScoHandle(uint16_t handle) const;
