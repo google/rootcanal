@@ -76,6 +76,9 @@ struct ControllerProperties {
   uint8_t total_num_le_acl_data_packets{20};
   uint8_t total_num_iso_data_packets{12};
 
+  // Number of Supported IAC (Vol 4, Part E § 7.3.43).
+  uint8_t num_supported_iac{4};
+
   // Supported Codecs (Vol 4, Part E § 7.4.8).
   // Implements the [v1] version only.
   std::vector<uint8_t> supported_standard_codecs{0};
