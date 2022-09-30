@@ -30,7 +30,8 @@ using ::bluetooth::hci::AddressWithType;
 class AclConnection {
  public:
   AclConnection(AddressWithType address, AddressWithType own_address,
-                AddressWithType resolved_address, Phy::Type phy_type);
+                AddressWithType resolved_address, Phy::Type phy_type,
+                bluetooth::hci::Role role);
 
   virtual ~AclConnection() = default;
 
