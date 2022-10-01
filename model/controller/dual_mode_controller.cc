@@ -1745,25 +1745,24 @@ void DualModeController::ReadNumberOfSupportedIac(CommandView command) {
   auto command_view = gd_hci::ReadNumberOfSupportedIacView::Create(
       gd_hci::DiscoveryCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  uint8_t num_support_iac = 0x1;
   send_event_(bluetooth::hci::ReadNumberOfSupportedIacCompleteBuilder::Create(
-      kNumCommandPackets, ErrorCode::SUCCESS, num_support_iac));
+      kNumCommandPackets, ErrorCode::SUCCESS, properties_.num_supported_iac));
 }
 
 void DualModeController::ReadCurrentIacLap(CommandView command) {
   auto command_view = gd_hci::ReadCurrentIacLapView::Create(
       gd_hci::DiscoveryCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  gd_hci::Lap lap;
-  lap.lap_ = 0x30;
   send_event_(bluetooth::hci::ReadCurrentIacLapCompleteBuilder::Create(
-      kNumCommandPackets, ErrorCode::SUCCESS, {lap}));
+      kNumCommandPackets, ErrorCode::SUCCESS,
+      link_layer_controller_.ReadCurrentIacLap()));
 }
 
 void DualModeController::WriteCurrentIacLap(CommandView command) {
   auto command_view = gd_hci::WriteCurrentIacLapView::Create(
       gd_hci::DiscoveryCommandView::Create(command));
   ASSERT(command_view.IsValid());
+  link_layer_controller_.WriteCurrentIacLap(command_view.GetLapsToWrite());
   send_event_(bluetooth::hci::WriteCurrentIacLapCompleteBuilder::Create(
       kNumCommandPackets, ErrorCode::SUCCESS));
 }
