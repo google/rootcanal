@@ -1292,6 +1292,14 @@ void LinkLayerController::IncomingInquiryPacket(
   ASSERT(inquiry.IsValid());
 
   Address peer = incoming.GetSourceAddress();
+  uint8_t lap = inquiry.GetLap();
+
+  // Filter out inquiry packets with IAC not present in the
+  // list Current_IAC_LAP.
+  if (std::none_of(current_iac_lap_list_.cbegin(), current_iac_lap_list_.cend(),
+                   [lap](auto iac_lap) { return iac_lap.lap_ == lap; })) {
+    return;
+  }
 
   switch (inquiry.GetInquiryType()) {
     case (model::packets::InquiryType::STANDARD): {
@@ -3252,6 +3260,22 @@ ErrorCode LinkLayerController::SetConnectionEncryption(
 }
 #endif /* ROOTCANAL_LMP */
 
+std::vector<bluetooth::hci::Lap> const& LinkLayerController::ReadCurrentIacLap()
+    const {
+  return current_iac_lap_list_;
+}
+
+void LinkLayerController::WriteCurrentIacLap(
+    std::vector<bluetooth::hci::Lap> iac_lap) {
+  current_iac_lap_list_.swap(iac_lap);
+
+  //  If Num_Current_IAC is greater than Num_Supported_IAC then only the first
+  //  Num_Supported_IAC shall be stored in the Controller
+  if (current_iac_lap_list_.size() > properties_.num_supported_iac) {
+    current_iac_lap_list_.resize(properties_.num_supported_iac);
+  }
+}
+
 ErrorCode LinkLayerController::AcceptConnectionRequest(const Address& bd_addr,
                                                        bool try_role_switch) {
   if (connections_.HasPendingConnection(bd_addr)) {
@@ -4206,6 +4230,12 @@ void LinkLayerController::Reset() {
   last_inquiry_ = steady_clock::now();
   page_scan_enable_ = false;
   inquiry_scan_enable_ = false;
+
+  bluetooth::hci::Lap general_iac;
+  general_iac.lap_ = 0x33;  // 0x9E8B33
+  current_iac_lap_list_.clear();
+  current_iac_lap_list_.emplace_back(general_iac);
+
 #ifdef ROOTCANAL_LMP
   lm_.reset(link_manager_create(ops_));
 #endif
@@ -4250,7 +4280,7 @@ void LinkLayerController::Inquiry() {
   }
 
   SendLinkLayerPacket(model::packets::InquiryBuilder::Create(
-      GetAddress(), Address::kEmpty, inquiry_mode_));
+      GetAddress(), Address::kEmpty, inquiry_mode_, inquiry_lap_));
   last_inquiry_ = now;
 }
 
