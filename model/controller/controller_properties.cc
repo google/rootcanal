@@ -307,6 +307,7 @@ ControllerProperties::ControllerProperties(const std::string& file_name)
   ParseUint(root, "total_num_le_acl_data_packets ",
             total_num_le_acl_data_packets);
   ParseUint(root, "total_num_iso_data_packets ", total_num_iso_data_packets);
+  ParseUint(root, "num_supported_iac", num_supported_iac);
 
   ParseUintArray(root, "lmp_features", lmp_features);
   ParseUintVector(root, "supported_standard_codecs", supported_standard_codecs);

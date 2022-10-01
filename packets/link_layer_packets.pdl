@@ -100,6 +100,7 @@ enum InquiryType : 8 {
 
 packet Inquiry : LinkLayerPacket (type = INQUIRY) {
   inquiry_type : InquiryType,
+  lap : 8, // The IAC is derived from the LAP
 }
 
 packet BasicInquiryResponse : LinkLayerPacket(type = INQUIRY_RESPONSE) {
