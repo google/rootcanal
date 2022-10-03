@@ -96,6 +96,15 @@ struct ControllerProperties {
   // LE Supported States (Vol 4, Part E § 7.8.27).
   uint64_t le_supported_states{0x3ffffffffff};
 
+  // LE Maximum Advertising Data Length (Vol 4, Part E § 7.8.57).
+  // Note: valid range 0x001F to 0x0672.
+  uint16_t le_max_advertising_data_length{512};
+
+  // LE Number of Supported Advertising Sets (Vol 4, Part E § 7.8.58)
+  // Note: the controller can change the number of advertising sets
+  // at any time. This behaviour is not emulated here.
+  uint8_t le_num_supported_advertising_sets{8};
+
   // Vendor Information.
   // Provide parameters returned by vendor specific commands.
   std::vector<uint8_t> le_vendor_capabilities{};
