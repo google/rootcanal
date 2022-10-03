@@ -320,6 +320,11 @@ ControllerProperties::ControllerProperties(const std::string& file_name)
   ParseUint(root, "le_resolving_list_size", le_resolving_list_size);
   ParseUint(root, "le_supported_states", le_supported_states);
 
+  ParseUint(root, "le_max_advertising_data_length",
+            le_max_advertising_data_length);
+  ParseUint(root, "le_num_supported_advertising_sets",
+            le_num_supported_advertising_sets);
+
   ParseUintVector(root, "le_vendor_capabilities", le_vendor_capabilities);
 
   this->hci_version = static_cast<HciVersion>(hci_version);

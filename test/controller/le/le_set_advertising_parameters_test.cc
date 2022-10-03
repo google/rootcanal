@@ -42,7 +42,7 @@ TEST_F(LeSetAdvertisingParametersTest, Success) {
             ErrorCode::SUCCESS);
 }
 
-TEST_F(LeSetAdvertisingParametersTest, LegacyAdvertisingActive) {
+TEST_F(LeSetAdvertisingParametersTest, AdvertisingActive) {
   ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
@@ -53,7 +53,7 @@ TEST_F(LeSetAdvertisingParametersTest, LegacyAdvertisingActive) {
             ErrorCode::COMMAND_DISALLOWED);
 }
 
-TEST_F(LeSetAdvertisingParametersTest, NoAdvertisingChannel) {
+TEST_F(LeSetAdvertisingParametersTest, InvalidChannelMap) {
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
                 0x0800, 0x0800, AdvertisingType::ADV_IND,
                 OwnAddressType::PUBLIC_DEVICE_ADDRESS,
