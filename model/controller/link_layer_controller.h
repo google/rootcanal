@@ -352,8 +352,12 @@ class LinkLayerController {
   void SetInquiryMaxResponses(uint8_t max);
   void Inquiry();
 
+  bool GetInquiryScanEnable() { return inquiry_scan_enable_; }
   void SetInquiryScanEnable(bool enable);
+
+  bool GetPageScanEnable() { return page_scan_enable_; }
   void SetPageScanEnable(bool enable);
+
   uint16_t GetPageTimeout();
   void SetPageTimeout(uint16_t page_timeout);
 

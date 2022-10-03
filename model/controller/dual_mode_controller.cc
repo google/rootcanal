@@ -1807,8 +1807,19 @@ void DualModeController::ReadScanEnable(CommandView command) {
   auto command_view = gd_hci::ReadScanEnableView::Create(
       gd_hci::DiscoveryCommandView::Create(command));
   ASSERT(command_view.IsValid());
+
+  bool inquiry_scan = link_layer_controller_.GetInquiryScanEnable();
+  bool page_scan = link_layer_controller_.GetPageScanEnable();
+
+  bluetooth::hci::ScanEnable scan_enable =
+      inquiry_scan && page_scan
+          ? bluetooth::hci::ScanEnable::INQUIRY_AND_PAGE_SCAN
+      : inquiry_scan ? bluetooth::hci::ScanEnable::INQUIRY_SCAN_ONLY
+      : page_scan    ? bluetooth::hci::ScanEnable::PAGE_SCAN_ONLY
+                     : bluetooth::hci::ScanEnable::NO_SCANS;
+
   send_event_(bluetooth::hci::ReadScanEnableCompleteBuilder::Create(
-      kNumCommandPackets, ErrorCode::SUCCESS, gd_hci::ScanEnable::NO_SCANS));
+      kNumCommandPackets, ErrorCode::SUCCESS, scan_enable));
 }
 
 void DualModeController::WriteScanEnable(CommandView command) {
