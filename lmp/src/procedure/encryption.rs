@@ -1,8 +1,12 @@
 // Bluetooth Core, Vol 2, Part C, 4.2.5
 
+use super::features;
 use crate::num_hci_command_packets;
 use crate::packets::{hci, lmp};
 use crate::procedure::Context;
+
+use hci::LMPFeaturesPage1Bits::SecureConnectionsHostSupport;
+use hci::LMPFeaturesPage2Bits::SecureConnectionsControllerSupport;
 
 pub async fn initiate(ctx: &impl Context) {
     // TODO: handle turn off
@@ -36,11 +40,18 @@ pub async fn initiate(ctx: &impl Context) {
         )
         .await;
 
+    let aes_ccm = features::supported_on_both_page1(ctx, SecureConnectionsHostSupport).await
+        && features::supported_on_both_page2(ctx, SecureConnectionsControllerSupport).await;
+
     ctx.send_hci_event(
         hci::EncryptionChangeBuilder {
             status: hci::ErrorCode::Success,
             connection_handle: ctx.peer_handle(),
-            encryption_enabled: hci::EncryptionEnabled::On,
+            encryption_enabled: if aes_ccm {
+                hci::EncryptionEnabled::BrEdrAesCcm
+            } else {
+                hci::EncryptionEnabled::On
+            },
         }
         .build(),
     );
@@ -72,12 +83,70 @@ pub async fn respond(ctx: &impl Context) {
         .build(),
     );
 
+    let aes_ccm = features::supported_on_both_page1(ctx, SecureConnectionsHostSupport).await
+        && features::supported_on_both_page2(ctx, SecureConnectionsControllerSupport).await;
+
     ctx.send_hci_event(
         hci::EncryptionChangeBuilder {
             status: hci::ErrorCode::Success,
             connection_handle: ctx.peer_handle(),
-            encryption_enabled: hci::EncryptionEnabled::On,
+            encryption_enabled: if aes_ccm {
+                hci::EncryptionEnabled::BrEdrAesCcm
+            } else {
+                hci::EncryptionEnabled::On
+            },
         }
         .build(),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::initiate;
+    use super::respond;
+    use crate::procedure::Context;
+    use crate::test::{sequence, TestContext};
+
+    use crate::packets::hci::LMPFeaturesPage1Bits::SecureConnectionsHostSupport;
+    use crate::packets::hci::LMPFeaturesPage2Bits::SecureConnectionsControllerSupport;
+
+    #[test]
+    fn accept_encryption() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../test/ENC/BV-01-C.in");
+    }
+
+    #[test]
+    fn initiate_encryption() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../test/ENC/BV-05-C.in");
+    }
+
+    #[test]
+    fn accept_aes_ccm_encryption_request() {
+        let context = TestContext::new()
+            .with_page_1_feature(SecureConnectionsHostSupport)
+            .with_page_2_feature(SecureConnectionsControllerSupport)
+            .with_peer_page_1_feature(SecureConnectionsHostSupport)
+            .with_peer_page_2_feature(SecureConnectionsControllerSupport);
+        let procedure = respond;
+
+        include!("../../test/ENC/BV-26-C.in");
+    }
+
+    #[test]
+    fn initiate_aes_ccm_encryption() {
+        let context = TestContext::new()
+            .with_page_1_feature(SecureConnectionsHostSupport)
+            .with_page_2_feature(SecureConnectionsControllerSupport)
+            .with_peer_page_1_feature(SecureConnectionsHostSupport)
+            .with_peer_page_2_feature(SecureConnectionsControllerSupport);
+        let procedure = initiate;
+
+        include!("../../test/ENC/BV-34-C.in");
+    }
 }
