@@ -79,6 +79,9 @@ struct ControllerProperties {
   // Number of Supported IAC (Vol 4, Part E § 7.3.43).
   uint8_t num_supported_iac{4};
 
+  // LE Advertising Physical Channel TX Power (Vol 4, Part E § 7.8.6).
+  uint8_t le_advertising_physical_channel_tx_power{static_cast<uint8_t>(-10)};
+
   // Supported Codecs (Vol 4, Part E § 7.4.8).
   // Implements the [v1] version only.
   std::vector<uint8_t> supported_standard_codecs{0};
