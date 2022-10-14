@@ -2341,7 +2341,7 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
     response.rssi_ = rssi;
     response.periodic_advertising_interval_ = 0;  // No periodic advertising.
     response.direct_address_type_ =
-        bluetooth::hci::DirectAdvertisingAddressType::NO_ADDRESS;
+        bluetooth::hci::DirectAdvertisingAddressType::NO_ADDRESS_PROVIDED;
     response.direct_address_ = Address::kEmpty;
     response.advertising_data_ = advertising_data;
 
