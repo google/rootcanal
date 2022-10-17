@@ -19,8 +19,6 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
-#include <optional>
-#include <ratio>
 
 #include "hci/address_with_type.h"
 #include "hci/hci_packets.h"
@@ -28,83 +26,20 @@
 
 namespace rootcanal {
 
-// Duration type for slots (increments of 625us).
-using slots =
-    std::chrono::duration<unsigned long long, std::ratio<625, 1000000>>;
-
-// User defined literal for slots, e.g. `0x800_slots`
-slots operator"" _slots(unsigned long long count);
-
-using namespace bluetooth::hci;
-
-// Advertising interface common to legacy and extended advertisers.
-class Advertiser {
- public:
-  Advertiser() = default;
-  ~Advertiser() = default;
-
-  bool IsEnabled() const { return advertising_enable; }
-  void Disable() { advertising_enable = false; }
-
-  AddressWithType GetAdvertisingAddress() const { return advertising_address; }
-  AddressWithType GetTargetAddress() const { return target_address; }
-
-  bool advertising_enable{false};
-  AddressWithType advertising_address{Address::kEmpty,
-                                      AddressType::PUBLIC_DEVICE_ADDRESS};
-  AddressWithType target_address{Address::kEmpty,
-                                 AddressType::PUBLIC_DEVICE_ADDRESS};
-};
-
-// Implement the unique legacy advertising instance.
-// For extended advertising check the ExtendedAdvertiser class.
-class LegacyAdvertiser : public Advertiser {
- public:
-  LegacyAdvertiser() = default;
-  ~LegacyAdvertiser() = default;
-
-  bool IsScannable() const {
-    return advertising_type != AdvertisingType::ADV_NONCONN_IND &&
-           advertising_type != AdvertisingType::ADV_DIRECT_IND_HIGH &&
-           advertising_type != AdvertisingType::ADV_DIRECT_IND_LOW;
-  }
-
-  bool IsConnectable() const {
-    return advertising_type != AdvertisingType::ADV_NONCONN_IND &&
-           advertising_type != AdvertisingType::ADV_SCAN_IND;
-  }
-
-  bool IsDirected() const {
-    return advertising_type == AdvertisingType::ADV_DIRECT_IND_HIGH ||
-           advertising_type == AdvertisingType::ADV_DIRECT_IND_LOW;
-  }
-
-  // Time keeping.
-  std::chrono::steady_clock::time_point next_event{};
-  std::optional<std::chrono::steady_clock::time_point> timeout{};
-
-  // Host configuration parameters. Gather the configuration from the
-  // legacy advertising HCI commands. The initial configuration
-  // matches the default values of the parameters of the HCI command
-  // LE Set Advertising Parameters.
-  slots advertising_interval{0x0800};
-  AdvertisingType advertising_type{AdvertisingType::ADV_IND};
-  OwnAddressType own_address_type{OwnAddressType::PUBLIC_DEVICE_ADDRESS};
-  PeerAddressType peer_address_type{
-      PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS};
-  Address peer_address{};
-  uint8_t advertising_channel_map{0x07};
-  AdvertisingFilterPolicy advertising_filter_policy{
-      AdvertisingFilterPolicy::ALL_DEVICES};
-  std::vector<uint8_t> advertising_data{};
-  std::vector<uint8_t> scan_response_data{};
-};
-
-// Track a single extended advertising instance
+// Track a single advertising instance
 class LeAdvertiser {
  public:
   LeAdvertiser() = default;
   virtual ~LeAdvertiser() = default;
+
+  void Initialize(bluetooth::hci::OwnAddressType address_type,
+                  bluetooth::hci::AddressWithType public_address,
+                  bluetooth::hci::AddressWithType peer_address,
+                  bluetooth::hci::AdvertisingFilterPolicy filter_policy,
+                  bluetooth::hci::AdvertisingType type,
+                  const std::vector<uint8_t>& advertisement,
+                  const std::vector<uint8_t>& scan_response,
+                  std::chrono::steady_clock::duration interval);
 
   void InitializeExtended(
       unsigned advertising_handle, bluetooth::hci::OwnAddressType address_type,
@@ -131,12 +66,13 @@ class LeAdvertiser {
       std::chrono::steady_clock::time_point);
 
   std::unique_ptr<model::packets::LinkLayerPacketBuilder> GetScanResponse(
-      bluetooth::hci::AddressWithType scanned_address,
-      bluetooth::hci::AddressWithType scanner_address,
+      bluetooth::hci::Address scanned_address,
+      bluetooth::hci::Address scanner_address,
       bool scanner_in_filter_accept_list);
 
   void Clear();
   void Disable();
+  void Enable();
   void EnableExtended(std::chrono::milliseconds duration);
 
   bluetooth::hci::AdvertisingFilterPolicy GetAdvertisingFilterPolicy() const {

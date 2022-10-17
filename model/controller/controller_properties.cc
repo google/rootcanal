@@ -308,8 +308,6 @@ ControllerProperties::ControllerProperties(const std::string& file_name)
             total_num_le_acl_data_packets);
   ParseUint(root, "total_num_iso_data_packets ", total_num_iso_data_packets);
   ParseUint(root, "num_supported_iac", num_supported_iac);
-  ParseUint(root, "le_advertising_physical_channel_tx_power",
-            le_advertising_physical_channel_tx_power);
 
   ParseUintArray(root, "lmp_features", lmp_features);
   ParseUintVector(root, "supported_standard_codecs", supported_standard_codecs);

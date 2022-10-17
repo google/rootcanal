@@ -179,8 +179,6 @@ packet LeConnectComplete : LinkLayerPacket (type = LE_CONNECT_COMPLETE) {
 }
 
 packet LeScan : LinkLayerPacket (type = LE_SCAN) {
-  scanning_address_type : AddressType,
-  advertising_address_type : AddressType,
 }
 
 packet LeScanResponse : LinkLayerPacket (type = LE_SCAN_RESPONSE) {
