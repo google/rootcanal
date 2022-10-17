@@ -2129,10 +2129,9 @@ void DualModeController::LeSetAdvertisingData(CommandView command) {
   ASSERT_LOG(command_view.IsValid(), "%s command.size() = %zu",
              gd_hci::OpCodeText(command.GetOpCode()).c_str(), command.size());
   ASSERT(command_view.GetPayload().size() == 32);
-  ErrorCode status =
-      link_layer_controller_.LeSetAdvertisingData(advertising_data);
+  link_layer_controller_.LeSetAdvertisingData(advertising_data);
   send_event_(bluetooth::hci::LeSetAdvertisingDataCompleteBuilder::Create(
-      kNumCommandPackets, status));
+      kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
 void DualModeController::LeSetScanResponseData(CommandView command) {
@@ -2140,11 +2139,10 @@ void DualModeController::LeSetScanResponseData(CommandView command) {
       gd_hci::LeAdvertisingCommandView::Create(command));
   ASSERT(command_view.IsValid());
   ASSERT(command_view.GetPayload().size() == 32);
-  ErrorCode status = link_layer_controller_.LeSetScanResponseData(
-      std::vector<uint8_t>(command_view.GetPayload().begin() + 1,
-                           command_view.GetPayload().end()));
+  link_layer_controller_.LeSetScanResponseData(std::vector<uint8_t>(
+      command_view.GetPayload().begin() + 1, command_view.GetPayload().end()));
   send_event_(bluetooth::hci::LeSetScanResponseDataCompleteBuilder::Create(
-      kNumCommandPackets, status));
+      kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
 void DualModeController::LeSetAdvertisingEnable(CommandView command) {
@@ -2165,13 +2163,15 @@ void DualModeController::LeSetScanParameters(CommandView command) {
   auto command_view = gd_hci::LeSetScanParametersView::Create(
       gd_hci::LeScanningCommandView::Create(command));
   ASSERT(command_view.IsValid());
-
-  ErrorCode status = link_layer_controller_.LeSetScanParameters(
-      command_view.GetLeScanType(), command_view.GetLeScanInterval(),
-      command_view.GetLeScanWindow(), command_view.GetOwnAddressType(),
+  link_layer_controller_.SetLeScanType(
+      static_cast<uint8_t>(command_view.GetLeScanType()));
+  link_layer_controller_.SetLeScanInterval(command_view.GetLeScanInterval());
+  link_layer_controller_.SetLeScanWindow(command_view.GetLeScanWindow());
+  link_layer_controller_.SetLeAddressType(command_view.GetOwnAddressType());
+  link_layer_controller_.SetLeScanFilterPolicy(
       command_view.GetScanningFilterPolicy());
   send_event_(bluetooth::hci::LeSetScanParametersCompleteBuilder::Create(
-      kNumCommandPackets, status));
+      kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
 void DualModeController::LeSetScanEnable(CommandView command) {
@@ -2182,11 +2182,15 @@ void DualModeController::LeSetScanEnable(CommandView command) {
   LOG_INFO("%s | LeSetScanEnable (%d)", GetAddress().ToString().c_str(),
            command_view.GetLeScanEnable() == gd_hci::Enable::ENABLED);
 
-  ErrorCode status = link_layer_controller_.LeSetScanEnable(
-      command_view.GetLeScanEnable() == gd_hci::Enable::ENABLED,
+  if (command_view.GetLeScanEnable() == gd_hci::Enable::ENABLED) {
+    link_layer_controller_.SetLeScanEnable(gd_hci::OpCode::LE_SET_SCAN_ENABLE);
+  } else {
+    link_layer_controller_.SetLeScanEnable(gd_hci::OpCode::NONE);
+  }
+  link_layer_controller_.SetLeFilterDuplicates(
       command_view.GetFilterDuplicates() == gd_hci::Enable::ENABLED);
   send_event_(bluetooth::hci::LeSetScanEnableCompleteBuilder::Create(
-      kNumCommandPackets, status));
+      kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
 void DualModeController::LeCreateConnection(CommandView command) {
@@ -2203,8 +2207,11 @@ void DualModeController::LeCreateConnection(CommandView command) {
   if (initiator_filter_policy ==
       bluetooth::hci::InitiatorFilterPolicy::USE_PEER_ADDRESS) {
     // Connect list not used
-    link_layer_controller_.SetLePeerAddress(AddressWithType{
-        command_view.GetPeerAddress(), command_view.GetPeerAddressType()});
+    uint8_t peer_address_type =
+        static_cast<uint8_t>(command_view.GetPeerAddressType());
+    Address peer_address = command_view.GetPeerAddress();
+    link_layer_controller_.SetLePeerAddressType(peer_address_type);
+    link_layer_controller_.SetLePeerAddress(peer_address);
   }
   link_layer_controller_.SetLeAddressType(command_view.GetOwnAddressType());
   link_layer_controller_.SetLeConnectionIntervalMin(
@@ -2447,9 +2454,23 @@ void DualModeController::LeSetExtendedScanParameters(CommandView command) {
   auto command_view = gd_hci::LeSetExtendedScanParametersView::Create(
       gd_hci::LeScanningCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  ErrorCode status = link_layer_controller_.LeSetExtendedScanParameters(
-      command_view.GetOwnAddressType(), command_view.GetScanningFilterPolicy(),
-      command_view.GetScanningPhys(), command_view.GetParameters());
+  auto parameters = command_view.GetParameters();
+  // Multiple phys are not supported.
+  ASSERT(command_view.GetScanningPhys() == 1);
+  ASSERT(parameters.size() == 1);
+
+  auto status = ErrorCode::SUCCESS;
+  if (link_layer_controller_.GetLeScanEnable() == OpCode::NONE) {
+    link_layer_controller_.SetLeScanType(
+        static_cast<uint8_t>(parameters[0].le_scan_type_));
+    link_layer_controller_.SetLeScanInterval(parameters[0].le_scan_interval_);
+    link_layer_controller_.SetLeScanWindow(parameters[0].le_scan_window_);
+    link_layer_controller_.SetLeAddressType(command_view.GetOwnAddressType());
+    link_layer_controller_.SetLeScanFilterPolicy(
+        command_view.GetScanningFilterPolicy());
+  } else {
+    status = ErrorCode::COMMAND_DISALLOWED;
+  }
   send_event_(
       bluetooth::hci::LeSetExtendedScanParametersCompleteBuilder::Create(
           kNumCommandPackets, status));
@@ -2459,12 +2480,16 @@ void DualModeController::LeSetExtendedScanEnable(CommandView command) {
   auto command_view = gd_hci::LeSetExtendedScanEnableView::Create(
       gd_hci::LeScanningCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  ErrorCode status = link_layer_controller_.LeSetExtendedScanEnable(
-      command_view.GetEnable() == gd_hci::Enable::ENABLED,
-      command_view.GetFilterDuplicates(), command_view.GetDuration(),
-      command_view.GetPeriod());
+  if (command_view.GetEnable() == gd_hci::Enable::ENABLED) {
+    link_layer_controller_.SetLeScanEnable(
+        gd_hci::OpCode::LE_SET_EXTENDED_SCAN_ENABLE);
+  } else {
+    link_layer_controller_.SetLeScanEnable(gd_hci::OpCode::NONE);
+  }
+  link_layer_controller_.SetLeFilterDuplicates(
+      command_view.GetFilterDuplicates() == gd_hci::FilterDuplicates::ENABLED);
   send_event_(bluetooth::hci::LeSetExtendedScanEnableCompleteBuilder::Create(
-      kNumCommandPackets, status));
+      kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
 void DualModeController::LeExtendedCreateConnection(CommandView command) {
@@ -2482,10 +2507,9 @@ void DualModeController::LeExtendedCreateConnection(CommandView command) {
 
   if (initiator_filter_policy ==
       gd_hci::InitiatorFilterPolicy::USE_PEER_ADDRESS) {
-    link_layer_controller_.SetLePeerAddress(AddressWithType{
-        command_view.GetPeerAddress(),
-        command_view.GetPeerAddressType(),
-    });
+    link_layer_controller_.SetLePeerAddressType(
+        static_cast<uint8_t>(command_view.GetPeerAddressType()));
+    link_layer_controller_.SetLePeerAddress(command_view.GetPeerAddress());
   }
   link_layer_controller_.SetLeAddressType(command_view.GetOwnAddressType());
   link_layer_controller_.SetLeConnectionIntervalMin(

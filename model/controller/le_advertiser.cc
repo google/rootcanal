@@ -50,15 +50,6 @@ ErrorCode LinkLayerController::LeSetAdvertisingParameters(
     PeerAddressType peer_address_type, Address peer_address,
     uint8_t advertising_channel_map,
     AdvertisingFilterPolicy advertising_filter_policy) {
-  // Legacy advertising commands are disallowed when extended advertising
-  // commands were used since the last reset.
-  if (!SelectLegacyAdvertising()) {
-    LOG_INFO(
-        "legacy advertising command rejected because extended advertising"
-        " is being used");
-    return ErrorCode::COMMAND_DISALLOWED;
-  }
-
   // Clear reserved bits.
   advertising_channel_map &= 0x7;
 
@@ -127,47 +118,21 @@ ErrorCode LinkLayerController::LeSetAdvertisingParameters(
 }
 
 // HCI command LE_Set_Advertising_Data (Vol 4, Part E § 7.8.7).
-ErrorCode LinkLayerController::LeSetAdvertisingData(
+void LinkLayerController::LeSetAdvertisingData(
     const std::vector<uint8_t>& advertising_data) {
-  // Legacy advertising commands are disallowed when extended advertising
-  // commands were used since the last reset.
-  if (!SelectLegacyAdvertising()) {
-    LOG_INFO(
-        "legacy advertising command rejected because extended advertising"
-        " is being used");
-    return ErrorCode::COMMAND_DISALLOWED;
-  }
-
   legacy_advertiser_.advertising_data = advertising_data;
-  return ErrorCode::SUCCESS;
 }
 
 // HCI command LE_Set_Scan_Response_Data (Vol 4, Part E § 7.8.8).
-ErrorCode LinkLayerController::LeSetScanResponseData(
+void LinkLayerController::LeSetScanResponseData(
     const std::vector<uint8_t>& scan_response_data) {
-  // Legacy advertising commands are disallowed when extended advertising
-  // commands were used since the last reset.
-  if (!SelectLegacyAdvertising()) {
-    LOG_INFO(
-        "legacy advertising command rejected because extended advertising"
-        " is being used");
-    return ErrorCode::COMMAND_DISALLOWED;
-  }
-
   legacy_advertiser_.scan_response_data = scan_response_data;
-  return ErrorCode::SUCCESS;
 }
 
 // HCI command LE_Advertising_Enable (Vol 4, Part E § 7.8.9).
 ErrorCode LinkLayerController::LeSetAdvertisingEnable(bool advertising_enable) {
-  // Legacy advertising commands are disallowed when extended advertising
-  // commands were used since the last reset.
-  if (!SelectLegacyAdvertising()) {
-    LOG_INFO(
-        "legacy advertising command rejected because extended advertising"
-        " is being used");
-    return ErrorCode::COMMAND_DISALLOWED;
-  }
+  // Note: additional checks would apply in the case of a LE only Controller
+  // with no configured public device address.
 
   if (!advertising_enable) {
     legacy_advertiser_.advertising_enable = false;
@@ -181,9 +146,6 @@ ErrorCode LinkLayerController::LeSetAdvertisingEnable(bool advertising_enable) {
                                  AddressType::RANDOM_DEVICE_ADDRESS};
   std::optional<AddressWithType> resolvable_address =
       GenerateResolvablePrivateAddress(peer_address, IrkSelection::Local);
-
-  // TODO: additional checks would apply in the case of a LE only Controller
-  // with no configured public device address.
 
   switch (legacy_advertiser_.own_address_type) {
     case OwnAddressType::PUBLIC_DEVICE_ADDRESS:

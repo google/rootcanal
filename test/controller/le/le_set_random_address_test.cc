@@ -38,7 +38,7 @@ TEST_F(LeSetRandomAddressTest, Success) {
 }
 
 TEST_F(LeSetRandomAddressTest, ScanningActive) {
-  controller_.LeSetScanEnable(true, false);
+  controller_.SetLeScanEnable(OpCode::LE_SET_SCAN_ENABLE);
   ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }

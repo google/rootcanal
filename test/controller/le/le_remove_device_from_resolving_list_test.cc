@@ -66,7 +66,7 @@ TEST_F(LeRemoveDeviceFromResolvingListTest, ScanningActive) {
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
-  controller_.LeSetScanEnable(true, false);
+  controller_.SetLeScanEnable(OpCode::LE_SET_SCAN_ENABLE);
 
   ASSERT_EQ(controller_.LeRemoveDeviceFromResolvingList(
                 PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
