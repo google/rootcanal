@@ -39,29 +39,29 @@ class LeAddDeviceToResolvingListTest : public ::testing::Test {
 
 TEST_F(LeAddDeviceToResolvingListTest, Success) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                AddressType::RANDOM_DEVICE_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{2}, std::array<uint8_t, 16>{2}),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeAddDeviceToResolvingListTest, ListFull) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{2},
+                AddressType::PUBLIC_DEVICE_ADDRESS, Address{2},
                 std::array<uint8_t, 16>{2}, std::array<uint8_t, 16>{2}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{3},
+                AddressType::PUBLIC_DEVICE_ADDRESS, Address{3},
                 std::array<uint8_t, 16>{3}, std::array<uint8_t, 16>{3}),
             ErrorCode::MEMORY_CAPACITY_EXCEEDED);
 }
@@ -71,17 +71,17 @@ TEST_F(LeAddDeviceToResolvingListTest, ScanningActive) {
   controller_.SetLeScanEnable(OpCode::LE_SET_SCAN_ENABLE);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeAddDeviceToResolvingListTest, LegacyAdvertisingActive) {
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.SetLeAdvertisingEnable(1), ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
@@ -96,31 +96,31 @@ TEST_F(LeAddDeviceToResolvingListTest, ExtendedAdvertisingActive) {
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeAddDeviceToResolvingListTest, PeerAddressDuplicate) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{2}, std::array<uint8_t, 16>{2}),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeAddDeviceToResolvingListTest, PeerIrkDuplicate) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                AddressType::RANDOM_DEVICE_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
