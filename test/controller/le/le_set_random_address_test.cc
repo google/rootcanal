@@ -22,10 +22,10 @@ namespace rootcanal {
 
 using namespace bluetooth::hci;
 
-class LeSetAddressResolutionEnableTest : public ::testing::Test {
+class LeSetRandomAddressTest : public ::testing::Test {
  public:
-  LeSetAddressResolutionEnableTest() = default;
-  ~LeSetAddressResolutionEnableTest() override = default;
+  LeSetRandomAddressTest() = default;
+  ~LeSetRandomAddressTest() override = default;
 
  protected:
   Address address_{0};
@@ -33,41 +33,36 @@ class LeSetAddressResolutionEnableTest : public ::testing::Test {
   LinkLayerController controller_{address_, properties_};
 };
 
-TEST_F(LeSetAddressResolutionEnableTest, Success) {
-  ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetAddressResolutionEnable(false),
-            ErrorCode::SUCCESS);
+TEST_F(LeSetRandomAddressTest, Success) {
+  ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::SUCCESS);
 }
 
-TEST_F(LeSetAddressResolutionEnableTest, ScanningActive) {
+TEST_F(LeSetRandomAddressTest, ScanningActive) {
   controller_.SetLeScanEnable(OpCode::LE_SET_SCAN_ENABLE);
-  ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true),
-            ErrorCode::COMMAND_DISALLOWED);
-  ASSERT_EQ(controller_.LeSetAddressResolutionEnable(false),
+  ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
-TEST_F(LeSetAddressResolutionEnableTest, LegacyAdvertisingActive) {
+TEST_F(LeSetRandomAddressTest, LegacyAdvertisingActive) {
   ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true),
-            ErrorCode::COMMAND_DISALLOWED);
-  ASSERT_EQ(controller_.LeSetAddressResolutionEnable(false),
+  ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
-TEST_F(LeSetAddressResolutionEnableTest, ExtendedAdvertisingActive) {
+TEST_F(LeSetRandomAddressTest, ExtendedAdvertisingActive) {
   EnabledSet enabled_set;
   enabled_set.advertising_handle_ = 1;
   enabled_set.duration_ = 0;
-  ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.SetLeExtendedAdvertisingEnable(Enable::ENABLED,
                                                        {enabled_set}),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true),
-            ErrorCode::COMMAND_DISALLOWED);
-  ASSERT_EQ(controller_.LeSetAddressResolutionEnable(false),
-            ErrorCode::COMMAND_DISALLOWED);
+  // The Random Address is not used for extended advertising,
+  // each set has its own address configured using the command
+  // LE_Set_Advertising_Set_Random_Address.
+  // It is allowed to modify the Random Address while extended advertising
+  // is active.
+  ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::SUCCESS);
 }
 
 }  // namespace rootcanal

@@ -39,7 +39,7 @@ class LeClearResolvingListTest : public ::testing::Test {
 
 TEST_F(LeClearResolvingListTest, Success) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
+                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
@@ -48,7 +48,7 @@ TEST_F(LeClearResolvingListTest, Success) {
 
 TEST_F(LeClearResolvingListTest, ScanningActive) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
+                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
@@ -60,19 +60,19 @@ TEST_F(LeClearResolvingListTest, ScanningActive) {
 
 TEST_F(LeClearResolvingListTest, LegacyAdvertisingActive) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
+                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.SetLeAdvertisingEnable(1), ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeClearResolvingList(), ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeClearResolvingListTest, ExtendedAdvertisingActive) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                AddressType::PUBLIC_DEVICE_ADDRESS, Address{1},
+                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
                 std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
