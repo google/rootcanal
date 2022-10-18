@@ -40,7 +40,7 @@ TEST_F(LeSetAddressResolutionEnableTest, Success) {
 }
 
 TEST_F(LeSetAddressResolutionEnableTest, ScanningActive) {
-  controller_.LeSetScanEnable(true, false);
+  controller_.SetLeScanEnable(OpCode::LE_SET_SCAN_ENABLE);
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true),
             ErrorCode::COMMAND_DISALLOWED);
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(false),
