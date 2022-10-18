@@ -68,7 +68,7 @@ TEST_F(LeAddDeviceToResolvingListTest, ListFull) {
 
 TEST_F(LeAddDeviceToResolvingListTest, ScanningActive) {
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
-  controller_.SetLeScanEnable(OpCode::LE_SET_SCAN_ENABLE);
+  controller_.LeSetScanEnable(true, false);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
                 PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},

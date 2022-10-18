@@ -62,9 +62,10 @@ TEST_F(LeAddDeviceToFilterAcceptListTest, ListFull) {
 }
 
 TEST_F(LeAddDeviceToFilterAcceptListTest, ScanningActive) {
-  controller_.SetLeScanFilterPolicy(
+  controller_.LeSetScanParameters(
+      LeScanType::PASSIVE, 0x400, 0x200, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
       LeScanningFilterPolicy::FILTER_ACCEPT_LIST_ONLY);
-  controller_.SetLeScanEnable(OpCode::LE_SET_SCAN_ENABLE);
+  controller_.LeSetScanEnable(true, false);
 
   ASSERT_EQ(controller_.LeAddDeviceToFilterAcceptList(
                 FilterAcceptListAddressType::PUBLIC, Address{1}),

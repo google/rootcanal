@@ -53,7 +53,7 @@ TEST_F(LeClearResolvingListTest, ScanningActive) {
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
-  controller_.SetLeScanEnable(OpCode::LE_SET_SCAN_ENABLE);
+  controller_.LeSetScanEnable(true, false);
 
   ASSERT_EQ(controller_.LeClearResolvingList(), ErrorCode::COMMAND_DISALLOWED);
 }

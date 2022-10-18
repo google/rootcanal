@@ -184,8 +184,8 @@ packet LeScan : LinkLayerPacket (type = LE_SCAN) {
 }
 
 packet LeScanResponse : LinkLayerPacket (type = LE_SCAN_RESPONSE) {
-  address_type : AddressType,
-  data : 8[],
+  advertising_address_type : AddressType,
+  scan_response_data : 8[],
 }
 
 packet Page : LinkLayerPacket (type = PAGE) {
