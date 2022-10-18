@@ -56,6 +56,26 @@ static uint8_t GetRssi() {
 
 const Address& LinkLayerController::GetAddress() const { return address_; }
 
+AddressWithType PeerDeviceAddress(Address address,
+                                  PeerAddressType peer_address_type) {
+  switch (peer_address_type) {
+    case PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS:
+      return AddressWithType(address, AddressType::PUBLIC_DEVICE_ADDRESS);
+    case PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS:
+      return AddressWithType(address, AddressType::RANDOM_DEVICE_ADDRESS);
+  }
+}
+
+AddressWithType PeerIdentityAddress(Address address,
+                                    PeerAddressType peer_address_type) {
+  switch (peer_address_type) {
+    case PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS:
+      return AddressWithType(address, AddressType::PUBLIC_IDENTITY_ADDRESS);
+    case PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS:
+      return AddressWithType(address, AddressType::RANDOM_IDENTITY_ADDRESS);
+  }
+}
+
 bool LinkLayerController::IsEventUnmasked(EventCode event) const {
   uint64_t bit = UINT64_C(1) << (static_cast<uint8_t>(event) - 1);
   return (event_mask_ & bit) != 0;
@@ -71,6 +91,12 @@ bool LinkLayerController::FilterAcceptListBusy() {
   // Filter Accept List cannot be modified when
   //  • any advertising filter policy uses the Filter Accept List and
   //    advertising is enabled,
+  if (legacy_advertiser_.IsEnabled() &&
+      legacy_advertiser_.advertising_filter_policy !=
+          bluetooth::hci::AdvertisingFilterPolicy::ALL_DEVICES) {
+    return true;
+  }
+
   for (auto const& advertiser : advertisers_) {
     if (advertiser.IsEnabled() &&
         advertiser.GetAdvertisingFilterPolicy() !=
@@ -116,26 +142,29 @@ bool LinkLayerController::LeFilterAcceptListContainsDevice(
 }
 
 bool LinkLayerController::LeFilterAcceptListContainsDevice(
-    AddressType address_type, Address address) {
-  FilterAcceptListAddressType filter_accept_list_address_type;
-  switch (address_type) {
+    AddressWithType address) {
+  FilterAcceptListAddressType address_type;
+  switch (address.GetAddressType()) {
     case AddressType::PUBLIC_DEVICE_ADDRESS:
     case AddressType::PUBLIC_IDENTITY_ADDRESS:
-      filter_accept_list_address_type = FilterAcceptListAddressType::PUBLIC;
+      address_type = FilterAcceptListAddressType::PUBLIC;
       break;
     case AddressType::RANDOM_DEVICE_ADDRESS:
     case AddressType::RANDOM_IDENTITY_ADDRESS:
-      filter_accept_list_address_type = FilterAcceptListAddressType::RANDOM;
+      address_type = FilterAcceptListAddressType::RANDOM;
       break;
   }
 
-  return LeFilterAcceptListContainsDevice(filter_accept_list_address_type,
-                                          address);
+  return LeFilterAcceptListContainsDevice(address_type, address.GetAddress());
 }
 
 bool LinkLayerController::ResolvingListBusy() {
   // The resolving list cannot be modified when
   //  • Advertising (other than periodic advertising) is enabled,
+  if (legacy_advertiser_.IsEnabled()) {
+    return true;
+  }
+
   for (auto const& advertiser : advertisers_) {
     if (advertiser.IsEnabled()) {
       return true;
@@ -156,37 +185,55 @@ bool LinkLayerController::ResolvingListBusy() {
   return false;
 }
 
-bool LinkLayerController::LeResolvingListContainsDevice(
-    AddressType peer_identity_address_type, Address peer_identity_address) {
+std::optional<AddressWithType> LinkLayerController::ResolvePrivateAddress(
+    AddressWithType address, IrkSelection irk) {
+  if (!address.IsRpa()) {
+    return address;
+  }
+
+  if (!le_resolving_list_enabled_) {
+    return {};
+  }
+
   for (auto const& entry : le_resolving_list_) {
-    if (entry.peer_identity_address_type == peer_identity_address_type &&
-        entry.peer_identity_address == peer_identity_address) {
-      return true;
+    std::array<uint8_t, LinkLayerController::kIrkSize> const& used_irk =
+        irk == IrkSelection::Local ? entry.local_irk : entry.peer_irk;
+
+    if (address.IsRpaThatMatchesIrk(used_irk)) {
+      return PeerIdentityAddress(entry.peer_identity_address,
+                                 entry.peer_identity_address_type);
     }
   }
 
-  return false;
+  return {};
 }
 
-bool LinkLayerController::LeResolvingListContainsDevice(
-    bluetooth::hci::PeerAddressType peer_identity_address_type,
-    Address peer_identity_address) {
-  AddressType peer_address_type;
-  switch (peer_identity_address_type) {
-    case bluetooth::hci::PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS:
-      peer_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
-      break;
-    case bluetooth::hci::PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS:
-      peer_address_type = AddressType::RANDOM_DEVICE_ADDRESS;
-      break;
+static Address generate_rpa(
+    std::array<uint8_t, LinkLayerController::kIrkSize> irk);
+
+std::optional<AddressWithType>
+LinkLayerController::GenerateResolvablePrivateAddress(AddressWithType address,
+                                                      IrkSelection irk) {
+  if (!le_resolving_list_enabled_) {
+    return {};
   }
 
-  return LeResolvingListContainsDevice(peer_address_type,
-                                       peer_identity_address);
+  for (auto const& entry : le_resolving_list_) {
+    if (address.GetAddress() == entry.peer_identity_address &&
+        address.ToPeerAddressType() == entry.peer_identity_address_type) {
+      std::array<uint8_t, LinkLayerController::kIrkSize> const& used_irk =
+          irk == IrkSelection::Local ? entry.local_irk : entry.peer_irk;
+
+      return AddressWithType{generate_rpa(used_irk),
+                             AddressType::RANDOM_DEVICE_ADDRESS};
+    }
+  }
+
+  return {};
 }
 
 // =============================================================================
-//  General LE Coommands
+//  General LE Commands
 // =============================================================================
 
 // HCI LE Set Random Address command (Vol 4, Part E § 7.8.4).
@@ -194,7 +241,8 @@ ErrorCode LinkLayerController::LeSetRandomAddress(Address random_address) {
   // If the Host issues this command when any of advertising (created using
   // legacy advertising commands), scanning, or initiating are enabled,
   // the Controller shall return the error code Command Disallowed (0x0C).
-  if (advertisers_[0].IsEnabled()) {
+  if (legacy_advertiser_.IsEnabled() ||
+      le_scan_enable_ != bluetooth::hci::OpCode::NONE || le_connect_) {
     return ErrorCode::COMMAND_DISALLOWED;
   }
 
@@ -254,7 +302,7 @@ ErrorCode LinkLayerController::LeSetHostFeature(uint8_t bit_number,
 
 // HCI command LE_Add_Device_To_Resolving_List (Vol 4, Part E § 7.8.38).
 ErrorCode LinkLayerController::LeAddDeviceToResolvingList(
-    AddressType peer_identity_address_type, Address peer_identity_address,
+    PeerAddressType peer_identity_address_type, Address peer_identity_address,
     std::array<uint8_t, kIrkSize> peer_irk,
     std::array<uint8_t, kIrkSize> local_irk) {
   // This command shall not be used when address resolution is enabled in the
@@ -290,14 +338,15 @@ ErrorCode LinkLayerController::LeAddDeviceToResolvingList(
     }
   }
 
-  le_resolving_list_.emplace_back(ResolvingListEntry{
-      peer_identity_address_type, peer_identity_address, peer_irk, local_irk});
+  le_resolving_list_.emplace_back(
+      ResolvingListEntry{peer_identity_address_type, peer_identity_address,
+                         peer_irk, local_irk, PrivacyMode::NETWORK});
   return ErrorCode::SUCCESS;
 }
 
 // HCI command LE_Remove_Device_From_Resolving_List (Vol 4, Part E § 7.8.39).
 ErrorCode LinkLayerController::LeRemoveDeviceFromResolvingList(
-    AddressType peer_identity_address_type, Address peer_identity_address) {
+    PeerAddressType peer_identity_address_type, Address peer_identity_address) {
   // This command shall not be used when address resolution is enabled in the
   // Controller and:
   //  • Advertising (other than periodic advertising) is enabled,
@@ -362,6 +411,37 @@ ErrorCode LinkLayerController::LeSetAddressResolutionEnable(bool enable) {
 
   le_resolving_list_enabled_ = enable;
   return ErrorCode::SUCCESS;
+}
+
+// HCI command LE_Set_Privacy_Mode (Vol 4, Part E § 7.8.77).
+ErrorCode LinkLayerController::LeSetPrivacyMode(
+    PeerAddressType peer_identity_address_type, Address peer_identity_address,
+    bluetooth::hci::PrivacyMode privacy_mode) {
+  // This command shall not be used when address resolution is enabled in the
+  // Controller and:
+  //  • Advertising (other than periodic advertising) is enabled,
+  //  • Scanning is enabled, or
+  //  • an HCI_LE_Create_Connection, HCI_LE_Extended_Create_Connection, or
+  //    HCI_LE_Periodic_Advertising_Create_Sync command is pending.
+  if (le_resolving_list_enabled_ && ResolvingListBusy()) {
+    LOG_INFO(
+        "device is currently advertising, scanning,"
+        " or establishing an LE connection");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  for (auto& entry : le_resolving_list_) {
+    if (entry.peer_identity_address_type == peer_identity_address_type &&
+        entry.peer_identity_address == peer_identity_address) {
+      entry.privacy_mode = privacy_mode;
+      return ErrorCode::SUCCESS;
+    }
+  }
+
+  // If the device is not on the resolving list, the Controller shall return
+  // the error code Unknown Connection Identifier (0x02).
+  LOG_INFO("peer address not found in the resolving list");
+  return ErrorCode::UNKNOWN_CONNECTION;
 }
 
 // =============================================================================
@@ -490,21 +570,6 @@ void LinkLayerController::SetName(std::vector<uint8_t> const& name) {
   for (size_t i = 0; i < 248 && i < name.size(); i++) {
     name_[i] = name[i];
   }
-}
-
-void LinkLayerController::SetLeAdvertisingParameters(
-    uint16_t interval_min, uint16_t interval_max,
-    bluetooth::hci::AdvertisingType advertising_type, uint8_t own_address_type,
-    uint8_t peer_address_type, Address peer_address, uint8_t channel_map,
-    bluetooth::hci::AdvertisingFilterPolicy filter_policy) {
-  le_advertising_type_ = advertising_type;
-  le_advertising_interval_min_ = interval_min;
-  le_advertising_interval_max_ = interval_max;
-  le_advertising_own_address_type_ = own_address_type;
-  le_advertising_peer_address_type_ = peer_address_type;
-  le_advertising_peer_address_ = peer_address;
-  le_advertising_channel_map_ = channel_map;
-  le_advertising_filter_policy_ = filter_policy;
 }
 
 void LinkLayerController::SendLeLinkLayerPacketWithRssi(
@@ -771,6 +836,15 @@ void LinkLayerController::IncomingPacketWithRssi(
   // Match broadcasts
   bool address_matches = (destination_address == Address::kEmpty);
 
+  // Address match is performed in specific handlers for these PDU types.
+  switch (incoming.GetType()) {
+    case model::packets::PacketType::LE_SCAN:
+      address_matches = true;
+      break;
+    default:
+      break;
+  }
+
   // Match addresses from device properties
   if (destination_address == GetAddress() ||
       destination_address == random_address_) {
@@ -782,7 +856,14 @@ void LinkLayerController::IncomingPacketWithRssi(
     address_matches = true;
   }
 
-  // Check advertising addresses
+  // Check legacy advertising addresses
+  if (legacy_advertiser_.IsEnabled() &&
+      legacy_advertiser_.GetAdvertisingAddress().GetAddress() ==
+          destination_address) {
+    address_matches = true;
+  }
+
+  // Check extended advertising addresses
   for (const auto& advertiser : advertisers_) {
     if (advertiser.IsEnabled() &&
         advertiser.GetAddress().GetAddress() == destination_address) {
@@ -902,7 +983,6 @@ void LinkLayerController::IncomingPacketWithRssi(
       IncomingLeReadRemoteFeaturesResponse(incoming);
       break;
     case model::packets::PacketType::LE_SCAN:
-      // TODO: Check Advertising flags and see if we are scannable.
       IncomingLeScanPacket(incoming);
       break;
     case model::packets::PacketType::LE_SCAN_RESPONSE:
@@ -1831,7 +1911,6 @@ void LinkLayerController::IncomingLeLegacyAdvertisingPdu(
 
   // TODO: Resolve the advertising and target addresses, check if the
   // target address matches the current device public or random addresses.
-
   // Legacy scanning.
   if (le_scan_enable_ == bluetooth::hci::OpCode::LE_SET_SCAN_ENABLE &&
       IsLeEventUnmasked(SubeventCode::ADVERTISING_REPORT)) {
@@ -1907,8 +1986,10 @@ void LinkLayerController::IncomingLeLegacyAdvertisingPdu(
            model::packets::LegacyAdvertisingType::ADV_SCAN_IND)) {
     // TODO: the address to use when sending scan requests is defined
     // in the Scan Parameters, and is not always the random address.
+    // TODO: generate an RPA for the scanner address
     SendLeLinkLayerPacket(model::packets::LeScanBuilder::Create(
-        random_address_, advertising_address));
+        random_address_, advertising_address,
+        model::packets::AddressType::RANDOM, advertising_address_type));
   }
 
   // Connection.
@@ -1921,8 +2002,8 @@ void LinkLayerController::IncomingLeLegacyAdvertisingPdu(
     return;
   }
 
-  Address resolved_address = Address::kEmpty;
-  AddressType resolved_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
+  AddressWithType resolved_address{Address::kEmpty,
+                                   AddressType::PUBLIC_DEVICE_ADDRESS};
   bool resolved = false;
   Address rpa;
   if (le_resolving_list_enabled_) {
@@ -1931,8 +2012,8 @@ void LinkLayerController::IncomingLeLegacyAdvertisingPdu(
         LOG_INFO("Matched against IRK for %s",
                  entry.peer_identity_address.ToString().c_str());
         resolved = true;
-        resolved_address = entry.peer_identity_address;
-        resolved_address_type = entry.peer_identity_address_type;
+        resolved_address = PeerDeviceAddress(entry.peer_identity_address,
+                                             entry.peer_identity_address_type);
         rpa = generate_rpa(entry.local_irk);
       }
     }
@@ -1942,11 +2023,10 @@ void LinkLayerController::IncomingLeLegacyAdvertisingPdu(
   if ((le_peer_address_ == advertising_address &&
        le_peer_address_type_ ==
            static_cast<uint8_t>(advertising_address_type)) ||
-      LeFilterAcceptListContainsDevice(
-          static_cast<AddressType>(advertising_address_type),
-          advertising_address) ||
-      (resolved && LeFilterAcceptListContainsDevice(resolved_address_type,
-                                                    resolved_address))) {
+      LeFilterAcceptListContainsDevice(AddressWithType{
+          advertising_address,
+          static_cast<AddressType>(advertising_address_type)}) ||
+      (resolved && LeFilterAcceptListContainsDevice(resolved_address))) {
     Address own_address;
     auto own_address_type =
         static_cast<bluetooth::hci::OwnAddressType>(le_address_type_);
@@ -1983,7 +2063,7 @@ void LinkLayerController::IncomingLeLegacyAdvertisingPdu(
     if (!connections_.CreatePendingLeConnection(
             AddressWithType(advertising_address,
                             static_cast<AddressType>(advertising_address_type)),
-            AddressWithType(resolved_address, resolved_address_type),
+            resolved_address,
             AddressWithType(
                 own_address,
                 static_cast<bluetooth::hci::AddressType>(own_address_type)))) {
@@ -2205,13 +2285,98 @@ uint16_t LinkLayerController::HandleLeConnection(
   return handle;
 }
 
+// Handle CONNECT_IND PDUs for the legacy advertiser.
+bool LinkLayerController::HandleLegacyConnectInd(
+    model::packets::LeConnectView const& connect_ind) {
+  if (!legacy_advertiser_.IsEnabled() || !legacy_advertiser_.IsConnectable()) {
+    return false;
+  }
+
+  AddressWithType advertising_address{
+      connect_ind.GetDestinationAddress(),
+      // TODO: using the advertising address type here to force a match as
+      //   long as the address is identical, since the advertising address
+      //   type is missing in the PDU. To be changed when the LL PDU is fixed:
+      // static_cast<AddressType>(connect_ind.GetAdvertisingAddressType())
+      legacy_advertiser_.GetAdvertisingAddress().GetAddressType()};
+
+  AddressWithType initiating_address{
+      connect_ind.GetSourceAddress(),
+      static_cast<AddressType>(connect_ind.GetAddressType()),
+  };
+
+  if (legacy_advertiser_.GetAdvertisingAddress() != advertising_address) {
+    return false;
+  }
+
+  // When an advertiser receives a connection request that contains a resolvable
+  // private address for the initiator’s address (InitA field) and address
+  // resolution is enabled, the Link Layer shall resolve the private address.
+  // The advertising filter policy shall then determine if the
+  // advertiser establishes a connection.
+  AddressWithType resolved_initiating_address =
+      ResolvePrivateAddress(initiating_address, IrkSelection::Peer)
+          .value_or(initiating_address);
+
+  // When the Link Layer is [...] connectable directed advertising events the
+  // advertising filter policy shall be ignored.
+  if (legacy_advertiser_.IsDirected()) {
+    if (legacy_advertiser_.GetTargetAddress() != initiating_address) {
+      return false;
+    }
+  } else {
+    // Check if initiator address is in the filter accept list
+    // for this advertiser.
+    switch (legacy_advertiser_.advertising_filter_policy) {
+      case bluetooth::hci::AdvertisingFilterPolicy::ALL_DEVICES:
+      case bluetooth::hci::AdvertisingFilterPolicy::LISTED_SCAN:
+        break;
+      case bluetooth::hci::AdvertisingFilterPolicy::LISTED_CONNECT:
+      case bluetooth::hci::AdvertisingFilterPolicy::LISTED_SCAN_AND_CONNECT:
+        if (!LeFilterAcceptListContainsDevice(resolved_initiating_address)) {
+          return false;
+        }
+        break;
+    }
+  }
+
+  if (!connections_.CreatePendingLeConnection(initiating_address,
+                                              resolved_initiating_address,
+                                              advertising_address)) {
+    LOG_WARN(
+        "CreatePendingLeConnection failed for connection from %s (type %hhx)",
+        initiating_address.GetAddress().ToString().c_str(),
+        initiating_address.GetAddressType());
+    return false;
+  }
+
+  (void)HandleLeConnection(
+      initiating_address, advertising_address, bluetooth::hci::Role::PERIPHERAL,
+      connect_ind.GetLeConnectionIntervalMax(),
+      connect_ind.GetLeConnectionLatency(),
+      connect_ind.GetLeConnectionSupervisionTimeout(), false);
+
+  SendLeLinkLayerPacket(model::packets::LeConnectCompleteBuilder::Create(
+      advertising_address.GetAddress(), initiating_address.GetAddress(),
+      connect_ind.GetLeConnectionIntervalMax(),
+      connect_ind.GetLeConnectionLatency(),
+      connect_ind.GetLeConnectionSupervisionTimeout(),
+      static_cast<uint8_t>(advertising_address.GetAddressType())));
+
+  legacy_advertiser_.Disable();
+  return true;
+}
+
 void LinkLayerController::IncomingLeConnectPacket(
     model::packets::LinkLayerPacketView incoming) {
-  auto connect = model::packets::LeConnectView::Create(incoming);
+  model::packets::LeConnectView connect =
+      model::packets::LeConnectView::Create(incoming);
   ASSERT(connect.IsValid());
-  uint16_t connection_interval = (connect.GetLeConnectionIntervalMax() +
-                                  connect.GetLeConnectionIntervalMin()) /
-                                 2;
+
+  if (HandleLegacyConnectInd(connect)) {
+    return;
+  }
+
   bluetooth::hci::AddressWithType my_address{};
   bool matched_advertiser = false;
   size_t set = 0;
@@ -2252,6 +2417,11 @@ void LinkLayerController::IncomingLeConnectPacket(
         connect.GetAddressType());
     return;
   }
+
+  uint16_t connection_interval = (connect.GetLeConnectionIntervalMax() +
+                                  connect.GetLeConnectionIntervalMin()) /
+                                 2;
+
   uint16_t handle = HandleLeConnection(
       AddressWithType(
           incoming.GetSourceAddress(),
@@ -2444,14 +2614,72 @@ void LinkLayerController::IncomingLeReadRemoteFeaturesResponse(
   }
 }
 
+void LinkLayerController::GenerateLegacyScanResponse(
+    AddressWithType scanning_address, AddressWithType advertising_address) {
+  // Check if the advertising addresses matches the legacy
+  // advertising address.
+  if (!legacy_advertiser_.IsEnabled() || !legacy_advertiser_.IsScannable() ||
+      advertising_address != legacy_advertiser_.advertising_address) {
+    return;
+  }
+
+  // Check if scanner address is in the filter accept list
+  // for this advertiser.
+  switch (legacy_advertiser_.advertising_filter_policy) {
+    case bluetooth::hci::AdvertisingFilterPolicy::ALL_DEVICES:
+    case bluetooth::hci::AdvertisingFilterPolicy::LISTED_CONNECT:
+      break;
+    case bluetooth::hci::AdvertisingFilterPolicy::LISTED_SCAN:
+    case bluetooth::hci::AdvertisingFilterPolicy::LISTED_SCAN_AND_CONNECT:
+      if (!LeFilterAcceptListContainsDevice(scanning_address)) {
+        return;
+      }
+      break;
+  }
+
+  // Generate the SCAN_RSP packet.
+  // Note: If the advertiser processes the scan request, the advertiser’s
+  // device address (AdvA field) in the SCAN_RSP PDU shall be the same as
+  // the advertiser’s device address (AdvA field) in the SCAN_REQ PDU to
+  // which it is responding.
+  SendLeLinkLayerPacket(model::packets::LeScanResponseBuilder::Create(
+      advertising_address.GetAddress(), scanning_address.GetAddress(),
+      static_cast<model::packets::AddressType>(
+          advertising_address.GetAddressType()),
+      legacy_advertiser_.scan_response_data));
+}
+
 void LinkLayerController::IncomingLeScanPacket(
     model::packets::LinkLayerPacketView incoming) {
+  auto scan_request = model::packets::LeScanView::Create(incoming);
+  ASSERT(scan_request.IsValid());
+
+  AddressWithType scanning_address{
+      scan_request.GetSourceAddress(),
+      static_cast<AddressType>(scan_request.GetScanningAddressType())};
+
+  AddressWithType advertising_address{
+      scan_request.GetDestinationAddress(),
+      static_cast<AddressType>(scan_request.GetAdvertisingAddressType())};
+
+  // Note: Vol 6, Part B § 6.2 Privacy in the Advertising State.
+  //
+  // When an advertiser receives a scan request that contains a resolvable
+  // private address for the scanner’s device address (ScanA field) and
+  // address resolution is enabled, the Link Layer shall resolve the private
+  // address. The advertising filter policy shall then determine if
+  // the advertiser processes the scan request.
+  AddressWithType resolved_scanning_address =
+      ResolvePrivateAddress(scanning_address, IrkSelection::Peer)
+          .value_or(scanning_address);
+
+  GenerateLegacyScanResponse(resolved_scanning_address, advertising_address);
+
   for (auto& advertiser : advertisers_) {
     // TODO address type should be provided by the LL SCAN_REQ PDU.
     auto to_send = advertiser.GetScanResponse(
-        incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
-        LeFilterAcceptListContainsDevice(AddressType::PUBLIC_DEVICE_ADDRESS,
-                                         incoming.GetSourceAddress()));
+        advertising_address, resolved_scanning_address,
+        LeFilterAcceptListContainsDevice(resolved_scanning_address));
     if (to_send != nullptr) {
       SendLeLinkLayerPacket(std::move(to_send));
     }
@@ -2723,21 +2951,6 @@ void LinkLayerController::TimerTick() {
 void LinkLayerController::Close() {
   for (auto handle : connections_.GetAclHandles()) {
     Disconnect(handle, ErrorCode::CONNECTION_TIMEOUT);
-  }
-}
-
-void LinkLayerController::LeAdvertising() {
-  steady_clock::time_point now = steady_clock::now();
-  for (auto& advertiser : advertisers_) {
-    auto event = advertiser.GetEvent(now);
-    if (event != nullptr) {
-      send_event_(std::move(event));
-    }
-
-    auto advertisement = advertiser.GetAdvertisement(now);
-    if (advertisement != nullptr) {
-      SendLeLinkLayerPacket(std::move(advertisement));
-    }
   }
 }
 
@@ -3770,7 +3983,7 @@ ErrorCode LinkLayerController::SetLeExtendedAdvertisingParameters(
           for (const auto& entry : le_resolving_list_) {
             if (entry.peer_identity_address == peer_address.GetAddress() &&
                 entry.peer_identity_address_type ==
-                    peer_address.GetAddressType()) {
+                    peer_address.ToPeerAddressType()) {
               return generate_rpa(entry.local_irk);
             }
           }
@@ -3904,14 +4117,6 @@ ErrorCode LinkLayerController::LeRemoteConnectionParameterRequestNegativeReply(
 
 bool LinkLayerController::HasAclConnection() {
   return (connections_.GetAclHandles().size() > 0);
-}
-
-void LinkLayerController::LeSetPrivacyMode(AddressType address_type,
-                                           Address addr, uint8_t mode) {
-  // set mode for addr
-  LOG_INFO("address type = %s ", AddressTypeText(address_type).c_str());
-  LOG_INFO("address = %s ", addr.ToString().c_str());
-  LOG_INFO("mode = %d ", mode);
 }
 
 void LinkLayerController::LeReadIsoTxSync(uint16_t /* handle */) {}
@@ -4137,49 +4342,6 @@ ErrorCode LinkLayerController::LeLongTermKeyRequestNegativeReply(
           connections_.GetOwnAddress(handle).GetAddress(),
           connections_.GetAddress(handle).GetAddress(),
           std::array<uint8_t, 8>(), uint16_t(), std::array<uint8_t, 16>()));
-  return ErrorCode::SUCCESS;
-}
-
-ErrorCode LinkLayerController::SetLeAdvertisingEnable(
-    uint8_t le_advertising_enable) {
-  if (!le_advertising_enable) {
-    advertisers_[0].Disable();
-    return ErrorCode::SUCCESS;
-  }
-  auto interval_ms =
-      (le_advertising_interval_max_ + le_advertising_interval_min_) * 0.625 / 2;
-
-  Address own_address = GetAddress();
-  if (GetLeAdvertisingOwnAddressType() ==
-          static_cast<uint8_t>(
-              bluetooth::hci::AddressType::RANDOM_DEVICE_ADDRESS) ||
-      GetLeAdvertisingOwnAddressType() ==
-          static_cast<uint8_t>(
-              bluetooth::hci::AddressType::RANDOM_IDENTITY_ADDRESS)) {
-    if (random_address_ == Address::kEmpty) {
-      return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-    }
-    own_address = random_address_;
-  }
-  auto own_address_with_type =
-      AddressWithType(own_address, static_cast<bluetooth::hci::AddressType>(
-                                       le_advertising_own_address_type_));
-
-  auto interval = std::chrono::milliseconds(static_cast<uint64_t>(interval_ms));
-  if (interval < std::chrono::milliseconds(20)) {
-    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-  advertisers_[0].Initialize(
-      static_cast<bluetooth::hci::OwnAddressType>(
-          GetLeAdvertisingOwnAddressType()),
-      bluetooth::hci::AddressWithType(
-          GetAddress(), bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS),
-      bluetooth::hci::AddressWithType(GetLeAdvertisingPeerAddress(),
-                                      static_cast<bluetooth::hci::AddressType>(
-                                          le_advertising_peer_address_type_)),
-      GetLeAdvertisingFilterPolicy(), le_advertising_type_,
-      GetLeAdvertisingData(), GetLeScanResponseData(), interval);
-  advertisers_[0].Enable();
   return ErrorCode::SUCCESS;
 }
 
