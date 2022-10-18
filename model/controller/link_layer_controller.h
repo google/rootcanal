@@ -181,6 +181,7 @@ class LinkLayerController {
   void Reset();
 
   void LeAdvertising();
+  void LeScanning();
 
   ErrorCode SetLeExtendedAddress(uint8_t handle, Address address);
 
@@ -243,6 +244,19 @@ class LinkLayerController {
   std::optional<AddressWithType> GenerateResolvablePrivateAddress(
       AddressWithType address, IrkSelection irk);
 
+  // Check if the selected address matches one of the controller's device
+  // addresses (public or random static).
+  bool IsLocalPublicOrRandomAddress(AddressWithType address) {
+    switch (address.GetAddressType()) {
+      case AddressType::PUBLIC_DEVICE_ADDRESS:
+        return address.GetAddress() == address_;
+      case AddressType::RANDOM_DEVICE_ADDRESS:
+        return address.GetAddress() == random_address_;
+      default:
+        return false;
+    }
+  }
+
   void LeReadIsoTxSync(uint16_t handle);
   void LeSetCigParameters(
       uint8_t cig_id, uint32_t sdu_interval_m_to_s,
@@ -300,25 +314,6 @@ class LinkLayerController {
       bluetooth::hci::Enable enable,
       const std::vector<bluetooth::hci::EnabledSet>& enabled_sets);
 
-  bluetooth::hci::OpCode GetLeScanEnable() { return le_scan_enable_; }
-
-  void SetLeScanEnable(bluetooth::hci::OpCode enabling_opcode) {
-    le_scan_enable_ = enabling_opcode;
-  }
-  void SetLeScanType(uint8_t le_scan_type) { le_scan_type_ = le_scan_type; }
-  void SetLeScanInterval(uint16_t le_scan_interval) {
-    le_scan_interval_ = le_scan_interval;
-  }
-  void SetLeScanWindow(uint16_t le_scan_window) {
-    le_scan_window_ = le_scan_window;
-  }
-  void SetLeScanFilterPolicy(
-      bluetooth::hci::LeScanningFilterPolicy le_scan_filter_policy) {
-    le_scan_filter_policy_ = le_scan_filter_policy;
-  }
-  void SetLeFilterDuplicates(uint8_t le_scan_filter_duplicates) {
-    le_scan_filter_duplicates_ = le_scan_filter_duplicates;
-  }
   void SetLeAddressType(bluetooth::hci::OwnAddressType le_address_type) {
     le_address_type_ = le_address_type;
   }
@@ -353,11 +348,15 @@ class LinkLayerController {
       bluetooth::hci::InitiatorFilterPolicy le_initiator_filter_policy) {
     le_initiator_filter_policy_ = le_initiator_filter_policy;
   }
-  void SetLePeerAddressType(uint8_t peer_address_type) {
-    le_peer_address_type_ = peer_address_type;
-  }
-  void SetLePeerAddress(const Address& peer_address) {
+  void SetLePeerAddress(const AddressWithType& peer_address) {
     le_peer_address_ = peer_address;
+  }
+
+  void SetLeScanInterval(uint16_t le_scan_interval) {
+    le_scan_interval_ = le_scan_interval;
+  }
+  void SetLeScanWindow(uint16_t le_scan_window) {
+    le_scan_window_ = le_scan_window;
   }
 
   // Classic
@@ -479,13 +478,39 @@ class LinkLayerController {
       bluetooth::hci::AdvertisingFilterPolicy advertising_filter_policy);
 
   // HCI command LE_Set_Advertising_Data (Vol 4, Part E § 7.8.7).
-  void LeSetAdvertisingData(const std::vector<uint8_t>& advertising_data);
+  ErrorCode LeSetAdvertisingData(const std::vector<uint8_t>& advertising_data);
 
   // HCI command LE_Set_Scan_Response_Data (Vol 4, Part E § 7.8.8).
-  void LeSetScanResponseData(const std::vector<uint8_t>& scan_response_data);
+  ErrorCode LeSetScanResponseData(
+      const std::vector<uint8_t>& scan_response_data);
 
   // HCI command LE_Advertising_Enable (Vol 4, Part E § 7.8.9).
   ErrorCode LeSetAdvertisingEnable(bool advertising_enable);
+
+  // Legacy Scanning
+
+  // HCI command LE_Set_Scan_Parameters (Vol 4, Part E § 7.8.10).
+  ErrorCode LeSetScanParameters(
+      bluetooth::hci::LeScanType scan_type, uint16_t scan_interval,
+      uint16_t scan_window, bluetooth::hci::OwnAddressType own_address_type,
+      bluetooth::hci::LeScanningFilterPolicy scanning_filter_policy);
+
+  // HCI command LE_Set_Scan_Enable (Vol 4, Part E § 7.8.11).
+  ErrorCode LeSetScanEnable(bool enable, bool filter_duplicates);
+
+  // Extended Scanning
+
+  // HCI command LE_Set_Extended_Scan_Parameters (Vol 4, Part E § 7.8.64).
+  ErrorCode LeSetExtendedScanParameters(
+      bluetooth::hci::OwnAddressType own_address_type,
+      bluetooth::hci::LeScanningFilterPolicy scanning_filter_policy,
+      uint8_t scanning_phys,
+      std::vector<bluetooth::hci::PhyScanParameters> scanning_phy_parameters);
+
+  // HCI command LE_Set_Extended_Scan_Enable (Vol 4, Part E § 7.8.65).
+  ErrorCode LeSetExtendedScanEnable(
+      bool enable, bluetooth::hci::FilterDuplicates filter_duplicates,
+      uint16_t duration, uint16_t period);
 
  protected:
   void SendLeLinkLayerPacketWithRssi(
@@ -527,6 +552,11 @@ class LinkLayerController {
       model::packets::LinkLayerPacketView packet);
   void IncomingIsoConnectionResponsePacket(
       model::packets::LinkLayerPacketView packet);
+
+  void ScanIncomingLeLegacyAdvertisingPdu(
+      model::packets::LeLegacyAdvertisingPduView& pdu, uint8_t rssi);
+  void ConnectIncomingLeLegacyAdvertisingPdu(
+      model::packets::LeLegacyAdvertisingPduView& pdu);
 
   void IncomingLeLegacyAdvertisingPdu(
       model::packets::LinkLayerPacketView packet, uint8_t rssi);
@@ -673,6 +703,27 @@ class LinkLayerController {
     connection_accept_timeout_ = timeout;
   }
 
+  bool LegacyAdvertising() const { return legacy_advertising_in_use_; }
+  bool ExtendedAdvertising() const { return extended_advertising_in_use_; }
+
+  bool SelectLegacyAdvertising() {
+    if (extended_advertising_in_use_) {
+      return false;
+    } else {
+      legacy_advertising_in_use_ = true;
+      return true;
+    }
+  }
+
+  bool SelectExtendedAdvertising() {
+    if (legacy_advertising_in_use_) {
+      return false;
+    } else {
+      extended_advertising_in_use_ = true;
+      return true;
+    }
+  }
+
  private:
   const Address& address_;
   const ControllerProperties& properties_;
@@ -801,19 +852,63 @@ class LinkLayerController {
   std::vector<ResolvingListEntry> le_resolving_list_;
   bool le_resolving_list_enabled_{false};
 
+  // Flag set when any legacy advertising command has been received
+  // since the last power-on-reset.
+  // From Vol 4, Part E § 3.1.1 Legacy and extended advertising,
+  // extended advertising are rejected when this bit is set.
+  bool legacy_advertising_in_use_{false};
+
+  // Flag set when any extended advertising command has been received
+  // since the last power-on-reset.
+  // From Vol 4, Part E § 3.1.1 Legacy and extended advertising,
+  // legacy advertising are rejected when this bit is set.
+  bool extended_advertising_in_use_{false};
+
   // Legacy advertising state.
   LegacyAdvertiser legacy_advertiser_{};
 
+  // Extended advertising state.
+  std::array<LeAdvertiser, 7> advertisers_{};
+
+  struct Scanner {
+    bool scan_enable;
+    slots period;
+    slots duration;
+    bluetooth::hci::FilterDuplicates filter_duplicates;
+    bluetooth::hci::OwnAddressType own_address_type;
+    bluetooth::hci::LeScanningFilterPolicy scan_filter_policy;
+
+    struct PhyParameters {
+      bool enabled;
+      bluetooth::hci::LeScanType scan_type;
+      uint16_t scan_interval;
+      uint16_t scan_window;
+    };
+
+    PhyParameters le_1m_phy;
+    PhyParameters le_coded_phy;
+
+    // Save information about the advertising PDU being scanned.
+    bool connectable_scan_response;
+    std::optional<AddressWithType> pending_scan_request{};
+
+    // Time keeping
+    std::optional<std::chrono::steady_clock::time_point> timeout;
+
+    bool IsEnabled() const { return scan_enable; }
+    void Disable() { scan_enable = false; }
+  };
+
+  // Legacy and extended scanning properties.
+  // Legacy and extended scanning are disambiguated by the use
+  // of legacy_advertising_in_use_ and extended_advertising_in_use_ flags.
+  // Only one type of advertising may be used during a controller session.
+  Scanner scanner_{};
+
   Address le_connecting_rpa_;
-
-  std::array<LeAdvertiser, 7> advertisers_;
-
-  bluetooth::hci::OpCode le_scan_enable_{bluetooth::hci::OpCode::NONE};
-  uint8_t le_scan_type_{};
   uint16_t le_scan_interval_{};
   uint16_t le_scan_window_{};
-  bluetooth::hci::LeScanningFilterPolicy le_scan_filter_policy_{};
-  uint8_t le_scan_filter_duplicates_{};
+
   bluetooth::hci::OwnAddressType le_address_type_{};
 
   bool le_connect_{false};
@@ -827,8 +922,7 @@ class LinkLayerController {
   uint16_t le_connection_maximum_ce_length_{};
   bluetooth::hci::InitiatorFilterPolicy le_initiator_filter_policy_{};
 
-  Address le_peer_address_{};
-  uint8_t le_peer_address_type_{};
+  AddressWithType le_peer_address_{};
 
   // Classic state
 #ifdef ROOTCANAL_LMP
