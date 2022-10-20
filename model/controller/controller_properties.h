@@ -107,7 +107,30 @@ struct ControllerProperties {
 
   // Vendor Information.
   // Provide parameters returned by vendor specific commands.
-  std::vector<uint8_t> le_vendor_capabilities{};
+  // The format is specified for the Android Bluetooth stack:
+  // https://source.android.com/docs/core/connect/bluetooth/hci_requirements#vendor-specific-capabilities
+  std::vector<uint8_t> le_vendor_capabilities{
+      8,  // max_advt_instances
+      0,  // offloaded_resolution_of_private_address
+      0,
+      0,  // total_scan_results_storage
+      0,  // max_irk_list_sz
+      0,  // filtering_support
+      0,  // max_filter
+      0,  // activity_energy_info_support
+      1,
+      0,  // version_supported v1.0
+      0,
+      0,  // total_num_of_advt_tracked
+      0,  // extended_scan_support
+      0,  // debug_logging_supported
+      0,  // le_address_generation_offloading_support
+      0, 0, 0,
+      0,  // A2DP_source_offload_capability_mask
+      0,  // bluetooth_quality_report_support
+      0, 0, 0,
+      0,  // dynamic_audio_buffer_support
+  };
 };
 
 }  // namespace rootcanal
