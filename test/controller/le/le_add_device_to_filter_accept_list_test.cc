@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "model/controller/link_layer_controller.h"
+#include "test_helpers.h"
 
 namespace rootcanal {
 
@@ -62,9 +63,10 @@ TEST_F(LeAddDeviceToFilterAcceptListTest, ListFull) {
 }
 
 TEST_F(LeAddDeviceToFilterAcceptListTest, ScanningActive) {
-  controller_.SetLeScanFilterPolicy(
+  controller_.LeSetScanParameters(
+      LeScanType::PASSIVE, 0x400, 0x200, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
       LeScanningFilterPolicy::FILTER_ACCEPT_LIST_ONLY);
-  controller_.SetLeScanEnable(OpCode::LE_SET_SCAN_ENABLE);
+  controller_.LeSetScanEnable(true, false);
 
   ASSERT_EQ(controller_.LeAddDeviceToFilterAcceptList(
                 FilterAcceptListAddressType::PUBLIC, Address{1}),
@@ -72,10 +74,13 @@ TEST_F(LeAddDeviceToFilterAcceptListTest, ScanningActive) {
 }
 
 TEST_F(LeAddDeviceToFilterAcceptListTest, LegacyAdvertisingActive) {
-  controller_.SetLeAdvertisingParameters(
-      0x0800, 0x0800, AdvertisingType::ADV_IND, 0, 0, Address::kEmpty, 0x7,
-      AdvertisingFilterPolicy::LISTED_SCAN);
-  ASSERT_EQ(controller_.SetLeAdvertisingEnable(1), ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetAdvertisingParameters(
+                0x0800, 0x0800, AdvertisingType::ADV_IND,
+                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
+                Address::kEmpty, 0x7, AdvertisingFilterPolicy::LISTED_SCAN),
+            ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToFilterAcceptList(
                 FilterAcceptListAddressType::PUBLIC, Address{1}),
@@ -83,17 +88,15 @@ TEST_F(LeAddDeviceToFilterAcceptListTest, LegacyAdvertisingActive) {
 }
 
 TEST_F(LeAddDeviceToFilterAcceptListTest, ExtendedAdvertisingActive) {
-  EnabledSet enabled_set;
-  enabled_set.advertising_handle_ = 1;
-  enabled_set.duration_ = 0;
-  ASSERT_EQ(controller_.SetLeExtendedAdvertisingParameters(
-                1, 0, 0, LegacyAdvertisingEventProperties::ADV_IND,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+  ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
+                0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800,
+                0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
                 PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::LISTED_SCAN, 0x70),
+                Address::kEmpty, AdvertisingFilterPolicy::LISTED_SCAN, 0x70,
+                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.SetLeExtendedAdvertisingEnable(Enable::ENABLED,
-                                                       {enabled_set}),
+  ASSERT_EQ(controller_.LeSetExtendedAdvertisingEnable(
+                true, {MakeEnabledSet(0, 0, 0)}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToFilterAcceptList(

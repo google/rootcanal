@@ -308,6 +308,8 @@ ControllerProperties::ControllerProperties(const std::string& file_name)
             total_num_le_acl_data_packets);
   ParseUint(root, "total_num_iso_data_packets ", total_num_iso_data_packets);
   ParseUint(root, "num_supported_iac", num_supported_iac);
+  ParseUint(root, "le_advertising_physical_channel_tx_power",
+            le_advertising_physical_channel_tx_power);
 
   ParseUintArray(root, "lmp_features", lmp_features);
   ParseUintVector(root, "supported_standard_codecs", supported_standard_codecs);
@@ -317,6 +319,11 @@ ControllerProperties::ControllerProperties(const std::string& file_name)
   ParseUint(root, "le_filter_accept_list_size", le_filter_accept_list_size);
   ParseUint(root, "le_resolving_list_size", le_resolving_list_size);
   ParseUint(root, "le_supported_states", le_supported_states);
+
+  ParseUint(root, "le_max_advertising_data_length",
+            le_max_advertising_data_length);
+  ParseUint(root, "le_num_supported_advertising_sets",
+            le_num_supported_advertising_sets);
 
   ParseUintVector(root, "le_vendor_capabilities", le_vendor_capabilities);
 

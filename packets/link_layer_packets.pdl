@@ -16,6 +16,7 @@ enum PacketType : 8 {
     IO_CAPABILITY_RESPONSE = 0x09,
     IO_CAPABILITY_NEGATIVE_RESPONSE = 0x0A,
     LE_LEGACY_ADVERTISING_PDU = 0x0B,
+    LE_EXTENDED_ADVERTISING_PDU = 0x37,
     LE_CONNECT = 0x0C,
     LE_CONNECT_COMPLETE = 0x0D,
     LE_SCAN = 0x0E,
@@ -163,27 +164,57 @@ packet LeLegacyAdvertisingPdu : LinkLayerPacket (type = LE_LEGACY_ADVERTISING_PD
   advertising_data: 8[],
 }
 
+enum PrimaryPhyType : 8 {
+  LE_1M = 0x01,
+  LE_CODED = 0x03,
+}
+
+enum SecondaryPhyType : 8 {
+  NO_PACKETS = 0x00,
+  LE_1M = 0x01,
+  LE_2M = 0x02,
+  LE_CODED = 0x03,
+}
+
+packet LeExtendedAdvertisingPdu : LinkLayerPacket (type = LE_EXTENDED_ADVERTISING_PDU) {
+  advertising_address_type: AddressType,
+  target_address_type: AddressType,
+  connectable: 1,
+  scannable: 1,
+  directed: 1,
+  sid: 4,
+  _reserved_: 1,
+  tx_power: 8,
+  primary_phy: PrimaryPhyType,
+  secondary_phy: SecondaryPhyType,
+  advertising_data: 8[],
+}
+
 packet LeConnect : LinkLayerPacket (type = LE_CONNECT) {
+  initiating_address_type : AddressType,
+  advertising_address_type : AddressType,
   le_connection_interval_min : 16,
   le_connection_interval_max : 16,
   le_connection_latency : 16,
   le_connection_supervision_timeout : 16,
-  address_type : 8,
 }
 
 packet LeConnectComplete : LinkLayerPacket (type = LE_CONNECT_COMPLETE) {
+  initiating_address_type : AddressType,
+  advertising_address_type : AddressType,
   le_connection_interval : 16,
   le_connection_latency : 16,
   le_connection_supervision_timeout : 16,
-  address_type : 8,
 }
 
 packet LeScan : LinkLayerPacket (type = LE_SCAN) {
+  scanning_address_type : AddressType,
+  advertising_address_type : AddressType,
 }
 
 packet LeScanResponse : LinkLayerPacket (type = LE_SCAN_RESPONSE) {
-  address_type : AddressType,
-  data : 8[],
+  advertising_address_type : AddressType,
+  scan_response_data : 8[],
 }
 
 packet Page : LinkLayerPacket (type = PAGE) {
