@@ -26,7 +26,7 @@ enum : unsigned {
   TX_POWER = 0x40,
 };
 
-static bluetooth::hci::AdvertisingEventProperties
+[[maybe_unused]] static bluetooth::hci::AdvertisingEventProperties
 MakeAdvertisingEventProperties(unsigned mask) {
   bluetooth::hci::AdvertisingEventProperties properties;
   properties.connectable_ = (mask & CONNECTABLE) != 0;
@@ -39,7 +39,7 @@ MakeAdvertisingEventProperties(unsigned mask) {
   return properties;
 }
 
-static bluetooth::hci::EnabledSet MakeEnabledSet(
+[[maybe_unused]] static bluetooth::hci::EnabledSet MakeEnabledSet(
     uint8_t advertising_handle, uint16_t duration,
     uint8_t max_extended_advertising_events) {
   bluetooth::hci::EnabledSet set;
@@ -47,4 +47,22 @@ static bluetooth::hci::EnabledSet MakeEnabledSet(
   set.duration_ = duration;
   set.max_extended_advertising_events_ = max_extended_advertising_events;
   return set;
+}
+
+[[maybe_unused]] static bluetooth::hci::LeCreateConnPhyScanParameters
+MakeInitiatingPhyParameters(uint16_t scan_interval, uint16_t scan_window,
+                            uint16_t connection_interval_min,
+                            uint16_t connection_interval_max,
+                            uint16_t max_latency, uint16_t supervision_timeout,
+                            uint16_t min_ce_length, uint16_t max_ce_length) {
+  bluetooth::hci::LeCreateConnPhyScanParameters parameters;
+  parameters.scan_interval_ = scan_interval;
+  parameters.scan_window_ = scan_window;
+  parameters.conn_interval_min_ = connection_interval_min;
+  parameters.conn_interval_max_ = connection_interval_max;
+  parameters.conn_latency_ = max_latency;
+  parameters.supervision_timeout_ = supervision_timeout;
+  parameters.min_ce_length_ = min_ce_length;
+  parameters.max_ce_length_ = max_ce_length;
+  return parameters;
 }
