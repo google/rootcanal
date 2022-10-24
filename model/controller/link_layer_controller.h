@@ -295,52 +295,6 @@ class LinkLayerController {
 
   uint8_t LeReadNumberOfSupportedAdvertisingSets();
 
-  void SetLeConnectionOwnAddressType(
-      bluetooth::hci::OwnAddressType own_address_type) {
-    le_connection_own_address_type_ = own_address_type;
-  }
-  ErrorCode SetLeConnect(bool le_connect, bool extended) {
-    if (le_connect_ == le_connect) {
-      return ErrorCode::COMMAND_DISALLOWED;
-    }
-    le_connect_ = le_connect;
-    le_extended_connect_ = extended;
-    le_pending_connect_ = false;
-    return ErrorCode::SUCCESS;
-  }
-  void SetLeConnectionIntervalMin(uint16_t min) {
-    le_connection_interval_min_ = min;
-  }
-  void SetLeConnectionIntervalMax(uint16_t max) {
-    le_connection_interval_max_ = max;
-  }
-  void SetLeConnectionLatency(uint16_t latency) {
-    le_connection_latency_ = latency;
-  }
-  void SetLeSupervisionTimeout(uint16_t timeout) {
-    le_connection_supervision_timeout_ = timeout;
-  }
-  void SetLeMinimumCeLength(uint16_t min) {
-    le_connection_minimum_ce_length_ = min;
-  }
-  void SetLeMaximumCeLength(uint16_t max) {
-    le_connection_maximum_ce_length_ = max;
-  }
-  void SetLeInitiatorFilterPolicy(
-      bluetooth::hci::InitiatorFilterPolicy le_initiator_filter_policy) {
-    le_initiator_filter_policy_ = le_initiator_filter_policy;
-  }
-  void SetLePeerAddress(const AddressWithType& peer_address) {
-    le_peer_address_ = peer_address;
-  }
-
-  void SetLeScanInterval(uint16_t le_scan_interval) {
-    le_scan_interval_ = le_scan_interval;
-  }
-  void SetLeScanWindow(uint16_t le_scan_window) {
-    le_scan_window_ = le_scan_window;
-  }
-
   // Classic
   void StartInquiry(std::chrono::milliseconds timeout);
   void InquiryCancel();
@@ -537,6 +491,31 @@ class LinkLayerController {
   ErrorCode LeSetExtendedScanEnable(
       bool enable, bluetooth::hci::FilterDuplicates filter_duplicates,
       uint16_t duration, uint16_t period);
+
+  // Legacy Connection
+
+  // HCI LE Create Connection command (Vol 4, Part E § 7.8.12).
+  ErrorCode LeCreateConnection(
+      uint16_t scan_interval, uint16_t scan_window,
+      bluetooth::hci::InitiatorFilterPolicy initiator_filter_policy,
+      AddressWithType peer_address,
+      bluetooth::hci::OwnAddressType own_address_type,
+      uint16_t connection_interval_min, uint16_t connection_interval_max,
+      uint16_t max_latency, uint16_t supervision_timeout,
+      uint16_t min_ce_length, uint16_t max_ce_length);
+
+  // HCI LE Create Connection Cancel command (Vol 4, Part E § 7.8.12).
+  ErrorCode LeCreateConnectionCancel();
+
+  // Extended Connection
+
+  // HCI LE Extended Create Connection command (Vol 4, Part E § 7.8.66).
+  ErrorCode LeExtendedCreateConnection(
+      bluetooth::hci::InitiatorFilterPolicy initiator_filter_policy,
+      bluetooth::hci::OwnAddressType own_address_type,
+      AddressWithType peer_address, uint8_t initiating_phys,
+      std::vector<bluetooth::hci::LeCreateConnPhyScanParameters>
+          initiating_phy_parameters);
 
  protected:
   void SendLeLinkLayerPacketWithRssi(
@@ -847,9 +826,6 @@ class LinkLayerController {
 
   std::vector<uint8_t> extended_inquiry_data_;
 
-  // The value is implementation defined.
-  int8_t le_advertising_tx_power_{-10};
-
   AclConnectionHandler connections_;
 
   // Callbacks to schedule tasks.
@@ -946,23 +922,41 @@ class LinkLayerController {
   // Only one type of advertising may be used during a controller session.
   Scanner scanner_{};
 
-  Address le_connecting_rpa_;
-  uint16_t le_scan_interval_{};
-  uint16_t le_scan_window_{};
+  struct Initiator {
+    bool connect_enable;
+    bluetooth::hci::InitiatorFilterPolicy initiator_filter_policy;
+    bluetooth::hci::AddressWithType peer_address{};
+    bluetooth::hci::OwnAddressType own_address_type;
 
-  bool le_connect_{false};
-  bool le_extended_connect_{false};
-  bool le_pending_connect_{false};
-  uint16_t le_connection_interval_min_{};
-  uint16_t le_connection_interval_max_{};
-  uint16_t le_connection_latency_{};
-  uint16_t le_connection_supervision_timeout_{};
-  uint16_t le_connection_minimum_ce_length_{};
-  uint16_t le_connection_maximum_ce_length_{};
-  bluetooth::hci::OwnAddressType le_connection_own_address_type_{};
-  bluetooth::hci::InitiatorFilterPolicy le_initiator_filter_policy_{};
+    struct PhyParameters {
+      bool enabled;
+      uint16_t scan_interval;
+      uint16_t scan_window;
+      uint16_t connection_interval_min;
+      uint16_t connection_interval_max;
+      uint16_t max_latency;
+      uint16_t supervision_timeout;
+      uint16_t min_ce_length;
+      uint16_t max_ce_length;
+    };
 
-  AddressWithType le_peer_address_{};
+    PhyParameters le_1m_phy;
+    PhyParameters le_2m_phy;
+    PhyParameters le_coded_phy;
+
+    // Save information about the ongoing connection.
+    Address initiating_address{};  // TODO: AddressWithType
+    std::optional<AddressWithType> pending_connect_request{};
+
+    bool IsEnabled() const { return connect_enable; }
+    void Disable() { connect_enable = false; }
+  };
+
+  // Legacy and extended initiating properties.
+  // Legacy and extended initiating are disambiguated by the use
+  // of legacy_advertising_in_use_ and extended_advertising_in_use_ flags.
+  // Only one type of advertising may be used during a controller session.
+  Initiator initiator_{};
 
   // Classic state
 #ifdef ROOTCANAL_LMP
