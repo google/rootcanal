@@ -2757,7 +2757,8 @@ void DualModeController::LeVendorCap(CommandView command) {
   auto command_view = gd_hci::LeGetVendorCapabilitiesView::Create(
       gd_hci::VendorCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  if (properties_.le_vendor_capabilities.size() == 0) {
+  vector<uint8_t> caps = properties_.le_vendor_capabilities;
+  if (caps.size() == 0) {
     SendCommandCompleteUnknownOpCodeEvent(
         static_cast<uint16_t>(OpCode::LE_GET_VENDOR_CAPABILITIES));
     return;
