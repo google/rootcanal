@@ -48,7 +48,9 @@ class TestModel {
       std::function<void(AsyncUserId)> cancel_user_tasks,
       std::function<void(AsyncTaskId)> cancel,
       std::function<std::shared_ptr<Device>(const std::string&, int, Phy::Type)>
-          connect_to_remote);
+          connect_to_remote,
+      std::array<uint8_t, 5> bluetooth_address_prefix = {0xda, 0x4c, 0x10, 0xde,
+                                                         0x17});
   virtual ~TestModel();
 
   TestModel(TestModel& model) = delete;
@@ -107,6 +109,10 @@ class TestModel {
   std::vector<std::unique_ptr<PhyLayerFactory>> phys_;
   std::vector<std::shared_ptr<Device>> devices_;
   std::string list_string_;
+
+  // Prefix used to generate public device addresses for hosts
+  // connecting over TCP.
+  std::array<uint8_t, 5> bluetooth_address_prefix_;
 
   // Callbacks to schedule tasks.
   std::function<AsyncUserId()> get_user_id_;
