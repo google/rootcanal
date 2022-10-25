@@ -822,6 +822,9 @@ void LinkLayerController::SetSecureSimplePairingSupport(bool enable) {
 }
 
 void LinkLayerController::SetLeHostSupport(bool enable) {
+  // TODO: Vol 2, Part C § 3.5 Feature requirements.
+  // (65) LE Supported (Host)             implies
+  //    (38) LE Supported (Controller)
   uint64_t bit = 0x2;
   le_host_support_ = enable;
   if (enable) {
@@ -832,6 +835,10 @@ void LinkLayerController::SetLeHostSupport(bool enable) {
 }
 
 void LinkLayerController::SetSecureConnectionsSupport(bool enable) {
+  // TODO: Vol 2, Part C § 3.5 Feature requirements.
+  // (67) Secure Connections (Host Support)           implies
+  //    (64) Secure Simple Pairing (Host Support)     and
+  //    (136) Secure Connections (Controller Support)
   uint64_t bit = 0x8;
   secure_connections_host_support_ = enable;
   if (enable) {
