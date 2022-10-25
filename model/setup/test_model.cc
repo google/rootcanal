@@ -42,8 +42,10 @@ TestModel::TestModel(
     std::function<void(AsyncUserId)> cancel_tasks_from_user,
     std::function<void(AsyncTaskId)> cancel,
     std::function<std::shared_ptr<Device>(const std::string&, int, Phy::Type)>
-        connect_to_remote)
-    : get_user_id_(std::move(get_user_id)),
+        connect_to_remote,
+    std::array<uint8_t, 5> bluetooth_address_prefix)
+    : bluetooth_address_prefix_(std::move(bluetooth_address_prefix)),
+      get_user_id_(std::move(get_user_id)),
       schedule_task_(std::move(event_scheduler)),
       schedule_periodic_task_(std::move(periodic_event_scheduler)),
       cancel_task_(std::move(cancel)),
@@ -181,15 +183,23 @@ void TestModel::AddRemote(const std::string& server, int port,
 
 size_t TestModel::AddHciConnection(std::shared_ptr<HciDevice> dev) {
   size_t index = Add(std::static_pointer_cast<Device>(dev));
+  auto bluetooth_address = Address{{
+      uint8_t(index),
+      bluetooth_address_prefix_[4],
+      bluetooth_address_prefix_[3],
+      bluetooth_address_prefix_[2],
+      bluetooth_address_prefix_[1],
+      bluetooth_address_prefix_[0],
+  }};
+  dev->SetAddress(bluetooth_address);
 
-  uint8_t raw[] = {0xda, 0x4c, 0x10, 0xde, 0x17, uint8_t(index)};  // Da HCI dev
-  auto addr = Address{{raw[5], raw[4], raw[3], raw[2], raw[1], raw[0]}};
-  dev->SetAddress(addr);
+  LOG_INFO("Initialized device with address %s",
+           bluetooth_address.ToString().c_str());
 
-  LOG_INFO("initialized %s", addr.ToString().c_str());
   for (size_t i = 0; i < phys_.size(); i++) {
     AddDeviceToPhy(index, i);
   }
+
   AsyncUserId user_id = get_user_id_();
   dev->RegisterTaskScheduler([user_id, this](std::chrono::milliseconds delay,
                                              TaskCallback task_callback) {
