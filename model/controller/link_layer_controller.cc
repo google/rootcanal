@@ -2563,19 +2563,6 @@ void LinkLayerController::IncomingKeypressNotificationPacket(
 }
 #endif /* !ROOTCANAL_LMP */
 
-static bool rpa_matches_irk(
-    Address rpa, std::array<uint8_t, LinkLayerController::kIrkSize> irk) {
-  // 1.3.2.3 Private device address resolution
-  uint8_t hash[3] = {rpa.address[0], rpa.address[1], rpa.address[2]};
-  uint8_t prand[3] = {rpa.address[3], rpa.address[4], rpa.address[5]};
-
-  // generate X = E irk(R0, R1, R2) and R is random address 3 LSO
-  auto x = bluetooth::crypto_toolbox::aes_128(irk, &prand[0], 3);
-
-  // If the hashes match, this is the IRK
-  return (memcmp(x.data(), &hash[0], 3) == 0);
-}
-
 static Address generate_rpa(
     std::array<uint8_t, LinkLayerController::kIrkSize> irk) {
   // most significant bit, bit7, bit6 is 01 to be resolvable random
@@ -2850,7 +2837,7 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
                                    AddressType::PUBLIC_DEVICE_ADDRESS};
     AddressWithType random_address{random_address_,
                                    AddressType::RANDOM_DEVICE_ADDRESS};
-    std::optional<AddressWithType> resolvable_address =
+    std::optional<AddressWithType> resolvable_scanning_address =
         GenerateResolvablePrivateAddress(resolved_advertising_address,
                                          IrkSelection::Local);
 
@@ -2859,7 +2846,6 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
     // Generation procedure (see Section 1.3.2.2), or the address is provided
     // by the Host.
     AddressWithType scanning_address;
-    std::optional<AddressWithType> resolvable_scanning_address;
     switch (scanner_.own_address_type) {
       case bluetooth::hci::OwnAddressType::PUBLIC_DEVICE_ADDRESS:
         scanning_address = public_address;
@@ -2871,13 +2857,13 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
         scanning_address = random_address;
         break;
       case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_PUBLIC_ADDRESS:
-        scanning_address = resolvable_address.value_or(public_address);
+        scanning_address = resolvable_scanning_address.value_or(public_address);
         break;
       case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS:
         // The random address is checked in Le_Set_Scan_Enable or
         // Le_Set_Extended_Scan_Enable.
         ASSERT(random_address_ != Address::kEmpty);
-        scanning_address = resolvable_address.value_or(random_address);
+        scanning_address = resolvable_scanning_address.value_or(random_address);
         break;
     }
 
@@ -2912,17 +2898,10 @@ void LinkLayerController::ConnectIncomingLeLegacyAdvertisingPdu(
   }
 
   auto advertising_type = pdu.GetAdvertisingType();
-
-  AddressWithType advertising_address{
-      pdu.GetSourceAddress(),
-      static_cast<AddressType>(pdu.GetAdvertisingAddressType())};
-
-  AddressWithType target_address{
-      pdu.GetDestinationAddress(),
-      static_cast<AddressType>(pdu.GetTargetAddressType())};
-
   bool connectable_advertising =
       advertising_type == model::packets::LegacyAdvertisingType::ADV_IND ||
+      advertising_type == model::packets::LegacyAdvertisingType::ADV_DIRECT_IND;
+  bool directed_advertising =
       advertising_type == model::packets::LegacyAdvertisingType::ADV_DIRECT_IND;
 
   // Connection.
@@ -2941,94 +2920,139 @@ void LinkLayerController::ConnectIncomingLeLegacyAdvertisingPdu(
     return;
   }
 
-  AddressWithType resolved_address{Address::kEmpty,
-                                   AddressType::PUBLIC_DEVICE_ADDRESS};
-  bool resolved = false;
-  Address rpa;
-  if (le_resolving_list_enabled_) {
-    for (const auto& entry : le_resolving_list_) {
-      if (rpa_matches_irk(advertising_address.GetAddress(), entry.peer_irk)) {
-        LOG_VERB("Matched against IRK for %s",
-                 entry.peer_identity_address.ToString().c_str());
-        resolved = true;
-        resolved_address = PeerDeviceAddress(entry.peer_identity_address,
-                                             entry.peer_identity_address_type);
-        rpa = generate_rpa(entry.local_irk);
+  AddressWithType advertising_address{
+      pdu.GetSourceAddress(),
+      static_cast<AddressType>(pdu.GetAdvertisingAddressType())};
+
+  AddressWithType target_address{
+      pdu.GetDestinationAddress(),
+      static_cast<AddressType>(pdu.GetTargetAddressType())};
+
+  AddressWithType resolved_advertising_address =
+      ResolvePrivateAddress(advertising_address, IrkSelection::Peer)
+          .value_or(advertising_address);
+
+  AddressWithType resolved_target_address =
+      ResolvePrivateAddress(target_address, IrkSelection::Peer)
+          .value_or(target_address);
+
+  // Vol 6, Part B § 4.3.5 Initiator filter policy.
+  switch (initiator_.initiator_filter_policy) {
+    case bluetooth::hci::InitiatorFilterPolicy::USE_PEER_ADDRESS:
+      if (resolved_advertising_address != initiator_.peer_address) {
+        LOG_VERB(
+            "Legacy advertising ignored by initiator because the "
+            "advertising address %s does not match the peer address %s",
+            resolved_advertising_address.ToString().c_str(),
+            initiator_.peer_address.ToString().c_str());
+        return;
       }
+      break;
+    case bluetooth::hci::InitiatorFilterPolicy::USE_FILTER_ACCEPT_LIST:
+      if (!LeFilterAcceptListContainsDevice(resolved_advertising_address)) {
+        LOG_VERB(
+            "Legacy advertising ignored by initiator because the "
+            "advertising address %s is not in the filter accept list",
+            resolved_advertising_address.ToString().c_str());
+        return;
+      }
+      break;
+  }
+
+  // When an initiator receives a directed connectable advertising event that
+  // contains a resolvable private address for the target’s address
+  // (TargetA field) and address resolution is enabled, the Link Layer shall
+  // resolve the private address using the resolving list’s Local IRK values.
+  // An initiator that has been instructed by the Host to use Resolvable Private
+  // Addresses shall not respond to directed connectable advertising events that
+  // contain Public or Static addresses for the target’s address (TargetA
+  // field).
+  if (directed_advertising) {
+    if (!IsLocalPublicOrRandomAddress(resolved_target_address)) {
+      LOG_VERB(
+          "Directed legacy advertising ignored by initiator because the "
+          "target address %s does not match the current device addresses",
+          resolved_advertising_address.ToString().c_str());
+      return;
+    }
+    if (resolved_target_address == target_address &&
+        (initiator_.own_address_type ==
+             OwnAddressType::RESOLVABLE_OR_PUBLIC_ADDRESS ||
+         initiator_.own_address_type ==
+             OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS)) {
+      LOG_VERB(
+          "Directed legacy advertising ignored by initiator because the "
+          "target address %s is static or public and the initiator is "
+          "configured to use resolvable addresses",
+          resolved_advertising_address.ToString().c_str());
+      return;
     }
   }
 
-  // Connect
-  if (initiator_.peer_address == advertising_address ||
-      LeFilterAcceptListContainsDevice(advertising_address) ||
-      (resolved && LeFilterAcceptListContainsDevice(resolved_address))) {
-    AddressWithType public_address{address_,
-                                   AddressType::PUBLIC_DEVICE_ADDRESS};
-    AddressWithType random_address{random_address_,
-                                   AddressType::RANDOM_DEVICE_ADDRESS};
-    AddressWithType initiating_address;
+  AddressWithType public_address{address_, AddressType::PUBLIC_DEVICE_ADDRESS};
+  AddressWithType random_address{random_address_,
+                                 AddressType::RANDOM_DEVICE_ADDRESS};
+  std::optional<AddressWithType> resolvable_initiating_address =
+      GenerateResolvablePrivateAddress(resolved_advertising_address,
+                                       IrkSelection::Local);
 
-    switch (initiator_.own_address_type) {
-      case bluetooth::hci::OwnAddressType::PUBLIC_DEVICE_ADDRESS:
-        initiating_address = public_address;
-        break;
-      case bluetooth::hci::OwnAddressType::RANDOM_DEVICE_ADDRESS:
-        initiating_address = random_address;
-        break;
-      case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_PUBLIC_ADDRESS:
-        if (resolved) {
-          initiating_address =
-              AddressWithType{rpa, AddressType::RANDOM_DEVICE_ADDRESS};
-          initiator_.initiating_address = rpa;
-        } else {
-          initiating_address = public_address;
-        }
-        break;
-      case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS:
-        if (resolved) {
-          initiating_address =
-              AddressWithType{rpa, AddressType::RANDOM_DEVICE_ADDRESS};
-          initiator_.initiating_address = rpa;
-        } else {
-          initiating_address = random_address;
-        }
-        break;
-    }
-    LOG_INFO(
-        "Sending LE Connect request to %s(%hhx) with initiating address "
-        "%s(%hhx)",
-        advertising_address.GetAddress().ToString().c_str(),
-        advertising_address.GetAddressType(),
-        initiating_address.ToString().c_str(),
-        initiating_address.GetAddressType());
-
-    initiator_.pending_connect_request = advertising_address;
-
-    if (!connections_.CreatePendingLeConnection(
-            advertising_address, resolved_address, initiating_address)) {
-      LOG_WARN(
-          "CreatePendingLeConnection failed for connection to %s (type %hhx)",
-          advertising_address.GetAddress().ToString().c_str(),
-          advertising_address.GetAddressType());
-    }
-    SendLeLinkLayerPacket(model::packets::LeConnectBuilder::Create(
-        initiating_address.GetAddress(), advertising_address.GetAddress(),
-        static_cast<model::packets::AddressType>(
-            initiating_address.GetAddressType()),
-        static_cast<model::packets::AddressType>(
-            advertising_address.GetAddressType()),
-        initiator_.le_1m_phy.connection_interval_min,
-        initiator_.le_1m_phy.connection_interval_max,
-        initiator_.le_1m_phy.max_latency,
-        initiator_.le_1m_phy.supervision_timeout));
-  } else {
-    LOG_VERB(
-        "Legacy advertising ignored by initiator because the advertising "
-        "address %s(%hhx) does not match the peer address or is not in the "
-        "filter accept list",
-        advertising_address.GetAddress().ToString().c_str(),
-        advertising_address.GetAddressType());
+  // The Link Layer shall use resolvable private addresses for the initiator’s
+  // device address (InitA field) when initiating connection establishment with
+  // an associated device that exists in the Resolving List.
+  AddressWithType initiating_address;
+  switch (initiator_.own_address_type) {
+    case bluetooth::hci::OwnAddressType::PUBLIC_DEVICE_ADDRESS:
+      initiating_address = public_address;
+      break;
+    case bluetooth::hci::OwnAddressType::RANDOM_DEVICE_ADDRESS:
+      // The random address is checked in Le_Create_Connection or
+      // Le_Extended_Create_Connection.
+      ASSERT(random_address_ != Address::kEmpty);
+      initiating_address = random_address;
+      break;
+    case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_PUBLIC_ADDRESS:
+      initiating_address =
+          resolvable_initiating_address.value_or(public_address);
+      break;
+    case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS:
+      // The random address is checked in Le_Create_Connection or
+      // Le_Extended_Create_Connection.
+      ASSERT(random_address_ != Address::kEmpty);
+      initiating_address =
+          resolvable_initiating_address.value_or(random_address);
+      break;
   }
+
+  if (!connections_.CreatePendingLeConnection(
+          advertising_address,
+          resolved_advertising_address != advertising_address
+              ? resolved_advertising_address
+              : AddressWithType{},
+          initiating_address)) {
+    LOG_WARN("CreatePendingLeConnection failed for connection to %s",
+             advertising_address.ToString().c_str());
+  }
+
+  initiator_.pending_connect_request = advertising_address;
+
+  LOG_INFO("Sending LE Connect request to %s with initiating address %s",
+           resolved_advertising_address.ToString().c_str(),
+           initiating_address.ToString().c_str());
+
+  // The advertiser’s device address (AdvA field) in the initiating PDU
+  // shall be the same as the advertiser’s device address (AdvA field)
+  // received in the advertising event PDU to which the initiator is
+  // responding.
+  SendLeLinkLayerPacket(model::packets::LeConnectBuilder::Create(
+      initiating_address.GetAddress(), advertising_address.GetAddress(),
+      static_cast<model::packets::AddressType>(
+          initiating_address.GetAddressType()),
+      static_cast<model::packets::AddressType>(
+          advertising_address.GetAddressType()),
+      initiator_.le_1m_phy.connection_interval_min,
+      initiator_.le_1m_phy.connection_interval_max,
+      initiator_.le_1m_phy.max_latency,
+      initiator_.le_1m_phy.supervision_timeout));
 }
 
 void LinkLayerController::IncomingLeLegacyAdvertisingPdu(
@@ -3119,8 +3143,7 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
       // shall be ignored unless either:
       //  • the TargetA field is identical to the scanner's device address, or
       //  • the TargetA field is a resolvable private address, address
-      //  resolution is
-      //    enabled, and the address is resolved successfully
+      //    resolution is enabled, and the address is resolved successfully
       case bluetooth::hci::LeScanningFilterPolicy::ACCEPT_ALL:
       case bluetooth::hci::LeScanningFilterPolicy::FILTER_ACCEPT_LIST_ONLY:
         if (!IsLocalPublicOrRandomAddress(target_address) &&
@@ -3281,14 +3304,10 @@ void LinkLayerController::ConnectIncomingLeExtendedAdvertisingPdu(
   if (!initiator_.IsEnabled()) {
     return;
   }
-
-  AddressWithType advertising_address{
-      pdu.GetSourceAddress(),
-      static_cast<AddressType>(pdu.GetAdvertisingAddressType())};
-
-  AddressWithType target_address{
-      pdu.GetDestinationAddress(),
-      static_cast<AddressType>(pdu.GetTargetAddressType())};
+  if (!ExtendedAdvertising()) {
+    LOG_VERB("Extended advertising ignored because the initiator is legacy");
+    return;
+  }
 
   // Connection.
   // Note: only send CONNECT requests in response to connectable advertising
@@ -3306,94 +3325,139 @@ void LinkLayerController::ConnectIncomingLeExtendedAdvertisingPdu(
     return;
   }
 
-  AddressWithType resolved_address{Address::kEmpty,
-                                   AddressType::PUBLIC_DEVICE_ADDRESS};
-  bool resolved = false;
-  Address rpa;
-  if (le_resolving_list_enabled_) {
-    for (const auto& entry : le_resolving_list_) {
-      if (rpa_matches_irk(advertising_address.GetAddress(), entry.peer_irk)) {
-        LOG_VERB("Matched against IRK for %s",
-                 entry.peer_identity_address.ToString().c_str());
-        resolved = true;
-        resolved_address = PeerDeviceAddress(entry.peer_identity_address,
-                                             entry.peer_identity_address_type);
-        rpa = generate_rpa(entry.local_irk);
+  AddressWithType advertising_address{
+      pdu.GetSourceAddress(),
+      static_cast<AddressType>(pdu.GetAdvertisingAddressType())};
+
+  AddressWithType target_address{
+      pdu.GetDestinationAddress(),
+      static_cast<AddressType>(pdu.GetTargetAddressType())};
+
+  AddressWithType resolved_advertising_address =
+      ResolvePrivateAddress(advertising_address, IrkSelection::Peer)
+          .value_or(advertising_address);
+
+  AddressWithType resolved_target_address =
+      ResolvePrivateAddress(target_address, IrkSelection::Peer)
+          .value_or(target_address);
+
+  // Vol 6, Part B § 4.3.5 Initiator filter policy.
+  switch (initiator_.initiator_filter_policy) {
+    case bluetooth::hci::InitiatorFilterPolicy::USE_PEER_ADDRESS:
+      if (resolved_advertising_address != initiator_.peer_address) {
+        LOG_VERB(
+            "Extended advertising ignored by initiator because the "
+            "advertising address %s does not match the peer address %s",
+            resolved_advertising_address.ToString().c_str(),
+            initiator_.peer_address.ToString().c_str());
+        return;
       }
+      break;
+    case bluetooth::hci::InitiatorFilterPolicy::USE_FILTER_ACCEPT_LIST:
+      if (!LeFilterAcceptListContainsDevice(resolved_advertising_address)) {
+        LOG_VERB(
+            "Extended advertising ignored by initiator because the "
+            "advertising address %s is not in the filter accept list",
+            resolved_advertising_address.ToString().c_str());
+        return;
+      }
+      break;
+  }
+
+  // When an initiator receives a directed connectable advertising event that
+  // contains a resolvable private address for the target’s address
+  // (TargetA field) and address resolution is enabled, the Link Layer shall
+  // resolve the private address using the resolving list’s Local IRK values.
+  // An initiator that has been instructed by the Host to use Resolvable Private
+  // Addresses shall not respond to directed connectable advertising events that
+  // contain Public or Static addresses for the target’s address (TargetA
+  // field).
+  if (pdu.GetDirected()) {
+    if (!IsLocalPublicOrRandomAddress(resolved_target_address)) {
+      LOG_VERB(
+          "Directed extended advertising ignored by initiator because the "
+          "target address %s does not match the current device addresses",
+          resolved_advertising_address.ToString().c_str());
+      return;
+    }
+    if (resolved_target_address == target_address &&
+        (initiator_.own_address_type ==
+             OwnAddressType::RESOLVABLE_OR_PUBLIC_ADDRESS ||
+         initiator_.own_address_type ==
+             OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS)) {
+      LOG_VERB(
+          "Directed extended advertising ignored by initiator because the "
+          "target address %s is static or public and the initiator is "
+          "configured to use resolvable addresses",
+          resolved_advertising_address.ToString().c_str());
+      return;
     }
   }
 
-  // Connect
-  if (initiator_.peer_address == advertising_address ||
-      LeFilterAcceptListContainsDevice(advertising_address) ||
-      (resolved && LeFilterAcceptListContainsDevice(resolved_address))) {
-    AddressWithType public_address{address_,
-                                   AddressType::PUBLIC_DEVICE_ADDRESS};
-    AddressWithType random_address{random_address_,
-                                   AddressType::RANDOM_DEVICE_ADDRESS};
-    AddressWithType initiating_address;
+  AddressWithType public_address{address_, AddressType::PUBLIC_DEVICE_ADDRESS};
+  AddressWithType random_address{random_address_,
+                                 AddressType::RANDOM_DEVICE_ADDRESS};
+  std::optional<AddressWithType> resolvable_initiating_address =
+      GenerateResolvablePrivateAddress(resolved_advertising_address,
+                                       IrkSelection::Local);
 
-    switch (initiator_.own_address_type) {
-      case bluetooth::hci::OwnAddressType::PUBLIC_DEVICE_ADDRESS:
-        initiating_address = public_address;
-        break;
-      case bluetooth::hci::OwnAddressType::RANDOM_DEVICE_ADDRESS:
-        initiating_address = random_address;
-        break;
-      case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_PUBLIC_ADDRESS:
-        if (resolved) {
-          initiating_address =
-              AddressWithType{rpa, AddressType::RANDOM_DEVICE_ADDRESS};
-          initiator_.initiating_address = rpa;
-        } else {
-          initiating_address = public_address;
-        }
-        break;
-      case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS:
-        if (resolved) {
-          initiating_address =
-              AddressWithType{rpa, AddressType::RANDOM_DEVICE_ADDRESS};
-          initiator_.initiating_address = rpa;
-        } else {
-          initiating_address = random_address;
-        }
-        break;
-    }
-    LOG_INFO(
-        "Sending LE Connect request to %s(%hhx) with initiating address "
-        "%s(%hhx)",
-        advertising_address.GetAddress().ToString().c_str(),
-        advertising_address.GetAddressType(),
-        initiating_address.ToString().c_str(),
-        initiating_address.GetAddressType());
-
-    initiator_.pending_connect_request = advertising_address;
-
-    if (!connections_.CreatePendingLeConnection(
-            advertising_address, resolved_address, initiating_address)) {
-      LOG_WARN(
-          "CreatePendingLeConnection failed for connection to %s (type %hhx)",
-          advertising_address.GetAddress().ToString().c_str(),
-          advertising_address.GetAddressType());
-    }
-    SendLeLinkLayerPacket(model::packets::LeConnectBuilder::Create(
-        initiating_address.GetAddress(), advertising_address.GetAddress(),
-        static_cast<model::packets::AddressType>(
-            initiating_address.GetAddressType()),
-        static_cast<model::packets::AddressType>(
-            advertising_address.GetAddressType()),
-        initiator_.le_1m_phy.connection_interval_min,
-        initiator_.le_1m_phy.connection_interval_max,
-        initiator_.le_1m_phy.max_latency,
-        initiator_.le_1m_phy.supervision_timeout));
-  } else {
-    LOG_VERB(
-        "Extended advertising ignored by initiator because the advertising "
-        "address %s(%hhx) does not match the peer address or is not in the "
-        "filter accept list",
-        advertising_address.GetAddress().ToString().c_str(),
-        advertising_address.GetAddressType());
+  // The Link Layer shall use resolvable private addresses for the initiator’s
+  // device address (InitA field) when initiating connection establishment with
+  // an associated device that exists in the Resolving List.
+  AddressWithType initiating_address;
+  switch (initiator_.own_address_type) {
+    case bluetooth::hci::OwnAddressType::PUBLIC_DEVICE_ADDRESS:
+      initiating_address = public_address;
+      break;
+    case bluetooth::hci::OwnAddressType::RANDOM_DEVICE_ADDRESS:
+      // The random address is checked in Le_Create_Connection or
+      // Le_Extended_Create_Connection.
+      ASSERT(random_address_ != Address::kEmpty);
+      initiating_address = random_address;
+      break;
+    case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_PUBLIC_ADDRESS:
+      initiating_address =
+          resolvable_initiating_address.value_or(public_address);
+      break;
+    case bluetooth::hci::OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS:
+      // The random address is checked in Le_Create_Connection or
+      // Le_Extended_Create_Connection.
+      ASSERT(random_address_ != Address::kEmpty);
+      initiating_address =
+          resolvable_initiating_address.value_or(random_address);
+      break;
   }
+
+  if (!connections_.CreatePendingLeConnection(
+          advertising_address,
+          resolved_advertising_address != advertising_address
+              ? resolved_advertising_address
+              : AddressWithType{},
+          initiating_address)) {
+    LOG_WARN("CreatePendingLeConnection failed for connection to %s",
+             advertising_address.ToString().c_str());
+  }
+
+  initiator_.pending_connect_request = advertising_address;
+
+  LOG_INFO("Sending LE Connect request to %s with initiating address %s",
+           resolved_advertising_address.ToString().c_str(),
+           initiating_address.ToString().c_str());
+
+  // The advertiser’s device address (AdvA field) in the initiating PDU
+  // shall be the same as the advertiser’s device address (AdvA field)
+  // received in the advertising event PDU to which the initiator is
+  // responding.
+  SendLeLinkLayerPacket(model::packets::LeConnectBuilder::Create(
+      initiating_address.GetAddress(), advertising_address.GetAddress(),
+      static_cast<model::packets::AddressType>(
+          initiating_address.GetAddressType()),
+      static_cast<model::packets::AddressType>(
+          advertising_address.GetAddressType()),
+      initiator_.le_1m_phy.connection_interval_min,
+      initiator_.le_1m_phy.connection_interval_max,
+      initiator_.le_1m_phy.max_latency,
+      initiator_.le_1m_phy.supervision_timeout));
 }
 
 void LinkLayerController::IncomingLeExtendedAdvertisingPdu(
