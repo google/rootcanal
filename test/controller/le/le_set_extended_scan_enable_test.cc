@@ -95,6 +95,18 @@ TEST_F(LeSetExtendedScanEnableTest, Disable) {
             ErrorCode::SUCCESS);
 }
 
+TEST_F(LeSetExtendedScanEnableTest, ValidDuration) {
+  ASSERT_EQ(controller_.LeSetExtendedScanParameters(
+                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
+                {MakePhyScanParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
+            ErrorCode::SUCCESS);
+
+  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
+                true, FilterDuplicates::DISABLED, 127, 1),
+            ErrorCode::SUCCESS);
+}
+
 TEST_F(LeSetExtendedScanEnableTest, InvalidDuration) {
   ASSERT_EQ(controller_.LeSetExtendedScanParameters(
                 OwnAddressType::PUBLIC_DEVICE_ADDRESS,
@@ -106,7 +118,7 @@ TEST_F(LeSetExtendedScanEnableTest, InvalidDuration) {
                 true, FilterDuplicates::RESET_EACH_PERIOD, 0, 0),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
   ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                true, FilterDuplicates::DISABLED, 1000, 100),
+                true, FilterDuplicates::DISABLED, 128, 1),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
