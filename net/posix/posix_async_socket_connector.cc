@@ -26,7 +26,6 @@
 
 #include "net/posix/posix_async_socket.h"  // for PosixAsyncSocket
 #include "os/log.h"                        // for LOG_INFO
-#include "osi/include/osi.h"               // for OSI_NO_INTR
 
 namespace android {
 namespace net {
@@ -83,8 +82,10 @@ PosixAsyncSocketConnector::ConnectToRemoteServer(
           .revents = 0,
       },
   };
+
   int numFdsReady = 0;
-  OSI_NO_INTR(numFdsReady = ::poll(fds, 1, timeout.count()));
+  REPEAT_UNTIL_NO_INTR(numFdsReady = ::poll(fds, 1, timeout.count()));
+
   if (numFdsReady <= 0) {
     LOG_INFO("Failed to connect to %s:%d, error:  %s", server.c_str(), port,
              strerror(errno));
