@@ -24,7 +24,6 @@
 
 #include "device_boutique.h"
 #include "os/log.h"
-#include "osi/include/osi.h"
 #include "phy.h"
 
 using std::vector;

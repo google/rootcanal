@@ -85,3 +85,8 @@ class PosixAsyncSocket : public AsyncDataChannel {
 };
 }  // namespace net
 }  // namespace android
+
+// Re-run |fn| system call until the system call doesn't cause EINTR.
+#define REPEAT_UNTIL_NO_INTR(fn) \
+  do {                           \
+  } while ((fn) == -1 && errno == EINTR)

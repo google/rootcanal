@@ -35,8 +35,6 @@
 #include <thread>
 #include <tuple>  // for tuple
 
-#include "osi/include/osi.h"  // for OSI_NO_INTR
-
 namespace rootcanal {
 
 class Event {
@@ -111,7 +109,9 @@ class AsyncManagerSocketTest : public ::testing::Test {
 
   void ReadIncomingMessage(int fd) {
     int n;
-    OSI_NO_INTR(n = read(fd, server_buffer_, kBufferSize - 1));
+    do {
+      n = read(fd, server_buffer_, kBufferSize - 1);
+    } while (n == -1 && errno == EAGAIN);
     ASSERT_GE(n, 0) << strerror(errno);
 
     if (n == 0) {  // got EOF
