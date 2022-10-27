@@ -229,7 +229,7 @@ DualModeController::DualModeController(const std::string& properties_filename,
   SET_SUPPORTED(CREATE_CONNECTION, CreateConnection);
   SET_SUPPORTED(CREATE_CONNECTION_CANCEL, CreateConnectionCancel);
   SET_SUPPORTED(DISCONNECT, Disconnect);
-  SET_SUPPORTED(LE_CREATE_CONNECTION_CANCEL, LeConnectionCancel);
+  SET_SUPPORTED(LE_CREATE_CONNECTION_CANCEL, LeCreateConnectionCancel);
   SET_SUPPORTED(LE_READ_FILTER_ACCEPT_LIST_SIZE, LeReadFilterAcceptListSize);
   SET_SUPPORTED(LE_CLEAR_FILTER_ACCEPT_LIST, LeClearFilterAcceptList);
   SET_SUPPORTED(LE_ADD_DEVICE_TO_FILTER_ACCEPT_LIST,
@@ -2195,36 +2195,29 @@ void DualModeController::LeCreateConnection(CommandView command) {
       gd_hci::LeConnectionManagementCommandView::Create(
           gd_hci::AclCommandView::Create(command)));
   ASSERT(command_view.IsValid());
-  auto initiator_filter_policy = command_view.GetInitiatorFilterPolicy();
-
-  link_layer_controller_.SetLeScanInterval(command_view.GetLeScanInterval());
-  link_layer_controller_.SetLeScanWindow(command_view.GetLeScanWindow());
-  link_layer_controller_.SetLeInitiatorFilterPolicy(initiator_filter_policy);
-
-  if (initiator_filter_policy ==
-      bluetooth::hci::InitiatorFilterPolicy::USE_PEER_ADDRESS) {
-    // Connect list not used
-    link_layer_controller_.SetLePeerAddress(AddressWithType{
-        command_view.GetPeerAddress(), command_view.GetPeerAddressType()});
-  }
-  link_layer_controller_.SetLeConnectionOwnAddressType(
-      command_view.GetOwnAddressType());
-  link_layer_controller_.SetLeConnectionIntervalMin(
-      command_view.GetConnIntervalMin());
-  link_layer_controller_.SetLeConnectionIntervalMax(
-      command_view.GetConnIntervalMax());
-  link_layer_controller_.SetLeConnectionLatency(command_view.GetConnLatency());
-  link_layer_controller_.SetLeSupervisionTimeout(
-      command_view.GetSupervisionTimeout());
-  link_layer_controller_.SetLeMinimumCeLength(
-      command_view.GetMinimumCeLength());
-  link_layer_controller_.SetLeMaximumCeLength(
+  ErrorCode status = link_layer_controller_.LeCreateConnection(
+      command_view.GetLeScanInterval(), command_view.GetLeScanWindow(),
+      command_view.GetInitiatorFilterPolicy(),
+      AddressWithType{
+          command_view.GetPeerAddress(),
+          command_view.GetPeerAddressType(),
+      },
+      command_view.GetOwnAddressType(), command_view.GetConnIntervalMin(),
+      command_view.GetConnIntervalMax(), command_view.GetConnLatency(),
+      command_view.GetSupervisionTimeout(), command_view.GetMinimumCeLength(),
       command_view.GetMaximumCeLength());
-
-  auto status = link_layer_controller_.SetLeConnect(true, false);
-
   send_event_(bluetooth::hci::LeCreateConnectionStatusBuilder::Create(
       status, kNumCommandPackets));
+}
+
+void DualModeController::LeCreateConnectionCancel(CommandView command) {
+  auto command_view = gd_hci::LeCreateConnectionCancelView::Create(
+      gd_hci::LeConnectionManagementCommandView::Create(
+          gd_hci::AclCommandView::Create(command)));
+  ASSERT(command_view.IsValid());
+  ErrorCode status = link_layer_controller_.LeCreateConnectionCancel();
+  send_event_(bluetooth::hci::LeCreateConnectionCancelCompleteBuilder::Create(
+      kNumCommandPackets, status));
 }
 
 void DualModeController::LeConnectionUpdate(CommandView command) {
@@ -2292,24 +2285,6 @@ void DualModeController::Disconnect(CommandView command) {
 
   send_event_(bluetooth::hci::DisconnectStatusBuilder::Create(
       status, kNumCommandPackets));
-}
-
-void DualModeController::LeConnectionCancel(CommandView command) {
-  auto command_view = gd_hci::LeCreateConnectionCancelView::Create(
-      gd_hci::LeConnectionManagementCommandView::Create(
-          gd_hci::AclCommandView::Create(command)));
-  ASSERT(command_view.IsValid());
-  ErrorCode status = link_layer_controller_.SetLeConnect(false, false);
-  send_event_(bluetooth::hci::LeCreateConnectionCancelCompleteBuilder::Create(
-      kNumCommandPackets, status));
-
-  send_event_(bluetooth::hci::LeConnectionCompleteBuilder::Create(
-      ErrorCode::UNKNOWN_CONNECTION, kReservedHandle,
-      bluetooth::hci::Role::CENTRAL,
-      bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS,
-      bluetooth::hci::Address(), 1 /* connection_interval */,
-      2 /* connection_latency */, 3 /* supervision_timeout*/,
-      static_cast<bluetooth::hci::ClockAccuracy>(0x00)));
 }
 
 void DualModeController::LeReadFilterAcceptListSize(CommandView command) {
@@ -2474,35 +2449,13 @@ void DualModeController::LeExtendedCreateConnection(CommandView command) {
       gd_hci::LeConnectionManagementCommandView::Create(
           gd_hci::AclCommandView::Create(command)));
   ASSERT(command_view.IsValid());
-  ASSERT_LOG(command_view.GetInitiatingPhys() == 1, "Only LE_1M is supported");
-  auto params = command_view.GetPhyScanParameters();
-  auto initiator_filter_policy = command_view.GetInitiatorFilterPolicy();
-
-  link_layer_controller_.SetLeScanInterval(params[0].scan_interval_);
-  link_layer_controller_.SetLeScanWindow(params[0].scan_window_);
-  link_layer_controller_.SetLeInitiatorFilterPolicy(initiator_filter_policy);
-
-  if (initiator_filter_policy ==
-      gd_hci::InitiatorFilterPolicy::USE_PEER_ADDRESS) {
-    link_layer_controller_.SetLePeerAddress(AddressWithType{
-        command_view.GetPeerAddress(),
-        command_view.GetPeerAddressType(),
-    });
-  }
-  link_layer_controller_.SetLeConnectionOwnAddressType(
-      command_view.GetOwnAddressType());
-  link_layer_controller_.SetLeConnectionIntervalMin(
-      params[0].conn_interval_min_);
-  link_layer_controller_.SetLeConnectionIntervalMax(
-      params[0].conn_interval_max_);
-  link_layer_controller_.SetLeConnectionLatency(params[0].conn_latency_);
-  link_layer_controller_.SetLeSupervisionTimeout(
-      params[0].supervision_timeout_);
-  link_layer_controller_.SetLeMinimumCeLength(params[0].min_ce_length_);
-  link_layer_controller_.SetLeMaximumCeLength(params[0].max_ce_length_);
-
-  auto status = link_layer_controller_.SetLeConnect(true, true);
-
+  ErrorCode status = link_layer_controller_.LeExtendedCreateConnection(
+      command_view.GetInitiatorFilterPolicy(), command_view.GetOwnAddressType(),
+      AddressWithType{
+          command_view.GetPeerAddress(),
+          command_view.GetPeerAddressType(),
+      },
+      command_view.GetInitiatingPhys(), command_view.GetPhyScanParameters());
   send_event_(bluetooth::hci::LeExtendedCreateConnectionStatusBuilder::Create(
       status, kNumCommandPackets));
 }
