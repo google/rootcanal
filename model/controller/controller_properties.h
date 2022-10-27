@@ -47,6 +47,9 @@ struct ControllerProperties {
   // file or all 1s.
   void SetSupportedCommands(std::array<uint8_t, 64> supported_commands);
 
+  // Check if the feature masks are valid according to the specification.
+  bool CheckSupportedFeatures() const;
+
   // Local Version Information (Vol 4, Part E § 7.4.1).
   HciVersion hci_version{HciVersion::V_5_3};
   LmpVersion lmp_version{LmpVersion::V_5_3};
@@ -108,6 +111,14 @@ struct ControllerProperties {
   // Vendor Information.
   // Provide parameters returned by vendor specific commands.
   std::vector<uint8_t> le_vendor_capabilities{};
+
+  bool SupportsLMPFeature(bluetooth::hci::LMPFeaturesPage0Bits bit) const {
+    return (lmp_features[0] & static_cast<uint64_t>(bit)) != 0;
+  }
+
+  bool SupportsLMPFeature(bluetooth::hci::LMPFeaturesPage2Bits bit) const {
+    return (lmp_features[2] & static_cast<uint64_t>(bit)) != 0;
+  }
 };
 
 }  // namespace rootcanal
