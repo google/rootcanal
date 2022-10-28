@@ -31,7 +31,6 @@ using gd_hci::OpCode;
 using std::vector;
 
 namespace rootcanal {
-constexpr char DualModeController::kControllerPropertiesFile[];
 constexpr uint16_t DualModeController::kSecurityManagerNumKeys;
 constexpr uint16_t kNumCommandPackets = 0x01;
 constexpr uint16_t kLeMaximumAdvertisingDataLength = 256;

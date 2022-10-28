@@ -51,15 +51,11 @@ using ::bluetooth::hci::CommandView;
 // corresponding Bluetooth command in the Core Specification with the prefix
 // "Hci" to distinguish it as a controller command.
 class DualModeController : public Device {
-  // The location of the config file loaded to populate controller attributes.
-  static constexpr char kControllerPropertiesFile[] =
-      "/vendor/etc/bluetooth/controller_properties.json";
   static constexpr uint16_t kSecurityManagerNumKeys = 15;
 
  public:
   // Sets all of the methods to be used as callbacks in the HciHandler.
-  DualModeController(const std::string& properties_filename =
-                         std::string(kControllerPropertiesFile),
+  DualModeController(const std::string& properties_filename = "",
                      uint16_t num_keys = kSecurityManagerNumKeys);
 
   ~DualModeController() = default;
