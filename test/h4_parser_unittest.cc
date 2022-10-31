@@ -18,8 +18,6 @@
 
 #include <gtest/gtest.h>
 
-#include "osi/include/osi.h"  // for OSI_NO_INTR
-
 namespace rootcanal {
 using PacketData = std::vector<uint8_t>;
 

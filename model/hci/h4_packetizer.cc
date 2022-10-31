@@ -24,7 +24,6 @@
 #include <cerrno>
 
 #include "os/log.h"
-#include "osi/include/osi.h"
 
 namespace rootcanal {
 
@@ -42,8 +41,8 @@ size_t H4Packetizer::Send(uint8_t type, const uint8_t* data, size_t length) {
                         {const_cast<uint8_t*>(data), length}};
   ssize_t ret = 0;
   do {
-    OSI_NO_INTR(ret = writev(uart_fd_, iov, sizeof(iov) / sizeof(iov[0])));
-  } while (-1 == ret && EAGAIN == errno);
+    ret = writev(uart_fd_, iov, sizeof(iov) / sizeof(iov[0]));
+  } while (-1 == ret && (EINTR == errno || EAGAIN == errno));
 
   if (ret == -1) {
     LOG_ERROR("Error writing to UART (%s)", strerror(errno));
@@ -60,7 +59,10 @@ void H4Packetizer::OnDataReady(int fd) {
   std::vector<uint8_t> buffer(bytes_to_read);
 
   ssize_t bytes_read;
-  OSI_NO_INTR(bytes_read = read(fd, buffer.data(), bytes_to_read));
+  do {
+    bytes_read = read(fd, buffer.data(), bytes_to_read);
+  } while (bytes_read == -1 && errno == EINTR);
+
   if (bytes_read == 0) {
     LOG_INFO("remote disconnected!");
     disconnected_ = true;
