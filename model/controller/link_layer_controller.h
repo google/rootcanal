@@ -364,6 +364,10 @@ class LinkLayerController {
   // HCI LE Set Random Address command (Vol 4, Part E § 7.8.4).
   ErrorCode LeSetRandomAddress(Address random_address);
 
+  // HCI LE Set Resolvable Private Address Timeout command
+  // (Vol 4, Part E § 7.8.45).
+  ErrorCode LeSetResolvablePrivateAddressTimeout(uint16_t rpa_timeout);
+
   // HCI LE Set Host Feature command (Vol 4, Part E § 7.8.115).
   ErrorCode LeSetHostFeature(uint8_t bit_number, uint8_t bit_value);
 
@@ -661,10 +665,12 @@ class LinkLayerController {
   uint8_t GetEncryptionKeySize() const { return min_encryption_key_size_; }
 
   bool GetScoFlowControlEnable() const { return sco_flow_control_enable_; }
+
   AuthenticationEnable GetAuthenticationEnable() {
     return authentication_enable_;
   }
-  std::array<uint8_t, 248> const& GetName() { return name_; }
+
+  std::array<uint8_t, 248> const& GetLocalName() { return local_name_; }
 
   uint64_t GetLeSupportedFeatures() const {
     return properties_.le_features | le_host_supported_features_;
@@ -686,6 +692,11 @@ class LinkLayerController {
                             : properties_.lmp_features[page_number];
   }
 
+  void SetLocalName(std::vector<uint8_t> const& local_name);
+  void SetLocalName(std::array<uint8_t, 248> const& local_name);
+  void SetExtendedInquiryResponse(
+      std::vector<uint8_t> const& extended_inquiry_response);
+
   void SetClassOfDevice(ClassOfDevice class_of_device) {
     class_of_device_ = class_of_device;
   }
@@ -694,11 +705,6 @@ class LinkLayerController {
     class_of_device_.cod[0] = class_of_device & 0xff;
     class_of_device_.cod[1] = (class_of_device >> 8) & 0xff;
     class_of_device_.cod[2] = (class_of_device >> 16) & 0xff;
-  }
-
-  void SetExtendedInquiryData(
-      std::vector<uint8_t> const& extended_inquiry_data) {
-    extended_inquiry_data_ = extended_inquiry_data;
   }
 
   void SetAuthenticationEnable(AuthenticationEnable enable) {
@@ -712,11 +718,13 @@ class LinkLayerController {
     voice_setting_ = voice_setting;
   }
   void SetEventMask(uint64_t event_mask) { event_mask_ = event_mask; }
+
+  void SetEventMaskPage2(uint64_t event_mask) {
+    event_mask_page_2_ = event_mask;
+  }
   void SetLeEventMask(uint64_t le_event_mask) {
     le_event_mask_ = le_event_mask;
   }
-
-  void SetName(std::vector<uint8_t> const& name);
 
   void SetLeHostSupport(bool enable);
   void SetSecureSimplePairingSupport(bool enable);
@@ -745,6 +753,18 @@ class LinkLayerController {
       extended_advertising_in_use_ = true;
       return true;
     }
+  }
+
+  uint16_t GetLeSuggestedMaxTxOctets() const {
+    return le_suggested_max_tx_octets_;
+  }
+  uint16_t GetLeSuggestedMaxTxTime() const { return le_suggested_max_tx_time_; }
+
+  void SetLeSuggestedMaxTxOctets(uint16_t max_tx_octets) {
+    le_suggested_max_tx_octets_ = max_tx_octets;
+  }
+  void SetLeSuggestedMaxTxTime(uint16_t max_tx_time) {
+    le_suggested_max_tx_time_ = max_tx_time;
   }
 
  private:
@@ -805,7 +825,10 @@ class LinkLayerController {
   bool sco_flow_control_enable_{false};
 
   // Local Name (Vol 4, Part E § 6.23).
-  std::array<uint8_t, 248> name_;
+  std::array<uint8_t, 248> local_name_{};
+
+  // Extended Inquiry Response (Vol 4, Part E § 6.24).
+  std::array<uint8_t, 240> extended_inquiry_response_{};
 
   // Class of Device (Vol 4, Part E § 6.26).
   ClassOfDevice class_of_device_{{0, 0, 0}};
@@ -819,15 +842,22 @@ class LinkLayerController {
   uint8_t min_encryption_key_size_{16};
 
   // Event Mask (Vol 4, Part E § 7.3.1) and
+  // Event Mask Page 2 (Vol 4, Part E § 7.3.69) and
   // LE Event Mask (Vol 4, Part E § 7.8.1).
   uint64_t event_mask_{0x00001fffffffffff};
+  uint64_t event_mask_page_2_{0x0};
   uint64_t le_event_mask_{0x01f};
+
+  // Suggested Default Data Length (Vol 4, Part E § 7.8.34).
+  uint16_t le_suggested_max_tx_octets_{0x001b};
+  uint16_t le_suggested_max_tx_time_{0x0148};
+
+  // Resolvable Private Address Timeout (Vol 4, Part E § 7.8.45).
+  std::chrono::seconds resolvable_private_address_timeout_{0x0384};
 
   // Page Scan Repetition Mode (Vol 2 Part B § 8.3.1 Page Scan substate).
   // The Page Scan Repetition Mode depends on the selected Page Scan Interval.
   PageScanRepetitionMode page_scan_repetition_mode_{PageScanRepetitionMode::R0};
-
-  std::vector<uint8_t> extended_inquiry_data_;
 
   AclConnectionHandler connections_;
 
