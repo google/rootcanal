@@ -122,7 +122,7 @@ packet InquiryResponseWithRssi : BasicInquiryResponse (inquiry_type = RSSI)  {
 
 packet ExtendedInquiryResponse : BasicInquiryResponse (inquiry_type = EXTENDED)  {
   rssi: 8,
-  extended_data : 8[],
+  extended_inquiry_response : 8[240],
 }
 
 packet IoCapabilityRequest : LinkLayerPacket (type = IO_CAPABILITY_REQUEST) {

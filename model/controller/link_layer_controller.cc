@@ -1314,11 +1314,23 @@ void LinkLayerController::SetSecureConnectionsSupport(bool enable) {
   }
 }
 
-void LinkLayerController::SetName(std::vector<uint8_t> const& name) {
-  name_.fill(0);
-  for (size_t i = 0; i < 248 && i < name.size(); i++) {
-    name_[i] = name[i];
-  }
+void LinkLayerController::SetLocalName(
+    std::array<uint8_t, 248> const& local_name) {
+  std::copy(local_name.begin(), local_name.end(), local_name_.begin());
+}
+
+void LinkLayerController::SetLocalName(std::vector<uint8_t> const& local_name) {
+  ASSERT(local_name.size() <= local_name_.size());
+  local_name_.fill(0);
+  std::copy(local_name.begin(), local_name.end(), local_name_.begin());
+}
+
+void LinkLayerController::SetExtendedInquiryResponse(
+    std::vector<uint8_t> const& extended_inquiry_response) {
+  ASSERT(extended_inquiry_response.size() <= extended_inquiry_response_.size());
+  extended_inquiry_response_.fill(0);
+  std::copy(extended_inquiry_response.begin(), extended_inquiry_response.end(),
+            extended_inquiry_response_.begin());
 }
 
 void LinkLayerController::SendLeLinkLayerPacketWithRssi(
@@ -1879,7 +1891,7 @@ void LinkLayerController::IncomingRemoteNameRequest(
   ASSERT(view.IsValid());
 
   SendLinkLayerPacket(model::packets::RemoteNameRequestResponseBuilder::Create(
-      packet.GetDestinationAddress(), packet.GetSourceAddress(), name_));
+      packet.GetDestinationAddress(), packet.GetSourceAddress(), local_name_));
 }
 
 void LinkLayerController::IncomingRemoteNameRequestResponse(
@@ -2138,7 +2150,7 @@ void LinkLayerController::IncomingInquiryPacket(
               GetAddress(), peer,
               static_cast<uint8_t>(GetPageScanRepetitionMode()),
               class_of_device_, GetClockOffset(), rssi,
-              extended_inquiry_data_));
+              extended_inquiry_response_));
 
     } break;
     default:
@@ -2213,7 +2225,8 @@ void LinkLayerController::IncomingInquiryResponsePacket(
               inquiry_response.GetPageScanRepetitionMode()),
           inquiry_response.GetClassOfDevice(),
           inquiry_response.GetClockOffset(), inquiry_response.GetRssi(),
-          inquiry_response.GetExtendedData()));
+          std::vector<uint8_t>(extended_inquiry_response_.begin(),
+                               extended_inquiry_response_.end())));
     } break;
     default:
       LOG_WARN("Unhandled Incoming Inquiry Response of type %d",
@@ -3169,13 +3182,6 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
       break;
   }
 
-  // When the Scanning_Filter_Policy is set to 0x02 or 0x03 (see Section 7.8.10)
-  // and a directed advertisement was received where the advertiser used a
-  // resolvable private address which the Controller is unable to resolve, an
-  // HCI_LE_Directed_Advertising_Report event shall be generated instead of an
-  // HCI_LE_Advertising_Report event.
-  bool should_send_directed_advertising_report = false;
-
   if (directed_advertising) {
     switch (scanner_.scan_filter_policy) {
       // In both basic scanner filter policy modes, a directed advertising PDU
@@ -3213,8 +3219,6 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
               target_address.GetAddressType());
           return;
         }
-        should_send_directed_advertising_report =
-            target_address.IsRpa() && !resolved_target_address;
         break;
     }
   }
