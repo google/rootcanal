@@ -531,7 +531,7 @@ class DualModeController : public Device {
   void LeSetAddressResolutionEnable(CommandView args);
 
   // 7.8.45
-  void LeSetResovalablePrivateAddressTimeout(CommandView args);
+  void LeSetResolvablePrivateAddressTimeout(CommandView args);
 
   // 7.8.46
   void LeReadMaximumDataLength(CommandView args);
