@@ -31,7 +31,6 @@ using gd_hci::OpCode;
 using std::vector;
 
 namespace rootcanal {
-constexpr uint16_t DualModeController::kSecurityManagerNumKeys;
 constexpr uint16_t kNumCommandPackets = 0x01;
 constexpr uint16_t kLeMaximumAdvertisingDataLength = 256;
 constexpr uint16_t kLeMaximumDataLength = 64;
@@ -55,11 +54,11 @@ void DualModeController::Close() {
 }
 
 void DualModeController::SendCommandCompleteUnknownOpCodeEvent(
-    uint16_t command_opcode) const {
+    uint16_t op_code) const {
   std::unique_ptr<bluetooth::packet::RawBuilder> raw_builder_ptr =
       std::make_unique<bluetooth::packet::RawBuilder>();
   raw_builder_ptr->AddOctets1(kNumCommandPackets);
-  raw_builder_ptr->AddOctets2(command_opcode);
+  raw_builder_ptr->AddOctets2(op_code);
   raw_builder_ptr->AddOctets1(
       static_cast<uint8_t>(ErrorCode::UNKNOWN_HCI_COMMAND));
 
@@ -88,10 +87,7 @@ DualModeController::DualModeController(const std::string& properties_filename,
         DualModeController::SendLinkLayerPacket(packet, phy_type);
       });
 
-  std::array<uint8_t, 64> supported_commands;
-  for (size_t i = 0; i < 64; i++) {
-    supported_commands[i] = 0;
-  }
+  std::array<uint8_t, 64> supported_commands{0};
 
 #define SET_HANDLER(name, method)                                  \
   active_hci_commands_[OpCode::name] = [this](CommandView param) { \
@@ -566,14 +562,8 @@ void DualModeController::ReadBdAddr(CommandView command) {
 void DualModeController::ReadLocalSupportedCommands(CommandView command) {
   auto command_view = gd_hci::ReadLocalSupportedCommandsView::Create(command);
   ASSERT(command_view.IsValid());
-
-  std::array<uint8_t, 64> supported_commands{0};
-  size_t len = std::min(properties_.supported_commands.size(), (size_t)64);
-  std::copy_n(properties_.supported_commands.begin(), len,
-              supported_commands.begin());
-
   send_event_(bluetooth::hci::ReadLocalSupportedCommandsCompleteBuilder::Create(
-      kNumCommandPackets, ErrorCode::SUCCESS, supported_commands));
+      kNumCommandPackets, ErrorCode::SUCCESS, properties_.supported_commands));
 }
 
 void DualModeController::ReadLocalSupportedFeatures(CommandView command) {
@@ -1685,25 +1675,15 @@ void DualModeController::WriteLinkSupervisionTimeout(CommandView command) {
 void DualModeController::ReadLocalName(CommandView command) {
   auto command_view = gd_hci::ReadLocalNameView::Create(command);
   ASSERT(command_view.IsValid());
-
-  std::array<uint8_t, 248> local_name{0};
-  size_t len = std::min(link_layer_controller_.GetName().size(), (size_t)247);
-  std::copy_n(link_layer_controller_.GetName().begin(), len,
-              local_name.begin());
-
   send_event_(bluetooth::hci::ReadLocalNameCompleteBuilder::Create(
-      kNumCommandPackets, ErrorCode::SUCCESS, local_name));
+      kNumCommandPackets, ErrorCode::SUCCESS,
+      link_layer_controller_.GetLocalName()));
 }
 
 void DualModeController::WriteLocalName(CommandView command) {
   auto command_view = gd_hci::WriteLocalNameView::Create(command);
   ASSERT(command_view.IsValid());
-  const auto local_name = command_view.GetLocalName();
-  std::vector<uint8_t> name_vec(248);
-  for (size_t i = 0; i < 248; i++) {
-    name_vec[i] = local_name[i];
-  }
-  link_layer_controller_.SetName(name_vec);
+  link_layer_controller_.SetLocalName(command_view.GetLocalName());
   send_event_(bluetooth::hci::WriteLocalNameCompleteBuilder::Create(
       kNumCommandPackets, ErrorCode::SUCCESS));
 }
@@ -1711,7 +1691,7 @@ void DualModeController::WriteLocalName(CommandView command) {
 void DualModeController::WriteExtendedInquiryResponse(CommandView command) {
   auto command_view = gd_hci::WriteExtendedInquiryResponseView::Create(command);
   ASSERT(command_view.IsValid());
-  link_layer_controller_.SetExtendedInquiryData(std::vector<uint8_t>(
+  link_layer_controller_.SetExtendedInquiryResponse(std::vector<uint8_t>(
       command_view.GetPayload().begin() + 1, command_view.GetPayload().end()));
   send_event_(
       bluetooth::hci::WriteExtendedInquiryResponseCompleteBuilder::Create(
@@ -2370,7 +2350,8 @@ void DualModeController::LeReadSuggestedDefaultDataLength(CommandView command) {
   send_event_(
       bluetooth::hci::LeReadSuggestedDefaultDataLengthCompleteBuilder::Create(
           kNumCommandPackets, ErrorCode::SUCCESS,
-          le_suggested_default_data_bytes_, le_suggested_default_data_time_));
+          link_layer_controller_.GetLeSuggestedMaxTxOctets(),
+          link_layer_controller_.GetLeSuggestedMaxTxTime()));
 }
 
 void DualModeController::LeWriteSuggestedDefaultDataLength(
@@ -2379,20 +2360,21 @@ void DualModeController::LeWriteSuggestedDefaultDataLength(
       gd_hci::LeConnectionManagementCommandView::Create(
           gd_hci::AclCommandView::Create(command)));
   ASSERT(command_view.IsValid());
-  uint16_t bytes = command_view.GetTxOctets();
-  uint16_t time = command_view.GetTxTime();
-  if (bytes > 0xFB || bytes < 0x1B || time < 0x148 || time > 0x4290) {
-    send_event_(
-        bluetooth::hci::LeWriteSuggestedDefaultDataLengthCompleteBuilder::
-            Create(kNumCommandPackets,
-                   ErrorCode::INVALID_HCI_COMMAND_PARAMETERS));
-    return;
+
+  uint16_t max_tx_octets = command_view.GetTxOctets();
+  uint16_t max_tx_time = command_view.GetTxTime();
+  ErrorCode status = ErrorCode::SUCCESS;
+  if (max_tx_octets > 0xFB || max_tx_octets < 0x1B || max_tx_time < 0x148 ||
+      max_tx_time > 0x4290) {
+    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  } else {
+    link_layer_controller_.SetLeSuggestedMaxTxOctets(max_tx_octets);
+    link_layer_controller_.SetLeSuggestedMaxTxTime(max_tx_time);
   }
-  le_suggested_default_data_bytes_ = bytes;
-  le_suggested_default_data_time_ = time;
+
   send_event_(
       bluetooth::hci::LeWriteSuggestedDefaultDataLengthCompleteBuilder::Create(
-          kNumCommandPackets, ErrorCode::SUCCESS));
+          kNumCommandPackets, status));
 }
 
 void DualModeController::LeAddDeviceToResolvingList(CommandView command) {
@@ -2971,8 +2953,7 @@ void DualModeController::ReadLoopbackMode(CommandView command) {
   auto command_view = gd_hci::ReadLoopbackModeView::Create(command);
   ASSERT(command_view.IsValid());
   send_event_(bluetooth::hci::ReadLoopbackModeCompleteBuilder::Create(
-      kNumCommandPackets, ErrorCode::SUCCESS,
-      static_cast<LoopbackMode>(loopback_mode_)));
+      kNumCommandPackets, ErrorCode::SUCCESS, loopback_mode_));
 }
 
 void DualModeController::WriteLoopbackMode(CommandView command) {
