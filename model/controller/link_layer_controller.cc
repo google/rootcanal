@@ -254,6 +254,22 @@ ErrorCode LinkLayerController::LeSetRandomAddress(Address random_address) {
   return ErrorCode::SUCCESS;
 }
 
+// HCI LE Set Host Feature command (Vol 4, Part E § 7.8.45).
+ErrorCode LinkLayerController::LeSetResolvablePrivateAddressTimeout(
+    uint16_t rpa_timeout) {
+  // Note: no documented status code for this case.
+  if (rpa_timeout < 0x1 || rpa_timeout > 0x0e10) {
+    LOG_INFO(
+        "rpa_timeout (0x%04x) is outside the range of supported values "
+        " 0x1 - 0x0e10",
+        rpa_timeout);
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  resolvable_private_address_timeout_ = seconds(rpa_timeout);
+  return ErrorCode::SUCCESS;
+}
+
 // HCI LE Set Host Feature command (Vol 4, Part E § 7.8.115).
 ErrorCode LinkLayerController::LeSetHostFeature(uint8_t bit_number,
                                                 uint8_t bit_value) {

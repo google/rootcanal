@@ -364,6 +364,10 @@ class LinkLayerController {
   // HCI LE Set Random Address command (Vol 4, Part E § 7.8.4).
   ErrorCode LeSetRandomAddress(Address random_address);
 
+  // HCI LE Set Resolvable Private Address Timeout command
+  // (Vol 4, Part E § 7.8.45).
+  ErrorCode LeSetResolvablePrivateAddressTimeout(uint16_t rpa_timeout);
+
   // HCI LE Set Host Feature command (Vol 4, Part E § 7.8.115).
   ErrorCode LeSetHostFeature(uint8_t bit_number, uint8_t bit_value);
 
@@ -714,6 +718,10 @@ class LinkLayerController {
     voice_setting_ = voice_setting;
   }
   void SetEventMask(uint64_t event_mask) { event_mask_ = event_mask; }
+
+  void SetEventMaskPage2(uint64_t event_mask) {
+    event_mask_page_2_ = event_mask;
+  }
   void SetLeEventMask(uint64_t le_event_mask) {
     le_event_mask_ = le_event_mask;
   }
@@ -834,13 +842,18 @@ class LinkLayerController {
   uint8_t min_encryption_key_size_{16};
 
   // Event Mask (Vol 4, Part E § 7.3.1) and
+  // Event Mask Page 2 (Vol 4, Part E § 7.3.69) and
   // LE Event Mask (Vol 4, Part E § 7.8.1).
   uint64_t event_mask_{0x00001fffffffffff};
+  uint64_t event_mask_page_2_{0x0};
   uint64_t le_event_mask_{0x01f};
 
   // Suggested Default Data Length (Vol 4, Part E § 7.8.34).
   uint16_t le_suggested_max_tx_octets_{0x001b};
   uint16_t le_suggested_max_tx_time_{0x0148};
+
+  // Resolvable Private Address Timeout (Vol 4, Part E § 7.8.45).
+  std::chrono::seconds resolvable_private_address_timeout_{0x0384};
 
   // Page Scan Repetition Mode (Vol 2 Part B § 8.3.1 Page Scan substate).
   // The Page Scan Repetition Mode depends on the selected Page Scan Interval.
