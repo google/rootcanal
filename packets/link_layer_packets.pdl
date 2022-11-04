@@ -429,6 +429,7 @@ packet ScoConnectionRequest : LinkLayerPacket (type = SCO_CONNECTION_REQUEST) {
   _reserved_ : 6,
   retransmission_effort : 8,
   packet_type : 16,
+  class_of_device : ClassOfDevice,
 }
 
 packet ScoConnectionResponse : LinkLayerPacket (type = SCO_CONNECTION_RESPONSE) {
