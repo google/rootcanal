@@ -665,7 +665,8 @@ void DualModeController::AddScoConnection(CommandView command) {
   ASSERT(command_view.IsValid());
 
   auto status = link_layer_controller_.AddScoConnection(
-      command_view.GetConnectionHandle(), command_view.GetPacketType());
+      command_view.GetConnectionHandle(), command_view.GetPacketType(),
+      ScoDatapath::NORMAL);
 
   send_event_(bluetooth::hci::AddScoConnectionStatusBuilder::Create(
       status, kNumCommandPackets));
@@ -682,7 +683,7 @@ void DualModeController::SetupSynchronousConnection(CommandView command) {
       command_view.GetReceiveBandwidth(), command_view.GetMaxLatency(),
       command_view.GetVoiceSetting(),
       static_cast<uint8_t>(command_view.GetRetransmissionEffort()),
-      command_view.GetPacketType());
+      command_view.GetPacketType(), ScoDatapath::NORMAL);
 
   send_event_(bluetooth::hci::SetupSynchronousConnectionStatusBuilder::Create(
       status, kNumCommandPackets));
@@ -762,15 +763,17 @@ void DualModeController::EnhancedSetupSynchronousConnection(
   }
 
   // Root-Canal does not implement audio data transport paths other than the
-  // default HCI transport.
+  // default HCI transport - other transports will receive spoofed data
+  ScoDatapath datapath = ScoDatapath::NORMAL;
   if (command_view.GetInputDataPath() != bluetooth::hci::ScoDataPath::HCI ||
       command_view.GetOutputDataPath() != bluetooth::hci::ScoDataPath::HCI) {
-    LOG_INFO(
-        "EnhancedSetupSynchronousConnection: rejected Input_Data_Path (%u)"
-        " and/or Output_Data_Path (%u) as they are un-implemented",
+    LOG_WARN(
+        "EnhancedSetupSynchronousConnection: Input_Data_Path (%u)"
+        " and/or Output_Data_Path (%u) are not over HCI, so data will be "
+        "spoofed",
         static_cast<unsigned>(command_view.GetInputDataPath()),
         static_cast<unsigned>(command_view.GetOutputDataPath()));
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+    datapath = ScoDatapath::SPOOFED;
   }
 
   // Either both the Transmit_Coding_Format and Input_Coding_Format shall be
@@ -842,7 +845,7 @@ void DualModeController::EnhancedSetupSynchronousConnection(
         command_view.GetConnectionHandle(), transmit_bandwidth,
         receive_bandwidth, command_view.GetMaxLatency(), 0 /* Voice_Setting */,
         static_cast<uint8_t>(command_view.GetRetransmissionEffort()),
-        command_view.GetPacketType());
+        command_view.GetPacketType(), datapath);
   }
 
   send_event_(
@@ -911,11 +914,11 @@ void DualModeController::EnhancedAcceptSynchronousConnection(
   if (command_view.GetInputDataPath() != bluetooth::hci::ScoDataPath::HCI ||
       command_view.GetOutputDataPath() != bluetooth::hci::ScoDataPath::HCI) {
     LOG_INFO(
-        "EnhancedAcceptSynchronousConnection: rejected Input_Data_Path (%u)"
-        " and/or Output_Data_Path (%u) as they are un-implemented",
+        "EnhancedSetupSynchronousConnection: Input_Data_Path (%u)"
+        " and/or Output_Data_Path (%u) are not over HCI, so data will be "
+        "spoofed",
         static_cast<unsigned>(command_view.GetInputDataPath()),
         static_cast<unsigned>(command_view.GetOutputDataPath()));
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
   }
 
   // Either both the Transmit_Coding_Format and Input_Coding_Format shall be
