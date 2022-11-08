@@ -311,3 +311,17 @@ bool ScoConnection::NegotiateLinkParameters(
   }
   return link_parameters.has_value();
 }
+
+void ScoConnection::StartStream(std::function<AsyncTaskId()> startStream) {
+  ASSERT(!stream_handle_.has_value());
+  if (datapath_ == ScoDatapath::SPOOFED) {
+    stream_handle_ = startStream();
+  }
+}
+
+void ScoConnection::StopStream(std::function<void(AsyncTaskId)> stopStream) {
+  if (stream_handle_.has_value()) {
+    stopStream(*stream_handle_);
+  }
+  stream_handle_ = std::nullopt;
+}

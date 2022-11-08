@@ -149,6 +149,10 @@ class LinkLayerController {
   AsyncTaskId ScheduleTask(std::chrono::milliseconds delay_ms,
                            const TaskCallback& task);
 
+  AsyncTaskId SchedulePeriodicTask(std::chrono::milliseconds delay_ms,
+                                   std::chrono::milliseconds period_ms,
+                                   const TaskCallback& callback);
+
   void CancelScheduledTask(AsyncTaskId task);
 
   // Set the callbacks for sending packets to the HCI.
@@ -344,11 +348,13 @@ class LinkLayerController {
   void ReadLocalOobData();
   void ReadLocalOobExtendedData();
 
-  ErrorCode AddScoConnection(uint16_t connection_handle, uint16_t packet_type);
+  ErrorCode AddScoConnection(uint16_t connection_handle, uint16_t packet_type,
+                             ScoDatapath datapath);
   ErrorCode SetupSynchronousConnection(
       uint16_t connection_handle, uint32_t transmit_bandwidth,
       uint32_t receive_bandwidth, uint16_t max_latency, uint16_t voice_setting,
-      uint8_t retransmission_effort, uint16_t packet_types);
+      uint8_t retransmission_effort, uint16_t packet_types,
+      ScoDatapath datapath);
   ErrorCode AcceptSynchronousConnection(
       Address bd_addr, uint32_t transmit_bandwidth, uint32_t receive_bandwidth,
       uint16_t max_latency, uint16_t voice_setting,
@@ -766,6 +772,8 @@ class LinkLayerController {
   void SetLeSuggestedMaxTxTime(uint16_t max_tx_time) {
     le_suggested_max_tx_time_ = max_tx_time;
   }
+
+  AsyncTaskId StartScoStream(Address address);
 
  private:
   const Address& address_;
