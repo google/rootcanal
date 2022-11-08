@@ -773,14 +773,14 @@ class LinkLayerController {
 
   // Host Supported Features (Vol 2, Part C § 3.3 Feature Mask Definition).
   // Page 1 of the LMP feature mask.
-  uint64_t host_supported_features_;
+  uint64_t host_supported_features_{};
   bool le_host_support_{false};
   bool secure_simple_pairing_host_support_{false};
   bool secure_connections_host_support_{false};
 
   // Le Host Supported Features (Vol 4, Part E § 7.8.3).
   // Specifies the bits indicating Host support.
-  uint64_t le_host_supported_features_;
+  uint64_t le_host_supported_features_{};
   bool connected_isochronous_stream_host_support_{false};
   bool connection_subrating_host_support_{false};
 
