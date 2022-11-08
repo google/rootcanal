@@ -1343,16 +1343,20 @@ void LinkLayerController::LeAdvertising() {
         break;
     }
 
-    SendLeLinkLayerPacket(model::packets::LeLegacyAdvertisingPduBuilder::Create(
+    SendLeLinkLayerPacketWithRssi(
         legacy_advertiser_.advertising_address.GetAddress(),
         legacy_advertiser_.target_address.GetAddress(),
-        static_cast<model::packets::AddressType>(
-            legacy_advertiser_.advertising_address.GetAddressType()),
-        static_cast<model::packets::AddressType>(
-            legacy_advertiser_.target_address.GetAddressType()),
-        type,
-        attach_advertising_data ? legacy_advertiser_.advertising_data
-                                : std::vector<uint8_t>{}));
+        properties_.le_advertising_physical_channel_tx_power,
+        model::packets::LeLegacyAdvertisingPduBuilder::Create(
+            legacy_advertiser_.advertising_address.GetAddress(),
+            legacy_advertiser_.target_address.GetAddress(),
+            static_cast<model::packets::AddressType>(
+                legacy_advertiser_.advertising_address.GetAddressType()),
+            static_cast<model::packets::AddressType>(
+                legacy_advertiser_.target_address.GetAddressType()),
+            type,
+            attach_advertising_data ? legacy_advertiser_.advertising_data
+                                    : std::vector<uint8_t>{}));
   }
 
   for (auto& [_, advertiser] : extended_advertisers_) {
@@ -1454,7 +1458,10 @@ void LinkLayerController::LeAdvertising() {
             break;
         }
 
-        SendLeLinkLayerPacket(
+        SendLeLinkLayerPacketWithRssi(
+            advertiser.advertising_address.GetAddress(),
+            advertiser.target_address.GetAddress(),
+            advertiser.advertising_tx_power,
             model::packets::LeLegacyAdvertisingPduBuilder::Create(
                 advertiser.advertising_address.GetAddress(),
                 advertiser.target_address.GetAddress(),
@@ -1464,7 +1471,10 @@ void LinkLayerController::LeAdvertising() {
                     advertiser.target_address.GetAddressType()),
                 type, advertiser.advertising_data));
       } else {
-        SendLeLinkLayerPacket(
+        SendLeLinkLayerPacketWithRssi(
+            advertiser.advertising_address.GetAddress(),
+            advertiser.target_address.GetAddress(),
+            advertiser.advertising_tx_power,
             model::packets::LeExtendedAdvertisingPduBuilder::Create(
                 advertiser.advertising_address.GetAddress(),
                 advertiser.target_address.GetAddress(),
