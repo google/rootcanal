@@ -75,19 +75,20 @@ void H4DataChannelPacketizer::OnDataReady(
     disconnected_ = true;
     disconnect_cb_();
     return;
-  } else if (bytes_read < 0) {
+  }
+  if (bytes_read < 0) {
     if (errno == EAGAIN) {
       // No data, try again later.
       return;
-    } else if (errno == ECONNRESET) {
+    }
+    if (errno == ECONNRESET) {
       // They probably rejected our packet
       disconnected_ = true;
       disconnect_cb_();
       return;
-    } else {
-      LOG_ALWAYS_FATAL("Read error in %u: %s", h4_parser_.CurrentState(),
-                       strerror(errno));
     }
+    LOG_ALWAYS_FATAL("Read error in %u: %s", h4_parser_.CurrentState(),
+                     strerror(errno));
   }
   h4_parser_.Consume(buffer.data(), bytes_read);
 }

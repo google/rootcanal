@@ -51,7 +51,7 @@ class PosixAsyncSocketConnector : public AsyncDataChannelConnector {
   // might not (yet?) have called accept on the socket.
   std::shared_ptr<AsyncDataChannel> ConnectToRemoteServer(
       const std::string& server, int port,
-      const std::chrono::milliseconds timeout = 5000ms);
+      std::chrono::milliseconds timeout = 5000ms);
 
  private:
   AsyncManager* am_;

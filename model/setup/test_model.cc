@@ -61,7 +61,9 @@ TestModel::~TestModel() {
 void TestModel::SetTimerPeriod(std::chrono::milliseconds new_period) {
   timer_period_ = new_period;
 
-  if (timer_tick_task_ == kInvalidTaskId) return;
+  if (timer_tick_task_ == kInvalidTaskId) {
+    return;
+  }
 
   // Restart the timer with the new period
   StopTimer();

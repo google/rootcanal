@@ -54,7 +54,9 @@ size_t H4Packetizer::Send(uint8_t type, const uint8_t* data, size_t length) {
 }
 
 void H4Packetizer::OnDataReady(int fd) {
-  if (disconnected_) return;
+  if (disconnected_) {
+    return;
+  }
   ssize_t bytes_to_read = h4_parser_.BytesRequested();
   std::vector<uint8_t> buffer(bytes_to_read);
 
@@ -68,19 +70,21 @@ void H4Packetizer::OnDataReady(int fd) {
     disconnected_ = true;
     disconnect_cb_();
     return;
-  } else if (bytes_read < 0) {
+  }
+  if (bytes_read < 0) {
     if (errno == EAGAIN) {
       // No data, try again later.
       return;
-    } else if (errno == ECONNRESET) {
+    }
+    if (errno == ECONNRESET) {
       // They probably rejected our packet
       disconnected_ = true;
       disconnect_cb_();
       return;
-    } else {
-      LOG_ALWAYS_FATAL("Read error in %d: %s", h4_parser_.CurrentState(),
-                       strerror(errno));
     }
+
+    LOG_ALWAYS_FATAL("Read error in %d: %s", h4_parser_.CurrentState(),
+                     strerror(errno));
   }
   h4_parser_.Consume(buffer.data(), bytes_read);
 }

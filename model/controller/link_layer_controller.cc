@@ -1336,7 +1336,7 @@ void LinkLayerController::SetSecureConnectionsSupport(bool enable) {
 }
 
 void LinkLayerController::SetLocalName(
-    std::array<uint8_t, 248> const& local_name) {
+    std::array<uint8_t, kLocalNameSize> const& local_name) {
   std::copy(local_name.begin(), local_name.end(), local_name_.begin());
 }
 
@@ -4166,7 +4166,7 @@ void LinkLayerController::IncomingLeEncryptConnectionResponse(
   ASSERT(response.IsValid());
 
   // Zero LTK is a rejection
-  if (response.GetLtk() == std::array<uint8_t, 16>()) {
+  if (response.GetLtk() == std::array<uint8_t, 16>{0}) {
     status = ErrorCode::AUTHENTICATION_FAILURE;
   }
 
@@ -4766,7 +4766,9 @@ void LinkLayerController::IncomingPageResponsePacket(
 }
 
 void LinkLayerController::TimerTick() {
-  if (inquiry_timer_task_id_ != kInvalidTaskId) Inquiry();
+  if (inquiry_timer_task_id_ != kInvalidTaskId) {
+    Inquiry();
+  }
   LeAdvertising();
   LeScanning();
 #ifdef ROOTCANAL_LMP
@@ -4821,13 +4823,13 @@ AsyncTaskId LinkLayerController::ScheduleTask(
     milliseconds delay_ms, const TaskCallback& task_callback) {
   if (schedule_task_) {
     return schedule_task_(delay_ms, task_callback);
-  } else if (delay_ms == milliseconds::zero()) {
+  }
+  if (delay_ms == milliseconds::zero()) {
     task_callback();
     return 0;
-  } else {
-    LOG_ERROR("Unable to schedule task on delay");
-    return 0;
   }
+  LOG_ERROR("Unable to schedule task on delay");
+  return 0;
 }
 
 AsyncTaskId LinkLayerController::SchedulePeriodicTask(
@@ -4835,10 +4837,9 @@ AsyncTaskId LinkLayerController::SchedulePeriodicTask(
     const TaskCallback& task_callback) {
   if (schedule_periodic_task_) {
     return schedule_periodic_task_(delay_ms, period_ms, task_callback);
-  } else {
-    LOG_ERROR("Unable to schedule task on delay");
-    return 0;
   }
+  LOG_ERROR("Unable to schedule task on delay");
+  return 0;
 }
 
 void LinkLayerController::RegisterPeriodicTaskScheduler(
@@ -5435,8 +5436,10 @@ void LinkLayerController::RejectPeripheralConnection(const Address& addr,
   }
 }
 
-ErrorCode LinkLayerController::CreateConnection(const Address& addr, uint16_t,
-                                                uint8_t, uint16_t,
+ErrorCode LinkLayerController::CreateConnection(const Address& addr,
+                                                uint16_t /* packet_type */,
+                                                uint8_t /* page_scan_mode */,
+                                                uint16_t /* clock_offset */,
                                                 uint8_t allow_role_switch) {
   if (!connections_.CreatePendingConnection(
           addr, authentication_enable_ == AuthenticationEnable::REQUIRED)) {
@@ -5546,6 +5549,7 @@ ErrorCode LinkLayerController::ChangeConnectionPacketType(uint16_t handle,
   return ErrorCode::SUCCESS;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 ErrorCode LinkLayerController::ChangeConnectionLinkKey(uint16_t handle) {
   if (!connections_.HasHandle(handle)) {
     return ErrorCode::UNKNOWN_CONNECTION;
@@ -5555,6 +5559,7 @@ ErrorCode LinkLayerController::ChangeConnectionLinkKey(uint16_t handle) {
   return ErrorCode::COMMAND_DISALLOWED;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 ErrorCode LinkLayerController::CentralLinkKey(uint8_t /* key_flag */) {
   // TODO: implement real logic
   return ErrorCode::COMMAND_DISALLOWED;
@@ -5672,19 +5677,19 @@ ErrorCode LinkLayerController::WriteDefaultLinkPolicySettings(
   return ErrorCode::SUCCESS;
 }
 
-uint16_t LinkLayerController::ReadDefaultLinkPolicySettings() {
+uint16_t LinkLayerController::ReadDefaultLinkPolicySettings() const {
   return default_link_policy_settings_;
 }
 
 void LinkLayerController::ReadLocalOobData() {
   std::array<uint8_t, 16> c_array(
       {'c', ' ', 'a', 'r', 'r', 'a', 'y', ' ', '0', '0', '0', '0', '0', '0',
-       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8u),
+       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8),
        static_cast<uint8_t>(oob_id_ % 0x100)});
 
   std::array<uint8_t, 16> r_array(
       {'r', ' ', 'a', 'r', 'r', 'a', 'y', ' ', '0', '0', '0', '0', '0', '0',
-       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8u),
+       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8),
        static_cast<uint8_t>(oob_id_ % 0x100)});
 
   send_event_(bluetooth::hci::ReadLocalOobDataCompleteBuilder::Create(
@@ -5695,22 +5700,22 @@ void LinkLayerController::ReadLocalOobData() {
 void LinkLayerController::ReadLocalOobExtendedData() {
   std::array<uint8_t, 16> c_192_array(
       {'c', ' ', 'a', 'r', 'r', 'a', 'y', ' ', '1', '9', '2', '0', '0', '0',
-       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8u),
+       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8),
        static_cast<uint8_t>(oob_id_ % 0x100)});
 
   std::array<uint8_t, 16> r_192_array(
       {'r', ' ', 'a', 'r', 'r', 'a', 'y', ' ', '1', '9', '2', '0', '0', '0',
-       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8u),
+       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8),
        static_cast<uint8_t>(oob_id_ % 0x100)});
 
   std::array<uint8_t, 16> c_256_array(
       {'c', ' ', 'a', 'r', 'r', 'a', 'y', ' ', '2', '5', '6', '0', '0', '0',
-       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8u),
+       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8),
        static_cast<uint8_t>(oob_id_ % 0x100)});
 
   std::array<uint8_t, 16> r_256_array(
       {'r', ' ', 'a', 'r', 'r', 'a', 'y', ' ', '2', '5', '6', '0', '0', '0',
-       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8u),
+       static_cast<uint8_t>((oob_id_ % 0x10000) >> 8),
        static_cast<uint8_t>(oob_id_ % 0x100)});
 
   send_event_(bluetooth::hci::ReadLocalOobExtendedDataCompleteBuilder::Create(
@@ -5735,8 +5740,8 @@ ErrorCode LinkLayerController::FlowSpecification(
   return ErrorCode::COMMAND_DISALLOWED;
 }
 
-ErrorCode LinkLayerController::WriteLinkSupervisionTimeout(uint16_t handle,
-                                                           uint16_t) {
+ErrorCode LinkLayerController::WriteLinkSupervisionTimeout(
+    uint16_t handle, uint16_t /* timeout */) {
   if (!connections_.HasHandle(handle)) {
     return ErrorCode::UNKNOWN_CONNECTION;
   }
@@ -5846,7 +5851,7 @@ ErrorCode LinkLayerController::LeRemoteConnectionParameterRequestNegativeReply(
 }
 
 bool LinkLayerController::HasAclConnection() {
-  return (connections_.GetAclHandles().size() > 0);
+  return !connections_.GetAclHandles().empty();
 }
 
 void LinkLayerController::LeReadIsoTxSync(uint16_t /* handle */) {}
@@ -5957,11 +5962,12 @@ ErrorCode LinkLayerController::LeRejectCisRequest(uint16_t cis_handle,
   SendLeLinkLayerPacket(model::packets::IsoConnectionResponseBuilder::Create(
       connections_.GetOwnAddress(acl_handle).GetAddress(),
       connections_.GetAddress(acl_handle).GetAddress(),
-      static_cast<uint8_t>(reason), acl_handle, cis_handle, kReservedHandle));
+      static_cast<uint8_t>(reason), cis_handle, acl_handle, kReservedHandle));
   connections_.RejectCis(cis_handle);
   return ErrorCode::SUCCESS;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 ErrorCode LinkLayerController::LeCreateBig(
     uint8_t /* big_handle */, uint8_t /* advertising_handle */,
     uint8_t /* num_bis */, uint32_t /* sdu_interval */, uint16_t /* max_sdu */,
@@ -5973,11 +5979,13 @@ ErrorCode LinkLayerController::LeCreateBig(
   return ErrorCode::SUCCESS;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 ErrorCode LinkLayerController::LeTerminateBig(uint8_t /* big_handle */,
                                               ErrorCode /* reason */) {
   return ErrorCode::SUCCESS;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 ErrorCode LinkLayerController::LeBigCreateSync(
     uint8_t /* big_handle */, uint16_t /* sync_handle */,
     bluetooth::hci::Enable /* encryption */,
@@ -5986,8 +5994,10 @@ ErrorCode LinkLayerController::LeBigCreateSync(
   return ErrorCode::SUCCESS;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 void LinkLayerController::LeBigTerminateSync(uint8_t /* big_handle */) {}
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 ErrorCode LinkLayerController::LeRequestPeerSca(uint16_t /* request_handle */) {
   return ErrorCode::SUCCESS;
 }
@@ -6005,7 +6015,7 @@ void LinkLayerController::LeRemoveIsoDataPath(
 
 void LinkLayerController::HandleLeEnableEncryption(
     uint16_t handle, std::array<uint8_t, 8> rand, uint16_t ediv,
-    std::array<uint8_t, 16> ltk) {
+    std::array<uint8_t, kLtkSize> ltk) {
   // TODO: Check keys
   // TODO: Block ACL traffic or at least guard against it
   if (!connections_.HasHandle(handle)) {
@@ -6016,10 +6026,9 @@ void LinkLayerController::HandleLeEnableEncryption(
       connections_.GetAddress(handle).GetAddress(), rand, ediv, ltk));
 }
 
-ErrorCode LinkLayerController::LeEnableEncryption(uint16_t handle,
-                                                  std::array<uint8_t, 8> rand,
-                                                  uint16_t ediv,
-                                                  std::array<uint8_t, 16> ltk) {
+ErrorCode LinkLayerController::LeEnableEncryption(
+    uint16_t handle, std::array<uint8_t, 8> rand, uint16_t ediv,
+    std::array<uint8_t, kLtkSize> ltk) {
   if (!connections_.HasHandle(handle)) {
     LOG_INFO("Unknown handle %04x", handle);
     return ErrorCode::UNKNOWN_CONNECTION;
@@ -6032,7 +6041,7 @@ ErrorCode LinkLayerController::LeEnableEncryption(uint16_t handle,
 }
 
 ErrorCode LinkLayerController::LeLongTermKeyRequestReply(
-    uint16_t handle, std::array<uint8_t, 16> ltk) {
+    uint16_t handle, std::array<uint8_t, kLtkSize> ltk) {
   if (!connections_.HasHandle(handle)) {
     LOG_INFO("Unknown handle %04x", handle);
     return ErrorCode::UNKNOWN_CONNECTION;
@@ -6197,8 +6206,6 @@ void LinkLayerController::SetPageScanEnable(bool enable) {
   page_scan_enable_ = enable;
 }
 
-uint16_t LinkLayerController::GetPageTimeout() { return page_timeout_; }
-
 void LinkLayerController::SetPageTimeout(uint16_t page_timeout) {
   page_timeout_ = page_timeout;
 }
@@ -6224,7 +6231,7 @@ ErrorCode LinkLayerController::AddScoConnection(uint16_t connection_handle,
       0xffff,
       0x60 /* 16bit CVSD */,
       (uint8_t)bluetooth::hci::RetransmissionEffort::NO_RETRANSMISSION,
-      (uint16_t)((uint16_t)((packet_type >> 5) & 0x7u) |
+      (uint16_t)((uint16_t)((packet_type >> 5) & 0x7U) |
                  (uint16_t)bluetooth::hci::SynchronousPacketTypeBits::
                      NO_2_EV3_ALLOWED |
                  (uint16_t)bluetooth::hci::SynchronousPacketTypeBits::

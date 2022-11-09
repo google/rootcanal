@@ -37,7 +37,7 @@ class AsyncDataChannelConnector {
   // the errno variable can be set with the encountered error.
   virtual std::shared_ptr<AsyncDataChannel> ConnectToRemoteServer(
       const std::string& server, int port,
-      const std::chrono::milliseconds timeout = 5000ms) = 0;
+      std::chrono::milliseconds timeout = 5000ms) = 0;
 };
 }  // namespace net
 }  // namespace android

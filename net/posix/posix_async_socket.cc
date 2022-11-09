@@ -108,10 +108,7 @@ bool PosixAsyncSocket::Connected() {
   char buf;
   if (recv(fd_, &buf, 1, MSG_PEEK | MSG_DONTWAIT) != 1) {
     DD("Recv not 1, could be connected: %s (%d)", strerror(errno), fd_);
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      return true;
-    }
-    return false;
+    return errno == EAGAIN || errno == EWOULDBLOCK;
   }
 
   // We saw a byte in the queue, we are likely connected.

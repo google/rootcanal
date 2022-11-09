@@ -33,10 +33,10 @@ class DeviceBoutique {
   virtual ~DeviceBoutique() = default;
 
   // Register a constructor for a device type.
-  static bool Register(const std::string& device_type,
-                       const std::function<std::shared_ptr<Device>(
-                           const std::vector<std::string>&)>
-                           method);
+  static bool Register(
+      std::string const& device_type,
+      std::function<std::shared_ptr<Device>(const std::vector<std::string>&)>
+          method);
 
   // Call the function that matches arg[0] with args
   static std::shared_ptr<Device> Create(const std::vector<std::string>& args);

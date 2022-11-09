@@ -61,9 +61,6 @@ class ScriptedBeacon : public Beacon {
     std::chrono::steady_clock::time_point ad_time;
   };
 
-  void populate_event(PlaybackEvent* event,
-                      PlaybackEvent::PlaybackEventType type);
-
   void get_next_advertisement();
 
   void set_state(PlaybackEvent::PlaybackEventType state);

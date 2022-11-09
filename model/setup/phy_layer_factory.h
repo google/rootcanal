@@ -34,9 +34,9 @@ class PhyLayerFactory {
 
   virtual ~PhyLayerFactory() = default;
 
-  Phy::Type GetType();
+  Phy::Type GetType() const;
 
-  uint32_t GetFactoryId();
+  uint32_t GetFactoryId() const;
 
   std::shared_ptr<PhyLayer> GetPhyLayer(
       const std::function<void(model::packets::LinkLayerPacketView)>&

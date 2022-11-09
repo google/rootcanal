@@ -175,7 +175,7 @@ class AsyncManager::AsyncFdWatcher {
     return 0;
   }
 
-  int notifyThread() {
+  int notifyThread() const {
     char buffer = '0';
     if (TEMP_FAILURE_RETRY(write(notification_write_fd_, &buffer, 1)) < 0) {
       LOG_ERROR("%s: Unable to send message to reading thread", __func__);
@@ -201,7 +201,7 @@ class AsyncManager::AsyncFdWatcher {
   }
 
   // check the comm channel and read everything there
-  bool consumeThreadNotifications(fd_set& read_fds) {
+  bool consumeThreadNotifications(fd_set& read_fds) const {
     if (FD_ISSET(notification_listen_fd_, &read_fds)) {
       char buffer[kNotificationBufferSize];
       while (TEMP_FAILURE_RETRY(read(notification_listen_fd_, buffer,
@@ -405,8 +405,9 @@ class AsyncManager::AsyncTaskManager {
     {
       std::unique_lock<std::mutex> guard(internal_mutex_);
       // no more room for new tasks, we need a larger type for IDs
-      if (tasks_by_id_.size() == kMaxTaskId)  // TODO potentially type unsafe
+      if (tasks_by_id_.size() == kMaxTaskId) {  // TODO potentially type unsafe
         return kInvalidTaskId;
+      }
       do {
         lastTaskId_ = NextAsyncTaskId(lastTaskId_);
       } while (isTaskIdInUse(lastTaskId_));
@@ -480,9 +481,11 @@ class AsyncManager::AsyncTaskManager {
       {
         std::unique_lock<std::mutex> guard(internal_mutex_);
         // check for termination right before waiting
-        if (!running_) break;
+        if (!running_) {
+          break;
+        }
         // wait until time for the next task (if any)
-        if (task_queue_.size() > 0) {
+        if (!task_queue_.empty()) {
           // Make a copy of the time_point because wait_until takes a reference
           // to it and may read it after waiting, by which time the task may
           // have been freed (e.g. via CancelAsyncTask).
@@ -559,8 +562,8 @@ bool AsyncManager::CancelAsyncTasksFromUser(rootcanal::AsyncUserId user_id) {
   return taskManager_p_->CancelAsyncTasksFromUser(user_id);
 }
 
-void AsyncManager::Synchronize(const CriticalCallback& critical) {
+void AsyncManager::Synchronize(const CriticalCallback& critical_callback) {
   std::unique_lock<std::mutex> guard(synchronization_mutex_);
-  critical();
+  critical_callback();
 }
 }  // namespace rootcanal

@@ -43,11 +43,11 @@ class PhyLayer {
 
   virtual void Unregister() = 0;
 
-  Phy::Type GetType() { return phy_type_; }
+  Phy::Type GetType() const { return phy_type_; }
 
-  uint32_t GetId() { return id_; }
+  uint32_t GetId() const { return id_; }
 
-  uint32_t GetDeviceId() { return device_id_; }
+  uint32_t GetDeviceId() const { return device_id_; }
 
   virtual ~PhyLayer() = default;
 
