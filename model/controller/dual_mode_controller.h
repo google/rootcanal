@@ -24,10 +24,11 @@
 #include <unordered_map>
 #include <vector>
 
+#include "controller_properties.h"
 #include "hci/address.h"
 #include "hci/hci_packets.h"
-#include "controller_properties.h"
 #include "link_layer_controller.h"
+#include "model/controller/vendor/csr.h"
 #include "model/devices/device.h"
 #include "model/setup/async_manager.h"
 #ifndef ROOTCANAL_LMP
@@ -606,6 +607,15 @@ class DualModeController : public Device {
   void LeEnergyInfo(CommandView args);
   void LeAdvertisingFilter(CommandView args);
   void LeExtendedScanParams(CommandView args);
+
+  // CSR vendor command.
+  // Implement the command specific to the CSR controller
+  // used specifically by the PTS tool to pass certification tests.
+  void CsrVendorCommand(CommandView args);
+  void CsrReadVarid(CsrVarid varid, std::vector<uint8_t>& value);
+  void CsrWriteVarid(CsrVarid varid, std::vector<uint8_t> const& value);
+  void CsrReadPskey(CsrPskey pskey, std::vector<uint8_t>& value);
+  void CsrWritePskey(CsrPskey pskey, std::vector<uint8_t> const& value);
 
   // Required commands for handshaking with hci driver
   void ReadClassOfDevice(CommandView args);
