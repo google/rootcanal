@@ -101,12 +101,12 @@ void TestEnvironment::close() {
   test_model_.Reset();
 }
 
-void TestEnvironment::SetUpHciServer(ConnectCallback connection_callback) {
+void TestEnvironment::SetUpHciServer(ConnectCallback on_connect) {
   test_channel_.RegisterSendResponse([](const std::string& response) {
     LOG_INFO("No HCI Response channel: %s", response.c_str());
   });
 
-  if (!remote_hci_transport_.SetUp(hci_socket_server_, connection_callback)) {
+  if (!remote_hci_transport_.SetUp(hci_socket_server_, on_connect)) {
     LOG_ERROR("Remote HCI channel SetUp failed.");
     return;
   }

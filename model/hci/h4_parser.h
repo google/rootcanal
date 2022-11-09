@@ -92,8 +92,8 @@ class H4Parser {
   PacketReadCallback sco_cb_;
   PacketReadCallback iso_cb_;
 
-  size_t HciGetPacketLengthForType(PacketType type,
-                                   const uint8_t* preamble) const;
+  static size_t HciGetPacketLengthForType(PacketType type,
+                                          const uint8_t* preamble);
 
   PacketType hci_packet_type_{PacketType::UNKNOWN};
 

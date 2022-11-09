@@ -67,9 +67,11 @@ std::optional<ClassOfDevice> ClassOfDevice::FromString(const std::string& str) {
 
     if (index == 0 && token.length() != 3) {
       return std::nullopt;
-    } else if (index == 1 && token.length() != 1) {
+    }
+    if (index == 1 && token.length() != 1) {
       return std::nullopt;
-    } else if (index == 2 && token.length() != 2) {
+    }
+    if (index == 2 && token.length() != 2) {
       return std::nullopt;
     }
     char* temp = nullptr;
@@ -102,8 +104,8 @@ bool ClassOfDevice::FromString(const std::string& from, ClassOfDevice& to) {
   return true;
 }
 
-bool ClassOfDevice::IsValid(const std::string& cod) {
-  return ClassOfDevice::FromString(cod).has_value();
+bool ClassOfDevice::IsValid(const std::string& class_of_device) {
+  return ClassOfDevice::FromString(class_of_device).has_value();
 }
 
 }  // namespace hci

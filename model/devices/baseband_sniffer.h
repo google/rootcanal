@@ -51,7 +51,7 @@ class BaseBandSniffer : public Device {
   virtual void TimerTick() override;
 
  private:
-  void AppendRecord(std::unique_ptr<bredr_bb::BaseBandPacketBuilder> record);
+  void AppendRecord(std::unique_ptr<bredr_bb::BaseBandPacketBuilder> packet);
   std::ofstream output_;
 };
 

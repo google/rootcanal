@@ -36,7 +36,7 @@ void H4Parser::Reset() {
 }
 
 size_t H4Parser::HciGetPacketLengthForType(PacketType type,
-                                           const uint8_t* preamble) const {
+                                           const uint8_t* preamble) {
   static const size_t
       packet_length_offset[static_cast<size_t>(PacketType::ISO) + 1] = {
           0,
@@ -50,10 +50,10 @@ size_t H4Parser::HciGetPacketLengthForType(PacketType type,
   size_t offset = packet_length_offset[static_cast<size_t>(type)];
   size_t size = preamble[offset];
   if (type == PacketType::ACL) {
-    size |= ((size_t)preamble[offset + 1]) << 8u;
+    size |= ((size_t)preamble[offset + 1]) << 8;
   }
   if (type == PacketType::ISO) {
-    size |= ((size_t)preamble[offset + 1] & 0x0fu) << 8u;
+    size |= ((size_t)preamble[offset + 1] & 0x0fU) << 8;
   }
   return size;
 }
@@ -107,7 +107,8 @@ bool H4Parser::Consume(uint8_t* buffer, int32_t bytes_read) {
   if (bytes_read <= 0) {
     LOG_INFO("remote disconnected, or unhandled error?");
     return false;
-  } else if ((uint32_t)bytes_read > BytesRequested()) {
+  }
+  if ((uint32_t)bytes_read > BytesRequested()) {
     LOG_ALWAYS_FATAL("More bytes read (%u) than expected (%u)!",
                      static_cast<int>(bytes_read),
                      static_cast<int>(bytes_to_read));

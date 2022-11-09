@@ -66,9 +66,7 @@ class ScriptedBeacon : public Beacon {
 
   void get_next_advertisement();
 
-  void set_state(
-      android::bluetooth::rootcanal::model::devices::ScriptedBeaconBleAdProto::
-          PlaybackEvent::PlaybackEventType type);
+  void set_state(PlaybackEvent::PlaybackEventType state);
 
   Advertisement next_ad_{};
   int packet_num_{0};

@@ -106,8 +106,8 @@ class AclConnectionHandler {
                    bluetooth::hci::ClockAccuracy accuracy,
                    bluetooth::hci::Packing packing,
                    bluetooth::hci::Enable framing,
-                   uint16_t max_transport_latency_m_to_s_,
-                   uint16_t max_transport_latency_s_to_m_,
+                   uint16_t max_transport_latency_m_to_s,
+                   uint16_t max_transport_latency_s_to_m,
                    std::vector<bluetooth::hci::CisParametersConfig>& streams);
 
   void CreatePendingCis(bluetooth::hci::CreateCisConfig config);

@@ -1907,58 +1907,60 @@ void LinkLayerController::IncomingScoPacket(
 }
 
 void LinkLayerController::IncomingRemoteNameRequest(
-    model::packets::LinkLayerPacketView packet) {
-  auto view = model::packets::RemoteNameRequestView::Create(packet);
+    model::packets::LinkLayerPacketView incoming) {
+  auto view = model::packets::RemoteNameRequestView::Create(incoming);
   ASSERT(view.IsValid());
 
   SendLinkLayerPacket(model::packets::RemoteNameRequestResponseBuilder::Create(
-      packet.GetDestinationAddress(), packet.GetSourceAddress(), local_name_));
+      incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
+      local_name_));
 }
 
 void LinkLayerController::IncomingRemoteNameRequestResponse(
-    model::packets::LinkLayerPacketView packet) {
-  auto view = model::packets::RemoteNameRequestResponseView::Create(packet);
+    model::packets::LinkLayerPacketView incoming) {
+  auto view = model::packets::RemoteNameRequestResponseView::Create(incoming);
   ASSERT(view.IsValid());
 
   if (IsEventUnmasked(EventCode::REMOTE_NAME_REQUEST_COMPLETE)) {
     send_event_(bluetooth::hci::RemoteNameRequestCompleteBuilder::Create(
-        ErrorCode::SUCCESS, packet.GetSourceAddress(), view.GetName()));
+        ErrorCode::SUCCESS, incoming.GetSourceAddress(), view.GetName()));
   }
 }
 
 void LinkLayerController::IncomingReadRemoteLmpFeatures(
-    model::packets::LinkLayerPacketView packet) {
+    model::packets::LinkLayerPacketView incoming) {
   SendLinkLayerPacket(
       model::packets::ReadRemoteLmpFeaturesResponseBuilder::Create(
-          packet.GetDestinationAddress(), packet.GetSourceAddress(),
+          incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
           host_supported_features_));
 }
 
 void LinkLayerController::IncomingReadRemoteLmpFeaturesResponse(
-    model::packets::LinkLayerPacketView packet) {
-  auto view = model::packets::ReadRemoteLmpFeaturesResponseView::Create(packet);
+    model::packets::LinkLayerPacketView incoming) {
+  auto view =
+      model::packets::ReadRemoteLmpFeaturesResponseView::Create(incoming);
   ASSERT(view.IsValid());
   if (IsEventUnmasked(EventCode::REMOTE_HOST_SUPPORTED_FEATURES_NOTIFICATION)) {
     send_event_(
         bluetooth::hci::RemoteHostSupportedFeaturesNotificationBuilder::Create(
-            packet.GetSourceAddress(), view.GetFeatures()));
+            incoming.GetSourceAddress(), view.GetFeatures()));
   }
 }
 
 void LinkLayerController::IncomingReadRemoteSupportedFeatures(
-    model::packets::LinkLayerPacketView packet) {
+    model::packets::LinkLayerPacketView incoming) {
   SendLinkLayerPacket(
       model::packets::ReadRemoteSupportedFeaturesResponseBuilder::Create(
-          packet.GetDestinationAddress(), packet.GetSourceAddress(),
+          incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
           properties_.lmp_features[0]));
 }
 
 void LinkLayerController::IncomingReadRemoteSupportedFeaturesResponse(
-    model::packets::LinkLayerPacketView packet) {
+    model::packets::LinkLayerPacketView incoming) {
   auto view =
-      model::packets::ReadRemoteSupportedFeaturesResponseView::Create(packet);
+      model::packets::ReadRemoteSupportedFeaturesResponseView::Create(incoming);
   ASSERT(view.IsValid());
-  Address source = packet.GetSourceAddress();
+  Address source = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(source);
   if (handle == kReservedHandle) {
     LOG_INFO("Discarding response from a disconnected device %s",
@@ -1973,8 +1975,8 @@ void LinkLayerController::IncomingReadRemoteSupportedFeaturesResponse(
 }
 
 void LinkLayerController::IncomingReadRemoteExtendedFeatures(
-    model::packets::LinkLayerPacketView packet) {
-  auto view = model::packets::ReadRemoteExtendedFeaturesView::Create(packet);
+    model::packets::LinkLayerPacketView incoming) {
+  auto view = model::packets::ReadRemoteExtendedFeaturesView::Create(incoming);
   ASSERT(view.IsValid());
   uint8_t page_number = view.GetPageNumber();
   uint8_t error_code = static_cast<uint8_t>(ErrorCode::SUCCESS);
@@ -1983,17 +1985,17 @@ void LinkLayerController::IncomingReadRemoteExtendedFeatures(
   }
   SendLinkLayerPacket(
       model::packets::ReadRemoteExtendedFeaturesResponseBuilder::Create(
-          packet.GetDestinationAddress(), packet.GetSourceAddress(), error_code,
-          page_number, GetMaxLmpFeaturesPageNumber(),
+          incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
+          error_code, page_number, GetMaxLmpFeaturesPageNumber(),
           GetLmpFeatures(page_number)));
 }
 
 void LinkLayerController::IncomingReadRemoteExtendedFeaturesResponse(
-    model::packets::LinkLayerPacketView packet) {
+    model::packets::LinkLayerPacketView incoming) {
   auto view =
-      model::packets::ReadRemoteExtendedFeaturesResponseView::Create(packet);
+      model::packets::ReadRemoteExtendedFeaturesResponseView::Create(incoming);
   ASSERT(view.IsValid());
-  Address source = packet.GetSourceAddress();
+  Address source = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(source);
   if (handle == kReservedHandle) {
     LOG_INFO("Discarding response from a disconnected device %s",
@@ -2009,21 +2011,21 @@ void LinkLayerController::IncomingReadRemoteExtendedFeaturesResponse(
 }
 
 void LinkLayerController::IncomingReadRemoteVersion(
-    model::packets::LinkLayerPacketView packet) {
+    model::packets::LinkLayerPacketView incoming) {
   SendLinkLayerPacket(
       model::packets::ReadRemoteVersionInformationResponseBuilder::Create(
-          packet.GetDestinationAddress(), packet.GetSourceAddress(),
+          incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
           static_cast<uint8_t>(properties_.lmp_version),
           static_cast<uint16_t>(properties_.lmp_subversion),
           properties_.company_identifier));
 }
 
 void LinkLayerController::IncomingReadRemoteVersionResponse(
-    model::packets::LinkLayerPacketView packet) {
-  auto view =
-      model::packets::ReadRemoteVersionInformationResponseView::Create(packet);
+    model::packets::LinkLayerPacketView incoming) {
+  auto view = model::packets::ReadRemoteVersionInformationResponseView::Create(
+      incoming);
   ASSERT(view.IsValid());
-  Address source = packet.GetSourceAddress();
+  Address source = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(source);
   if (handle == kReservedHandle) {
     LOG_INFO("Discarding response from a disconnected device %s",
@@ -2039,17 +2041,17 @@ void LinkLayerController::IncomingReadRemoteVersionResponse(
 }
 
 void LinkLayerController::IncomingReadClockOffset(
-    model::packets::LinkLayerPacketView packet) {
+    model::packets::LinkLayerPacketView incoming) {
   SendLinkLayerPacket(model::packets::ReadClockOffsetResponseBuilder::Create(
-      packet.GetDestinationAddress(), packet.GetSourceAddress(),
+      incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
       GetClockOffset()));
 }
 
 void LinkLayerController::IncomingReadClockOffsetResponse(
-    model::packets::LinkLayerPacketView packet) {
-  auto view = model::packets::ReadClockOffsetResponseView::Create(packet);
+    model::packets::LinkLayerPacketView incoming) {
+  auto view = model::packets::ReadClockOffsetResponseView::Create(incoming);
   ASSERT(view.IsValid());
-  Address source = packet.GetSourceAddress();
+  Address source = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(source);
   if (handle == kReservedHandle) {
     LOG_INFO("Discarding response from a disconnected device %s",
@@ -4782,47 +4784,47 @@ void LinkLayerController::Close() {
 
 void LinkLayerController::RegisterEventChannel(
     const std::function<void(std::shared_ptr<bluetooth::hci::EventBuilder>)>&
-        callback) {
-  send_event_ = callback;
+        send_event) {
+  send_event_ = send_event;
 }
 
 void LinkLayerController::RegisterAclChannel(
     const std::function<void(std::shared_ptr<bluetooth::hci::AclBuilder>)>&
-        callback) {
-  send_acl_ = callback;
+        send_acl) {
+  send_acl_ = send_acl;
 }
 
 void LinkLayerController::RegisterScoChannel(
     const std::function<void(std::shared_ptr<bluetooth::hci::ScoBuilder>)>&
-        callback) {
-  send_sco_ = callback;
+        send_sco) {
+  send_sco_ = send_sco;
 }
 
 void LinkLayerController::RegisterIsoChannel(
     const std::function<void(std::shared_ptr<bluetooth::hci::IsoBuilder>)>&
-        callback) {
-  send_iso_ = callback;
+        send_iso) {
+  send_iso_ = send_iso;
 }
 
 void LinkLayerController::RegisterRemoteChannel(
     const std::function<void(
         std::shared_ptr<model::packets::LinkLayerPacketBuilder>, Phy::Type)>&
-        callback) {
-  send_to_remote_ = callback;
+        send_to_remote) {
+  send_to_remote_ = send_to_remote;
 }
 
 void LinkLayerController::RegisterTaskScheduler(
     std::function<AsyncTaskId(milliseconds, const TaskCallback&)>
-        event_scheduler) {
-  schedule_task_ = event_scheduler;
+        task_scheduler) {
+  schedule_task_ = task_scheduler;
 }
 
-AsyncTaskId LinkLayerController::ScheduleTask(milliseconds delay_ms,
-                                              const TaskCallback& callback) {
+AsyncTaskId LinkLayerController::ScheduleTask(
+    milliseconds delay_ms, const TaskCallback& task_callback) {
   if (schedule_task_) {
-    return schedule_task_(delay_ms, callback);
+    return schedule_task_(delay_ms, task_callback);
   } else if (delay_ms == milliseconds::zero()) {
-    callback();
+    task_callback();
     return 0;
   } else {
     LOG_ERROR("Unable to schedule task on delay");
@@ -4832,9 +4834,9 @@ AsyncTaskId LinkLayerController::ScheduleTask(milliseconds delay_ms,
 
 AsyncTaskId LinkLayerController::SchedulePeriodicTask(
     milliseconds delay_ms, milliseconds period_ms,
-    const TaskCallback& callback) {
+    const TaskCallback& task_callback) {
   if (schedule_periodic_task_) {
-    return schedule_periodic_task_(delay_ms, period_ms, callback);
+    return schedule_periodic_task_(delay_ms, period_ms, task_callback);
   } else {
     LOG_ERROR("Unable to schedule task on delay");
     return 0;
@@ -4843,8 +4845,8 @@ AsyncTaskId LinkLayerController::SchedulePeriodicTask(
 
 void LinkLayerController::RegisterPeriodicTaskScheduler(
     std::function<AsyncTaskId(milliseconds, milliseconds, const TaskCallback&)>
-        periodic_event_scheduler) {
-  schedule_periodic_task_ = periodic_event_scheduler;
+        periodic_task_scheduler) {
+  schedule_periodic_task_ = periodic_task_scheduler;
 }
 
 void LinkLayerController::CancelScheduledTask(AsyncTaskId task_id) {
@@ -6391,11 +6393,11 @@ void LinkLayerController::CheckExpiringConnection(uint16_t handle) {
 }
 
 void LinkLayerController::IncomingPingRequest(
-    model::packets::LinkLayerPacketView packet) {
-  auto view = model::packets::PingRequestView::Create(packet);
+    model::packets::LinkLayerPacketView incoming) {
+  auto view = model::packets::PingRequestView::Create(incoming);
   ASSERT(view.IsValid());
   SendLinkLayerPacket(model::packets::PingResponseBuilder::Create(
-      packet.GetDestinationAddress(), packet.GetSourceAddress()));
+      incoming.GetDestinationAddress(), incoming.GetSourceAddress()));
 }
 
 AsyncTaskId LinkLayerController::StartScoStream(Address address) {

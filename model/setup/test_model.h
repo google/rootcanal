@@ -38,14 +38,14 @@ using ::bluetooth::hci::Address;
 class TestModel {
  public:
   TestModel(
-      std::function<AsyncUserId()> getNextUserId,
+      std::function<AsyncUserId()> get_user_id,
       std::function<AsyncTaskId(AsyncUserId, std::chrono::milliseconds,
                                 const TaskCallback&)>
-          evtScheduler,
+          event_scheduler,
       std::function<AsyncTaskId(AsyncUserId, std::chrono::milliseconds,
                                 std::chrono::milliseconds, const TaskCallback&)>
-          periodicEvtScheduler,
-      std::function<void(AsyncUserId)> cancel_user_tasks,
+          periodic_event_scheduler,
+      std::function<void(AsyncUserId)> cancel_tasks_from_user,
       std::function<void(AsyncTaskId)> cancel,
       std::function<std::shared_ptr<Device>(const std::string&, int, Phy::Type)>
           connect_to_remote,
@@ -68,7 +68,8 @@ class TestModel {
   size_t AddPhy(Phy::Type phy_type);
 
   // Allow derived classes to use custom phy layer
-  virtual std::unique_ptr<PhyLayerFactory> CreatePhy(Phy::Type phy_type, size_t phy_index);
+  virtual std::unique_ptr<PhyLayerFactory> CreatePhy(Phy::Type phy_type,
+                                                     size_t factory_id);
 
   // Remove phy by index
   void DelPhy(size_t phy_index);

@@ -49,20 +49,20 @@ void Device::UnregisterPhyLayer(Phy::Type phy_type, uint32_t factory_id) {
 }
 
 void Device::SendLinkLayerPacket(
-    std::shared_ptr<model::packets::LinkLayerPacketBuilder> to_send,
+    std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
     Phy::Type phy_type) {
   for (auto phy : phy_layers_) {
     if (phy != nullptr && phy->GetType() == phy_type) {
-      phy->Send(to_send);
+      phy->Send(packet);
     }
   }
 }
 
-void Device::SendLinkLayerPacket(model::packets::LinkLayerPacketView to_send,
+void Device::SendLinkLayerPacket(model::packets::LinkLayerPacketView packet,
                                  Phy::Type phy_type) {
   for (auto phy : phy_layers_) {
     if (phy != nullptr && phy->GetType() == phy_type) {
-      phy->Send(to_send);
+      phy->Send(packet);
     }
   }
 }

@@ -39,7 +39,7 @@ using bluetooth::hci::LmpVersion;
 // Controller. The Host device cannot modify any of these parameters.
 struct ControllerProperties {
  public:
-  explicit ControllerProperties(const std::string& filename = "");
+  explicit ControllerProperties(const std::string& file_name = "");
   ~ControllerProperties() = default;
 
   // Perform a bitwise and operation on the supported commands mask;

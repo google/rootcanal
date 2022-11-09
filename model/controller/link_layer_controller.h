@@ -151,13 +151,13 @@ class LinkLayerController {
   void Close();
 
   AsyncTaskId ScheduleTask(std::chrono::milliseconds delay_ms,
-                           const TaskCallback& task);
+                           const TaskCallback& task_callback);
 
   AsyncTaskId SchedulePeriodicTask(std::chrono::milliseconds delay_ms,
                                    std::chrono::milliseconds period_ms,
-                                   const TaskCallback& callback);
+                                   const TaskCallback& task_callback);
 
-  void CancelScheduledTask(AsyncTaskId task);
+  void CancelScheduledTask(AsyncTaskId task_id);
 
   // Set the callbacks for sending packets to the HCI.
   void RegisterEventChannel(
@@ -184,12 +184,12 @@ class LinkLayerController {
   // Set the callbacks for scheduling tasks.
   void RegisterTaskScheduler(
       std::function<AsyncTaskId(std::chrono::milliseconds, const TaskCallback&)>
-          event_scheduler);
+          task_scheduler);
 
   void RegisterPeriodicTaskScheduler(
       std::function<AsyncTaskId(std::chrono::milliseconds,
                                 std::chrono::milliseconds, const TaskCallback&)>
-          periodic_event_scheduler);
+          periodic_task_scheduler);
 
   void RegisterTaskCancel(std::function<void(AsyncTaskId)> cancel);
   void Reset();
@@ -544,37 +544,38 @@ class LinkLayerController {
       Address source_address, Address destination_address, uint8_t rssi,
       std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet);
 
-  void IncomingAclPacket(model::packets::LinkLayerPacketView packet);
-  void IncomingScoPacket(model::packets::LinkLayerPacketView packet);
-  void IncomingDisconnectPacket(model::packets::LinkLayerPacketView packet);
-  void IncomingEncryptConnection(model::packets::LinkLayerPacketView packet);
+  void IncomingAclPacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingScoPacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingDisconnectPacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingEncryptConnection(model::packets::LinkLayerPacketView incoming);
   void IncomingEncryptConnectionResponse(
-      model::packets::LinkLayerPacketView packet);
-  void IncomingInquiryPacket(model::packets::LinkLayerPacketView packet,
+      model::packets::LinkLayerPacketView incoming);
+  void IncomingInquiryPacket(model::packets::LinkLayerPacketView incoming,
                              uint8_t rssi);
   void IncomingInquiryResponsePacket(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
 #ifdef ROOTCANAL_LMP
-  void IncomingLmpPacket(model::packets::LinkLayerPacketView packet);
+  void IncomingLmpPacket(model::packets::LinkLayerPacketView incoming);
 #else
   void IncomingIoCapabilityRequestPacket(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingIoCapabilityResponsePacket(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingIoCapabilityNegativeResponsePacket(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingKeypressNotificationPacket(
-      model::packets::LinkLayerPacketView packet);
-  void IncomingPasskeyPacket(model::packets::LinkLayerPacketView packet);
-  void IncomingPasskeyFailedPacket(model::packets::LinkLayerPacketView packet);
-  void IncomingPinRequestPacket(model::packets::LinkLayerPacketView packet);
-  void IncomingPinResponsePacket(model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
+  void IncomingPasskeyPacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingPasskeyFailedPacket(
+      model::packets::LinkLayerPacketView incoming);
+  void IncomingPinRequestPacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingPinResponsePacket(model::packets::LinkLayerPacketView incoming);
 #endif /* ROOTCANAL_LMP */
-  void IncomingIsoPacket(model::packets::LinkLayerPacketView packet);
+  void IncomingIsoPacket(model::packets::LinkLayerPacketView incoming);
   void IncomingIsoConnectionRequestPacket(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingIsoConnectionResponsePacket(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
 
   void ScanIncomingLeLegacyAdvertisingPdu(
       model::packets::LeLegacyAdvertisingPduView& pdu, uint8_t rssi);
@@ -586,23 +587,25 @@ class LinkLayerController {
       model::packets::LeExtendedAdvertisingPduView& pdu);
 
   void IncomingLeLegacyAdvertisingPdu(
-      model::packets::LinkLayerPacketView packet, uint8_t rssi);
+      model::packets::LinkLayerPacketView incoming, uint8_t rssi);
   void IncomingLeExtendedAdvertisingPdu(
-      model::packets::LinkLayerPacketView packet, uint8_t rssi);
+      model::packets::LinkLayerPacketView incoming, uint8_t rssi);
 
-  void IncomingLeConnectPacket(model::packets::LinkLayerPacketView packet);
+  void IncomingLeConnectPacket(model::packets::LinkLayerPacketView incoming);
   void IncomingLeConnectCompletePacket(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingLeConnectionParameterRequest(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingLeConnectionParameterUpdate(
-      model::packets::LinkLayerPacketView packet);
-  void IncomingLeEncryptConnection(model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
+  void IncomingLeEncryptConnection(
+      model::packets::LinkLayerPacketView incoming);
   void IncomingLeEncryptConnectionResponse(
-      model::packets::LinkLayerPacketView packet);
-  void IncomingLeReadRemoteFeatures(model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
+  void IncomingLeReadRemoteFeatures(
+      model::packets::LinkLayerPacketView incoming);
   void IncomingLeReadRemoteFeaturesResponse(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
 
   void ProcessIncomingLegacyScanRequest(
       AddressWithType scanning_address,
@@ -619,41 +622,42 @@ class LinkLayerController {
       ExtendedAdvertiser& advertiser,
       model::packets::LeConnectView const& connect_ind);
 
-  void IncomingLeScanPacket(model::packets::LinkLayerPacketView packet);
+  void IncomingLeScanPacket(model::packets::LinkLayerPacketView incoming);
 
-  void IncomingLeScanResponsePacket(model::packets::LinkLayerPacketView packet,
-                                    uint8_t rssi);
-  void IncomingPagePacket(model::packets::LinkLayerPacketView packet);
-  void IncomingPageRejectPacket(model::packets::LinkLayerPacketView packet);
-  void IncomingPageResponsePacket(model::packets::LinkLayerPacketView packet);
+  void IncomingLeScanResponsePacket(
+      model::packets::LinkLayerPacketView incoming, uint8_t rssi);
+  void IncomingPagePacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingPageRejectPacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingPageResponsePacket(model::packets::LinkLayerPacketView incoming);
   void IncomingReadRemoteLmpFeatures(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingReadRemoteLmpFeaturesResponse(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingReadRemoteSupportedFeatures(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingReadRemoteSupportedFeaturesResponse(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingReadRemoteExtendedFeatures(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
   void IncomingReadRemoteExtendedFeaturesResponse(
-      model::packets::LinkLayerPacketView packet);
-  void IncomingReadRemoteVersion(model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
+  void IncomingReadRemoteVersion(model::packets::LinkLayerPacketView incoming);
   void IncomingReadRemoteVersionResponse(
-      model::packets::LinkLayerPacketView packet);
-  void IncomingReadClockOffset(model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
+  void IncomingReadClockOffset(model::packets::LinkLayerPacketView incoming);
   void IncomingReadClockOffsetResponse(
-      model::packets::LinkLayerPacketView packet);
-  void IncomingRemoteNameRequest(model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
+  void IncomingRemoteNameRequest(model::packets::LinkLayerPacketView incoming);
   void IncomingRemoteNameRequestResponse(
-      model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
 
-  void IncomingScoConnectionRequest(model::packets::LinkLayerPacketView packet);
+  void IncomingScoConnectionRequest(
+      model::packets::LinkLayerPacketView incoming);
   void IncomingScoConnectionResponse(
-      model::packets::LinkLayerPacketView packet);
-  void IncomingScoDisconnect(model::packets::LinkLayerPacketView packet);
+      model::packets::LinkLayerPacketView incoming);
+  void IncomingScoDisconnect(model::packets::LinkLayerPacketView incoming);
 
-  void IncomingPingRequest(model::packets::LinkLayerPacketView packet);
+  void IncomingPingRequest(model::packets::LinkLayerPacketView incoming);
 
  public:
   bool IsEventUnmasked(bluetooth::hci::EventCode event) const;
@@ -973,6 +977,7 @@ class LinkLayerController {
                    std::equal(a.begin(), a.end(), packet.begin());
           });
     }
+
     void AddPacketToHistory(model::packets::LinkLayerPacketView packet) {
       history.push_back(packet);
     }

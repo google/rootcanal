@@ -332,15 +332,15 @@ void DualModeController::SniffSubrating(CommandView command) {
 
 void DualModeController::RegisterTaskScheduler(
     std::function<AsyncTaskId(std::chrono::milliseconds, const TaskCallback&)>
-        oneshot_scheduler) {
-  link_layer_controller_.RegisterTaskScheduler(oneshot_scheduler);
+        task_scheduler) {
+  link_layer_controller_.RegisterTaskScheduler(task_scheduler);
 }
 
 void DualModeController::RegisterPeriodicTaskScheduler(
     std::function<AsyncTaskId(std::chrono::milliseconds,
                               std::chrono::milliseconds, const TaskCallback&)>
-        periodic_scheduler) {
-  link_layer_controller_.RegisterPeriodicTaskScheduler(periodic_scheduler);
+        periodic_task_scheduler) {
+  link_layer_controller_.RegisterPeriodicTaskScheduler(periodic_task_scheduler);
 }
 
 void DualModeController::RegisterTaskCancel(
@@ -435,53 +435,53 @@ void DualModeController::HandleCommand(
 
 void DualModeController::RegisterEventChannel(
     const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>&
-        callback) {
+        send_event) {
   send_event_ =
-      [callback](std::shared_ptr<bluetooth::hci::EventBuilder> event) {
+      [send_event](std::shared_ptr<bluetooth::hci::EventBuilder> event) {
         auto bytes = std::make_shared<std::vector<uint8_t>>();
         bluetooth::packet::BitInserter bit_inserter(*bytes);
         bytes->reserve(event->size());
         event->Serialize(bit_inserter);
-        callback(std::move(bytes));
+        send_event(std::move(bytes));
       };
   link_layer_controller_.RegisterEventChannel(send_event_);
 }
 
 void DualModeController::RegisterAclChannel(
     const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>&
-        callback) {
-  send_acl_ = [callback](std::shared_ptr<bluetooth::hci::AclBuilder> acl_data) {
+        send_acl) {
+  send_acl_ = [send_acl](std::shared_ptr<bluetooth::hci::AclBuilder> acl_data) {
     auto bytes = std::make_shared<std::vector<uint8_t>>();
     bluetooth::packet::BitInserter bit_inserter(*bytes);
     bytes->reserve(acl_data->size());
     acl_data->Serialize(bit_inserter);
-    callback(std::move(bytes));
+    send_acl(std::move(bytes));
   };
   link_layer_controller_.RegisterAclChannel(send_acl_);
 }
 
 void DualModeController::RegisterScoChannel(
     const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>&
-        callback) {
-  send_sco_ = [callback](std::shared_ptr<bluetooth::hci::ScoBuilder> sco_data) {
+        send_sco) {
+  send_sco_ = [send_sco](std::shared_ptr<bluetooth::hci::ScoBuilder> sco_data) {
     auto bytes = std::make_shared<std::vector<uint8_t>>();
     bluetooth::packet::BitInserter bit_inserter(*bytes);
     bytes->reserve(sco_data->size());
     sco_data->Serialize(bit_inserter);
-    callback(std::move(bytes));
+    send_sco(std::move(bytes));
   };
   link_layer_controller_.RegisterScoChannel(send_sco_);
 }
 
 void DualModeController::RegisterIsoChannel(
     const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>&
-        callback) {
-  send_iso_ = [callback](std::shared_ptr<bluetooth::hci::IsoBuilder> iso_data) {
+        send_iso) {
+  send_iso_ = [send_iso](std::shared_ptr<bluetooth::hci::IsoBuilder> iso_data) {
     auto bytes = std::make_shared<std::vector<uint8_t>>();
     bluetooth::packet::BitInserter bit_inserter(*bytes);
     bytes->reserve(iso_data->size());
     iso_data->Serialize(bit_inserter);
-    callback(std::move(bytes));
+    send_iso(std::move(bytes));
   };
   link_layer_controller_.RegisterIsoChannel(send_iso_);
 }
