@@ -525,12 +525,12 @@ class LinkLayerController {
           initiating_phy_parameters);
 
  protected:
-  void SendLeLinkLayerPacketWithRssi(
-      Address source, Address dest, uint8_t rssi,
+  void SendLinkLayerPacket(
       std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet);
   void SendLeLinkLayerPacket(
       std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet);
-  void SendLinkLayerPacket(
+  void SendLeLinkLayerPacketWithRssi(
+      Address source_address, Address destination_address, uint8_t rssi,
       std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet);
 
   void IncomingAclPacket(model::packets::LinkLayerPacketView packet);
