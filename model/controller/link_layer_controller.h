@@ -773,14 +773,14 @@ class LinkLayerController {
 
   // Host Supported Features (Vol 2, Part C § 3.3 Feature Mask Definition).
   // Page 1 of the LMP feature mask.
-  uint64_t host_supported_features_{};
+  uint64_t host_supported_features_{0};
   bool le_host_support_{false};
   bool secure_simple_pairing_host_support_{false};
   bool secure_connections_host_support_{false};
 
   // Le Host Supported Features (Vol 4, Part E § 7.8.3).
   // Specifies the bits indicating Host support.
-  uint64_t le_host_supported_features_{};
+  uint64_t le_host_supported_features_{0};
   bool connected_isochronous_stream_host_support_{false};
   bool connection_subrating_host_support_{false};
 
@@ -816,10 +816,11 @@ class LinkLayerController {
   uint16_t voice_setting_{0x0060};
 
   // Authentication Enable (Vol 4, Part E § 6.16).
-  AuthenticationEnable authentication_enable_;
+  AuthenticationEnable authentication_enable_{
+      AuthenticationEnable::NOT_REQUIRED};
 
   // Default Link Policy Settings (Vol 4, Part E § 6.18).
-  uint8_t default_link_policy_settings_;
+  uint8_t default_link_policy_settings_{0x0000};
 
   // Synchronous Flow Control Enable (Vol 4, Part E § 6.22).
   bool sco_flow_control_enable_{false};
@@ -881,8 +882,8 @@ class LinkLayerController {
                      Phy::Type phy_type)>
       send_to_remote_;
 
-  uint32_t oob_id_ = 1;
-  uint32_t key_id_ = 1;
+  uint32_t oob_id_{1};
+  uint32_t key_id_{1};
 
   struct FilterAcceptListEntry {
     FilterAcceptListAddressType address_type;
