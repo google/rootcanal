@@ -94,6 +94,10 @@ DualModeController::DualModeController(const std::string& properties_filename,
     method(std::move(param));                                      \
   };
 
+#define SET_VENDOR_HANDLER(op_code, method)                            \
+  active_hci_commands_[static_cast<bluetooth::hci::OpCode>(op_code)] = \
+      [this](CommandView param) { method(std::move(param)); };
+
 #define SET_SUPPORTED(name, method)                                        \
   SET_HANDLER(name, method);                                               \
   {                                                                        \
@@ -235,6 +239,7 @@ DualModeController::DualModeController(const std::string& properties_filename,
   SET_SUPPORTED(LE_RAND, LeRand);
   SET_SUPPORTED(LE_READ_SUPPORTED_STATES, LeReadSupportedStates);
   SET_HANDLER(LE_GET_VENDOR_CAPABILITIES, LeVendorCap);
+  SET_VENDOR_HANDLER(CSR_VENDOR, CsrVendorCommand);
   SET_HANDLER(LE_REMOTE_CONNECTION_PARAMETER_REQUEST_REPLY,
               LeRemoteConnectionParameterRequestReply);
   SET_HANDLER(LE_REMOTE_CONNECTION_PARAMETER_REQUEST_NEGATIVE_REPLY,
@@ -660,7 +665,8 @@ void DualModeController::AddScoConnection(CommandView command) {
   ASSERT(command_view.IsValid());
 
   auto status = link_layer_controller_.AddScoConnection(
-      command_view.GetConnectionHandle(), command_view.GetPacketType());
+      command_view.GetConnectionHandle(), command_view.GetPacketType(),
+      ScoDatapath::NORMAL);
 
   send_event_(bluetooth::hci::AddScoConnectionStatusBuilder::Create(
       status, kNumCommandPackets));
@@ -677,7 +683,7 @@ void DualModeController::SetupSynchronousConnection(CommandView command) {
       command_view.GetReceiveBandwidth(), command_view.GetMaxLatency(),
       command_view.GetVoiceSetting(),
       static_cast<uint8_t>(command_view.GetRetransmissionEffort()),
-      command_view.GetPacketType());
+      command_view.GetPacketType(), ScoDatapath::NORMAL);
 
   send_event_(bluetooth::hci::SetupSynchronousConnectionStatusBuilder::Create(
       status, kNumCommandPackets));
@@ -757,15 +763,17 @@ void DualModeController::EnhancedSetupSynchronousConnection(
   }
 
   // Root-Canal does not implement audio data transport paths other than the
-  // default HCI transport.
+  // default HCI transport - other transports will receive spoofed data
+  ScoDatapath datapath = ScoDatapath::NORMAL;
   if (command_view.GetInputDataPath() != bluetooth::hci::ScoDataPath::HCI ||
       command_view.GetOutputDataPath() != bluetooth::hci::ScoDataPath::HCI) {
-    LOG_INFO(
-        "EnhancedSetupSynchronousConnection: rejected Input_Data_Path (%u)"
-        " and/or Output_Data_Path (%u) as they are un-implemented",
+    LOG_WARN(
+        "EnhancedSetupSynchronousConnection: Input_Data_Path (%u)"
+        " and/or Output_Data_Path (%u) are not over HCI, so data will be "
+        "spoofed",
         static_cast<unsigned>(command_view.GetInputDataPath()),
         static_cast<unsigned>(command_view.GetOutputDataPath()));
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+    datapath = ScoDatapath::SPOOFED;
   }
 
   // Either both the Transmit_Coding_Format and Input_Coding_Format shall be
@@ -835,9 +843,10 @@ void DualModeController::EnhancedSetupSynchronousConnection(
   if (status == ErrorCode::SUCCESS) {
     status = link_layer_controller_.SetupSynchronousConnection(
         command_view.GetConnectionHandle(), transmit_bandwidth,
-        receive_bandwidth, command_view.GetMaxLatency(), 0 /* Voice_Setting */,
+        receive_bandwidth, command_view.GetMaxLatency(),
+        link_layer_controller_.GetVoiceSetting(),
         static_cast<uint8_t>(command_view.GetRetransmissionEffort()),
-        command_view.GetPacketType());
+        command_view.GetPacketType(), datapath);
   }
 
   send_event_(
@@ -906,11 +915,11 @@ void DualModeController::EnhancedAcceptSynchronousConnection(
   if (command_view.GetInputDataPath() != bluetooth::hci::ScoDataPath::HCI ||
       command_view.GetOutputDataPath() != bluetooth::hci::ScoDataPath::HCI) {
     LOG_INFO(
-        "EnhancedAcceptSynchronousConnection: rejected Input_Data_Path (%u)"
-        " and/or Output_Data_Path (%u) as they are un-implemented",
+        "EnhancedSetupSynchronousConnection: Input_Data_Path (%u)"
+        " and/or Output_Data_Path (%u) are not over HCI, so data will be "
+        "spoofed",
         static_cast<unsigned>(command_view.GetInputDataPath()),
         static_cast<unsigned>(command_view.GetOutputDataPath()));
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
   }
 
   // Either both the Transmit_Coding_Format and Input_Coding_Format shall be
@@ -980,7 +989,7 @@ void DualModeController::EnhancedAcceptSynchronousConnection(
   if (status == ErrorCode::SUCCESS) {
     status = link_layer_controller_.AcceptSynchronousConnection(
         command_view.GetBdAddr(), transmit_bandwidth, receive_bandwidth,
-        command_view.GetMaxLatency(), 0 /* Voice_Setting */,
+        command_view.GetMaxLatency(), link_layer_controller_.GetVoiceSetting(),
         static_cast<uint8_t>(command_view.GetRetransmissionEffort()),
         command_view.GetPacketType());
   }
@@ -2709,6 +2718,175 @@ void DualModeController::LeEnergyInfo(CommandView command) {
   ASSERT(command_view.IsValid());
   SendCommandCompleteUnknownOpCodeEvent(
       static_cast<uint16_t>(OpCode::LE_ENERGY_INFO));
+}
+
+// CSR vendor command.
+// Implement the command specific to the CSR controller
+// used specifically by the PTS tool to pass certification tests.
+void DualModeController::CsrVendorCommand(CommandView command) {
+  // The byte order is little endian.
+  // The command parameters are formatted as
+  //
+  //  00    | 0xc2
+  //  01 02 | action
+  //          read = 0
+  //          write = 2
+  //  03 04 | (value length / 2) + 5
+  //  04 05 | sequence number
+  //  06 07 | varid
+  //  08 09 | 00 00
+  //  0a .. | value
+  //
+  // BlueZ has a reference implementation of the CSR vendor command.
+
+  std::vector<uint8_t> parameters(command.GetPayload().begin(),
+                                  command.GetPayload().end());
+
+  uint16_t type = 0;
+  uint16_t length = 0;
+  uint16_t varid = 0;
+
+  if (parameters.size() == 0) {
+    LOG_INFO("Empty CSR vendor command");
+    goto complete;
+  }
+
+  if (parameters[0] != 0xc2 || parameters.size() < 11) {
+    LOG_INFO(
+        "Unsupported CSR vendor command with code %02x "
+        "and parameter length %zu",
+        static_cast<int>(parameters[0]), parameters.size());
+    goto complete;
+  }
+
+  type = (uint16_t)parameters[1] | ((uint16_t)parameters[2] << 8);
+  length = (uint16_t)parameters[3] | ((uint16_t)parameters[4] << 8);
+  varid = (uint16_t)parameters[7] | ((uint16_t)parameters[8] << 8);
+  length = 2 * (length - 5);
+
+  if (parameters.size() < (11 + length) ||
+      (varid == CsrVarid::CSR_VARID_PS && length < 6)) {
+    LOG_INFO("Invalid CSR vendor command parameter length %zu, expected %u",
+             parameters.size(), 11 + length);
+    goto complete;
+  }
+
+  if (varid == CsrVarid::CSR_VARID_PS) {
+    // Subcommand to read or write PSKEY of the selected identifier
+    // instead of VARID.
+    uint16_t pskey = (uint16_t)parameters[11] | ((uint16_t)parameters[12] << 8);
+    uint16_t length =
+        (uint16_t)parameters[13] | ((uint16_t)parameters[14] << 8);
+    length = 2 * length;
+
+    if (parameters.size() < (17 + length)) {
+      LOG_INFO("Invalid CSR vendor command parameter length %zu, expected %u",
+               parameters.size(), 17 + length);
+      goto complete;
+    }
+
+    std::vector<uint8_t> value(parameters.begin() + 17,
+                               parameters.begin() + 17 + length);
+
+    LOG_INFO("CSR vendor command type=%04x length=%04x pskey=%04x", type,
+             length, pskey);
+
+    if (type == 0) {
+      CsrReadPskey(static_cast<CsrPskey>(pskey), value);
+      std::copy(value.begin(), value.end(), parameters.begin() + 17);
+    } else {
+      CsrWritePskey(static_cast<CsrPskey>(pskey), value);
+    }
+
+  } else {
+    // Subcommand to read or write VARID of the selected identifier.
+    std::vector<uint8_t> value(parameters.begin() + 11,
+                               parameters.begin() + 11 + length);
+
+    LOG_INFO("CSR vendor command type=%04x length=%04x varid=%04x", type,
+             length, varid);
+
+    if (type == 0) {
+      CsrReadVarid(static_cast<CsrVarid>(varid), value);
+      std::copy(value.begin(), value.end(), parameters.begin() + 11);
+    } else {
+      CsrWriteVarid(static_cast<CsrVarid>(varid), value);
+    }
+  }
+
+complete:
+  // Overwrite the command type.
+  parameters[1] = 0x1;
+  parameters[2] = 0x0;
+  send_event_(bluetooth::hci::EventBuilder::Create(
+      bluetooth::hci::EventCode::VENDOR_SPECIFIC,
+      std::make_unique<bluetooth::packet::RawBuilder>(std::move(parameters))));
+}
+
+void DualModeController::CsrReadVarid(CsrVarid varid,
+                                      std::vector<uint8_t>& value) {
+  switch (varid) {
+    case CsrVarid::CSR_VARID_BUILDID:
+      // Return the extact Build ID returned by the official PTS dongle.
+      ASSERT(value.size() >= 2);
+      value[0] = 0xe8;
+      value[1] = 0x30;
+      break;
+
+    default:
+      LOG_INFO("Unsupported read of CSR varid 0x%04x", varid);
+      break;
+  }
+}
+
+void DualModeController::CsrWriteVarid(CsrVarid varid,
+                                       std::vector<uint8_t> const& value) {
+  LOG_INFO("Unsupported write of CSR varid 0x%04x", varid);
+}
+
+void DualModeController::CsrReadPskey(CsrPskey pskey,
+                                      std::vector<uint8_t>& value) {
+  switch (pskey) {
+    case CsrPskey::CSR_PSKEY_ENC_KEY_LMIN:
+      ASSERT(value.size() >= 1);
+      value[0] = 7;
+      break;
+
+    case CsrPskey::CSR_PSKEY_ENC_KEY_LMAX:
+      ASSERT(value.size() >= 1);
+      value[0] = 16;
+      break;
+
+    case CSR_PSKEY_HCI_LMP_LOCAL_VERSION:
+      // Return the extact version returned by the official PTS dongle.
+      ASSERT(value.size() >= 2);
+      value[0] = 0x08;
+      value[1] = 0x08;
+      break;
+
+    default:
+      LOG_INFO("Unsupported read of CSR pskey 0x%04x", pskey);
+      break;
+  }
+}
+
+void DualModeController::CsrWritePskey(CsrPskey pskey,
+                                       std::vector<uint8_t> const& value) {
+  switch (pskey) {
+    case CsrPskey::CSR_PSKEY_LOCAL_SUPPORTED_FEATURES:
+      ASSERT(value.size() >= 8);
+      LOG_INFO("CSR Vendor updating the Local Supported Features");
+      properties_.lmp_features[0] =
+          ((uint64_t)value[0] << 0) | ((uint64_t)value[1] << 8) |
+          ((uint64_t)value[2] << 16) | ((uint64_t)value[3] << 24) |
+          ((uint64_t)value[4] << 32) | ((uint64_t)value[5] << 40) |
+          ((uint64_t)value[6] << 48) | ((uint64_t)value[7] << 56);
+      break;
+
+    default:
+      LOG_INFO("Unsupported write of CSR pskey 0x%04x", pskey);
+      break;
+  }
 }
 
 void DualModeController::LeSetAdvertisingSetRandomAddress(CommandView command) {
