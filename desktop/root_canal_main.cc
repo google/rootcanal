@@ -13,6 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
+// clang-format off
+// This needs to be included before Backtrace.h to avoid a redefinition
+// of DISALLOW_COPY_AND_ASSIGN
+#include "log.h"
+// clang-format on
+
 #include <client/linux/handler/exception_handler.h>
 #include <gflags/gflags.h>
 #include <unwindstack/AndroidUnwinder.h>
@@ -23,7 +30,6 @@
 #include "model/setup/async_manager.h"
 #include "net/posix/posix_async_socket_connector.h"
 #include "net/posix/posix_async_socket_server.h"
-#include "os/log.h"
 #include "test_environment.h"
 
 using ::android::bluetooth::root_canal::TestEnvironment;
@@ -83,6 +89,7 @@ int main(int argc, char** argv) {
   eh.set_crash_handler(crash_callback);
 
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  android::base::InitLogging(argv);
 
   LOG_INFO("main");
   uint16_t test_port = kTestPort;

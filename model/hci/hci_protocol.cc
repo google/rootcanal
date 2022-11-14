@@ -21,7 +21,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "os/log.h"
+#include "log.h"
 
 namespace rootcanal {
 

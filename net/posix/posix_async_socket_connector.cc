@@ -24,8 +24,8 @@
 
 #include <type_traits>  // for remove_extent_t
 
+#include "log.h"                           // for LOG_INFO
 #include "net/posix/posix_async_socket.h"  // for PosixAsyncSocket
-#include "os/log.h"                        // for LOG_INFO
 
 namespace android {
 namespace net {

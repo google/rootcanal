@@ -21,8 +21,8 @@
 
 #include <functional>  // for __base
 
+#include "log.h"                        // for LOG_INFO
 #include "model/setup/async_manager.h"  // for AsyncManager
-#include "os/log.h"                     // for LOG_INFO
 
 #ifdef _WIN32
 #include "msvc-posix.h"
