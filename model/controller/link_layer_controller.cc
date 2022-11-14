@@ -247,9 +247,17 @@ ErrorCode LinkLayerController::LeSetRandomAddress(Address random_address) {
   // the Controller shall return the error code Command Disallowed (0x0C).
   if (legacy_advertiser_.IsEnabled() || scanner_.IsEnabled() ||
       initiator_.IsEnabled()) {
+    LOG_INFO("advertising, scanning or initiating are currently active");
     return ErrorCode::COMMAND_DISALLOWED;
   }
 
+  if (random_address == Address::kEmpty) {
+    LOG_INFO("the random address may not be set to 00:00:00:00:00:00");
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  LOG_INFO("device random address configured to %s",
+           random_address.ToString().c_str());
   random_address_ = random_address;
   return ErrorCode::SUCCESS;
 }
