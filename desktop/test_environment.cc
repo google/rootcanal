@@ -21,13 +21,13 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
+#include "log.h"  // for LOG_INFO, LOG_ERROR, LOG_WARN
 #include "model/devices/baseband_sniffer.h"
 #include "model/devices/link_layer_socket_device.h"  // for LinkLayerSocketDevice
 #include "model/hci/hci_sniffer.h"                   // for HciSniffer
 #include "model/hci/hci_socket_transport.h"          // for HciSocketTransport
 #include "net/async_data_channel.h"                  // for AsyncDataChannel
 #include "net/async_data_channel_connector.h"  // for AsyncDataChannelConnector
-#include "os/log.h"  // for LOG_INFO, LOG_ERROR, LOG_WARN
 
 namespace android {
 namespace bluetooth {

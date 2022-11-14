@@ -17,7 +17,7 @@
 #include "le_advertiser.h"
 
 #include "link_layer_controller.h"
-#include "os/log.h"
+#include "log.h"
 
 using namespace bluetooth::hci;
 using namespace std::literals;

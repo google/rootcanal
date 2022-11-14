@@ -18,7 +18,7 @@
 
 #include <type_traits>  // for remove_extent_t
 
-#include "os/log.h"               // for ASSERT, LOG_INFO, LOG_ERROR, LOG_WARN
+#include "log.h"                  // for ASSERT, LOG_INFO, LOG_ERROR, LOG_WARN
 #include "packet/bit_inserter.h"  // for BitInserter
 #include "packet/iterator.h"      // for Iterator
 #include "packet/packet_view.h"   // for PacketView, kLittleEndian

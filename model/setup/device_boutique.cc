@@ -16,7 +16,7 @@
 
 #include "device_boutique.h"
 
-#include "os/log.h"
+#include "log.h"
 
 using std::vector;
 

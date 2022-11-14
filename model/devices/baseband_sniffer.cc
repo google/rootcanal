@@ -16,7 +16,7 @@
 
 #include "baseband_sniffer.h"
 
-#include "os/log.h"
+#include "log.h"
 #include "packet/raw_builder.h"
 #include "pcap.h"
 

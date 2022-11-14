@@ -17,7 +17,7 @@
 #include "model/controller/isochronous_connection_handler.h"
 
 #include "hci/address.h"
-#include "os/log.h"
+#include "log.h"
 
 namespace rootcanal {
 

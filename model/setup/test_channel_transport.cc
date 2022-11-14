@@ -23,8 +23,8 @@
 #include <cstring>      // for strerror
 #include <type_traits>  // for remove_extent_t
 
+#include "log.h"                     // for LOG_INFO, ASSERT_LOG, LOG_WARN
 #include "net/async_data_channel.h"  // for AsyncDataChannel
-#include "os/log.h"                  // for LOG_INFO, ASSERT_LOG, LOG_WARN
 
 using std::vector;
 

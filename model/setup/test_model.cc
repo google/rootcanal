@@ -25,7 +25,7 @@
 #include <utility>      // for move
 
 #include "include/phy.h"  // for Phy, Phy::Type
-#include "os/log.h"       // for LOG_WARN, LOG_INFO
+#include "log.h"          // for LOG_WARN, LOG_INFO
 
 namespace rootcanal {
 

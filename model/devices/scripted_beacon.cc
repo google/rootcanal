@@ -21,9 +21,9 @@
 #include <cstdint>
 #include <fstream>
 
+#include "log.h"
 #include "model/devices/scripted_beacon_ble_payload.pb.h"
 #include "model/setup/device_boutique.h"
-#include "os/log.h"
 
 #ifdef _WIN32
 #define F_OK 00

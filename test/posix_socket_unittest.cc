@@ -31,10 +31,10 @@
 #include <random>
 #include <vector>
 
+#include "log.h"  // for LOG_INFO
 #include "model/setup/async_manager.h"
 #include "net/posix/posix_async_socket_connector.h"
 #include "net/posix/posix_async_socket_server.h"
-#include "os/log.h"  // for LOG_INFO
 
 namespace android {
 namespace net {

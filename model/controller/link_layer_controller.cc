@@ -22,7 +22,7 @@
 #endif /* ROOTCANAL_LMP */
 
 #include "crypto_toolbox/crypto_toolbox.h"
-#include "os/log.h"
+#include "log.h"
 #include "packet/raw_builder.h"
 
 using std::vector;
