@@ -44,7 +44,7 @@ class Device {
   virtual std::string ToString() const;
 
   // Set the device's Bluetooth address.
-  void SetAddress(Address address) { address_ = address; }
+  void SetAddress(Address address) { address_.address = address.address; }
 
   // Get the device's Bluetooth address.
   const Address& GetAddress() const { return address_; }

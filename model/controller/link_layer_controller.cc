@@ -21,7 +21,7 @@
 #include <lmp.h>
 #endif /* ROOTCANAL_LMP */
 
-#include "crypto_toolbox/crypto_toolbox.h"
+#include "crypto/crypto.h"
 #include "log.h"
 #include "packet/raw_builder.h"
 
@@ -2640,8 +2640,8 @@ Address LinkLayerController::generate_rpa(
   rpa.address[5] = prand[2];
 
   /* encrypt with IRK */
-  bluetooth::crypto_toolbox::Octet16 p =
-      bluetooth::crypto_toolbox::aes_128(irk, prand.data(), 3);
+  rootcanal::crypto::Octet16 p =
+      rootcanal::crypto::aes_128(irk, prand.data(), 3);
 
   /* set hash to be LSB of rpAddress */
   rpa.address[0] = p[0];
