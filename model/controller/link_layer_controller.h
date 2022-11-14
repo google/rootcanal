@@ -271,12 +271,13 @@ class LinkLayerController {
       uint32_t sdu_interval, uint16_t max_sdu, uint16_t max_transport_latency,
       uint8_t rtn, bluetooth::hci::SecondaryPhyType phy,
       bluetooth::hci::Packing packing, bluetooth::hci::Enable framing,
-      bluetooth::hci::Enable encryption, std::vector<uint16_t> broadcast_code);
+      bluetooth::hci::Enable encryption,
+      std::array<uint8_t, 16> broadcast_code);
   bluetooth::hci::ErrorCode LeTerminateBig(uint8_t big_handle,
                                            bluetooth::hci::ErrorCode reason);
   bluetooth::hci::ErrorCode LeBigCreateSync(
       uint8_t big_handle, uint16_t sync_handle,
-      bluetooth::hci::Enable encryption, std::vector<uint16_t> broadcast_code,
+      bluetooth::hci::Enable encryption, std::array<uint8_t, 16> broadcast_code,
       uint8_t mse, uint16_t big_syunc_timeout, std::vector<uint8_t> bis);
   void LeBigTerminateSync(uint8_t big_handle);
   bluetooth::hci::ErrorCode LeRequestPeerSca(uint16_t request_handle);
