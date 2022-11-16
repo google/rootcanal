@@ -195,13 +195,13 @@ impl procedure::Context for LinkContext {
 
     fn send_hci_event<E: Into<hci::EventPacket>>(&self, event: E) {
         if let Some(manager) = self.manager.upgrade() {
-            manager.ops.send_hci_event(&*event.into().to_vec())
+            manager.ops.send_hci_event(&event.into().to_vec())
         }
     }
 
     fn send_lmp_packet<P: Into<lmp::PacketPacket>>(&self, packet: P) {
         if let Some(manager) = self.manager.upgrade() {
-            manager.ops.send_lmp_packet(self.peer_address(), &*packet.into().to_vec())
+            manager.ops.send_lmp_packet(self.peer_address(), &packet.into().to_vec())
         }
     }
 
