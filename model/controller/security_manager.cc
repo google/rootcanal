@@ -16,7 +16,7 @@
 
 #include "security_manager.h"
 
-#include "os/log.h"
+#include "log.h"
 
 using std::vector;
 

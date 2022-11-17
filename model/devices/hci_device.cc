@@ -16,7 +16,7 @@
 
 #include "hci_device.h"
 
-#include "os/log.h"
+#include "log.h"
 
 namespace rootcanal {
 

@@ -16,7 +16,7 @@
 
 #include "hci_socket_transport.h"
 
-#include "os/log.h"  // for LOG_INFO, LOG_ALWAYS_FATAL
+#include "log.h"  // for LOG_INFO, LOG_ALWAYS_FATAL
 
 namespace rootcanal {
 

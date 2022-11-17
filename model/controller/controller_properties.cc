@@ -22,7 +22,7 @@
 #include <limits>
 #include <memory>
 
-#include "os/log.h"
+#include "log.h"
 
 namespace rootcanal {
 using namespace bluetooth::hci;
