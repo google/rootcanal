@@ -62,6 +62,10 @@ class LinkLayerController {
  public:
   static constexpr size_t kIrkSize = 16;
 
+  // Generate a resolvable private address using the specified IRK.
+  static Address generate_rpa(
+      std::array<uint8_t, LinkLayerController::kIrkSize> irk);
+
   LinkLayerController(const Address& address,
                       const ControllerProperties& properties);
 

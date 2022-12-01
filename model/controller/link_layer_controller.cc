@@ -212,9 +212,6 @@ std::optional<AddressWithType> LinkLayerController::ResolvePrivateAddress(
   return {};
 }
 
-static Address generate_rpa(
-    std::array<uint8_t, LinkLayerController::kIrkSize> irk);
-
 std::optional<AddressWithType>
 LinkLayerController::GenerateResolvablePrivateAddress(AddressWithType address,
                                                       IrkSelection irk) {
@@ -2620,7 +2617,7 @@ void LinkLayerController::IncomingKeypressNotificationPacket(
 }
 #endif /* !ROOTCANAL_LMP */
 
-static Address generate_rpa(
+Address LinkLayerController::generate_rpa(
     std::array<uint8_t, LinkLayerController::kIrkSize> irk) {
   // most significant bit, bit7, bit6 is 01 to be resolvable random
   // Bits of the random part of prand shall not be all 1 or all 0
