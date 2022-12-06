@@ -84,7 +84,7 @@ DualModeController::DualModeController(const std::string& properties_filename,
   link_layer_controller_.RegisterRemoteChannel(
       [this](std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
              Phy::Type phy_type) {
-        DualModeController::SendLinkLayerPacket(packet, phy_type);
+        this->SendLinkLayerPacket(packet, phy_type);
       });
 
   std::array<uint8_t, 64> supported_commands{0};

@@ -17,8 +17,10 @@ with tempfile.TemporaryDirectory() as cache:
 import unittest
 
 tests = [
+  'LL.DDI.ADV.BV_01_C',
   'LL.DDI.SCN.BV_13_C',
-  'LL.DDI.SCN.BV_14_C'
+  'LL.DDI.SCN.BV_14_C',
+  'LL.DDI.SCN.BV_18_C',
 ]
 
 if __name__ == "__main__":
