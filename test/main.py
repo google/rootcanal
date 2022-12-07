@@ -18,6 +18,8 @@ import unittest
 
 tests = [
   'LL.DDI.ADV.BV_01_C',
+  'LL.DDI.ADV.BV_02_C',
+  'LL.DDI.ADV.BV_03_C',
   'LL.DDI.SCN.BV_13_C',
   'LL.DDI.SCN.BV_14_C',
   'LL.DDI.SCN.BV_18_C',

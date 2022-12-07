@@ -9,7 +9,7 @@ from py.controller import ControllerTest
 
 class Test(ControllerTest):
 
-    # LL/DDI/ADV/BV-01-C [Non-Connectable Advertising Events]
+    # LL/DDI/ADV/BV-02-C [Undirected Advertising Events]
     async def test(self):
         # Test parameters.
         LL_advertiser_advInterval_MIN = 0x200
@@ -19,14 +19,13 @@ class Test(ControllerTest):
 
         # 1. Configure Lower Tester to monitor advertising packets from the IUT.
 
-        # 2. Upper Tester enables non-connectable advertising in the IUT using a selected advertising
-        # channel and a selected advertising interval between the minimum and maximum advertising
-        # intervals.
+        # 2. Upper Tester enables undirected advertising in the IUT using a selected advertising channel and
+        # a selected advertising interval between the minimum and maximum advertising intervals.
         controller.send_cmd(
             hci.LeSetAdvertisingParameters(
                 advertising_interval_min=LL_advertiser_advInterval_MIN,
                 advertising_interval_max=LL_advertiser_advInterval_MAX,
-                advertising_type=hci.AdvertisingType.ADV_NONCONN_IND,
+                advertising_type=hci.AdvertisingType.ADV_IND,
                 own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
                 advertising_channel_map=LL_advertiser_Adv_Channel_Map,
                 advertising_filter_policy=hci.AdvertisingFilterPolicy.LISTED_SCAN_AND_CONNECT))
@@ -42,13 +41,14 @@ class Test(ControllerTest):
 
         await self.expect_evt(hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
-        # 3. Expect the IUT to send ADV_NONCONN_IND on the selected advertising channel.
-        # 4. Expect the following event to start one advertising interval after the start of the first packet.
-        # 5. Repeat steps 3–4 until a number of advertising intervals (100) have been detected.
+        # 3. Lower Tester expects the IUT to send ADV_IND packets on the selected advertising channel.
+        # 4. Expect the next event to start after advertising interval time calculated from the start of the first
+        # packet.
+        # 5. Repeat steps 3–4 until a number advertising intervals (100) have been detected.
         for n in range(10):
             await self.expect_ll(ll.LeLegacyAdvertisingPdu(source_address=controller.address,
                                                            advertising_address_type=ll.AddressType.PUBLIC,
-                                                           advertising_type=ll.LegacyAdvertisingType.ADV_NONCONN_IND,
+                                                           advertising_type=ll.LegacyAdvertisingType.ADV_IND,
                                                            advertising_data=[]),
                                  timeout=5)
 
