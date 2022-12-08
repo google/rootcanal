@@ -116,6 +116,10 @@ PYBIND11_MODULE(lib_rootcanal_python3, m) {
 
         bluetooth::hci::Address rpa =
             rootcanal::LinkLayerController::generate_rpa(irk);
+        // Python address representation keeps the same
+        // byte order as the string representation, instead of using
+        // little endian order.
+        std::reverse(rpa.address.begin(), rpa.address.end());
         return rpa.address;
       },
       "Bluetooth RPA generation");
