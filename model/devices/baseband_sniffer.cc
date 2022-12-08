@@ -142,7 +142,7 @@ void BaseBandSniffer::IncomingPacket(
         0,  // eir
         0,  // sr
         0,  // sp
-        uap, nap, page_view.GetClassOfDevice().ToUint32Legacy(),
+        uap, nap, page_view.GetClassOfDevice().ToUint32(),
         1,  // lt_addr
         0,  // clk
         0,  // page_scan_mode

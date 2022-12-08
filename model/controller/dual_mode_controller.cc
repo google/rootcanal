@@ -20,7 +20,7 @@
 #include <memory>
 #include <random>
 
-#include "crypto_toolbox/crypto_toolbox.h"
+#include "crypto/crypto.h"
 #include "log.h"
 #include "packet/raw_builder.h"
 
@@ -2614,7 +2614,7 @@ void DualModeController::LeEncrypt(CommandView command) {
       gd_hci::LeSecurityCommandView::Create(command));
   ASSERT(command_view.IsValid());
 
-  auto encrypted_data = bluetooth::crypto_toolbox::aes_128(
+  auto encrypted_data = rootcanal::crypto::aes_128(
       command_view.GetKey(), command_view.GetPlaintextData());
 
   send_event_(bluetooth::hci::LeEncryptCompleteBuilder::Create(
