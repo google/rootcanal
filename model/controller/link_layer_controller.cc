@@ -4459,7 +4459,6 @@ void LinkLayerController::IncomingLeScanResponsePacket(
              advertising_address.GetAddressType(),
              resolved_advertising_address.ToString().c_str(),
              resolved_advertising_address.GetAddressType());
-    return;
   }
 
   LOG_INFO("Accepting LE Scan response from advertising address %s(%hhx)",

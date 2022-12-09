@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- *  Copyright 2019 The Android Open Source Project
+ *  Copyright 2022 The Android Open Source Project
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ class AddressWithType final {
   /* Is this an Resolvable Private Address ? */
   inline bool IsRpa() const {
     return address_type_ == hci::AddressType::RANDOM_DEVICE_ADDRESS &&
-           ((address_.data())[0] & 0xc0) == 0x40;
+           ((address_.data())[5] & 0xc0) == 0x40;
   }
 
   /* Is this an Resolvable Private Address, that was generated from given irk ?
@@ -55,22 +55,17 @@ class AddressWithType final {
 
     /* use the 3 MSB of bd address as prand */
     uint8_t prand[3];
-    prand[0] = address_.address[2];
-    prand[1] = address_.address[1];
-    prand[2] = address_.address[0];
+    prand[0] = address_.address[3];
+    prand[1] = address_.address[4];
+    prand[2] = address_.address[5];
     /* generate X = E irk(R0, R1, R2) and R is random address 3 LSO */
     rootcanal::crypto::Octet16 computed_hash =
         rootcanal::crypto::aes_128(irk, &prand[0], 3);
     uint8_t hash[3];
-    hash[0] = address_.address[5];
-    hash[1] = address_.address[4];
-    hash[2] = address_.address[3];
-    if (memcmp(computed_hash.data(), &hash[0], 3) == 0) {
-      // match
-      return true;
-    }
-    // not a match
-    return false;
+    hash[0] = address_.address[0];
+    hash[1] = address_.address[1];
+    hash[2] = address_.address[2];
+    return memcmp(computed_hash.data(), &hash[0], 3) == 0;
   }
 
   bool operator<(const AddressWithType& rhs) const {

@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- *  Copyright 2019 The Android Open Source Project
+ *  Copyright 2022 The Android Open Source Project
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -34,6 +34,10 @@ class Address final : public packet::CustomFieldFixedSizeInterface<Address> {
  public:
   static constexpr size_t kLength = 6;
 
+  // Bluetooth MAC address bytes saved in little endian format.
+  // The address MSB is address[5], the address LSB is address[0].
+  // Note that the textual representation follows the big endian format,
+  // ie. Address{0, 1, 2, 3, 4, 5} is represented as 05:04:03:02:01:00.
   std::array<uint8_t, kLength> address = {};
 
   constexpr Address() = default;

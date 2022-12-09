@@ -84,7 +84,7 @@ DualModeController::DualModeController(const std::string& properties_filename,
   link_layer_controller_.RegisterRemoteChannel(
       [this](std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
              Phy::Type phy_type) {
-        DualModeController::SendLinkLayerPacket(packet, phy_type);
+        this->SendLinkLayerPacket(packet, phy_type);
       });
 
   std::array<uint8_t, 64> supported_commands{0};
@@ -2112,29 +2112,21 @@ void DualModeController::LeReadAdvertisingPhysicalChannelTxPower(
 }
 
 void DualModeController::LeSetAdvertisingData(CommandView command) {
-  auto command_view = gd_hci::LeSetAdvertisingDataView::Create(
+  auto command_view = gd_hci::LeSetAdvertisingDataRawView::Create(
       gd_hci::LeAdvertisingCommandView::Create(command));
-  auto payload = command.GetPayload();
-  auto data_size = *payload.begin();
-  auto first_data = payload.begin() + 1;
-  std::vector<uint8_t> advertising_data{first_data, first_data + data_size};
-  ASSERT_LOG(command_view.IsValid(), "%s command.size() = %zu",
-             gd_hci::OpCodeText(command.GetOpCode()).c_str(), command.size());
-  ASSERT(command_view.GetPayload().size() == 32);
-  ErrorCode status =
-      link_layer_controller_.LeSetAdvertisingData(advertising_data);
+  ASSERT(command_view.IsValid());
+  ErrorCode status = link_layer_controller_.LeSetAdvertisingData(
+      command_view.GetAdvertisingData());
   send_event_(bluetooth::hci::LeSetAdvertisingDataCompleteBuilder::Create(
       kNumCommandPackets, status));
 }
 
 void DualModeController::LeSetScanResponseData(CommandView command) {
-  auto command_view = gd_hci::LeSetScanResponseDataView::Create(
+  auto command_view = gd_hci::LeSetScanResponseDataRawView::Create(
       gd_hci::LeAdvertisingCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  ASSERT(command_view.GetPayload().size() == 32);
   ErrorCode status = link_layer_controller_.LeSetScanResponseData(
-      std::vector<uint8_t>(command_view.GetPayload().begin() + 1,
-                           command_view.GetPayload().end()));
+      command_view.GetAdvertisingData());
   send_event_(bluetooth::hci::LeSetScanResponseDataCompleteBuilder::Create(
       kNumCommandPackets, status));
 }

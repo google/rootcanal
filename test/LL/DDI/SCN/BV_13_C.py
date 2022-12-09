@@ -20,7 +20,7 @@ class Test(ControllerTest):
 
         controller = self.controller
         peer_irk = bytes([1] * 16)
-        peer_identity_address = Address.from_str('aa:bb:cc:dd:ee:ff')
+        peer_identity_address = Address('aa:bb:cc:dd:ee:ff')
         peer_identity_address_type = hci.PeerAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS
         peer_resolvable_address = Address(rootcanal.generate_rpa(peer_irk))
 
