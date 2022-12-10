@@ -17,7 +17,7 @@ class Test(ControllerTest):
         LL_advertiser_Adv_Channel_Map = 0x7
         controller = self.controller
         peer_address = Address('aa:bb:cc:dd:ee:ff')
-        invalid_scan_address = Address([
+        invalid_local_address = Address([
             controller.address.address[0] ^ 0xff, controller.address.address[1], controller.address.address[2],
             controller.address.address[3], controller.address.address[4], controller.address.address[5]
         ])
@@ -136,7 +136,7 @@ class Test(ControllerTest):
                                           advertising_data=[]))
 
             controller.send_ll(ll.LeScan(source_address=peer_address,
-                                         destination_address=invalid_scan_address,
+                                         destination_address=invalid_local_address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
                                rssi=0xf0)
@@ -164,7 +164,7 @@ class Test(ControllerTest):
                                           advertising_data=[]))
 
             controller.send_ll(ll.LeScan(source_address=peer_address,
-                                         destination_address=invalid_scan_address,
+                                         destination_address=invalid_local_address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
                                rssi=0xf0)

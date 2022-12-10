@@ -3121,7 +3121,8 @@ void LinkLayerController::ConnectIncomingLeLegacyAdvertisingPdu(
           initiating_address.GetAddressType()),
       static_cast<model::packets::AddressType>(
           advertising_address.GetAddressType()),
-      initiator_.le_1m_phy.connection_interval_min,
+      // The connection is created with the highest allowed
+      // value for the connection interval and the latency.
       initiator_.le_1m_phy.connection_interval_max,
       initiator_.le_1m_phy.max_latency,
       initiator_.le_1m_phy.supervision_timeout));
@@ -3534,7 +3535,8 @@ void LinkLayerController::ConnectIncomingLeExtendedAdvertisingPdu(
           initiating_address.GetAddressType()),
       static_cast<model::packets::AddressType>(
           advertising_address.GetAddressType()),
-      initiator_.le_1m_phy.connection_interval_min,
+      // The connection is created with the highest allowed value
+      // for the connection interval and the latency.
       initiator_.le_1m_phy.connection_interval_max,
       initiator_.le_1m_phy.max_latency,
       initiator_.le_1m_phy.supervision_timeout));
@@ -3868,9 +3870,8 @@ bool LinkLayerController::ProcessIncomingLegacyConnectRequest(
 
   (void)HandleLeConnection(
       initiating_address, advertising_address, bluetooth::hci::Role::PERIPHERAL,
-      connect_ind.GetLeConnectionIntervalMax(),
-      connect_ind.GetLeConnectionLatency(),
-      connect_ind.GetLeConnectionSupervisionTimeout(), false);
+      connect_ind.GetConnInterval(), connect_ind.GetConnPeripheralLatency(),
+      connect_ind.GetConnSupervisionTimeout(), false);
 
   SendLeLinkLayerPacket(model::packets::LeConnectCompleteBuilder::Create(
       advertising_address.GetAddress(), initiating_address.GetAddress(),
@@ -3878,9 +3879,8 @@ bool LinkLayerController::ProcessIncomingLegacyConnectRequest(
           initiating_address.GetAddressType()),
       static_cast<model::packets::AddressType>(
           advertising_address.GetAddressType()),
-      connect_ind.GetLeConnectionIntervalMax(),
-      connect_ind.GetLeConnectionLatency(),
-      connect_ind.GetLeConnectionSupervisionTimeout()));
+      connect_ind.GetConnInterval(), connect_ind.GetConnPeripheralLatency(),
+      connect_ind.GetConnSupervisionTimeout()));
 
   legacy_advertiser_.Disable();
   return true;
@@ -4001,9 +4001,8 @@ bool LinkLayerController::ProcessIncomingExtendedConnectRequest(
 
   uint16_t connection_handle = HandleLeConnection(
       initiating_address, advertising_address, bluetooth::hci::Role::PERIPHERAL,
-      connect_ind.GetLeConnectionIntervalMax(),
-      connect_ind.GetLeConnectionLatency(),
-      connect_ind.GetLeConnectionSupervisionTimeout(), false);
+      connect_ind.GetConnInterval(), connect_ind.GetConnPeripheralLatency(),
+      connect_ind.GetConnSupervisionTimeout(), false);
 
   SendLeLinkLayerPacket(model::packets::LeConnectCompleteBuilder::Create(
       advertising_address.GetAddress(), initiating_address.GetAddress(),
@@ -4011,9 +4010,8 @@ bool LinkLayerController::ProcessIncomingExtendedConnectRequest(
           initiating_address.GetAddressType()),
       static_cast<model::packets::AddressType>(
           advertising_address.GetAddressType()),
-      connect_ind.GetLeConnectionIntervalMax(),
-      connect_ind.GetLeConnectionLatency(),
-      connect_ind.GetLeConnectionSupervisionTimeout()));
+      connect_ind.GetConnInterval(), connect_ind.GetConnPeripheralLatency(),
+      connect_ind.GetConnSupervisionTimeout()));
 
   // If the advertising set is connectable and a connection gets created, an
   // HCI_LE_Connection_Complete or HCI_LE_Enhanced_Connection_Complete
@@ -4061,14 +4059,14 @@ void LinkLayerController::IncomingLeConnectCompletePacket(
       advertising_address.ToString().c_str(),
       advertising_address.GetAddressType());
 
-  HandleLeConnection(
-      advertising_address,
-      AddressWithType(incoming.GetDestinationAddress(),
-                      static_cast<bluetooth::hci::AddressType>(
-                          complete.GetInitiatingAddressType())),
-      bluetooth::hci::Role::CENTRAL, complete.GetLeConnectionInterval(),
-      complete.GetLeConnectionLatency(),
-      complete.GetLeConnectionSupervisionTimeout(), ExtendedAdvertising());
+  HandleLeConnection(advertising_address,
+                     AddressWithType(incoming.GetDestinationAddress(),
+                                     static_cast<bluetooth::hci::AddressType>(
+                                         complete.GetInitiatingAddressType())),
+                     bluetooth::hci::Role::CENTRAL, complete.GetConnInterval(),
+                     complete.GetConnPeripheralLatency(),
+                     complete.GetConnSupervisionTimeout(),
+                     ExtendedAdvertising());
 
   initiator_.pending_connect_request = {};
   initiator_.Disable();
