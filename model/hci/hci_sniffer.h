@@ -21,6 +21,7 @@
 #include <memory>
 #include <ostream>
 
+#include "hci/pcap_filter.h"
 #include "model/hci/h4.h"
 #include "model/hci/hci_transport.h"
 
@@ -36,17 +37,20 @@ enum class PacketDirection : uint8_t {
 class HciSniffer : public HciTransport {
  public:
   HciSniffer(std::shared_ptr<HciTransport> transport,
-             std::shared_ptr<std::ostream> outputStream = nullptr);
+             std::shared_ptr<std::ostream> outputStream = nullptr,
+             std::shared_ptr<PcapFilter> filter = nullptr);
   ~HciSniffer() = default;
 
   static std::shared_ptr<HciTransport> Create(
       std::shared_ptr<HciTransport> transport,
-      std::shared_ptr<std::ostream> outputStream = nullptr) {
+      std::shared_ptr<std::ostream> outputStream = nullptr,
+      std::shared_ptr<PcapFilter> filter = nullptr) {
     return std::make_shared<HciSniffer>(transport, outputStream);
   }
 
   // Sets and initializes the output stream
   void SetOutputStream(std::shared_ptr<std::ostream> outputStream);
+  void SetPcapFilter(std::shared_ptr<PcapFilter> filter);
 
   void SendEvent(const std::vector<uint8_t>& packet) override;
 
@@ -72,6 +76,7 @@ class HciSniffer : public HciTransport {
 
   std::shared_ptr<std::ostream> output_;
   std::shared_ptr<HciTransport> transport_;
+  std::shared_ptr<rootcanal::PcapFilter> filter_;
 };
 
 }  // namespace rootcanal
