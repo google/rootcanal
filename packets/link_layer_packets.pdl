@@ -193,18 +193,17 @@ packet LeExtendedAdvertisingPdu : LinkLayerPacket (type = LE_EXTENDED_ADVERTISIN
 packet LeConnect : LinkLayerPacket (type = LE_CONNECT) {
   initiating_address_type : AddressType,
   advertising_address_type : AddressType,
-  le_connection_interval_min : 16,
-  le_connection_interval_max : 16,
-  le_connection_latency : 16,
-  le_connection_supervision_timeout : 16,
+  conn_interval : 16,
+  conn_peripheral_latency : 16,
+  conn_supervision_timeout : 16,
 }
 
 packet LeConnectComplete : LinkLayerPacket (type = LE_CONNECT_COMPLETE) {
   initiating_address_type : AddressType,
   advertising_address_type : AddressType,
-  le_connection_interval : 16,
-  le_connection_latency : 16,
-  le_connection_supervision_timeout : 16,
+  conn_interval : 16,
+  conn_peripheral_latency : 16,
+  conn_supervision_timeout : 16,
 }
 
 packet LeScan : LinkLayerPacket (type = LE_SCAN) {
