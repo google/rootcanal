@@ -76,10 +76,21 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
             device->GetAddress().ToString() + "_" + std::to_string(i) + ".pcap";
       }
       auto file = std::make_shared<std::ofstream>(filename, std::ios::binary);
-      std::static_pointer_cast<HciSniffer>(transport)->SetOutputStream(file);
+      auto sniffer = std::static_pointer_cast<HciSniffer>(transport);
+
+      // Add PCAP output stream.
+      sniffer->SetOutputStream(file);
+
+      // Add a PCAP filter if the option is enabled.
+      // TODO: ideally the filter should be shared between all transport
+      // instances to use the same user information remapping between traces.
+      if (enable_pcap_filter_) {
+        sniffer->SetPcapFilter(std::make_shared<rootcanal::PcapFilter>());
+      }
     }
     srv->StartListening();
   });
+
   SetUpLinkLayerServer();
   SetUpLinkBleLayerServer();
 
