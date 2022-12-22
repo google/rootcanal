@@ -68,12 +68,12 @@ void DualModeController::SendCommandCompleteUnknownOpCodeEvent(
 
 #ifdef ROOTCANAL_LMP
 DualModeController::DualModeController(const std::string& properties_filename,
-                                       uint16_t)
-    : Device(), properties_(properties_filename) {
+                                       uint16_t /*num_keys*/)
+    : properties_(properties_filename) {
 #else
 DualModeController::DualModeController(const std::string& properties_filename,
                                        uint16_t num_keys)
-    : Device(), properties_(properties_filename), security_manager_(num_keys) {
+    : properties_(properties_filename), security_manager_(num_keys) {
 #endif
   loopback_mode_ = LoopbackMode::NO_LOOPBACK;
 
@@ -2672,7 +2672,7 @@ void DualModeController::LeVendorCap(CommandView command) {
       gd_hci::VendorCommandView::Create(command));
   ASSERT(command_view.IsValid());
   vector<uint8_t> caps = properties_.le_vendor_capabilities;
-  if (caps.size() == 0) {
+  if (caps.empty()) {
     SendCommandCompleteUnknownOpCodeEvent(
         static_cast<uint16_t>(OpCode::LE_GET_VENDOR_CAPABILITIES));
     return;
@@ -2738,7 +2738,7 @@ void DualModeController::CsrVendorCommand(CommandView command) {
   uint16_t length = 0;
   uint16_t varid = 0;
 
-  if (parameters.size() == 0) {
+  if (parameters.empty()) {
     LOG_INFO("Empty CSR vendor command");
     goto complete;
   }
@@ -2815,6 +2815,7 @@ complete:
       std::make_unique<bluetooth::packet::RawBuilder>(std::move(parameters))));
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 void DualModeController::CsrReadVarid(CsrVarid varid,
                                       std::vector<uint8_t>& value) {
   switch (varid) {
@@ -2831,21 +2832,23 @@ void DualModeController::CsrReadVarid(CsrVarid varid,
   }
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 void DualModeController::CsrWriteVarid(CsrVarid varid,
                                        std::vector<uint8_t> const& value) {
   LOG_INFO("Unsupported write of CSR varid 0x%04x", varid);
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 void DualModeController::CsrReadPskey(CsrPskey pskey,
                                       std::vector<uint8_t>& value) {
   switch (pskey) {
     case CsrPskey::CSR_PSKEY_ENC_KEY_LMIN:
-      ASSERT(value.size() >= 1);
+      ASSERT(!value.empty());
       value[0] = 7;
       break;
 
     case CsrPskey::CSR_PSKEY_ENC_KEY_LMAX:
-      ASSERT(value.size() >= 1);
+      ASSERT(!value.empty());
       value[0] = 16;
       break;
 

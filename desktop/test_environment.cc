@@ -156,7 +156,9 @@ void TestEnvironment::SetUpLinkLayerServer() {
 std::shared_ptr<Device> TestEnvironment::ConnectToRemoteServer(
     const std::string& server, int port, Phy::Type phy_type) {
   auto socket = connector_->ConnectToRemoteServer(server, port);
-  if (!socket->Connected()) return nullptr;
+  if (!socket->Connected()) {
+    return nullptr;
+  }
   return LinkLayerSocketDevice::Create(socket, phy_type);
 }
 
@@ -168,14 +170,14 @@ void TestEnvironment::SetUpTestChannel() {
         server->StartListening();
         if (test_channel_open_) {
           LOG_WARN("Only one connection at a time is supported");
-          test_channel_transport_.SendResponse(conn_fd,
-                                               "The connection is broken");
+          rootcanal::TestChannelTransport::SendResponse(
+              conn_fd, "The connection is broken");
           return false;
         }
         test_channel_open_ = true;
         test_channel_.RegisterSendResponse(
-            [this, conn_fd](const std::string& response) {
-              test_channel_transport_.SendResponse(conn_fd, response);
+            [conn_fd](const std::string& response) {
+              rootcanal::TestChannelTransport::SendResponse(conn_fd, response);
             });
 
         conn_fd->WatchForNonBlockingRead([this](AsyncDataChannel* conn_fd) {

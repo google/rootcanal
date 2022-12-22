@@ -35,7 +35,7 @@ bool TestChannelTransport::SetUp(std::shared_ptr<AsyncDataChannelServer> server,
   socket_server_ = server;
   socket_server_->SetOnConnectCallback(connection_callback);
   socket_server_->StartListening();
-  return socket_server_.get() != nullptr;
+  return socket_server_ != nullptr;
 }
 
 void TestChannelTransport::CleanUp() {
@@ -54,14 +54,14 @@ void TestChannelTransport::OnCommandReady(AsyncDataChannel* socket,
   }
   vector<uint8_t> command_name_raw;
   command_name_raw.resize(command_name_size);
-  bytes_read = socket->Recv(&command_name_raw[0], command_name_size);
+  bytes_read = socket->Recv(command_name_raw.data(), command_name_size);
   if (bytes_read != command_name_size) {
     LOG_INFO("Unexpected (command_name) bytes_read: %zd != %d, %s", bytes_read,
              command_name_size, strerror(errno));
   }
   std::string command_name(command_name_raw.begin(), command_name_raw.end());
 
-  if (command_name == "CLOSE_TEST_CHANNEL" || command_name == "") {
+  if (command_name == "CLOSE_TEST_CHANNEL" || command_name.empty()) {
     LOG_INFO("Test channel closed");
     unwatch();
     socket->Close();
@@ -84,7 +84,7 @@ void TestChannelTransport::OnCommandReady(AsyncDataChannel* socket,
     }
     vector<uint8_t> arg;
     arg.resize(arg_size);
-    bytes_read = socket->Recv(&arg[0], arg_size);
+    bytes_read = socket->Recv(arg.data(), arg_size);
     if (bytes_read != arg_size) {
       LOG_INFO("Unexpected (arg) bytes_read: %zd != %d, %s", bytes_read,
                arg_size, strerror(errno));
@@ -96,8 +96,7 @@ void TestChannelTransport::OnCommandReady(AsyncDataChannel* socket,
 }
 
 void TestChannelTransport::SendResponse(
-    std::shared_ptr<AsyncDataChannel> socket,
-    const std::string& response) const {
+    std::shared_ptr<AsyncDataChannel> socket, const std::string& response) {
   size_t size = response.size();
   // Cap to 64K
   if (size > 0xffff) {

@@ -71,11 +71,11 @@ PosixAsyncSocketServer::PosixAsyncSocketServer(int port, AsyncManager* am)
 
   struct sockaddr_in sin;
   socklen_t slen = sizeof(sin);
-  if (getsockname(listen_fd, (struct sockaddr*)&sin, &slen) == -1)
+  if (getsockname(listen_fd, (struct sockaddr*)&sin, &slen) == -1) {
     LOG_INFO("Error retrieving actual port: %s", strerror(errno));
-  else
+  } else {
     port_ = ntohs(sin.sin_port);
-
+  }
   LOG_INFO("Listening on: %d (%d)", port_, listen_fd);
   server_socket_ = std::make_shared<PosixAsyncSocket>(listen_fd, am_);
 }

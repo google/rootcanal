@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
   for (int arg = 0; arg < argc; arg++) {
     int port = (int)strtol(argv[arg], nullptr, 0);
     LOG_INFO("%d: %s (%d)", arg, argv[arg], port);
-    if (port < 0 || port > 0xffff) {
+    if (port < 0 || port > UINT16_MAX) {
       LOG_WARN("%s out of range", argv[arg]);
     } else {
       switch (arg) {

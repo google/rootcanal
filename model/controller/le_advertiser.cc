@@ -400,7 +400,7 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingParameters(
   // does not support advertising data when the advertising set already
   // contains some, the Controller shall return the error code
   // Invalid HCI Command Parameters (0x12).
-  if (!can_have_advertising_data && advertiser.advertising_data.size() > 0) {
+  if (!can_have_advertising_data && !advertiser.advertising_data.empty()) {
     LOG_INFO(
         "advertising_event_properties (0x%02x) specifies an event type"
         " that does not support avertising data but the set contains some",
@@ -410,7 +410,7 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingParameters(
 
   // Note: not explicitly specified in the specification but makes sense
   // in the context of the other checks.
-  if (!scannable_advertising && advertiser.scan_response_data.size() > 0) {
+  if (!scannable_advertising && !advertiser.scan_response_data.empty()) {
     LOG_INFO(
         "advertising_event_properties (0x%02x) specifies an event type"
         " that does not support scan response data but the set contains some",
@@ -532,7 +532,8 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingParameters(
   // Secondary_Advertising_PHY parameter does not specify the PHY currently
   // being used for the periodic advertising, the Controller shall return the
   // error code Command Disallowed (0x0C).
-  if (advertiser.periodic_advertising_enable && false) {
+#if 0
+  if (advertiser.periodic_advertising_enable) {
     // TODO
     LOG_INFO(
         "periodic advertising is enabled for the specified advertising set"
@@ -540,6 +541,7 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingParameters(
         " advertising PHY");
     return ErrorCode::COMMAND_DISALLOWED;
   }
+#endif
 
   // If the advertising set already contains advertising data or scan response
   // data, extended advertising is being used, and the length of the data is
@@ -652,9 +654,8 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingData(
   // then the Controller shall return the error code Invalid HCI Command
   // Parameters (0x12).
   if (operation == Operation::UNCHANGED_DATA &&
-      (!advertiser.advertising_enable ||
-       advertiser.advertising_data.size() == 0 ||
-       advertising_event_properties.legacy_ || advertising_data.size() != 0)) {
+      (!advertiser.advertising_enable || advertiser.advertising_data.empty() ||
+       advertising_event_properties.legacy_ || !advertising_data.empty())) {
     LOG_INFO(
         "Unchanged_Data operation is used but advertising is disabled;"
         " or the advertising set contains no data;"
@@ -667,7 +668,7 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingData(
   // the Controller shall return the error code Invalid HCI
   // Command Parameters (0x12).
   if (operation != Operation::COMPLETE_ADVERTISEMENT &&
-      operation != Operation::UNCHANGED_DATA && advertising_data.size() == 0) {
+      operation != Operation::UNCHANGED_DATA && advertising_data.empty()) {
     LOG_INFO(
         "operation (%02x) is not Complete_Advertisement or Unchanged_Data"
         " but the advertising data is empty",
@@ -799,8 +800,7 @@ ErrorCode LinkLayerController::LeSetExtendedScanResponseData(
   // If the advertising set is non-scannable and the Host uses this
   // command other than to discard existing data, the Controller shall
   // return the error code Invalid HCI Command Parameters (0x12).
-  if (!advertising_event_properties.scannable_ &&
-      scan_response_data.size() > 0) {
+  if (!advertising_event_properties.scannable_ && !scan_response_data.empty()) {
     LOG_INFO(
         "advertising_event_properties (%02x) is not scannable"
         " but the scan response data is not empty",
@@ -828,7 +828,7 @@ ErrorCode LinkLayerController::LeSetExtendedScanResponseData(
   // Controller shall return the error code
   // Invalid HCI Command Parameters (0x12).
   if (operation != Operation::COMPLETE_ADVERTISEMENT &&
-      scan_response_data.size() == 0) {
+      scan_response_data.empty()) {
     LOG_INFO(
         "operation (%02x) is not Complete_Advertisement but the"
         " scan response data is empty",
@@ -854,7 +854,7 @@ ErrorCode LinkLayerController::LeSetExtendedScanResponseData(
   // the error code Command Disallowed (0x0C).
   if (advertiser.advertising_enable &&
       advertising_event_properties.scannable_ &&
-      !advertising_event_properties.legacy_ && scan_response_data.size() == 0) {
+      !advertising_event_properties.legacy_ && scan_response_data.empty()) {
     LOG_INFO(
         "advertising_event_properties (%02x) is scannable extended,"
         " advertising is enabled for the specified advertising set"
@@ -975,7 +975,7 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingEnable(
 
   // If Enable and Num_Sets are both set to
   // 0x00, then all advertising sets are disabled.
-  if (!enable && sets.size() == 0) {
+  if (!enable && sets.empty()) {
     for (auto& advertiser : extended_advertisers_) {
       advertiser.second.advertising_enable = false;
     }
@@ -984,7 +984,7 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingEnable(
 
   // If Num_Sets is set to 0x00, the Controller shall return the error code
   // Invalid HCI Command Parameters (0x12).
-  if (sets.size() == 0) {
+  if (sets.empty()) {
     LOG_INFO("enable is true but no advertising set is selected");
     return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
   }
@@ -1040,7 +1040,7 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingEnable(
     // scan response data is currently provided, the Controller shall return the
     // error code Command Disallowed (0x0C).
     if (extended_advertising && scannable_advertising &&
-        advertiser.scan_response_data.size() == 0) {
+        advertiser.scan_response_data.empty()) {
       LOG_INFO(
           "advertising set uses scannable extended advertising PDUs"
           " but no scan response data is provided");
@@ -1263,13 +1263,27 @@ uint16_t ExtendedAdvertiser::GetMaxScanResponseDataLength(
 uint16_t ExtendedAdvertiser::GetRawAdvertisingEventProperties(
     const AdvertisingEventProperties& properties) {
   uint16_t mask = 0;
-  if (properties.connectable_) mask |= 0x1;
-  if (properties.scannable_) mask |= 0x2;
-  if (properties.directed_) mask |= 0x4;
-  if (properties.high_duty_cycle_) mask |= 0x8;
-  if (properties.legacy_) mask |= 0x10;
-  if (properties.anonymous_) mask |= 0x20;
-  if (properties.tx_power_) mask |= 0x40;
+  if (properties.connectable_) {
+    mask |= 0x1;
+  }
+  if (properties.scannable_) {
+    mask |= 0x2;
+  }
+  if (properties.directed_) {
+    mask |= 0x4;
+  }
+  if (properties.high_duty_cycle_) {
+    mask |= 0x8;
+  }
+  if (properties.legacy_) {
+    mask |= 0x10;
+  }
+  if (properties.anonymous_) {
+    mask |= 0x20;
+  }
+  if (properties.tx_power_) {
+    mask |= 0x40;
+  }
   return mask;
 }
 

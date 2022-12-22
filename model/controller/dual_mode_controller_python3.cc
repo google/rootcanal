@@ -39,7 +39,7 @@ enum Type {
 // SendLinkLayerPacket as forwarding packets to a registered handler.
 class BaseController : public DualModeController {
  public:
-  BaseController() : DualModeController() {
+  BaseController() {
     RegisterTaskScheduler(
         [this](std::chrono::milliseconds delay, TaskCallback const& task) {
           return this->async_manager_.ExecAsync(0, delay, task);

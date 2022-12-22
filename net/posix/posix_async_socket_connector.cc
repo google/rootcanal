@@ -66,8 +66,8 @@ PosixAsyncSocketConnector::ConnectToRemoteServer(
   int result =
       connect(socket_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
-  if (result != 0 &&
-      !(errno == EWOULDBLOCK || errno == EAGAIN || errno == EINPROGRESS)) {
+  if (result != 0 && errno != EWOULDBLOCK && errno != EAGAIN &&
+      errno != EINPROGRESS) {
     LOG_INFO("Failed to connect to %s:%d, error:  %s", server.c_str(), port,
              strerror(errno));
     pas->Close();
