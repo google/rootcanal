@@ -89,7 +89,7 @@ void TestCommandHandler::HandleCommand(const std::string& name,
 }
 
 void TestCommandHandler::FromFile(const std::string& file_name) {
-  if (file_name.empty()) {
+  if (file_name.size() == 0) {
     return;
   }
 
@@ -119,7 +119,7 @@ void TestCommandHandler::RegisterSendResponse(
 }
 
 void TestCommandHandler::Add(const vector<std::string>& args) {
-  if (args.empty()) {
+  if (args.size() < 1) {
     response_string_ = "TestCommandHandler 'add' takes an argument";
     send_response_(response_string_);
     return;
@@ -216,6 +216,7 @@ void TestCommandHandler::AddDeviceToPhy(const vector<std::string>& args) {
       "TestCommandHandler 'add_device_to_phy' called with device " +
       std::to_string(dev_index) + " and phy " + std::to_string(phy_index);
   send_response_(response_string_);
+  return;
 }
 
 void TestCommandHandler::DelDeviceFromPhy(const vector<std::string>& args) {
@@ -232,10 +233,11 @@ void TestCommandHandler::DelDeviceFromPhy(const vector<std::string>& args) {
       "TestCommandHandler 'del_device_from_phy' called with device " +
       std::to_string(dev_index) + " and phy " + std::to_string(phy_index);
   send_response_(response_string_);
+  return;
 }
 
 void TestCommandHandler::List(const vector<std::string>& args) {
-  if (!args.empty()) {
+  if (args.size() > 0) {
     LOG_INFO("Unused args: arg[0] = %s", args[0].c_str());
     return;
   }
@@ -276,7 +278,7 @@ void TestCommandHandler::SetTimerPeriod(const vector<std::string>& args) {
 }
 
 void TestCommandHandler::StartTimer(const vector<std::string>& args) {
-  if (!args.empty()) {
+  if (args.size() > 0) {
     LOG_INFO("Unused args: arg[0] = %s", args[0].c_str());
   }
   model_.StartTimer();
@@ -285,7 +287,7 @@ void TestCommandHandler::StartTimer(const vector<std::string>& args) {
 }
 
 void TestCommandHandler::StopTimer(const vector<std::string>& args) {
-  if (!args.empty()) {
+  if (args.size() > 0) {
     LOG_INFO("Unused args: arg[0] = %s", args[0].c_str());
   }
   model_.StopTimer();
@@ -294,7 +296,7 @@ void TestCommandHandler::StopTimer(const vector<std::string>& args) {
 }
 
 void TestCommandHandler::Reset(const std::vector<std::string>& args) {
-  if (!args.empty()) {
+  if (args.size() > 0) {
     LOG_INFO("Unused args: arg[0] = %s", args[0].c_str());
   }
   model_.Reset();

@@ -46,7 +46,8 @@ class TestCommandHandler {
   void FromFile(const std::string& file_name);
 
   // Dispatches the action corresponding to the command specified by |name|.
-  void RegisterSendResponse(std::function<void(const std::string&)> callback);
+  void RegisterSendResponse(
+      const std::function<void(const std::string&)> callback);
 
   // Commands:
 

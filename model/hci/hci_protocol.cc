@@ -32,13 +32,11 @@ size_t HciProtocol::WriteSafely(AsyncDataChannel* socket, const uint8_t* data,
     ssize_t ret = socket->Send(data + transmitted_length, length);
 
     if (ret == -1) {
-      if (errno == EAGAIN) {
-        continue;
-      }
+      if (errno == EAGAIN) continue;
       LOG_ERROR("%s error writing to UART (%s)", __func__, strerror(errno));
       break;
-    }
-    if (ret == 0) {
+
+    } else if (ret == 0) {
       // Nothing written :(
       LOG_ERROR("%s zero bytes written - something went wrong...", __func__);
       break;

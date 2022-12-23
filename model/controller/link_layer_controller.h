@@ -61,9 +61,6 @@ AddressWithType PeerIdentityAddress(Address address,
 class LinkLayerController {
  public:
   static constexpr size_t kIrkSize = 16;
-  static constexpr size_t kLtkSize = 16;
-  static constexpr size_t kLocalNameSize = 248;
-  static constexpr size_t kExtendedInquiryResponseSize = 240;
 
   // Generate a resolvable private address using the specified IRK.
   static Address generate_rpa(
@@ -298,15 +295,13 @@ class LinkLayerController {
       bluetooth::hci::RemoveDataPathDirection remove_data_path_direction);
 
   void HandleLeEnableEncryption(uint16_t handle, std::array<uint8_t, 8> rand,
-                                uint16_t ediv,
-                                std::array<uint8_t, kLtkSize> ltk);
+                                uint16_t ediv, std::array<uint8_t, 16> ltk);
 
   ErrorCode LeEnableEncryption(uint16_t handle, std::array<uint8_t, 8> rand,
-                               uint16_t ediv,
-                               std::array<uint8_t, kLtkSize> ltk);
+                               uint16_t ediv, std::array<uint8_t, 16> ltk);
 
   ErrorCode LeLongTermKeyRequestReply(uint16_t handle,
-                                      std::array<uint8_t, kLtkSize> ltk);
+                                      std::array<uint8_t, 16> ltk);
 
   ErrorCode LeLongTermKeyRequestNegativeReply(uint16_t handle);
 
@@ -321,13 +316,13 @@ class LinkLayerController {
   void SetInquiryMaxResponses(uint8_t max);
   void Inquiry();
 
-  bool GetInquiryScanEnable() const { return inquiry_scan_enable_; }
+  bool GetInquiryScanEnable() { return inquiry_scan_enable_; }
   void SetInquiryScanEnable(bool enable);
 
-  bool GetPageScanEnable() const { return page_scan_enable_; }
+  bool GetPageScanEnable() { return page_scan_enable_; }
   void SetPageScanEnable(bool enable);
 
-  uint16_t GetPageTimeout() const { return page_timeout_; }
+  uint16_t GetPageTimeout();
   void SetPageTimeout(uint16_t page_timeout);
 
   ErrorCode ChangeConnectionPacketType(uint16_t handle, uint16_t types);
@@ -353,7 +348,7 @@ class LinkLayerController {
   ErrorCode WriteLinkSupervisionTimeout(uint16_t handle, uint16_t timeout);
   ErrorCode WriteDefaultLinkPolicySettings(uint16_t settings);
   void CheckExpiringConnection(uint16_t handle);
-  uint16_t ReadDefaultLinkPolicySettings() const;
+  uint16_t ReadDefaultLinkPolicySettings();
 
   void ReadLocalOobData();
   void ReadLocalOobExtendedData();
@@ -671,7 +666,6 @@ class LinkLayerController {
   // TODO
   // The Clock Offset should be specific to an ACL connection.
   // Returning a proper value is not that important.
-  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
   uint32_t GetClockOffset() const { return 0; }
 
   // TODO
@@ -691,9 +685,7 @@ class LinkLayerController {
     return authentication_enable_;
   }
 
-  std::array<uint8_t, kLocalNameSize> const& GetLocalName() {
-    return local_name_;
-  }
+  std::array<uint8_t, 248> const& GetLocalName() { return local_name_; }
 
   uint64_t GetLeSupportedFeatures() const {
     return properties_.le_features | le_host_supported_features_;
@@ -716,7 +708,7 @@ class LinkLayerController {
   }
 
   void SetLocalName(std::vector<uint8_t> const& local_name);
-  void SetLocalName(std::array<uint8_t, kLocalNameSize> const& local_name);
+  void SetLocalName(std::array<uint8_t, 248> const& local_name);
   void SetExtendedInquiryResponse(
       std::vector<uint8_t> const& extended_inquiry_response);
 
@@ -725,9 +717,9 @@ class LinkLayerController {
   }
 
   void SetClassOfDevice(uint32_t class_of_device) {
-    class_of_device_.cod[0] = class_of_device & UINT8_MAX;
-    class_of_device_.cod[1] = (class_of_device >> 8) & UINT8_MAX;
-    class_of_device_.cod[2] = (class_of_device >> 16) & UINT8_MAX;
+    class_of_device_.cod[0] = class_of_device & 0xff;
+    class_of_device_.cod[1] = (class_of_device >> 8) & 0xff;
+    class_of_device_.cod[2] = (class_of_device >> 16) & 0xff;
   }
 
   void SetAuthenticationEnable(AuthenticationEnable enable) {
@@ -763,17 +755,19 @@ class LinkLayerController {
   bool SelectLegacyAdvertising() {
     if (extended_advertising_in_use_) {
       return false;
+    } else {
+      legacy_advertising_in_use_ = true;
+      return true;
     }
-    legacy_advertising_in_use_ = true;
-    return true;
   }
 
   bool SelectExtendedAdvertising() {
     if (legacy_advertising_in_use_) {
       return false;
+    } else {
+      extended_advertising_in_use_ = true;
+      return true;
     }
-    extended_advertising_in_use_ = true;
-    return true;
   }
 
   uint16_t GetLeSuggestedMaxTxOctets() const {
@@ -849,11 +843,10 @@ class LinkLayerController {
   bool sco_flow_control_enable_{false};
 
   // Local Name (Vol 4, Part E § 6.23).
-  std::array<uint8_t, kLocalNameSize> local_name_{};
+  std::array<uint8_t, 248> local_name_{};
 
   // Extended Inquiry Response (Vol 4, Part E § 6.24).
-  std::array<uint8_t, kExtendedInquiryResponseSize>
-      extended_inquiry_response_{};
+  std::array<uint8_t, 240> extended_inquiry_response_{};
 
   // Class of Device (Vol 4, Part E § 6.26).
   ClassOfDevice class_of_device_{{0, 0, 0}};

@@ -74,7 +74,7 @@ class PosixAsyncSocket : public AsyncDataChannel {
 
   void StopWatching() override;
 
-  int fd() const { return fd_; }
+  int fd() { return fd_; }
 
  private:
   void OnReadCallback();
