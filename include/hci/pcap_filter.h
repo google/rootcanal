@@ -49,9 +49,6 @@ class PcapFilter final {
 
   std::vector<uint8_t> FilterHciCommand(std::vector<uint8_t> const& packet);
   std::vector<uint8_t> FilterHciEvent(std::vector<uint8_t> const& packet);
-  std::vector<uint8_t> FilterHciAcl(std::vector<uint8_t> const& packet) const;
-  std::vector<uint8_t> FilterHciSco(std::vector<uint8_t> const& packet) const;
-  std::vector<uint8_t> FilterHciIso(std::vector<uint8_t> const& packet) const;
 
  private:
   // Specific filters for HCI commands.
