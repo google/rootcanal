@@ -60,11 +60,11 @@ struct ScoConnectionParameters {
   uint16_t packet_type;
 
   // Return true if packet_type enables extended SCO packets.
-  bool IsExtended() const;
+  bool IsExtended();
 
   // Return the link parameters for these connection parameters, if the
   // parameters are coherent, none otherwise.
-  std::optional<ScoLinkParameters> GetLinkParameters() const;
+  std::optional<ScoLinkParameters> GetLinkParameters();
 };
 
 enum ScoState {
