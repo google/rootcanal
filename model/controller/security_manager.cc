@@ -72,13 +72,19 @@ void SecurityManager::AuthenticationRequestFinished() {
   authenticating_ = false;
 }
 
-bool SecurityManager::AuthenticationInProgress() { return authenticating_; }
+bool SecurityManager::AuthenticationInProgress() const {
+  return authenticating_;
+}
 
-bool SecurityManager::IsInitiator() { return initiator_; }
+bool SecurityManager::IsInitiator() const { return initiator_; }
 
-uint16_t SecurityManager::GetAuthenticationHandle() { return current_handle_; }
+uint16_t SecurityManager::GetAuthenticationHandle() const {
+  return current_handle_;
+}
 
-Address SecurityManager::GetAuthenticationAddress() { return peer_address_; }
+Address SecurityManager::GetAuthenticationAddress() const {
+  return peer_address_;
+}
 
 void SecurityManager::SetPeerIoCapability(const Address& addr,
                                           uint8_t io_capability,
@@ -129,7 +135,7 @@ void SecurityManager::InvalidateIoCapabilities() {
   peer_capabilities_valid_ = false;
 }
 
-PairingType SecurityManager::GetSimplePairingType() {
+PairingType SecurityManager::GetSimplePairingType() const {
   if (!host_capabilities_valid_ || !peer_capabilities_valid_) {
     return PairingType::INVALID;
   }
@@ -147,9 +153,8 @@ PairingType SecurityManager::GetSimplePairingType() {
                              AuthenticationType::GENERAL_BONDING_MITM);
   if (peer_oob_present_flag_ != 0 || host_oob_present_flag_ != 0) {
     if (host_oob_present_flag_ == 0) {
-      return PairingType::PEER_HAS_OUT_OF_BAND;
-    } else {
-      return PairingType::OUT_OF_BAND;
+      return host_oob_present_flag_ ? PairingType::OUT_OF_BAND
+                                    : PairingType::PEER_HAS_OUT_OF_BAND;
     }
   }
   if (!(peer_requires_mitm || host_requires_mitm)) {
@@ -208,7 +213,7 @@ void SecurityManager::SetPinRequested(const Address& addr) {
   peer_pin_requested_ = true;
 }
 
-bool SecurityManager::GetPinRequested(const Address& addr) {
+bool SecurityManager::GetPinRequested(const Address& addr) const {
   ASSERT(addr == peer_address_);
   return peer_pin_requested_;
 }
@@ -227,17 +232,17 @@ void SecurityManager::SetRemotePin(const Address& peer,
   peer_pin_ = pin;
 }
 
-bool SecurityManager::GetLocalPinResponseReceived(const Address& peer) {
+bool SecurityManager::GetLocalPinResponseReceived(const Address& peer) const {
   ASSERT(peer == peer_address_);
   return host_pin_received_;
 }
 
-bool SecurityManager::GetRemotePinResponseReceived(const Address& peer) {
+bool SecurityManager::GetRemotePinResponseReceived(const Address& peer) const {
   ASSERT(peer == peer_address_);
   return peer_pin_received_;
 }
 
-bool SecurityManager::PinCompare() {
+bool SecurityManager::PinCompare() const {
   return host_pin_received_ && peer_pin_received_ && peer_pin_ == host_pin_;
 }
 }  // namespace rootcanal

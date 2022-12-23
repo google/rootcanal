@@ -23,9 +23,9 @@ namespace rootcanal {
 PhyLayerFactory::PhyLayerFactory(Phy::Type phy_type, uint32_t factory_id)
     : phy_type_(phy_type), factory_id_(factory_id) {}
 
-Phy::Type PhyLayerFactory::GetType() { return phy_type_; }
+Phy::Type PhyLayerFactory::GetType() const { return phy_type_; }
 
-uint32_t PhyLayerFactory::GetFactoryId() { return factory_id_; }
+uint32_t PhyLayerFactory::GetFactoryId() const { return factory_id_; }
 
 std::shared_ptr<PhyLayer> PhyLayerFactory::GetPhyLayer(
     const std::function<void(model::packets::LinkLayerPacketView)>&

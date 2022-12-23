@@ -51,8 +51,8 @@ class TestChannelTransport {
                                const std::vector<std::string>&)>& callback);
 
   // Send data back to the test channel.
-  void SendResponse(std::shared_ptr<AsyncDataChannel> socket,
-                    const std::string&) const;
+  static void SendResponse(std::shared_ptr<AsyncDataChannel> socket,
+                           const std::string& response);
 
   void OnCommandReady(AsyncDataChannel* socket,
                       std::function<void(void)> unwatch);

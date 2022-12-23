@@ -40,7 +40,7 @@ class IsochronousConnectionHandler {
 
   bool HasHandle(uint16_t handle) const;
 
-  uint8_t GetGroupId(uint16_t) const;
+  uint8_t GetGroupId(uint16_t handle) const;
 
   StreamParameters GetStreamParameters(uint16_t handle) const;
   GroupParameters GetGroupParameters(uint8_t id) const;

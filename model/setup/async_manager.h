@@ -98,7 +98,7 @@ class AsyncManager {
   // made from inside a CriticalCallback, since that would cause a lock to be
   // acquired twice with unpredictable results. It is strongly recommended to
   // have very simple CriticalCallbacks, preferably using lambda expressions.
-  void Synchronize(const CriticalCallback&);
+  void Synchronize(const CriticalCallback& critical_callback);
 
   AsyncManager();
   AsyncManager(const AsyncManager&) = delete;

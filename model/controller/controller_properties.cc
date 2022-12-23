@@ -135,10 +135,9 @@ static bool ParseUint(Json::Value root, std::string field_name,
                field_name.c_str(), parsed_value,
                static_cast<unsigned long long>(max_value));
       return false;
-    } else {
-      output_value = static_cast<T>(parsed_value);
-      return true;
     }
+    output_value = static_cast<T>(parsed_value);
+    return true;
   }
 
   return false;

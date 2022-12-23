@@ -95,8 +95,8 @@ bool has_time_elapsed(steady_clock::time_point time_point) {
   return steady_clock::now() > time_point;
 }
 
-void ScriptedBeacon::populate_event(PlaybackEvent* event,
-                                    PlaybackEvent::PlaybackEventType type) {
+static void populate_event(PlaybackEvent* event,
+                           PlaybackEvent::PlaybackEventType type) {
   LOG_INFO("Adding event: %d", type);
   event->set_type(type);
   event->set_secs_since_epoch(system_clock::now().time_since_epoch().count());
@@ -156,15 +156,15 @@ void ScriptedBeacon::TimerTick() {
         LOG_ERROR("Cannot parse playback file %s", config_file_.c_str());
         set_state(PlaybackEvent::FILE_PARSING_FAILED);
         return;
-      } else {
-        set_state(PlaybackEvent::PLAYBACK_STARTED);
-        LOG_INFO("Starting Ble advertisement playback from file: %s",
-                 config_file_.c_str());
-        next_ad_.ad_time = steady_clock::now();
-        get_next_advertisement();
-        input.close();
       }
-    } break;
+      set_state(PlaybackEvent::PLAYBACK_STARTED);
+      LOG_INFO("Starting Ble advertisement playback from file: %s",
+               config_file_.c_str());
+      next_ad_.ad_time = steady_clock::now();
+      get_next_advertisement();
+      input.close();
+      break;
+    }
     case PlaybackEvent::PLAYBACK_STARTED: {
       while (has_time_elapsed(next_ad_.ad_time)) {
         auto ad = model::packets::LeLegacyAdvertisingPduBuilder::Create(

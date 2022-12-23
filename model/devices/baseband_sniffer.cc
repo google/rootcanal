@@ -72,7 +72,9 @@ static uint8_t HeaderErrorCheck(uint8_t uap, uint32_t data) {
     bool bit = (value ^ data) & 1;
     data >>= 1;
     value >>= 1;
-    if (bit) value ^= 0xe5;
+    if (bit) {
+      value ^= 0xe5;
+    }
   }
 
   return value;

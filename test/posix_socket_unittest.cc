@@ -84,7 +84,7 @@ class PosixSocketTest : public testing::Test {
     pass_.SetOnConnectCallback(
         [&](std::shared_ptr<AsyncDataChannel> sock, AsyncDataChannelServer*) {
           std::unique_lock<std::mutex> guard(m);
-          sock1 = sock;
+          sock1 = std::move(sock);
           cv.notify_all();
         });
     EXPECT_TRUE(pass_.StartListening());
@@ -243,14 +243,14 @@ TEST_F(PosixSocketTest, canConnectMultiple) {
   std::vector<std::shared_ptr<AsyncDataChannel>> connections;
   bool connected = false;
 
-  pass_.SetOnConnectCallback(
-      [&](std::shared_ptr<AsyncDataChannel> sock, AsyncDataChannelServer*) {
-        std::unique_lock<std::mutex> guard(m);
-        connections.push_back(sock);
-        connected = true;
-        ASSERT_TRUE(pass_.StartListening());
-        cv.notify_all();
-      });
+  pass_.SetOnConnectCallback([&](std::shared_ptr<AsyncDataChannel> const& sock,
+                                 AsyncDataChannelServer*) {
+    std::unique_lock<std::mutex> guard(m);
+    connections.push_back(sock);
+    connected = true;
+    ASSERT_TRUE(pass_.StartListening());
+    cv.notify_all();
+  });
   ASSERT_TRUE(pass_.StartListening());
 
   for (int i = 0; i < CONNECTION_COUNT; i++) {

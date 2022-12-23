@@ -58,7 +58,7 @@ class Device {
 
   void UnregisterPhyLayer(Phy::Type phy_type, uint32_t factory_id);
 
-  virtual void IncomingPacket(model::packets::LinkLayerPacketView){};
+  virtual void IncomingPacket(model::packets::LinkLayerPacketView packet){};
 
   virtual void SendLinkLayerPacket(
       std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
@@ -69,7 +69,7 @@ class Device {
 
   virtual void Close();
 
-  void RegisterCloseCallback(std::function<void()>);
+  void RegisterCloseCallback(std::function<void()> close_callback);
 
  protected:
   // List phy layers this device is listening on.

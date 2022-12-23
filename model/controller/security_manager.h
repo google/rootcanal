@@ -76,18 +76,18 @@ class SecurityManager {
                              bool initiator);
   void AuthenticationRequestFinished();
 
-  bool AuthenticationInProgress();
-  bool IsInitiator();
-  uint16_t GetAuthenticationHandle();
-  Address GetAuthenticationAddress();
+  bool AuthenticationInProgress() const;
+  bool IsInitiator() const;
+  uint16_t GetAuthenticationHandle() const;
+  Address GetAuthenticationAddress() const;
 
   void SetPinRequested(const Address& addr);
-  bool GetPinRequested(const Address& addr);
+  bool GetPinRequested(const Address& addr) const;
   void SetLocalPin(const Address& peer, const std::vector<uint8_t>& pin);
   void SetRemotePin(const Address& peer, const std::vector<uint8_t>& pin);
-  bool GetLocalPinResponseReceived(const Address& peer);
-  bool GetRemotePinResponseReceived(const Address& peer);
-  bool PinCompare();
+  bool GetLocalPinResponseReceived(const Address& peer) const;
+  bool GetRemotePinResponseReceived(const Address& peer) const;
+  bool PinCompare() const;
 
   void SetPeerIoCapability(const Address& addr, uint8_t io_capability,
                            uint8_t oob_present_flag,
@@ -96,7 +96,7 @@ class SecurityManager {
                             uint8_t oob_present_flag,
                             uint8_t authentication_requirements);
 
-  PairingType GetSimplePairingType();
+  PairingType GetSimplePairingType() const;
 
   void InvalidateIoCapabilities();
 
