@@ -436,7 +436,7 @@ static std::vector<uint8_t> generate_device_name(size_t device_nr,
   std::vector<uint8_t> output;
   output.resize(device_name_len + 1);
   int written_len = std::snprintf(reinterpret_cast<char*>(output.data()),
-                                  output.size(), "#%02zd device", device_nr);
+                                  output.size(), "#%02zu device", device_nr);
   // Remove the null terminator, not used for the device name
   // since it is framed in most cases.
   output.resize(device_name_len);
