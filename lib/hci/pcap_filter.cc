@@ -34,6 +34,10 @@ static PacketView<kLittleEndian> create_packet_view(
       &packet, [](std::vector<uint8_t> const* /* ptr */) {}));
 }
 
+static std::vector<uint8_t> FilterHciAcl(std::vector<uint8_t> const& packet);
+static std::vector<uint8_t> FilterHciSco(std::vector<uint8_t> const& packet);
+static std::vector<uint8_t> FilterHciIso(std::vector<uint8_t> const& packet);
+
 std::vector<uint8_t> PcapFilter::FilterHciPacket(
     std::vector<uint8_t> const& packet, uint8_t idc) {
   switch (idc) {
@@ -133,8 +137,7 @@ std::vector<uint8_t> PcapFilter::FilterHciEvent(
   return std::vector<uint8_t>(packet);
 }
 
-std::vector<uint8_t> PcapFilter::FilterHciAcl(
-    std::vector<uint8_t> const& packet) const {
+static std::vector<uint8_t> FilterHciAcl(std::vector<uint8_t> const& packet) {
   auto acl = AclView::Create(create_packet_view(packet));
   std::vector<uint8_t> payload;
   payload.resize(acl.GetPayload().size());
@@ -145,8 +148,7 @@ std::vector<uint8_t> PcapFilter::FilterHciAcl(
       ->SerializeToBytes();
 }
 
-std::vector<uint8_t> PcapFilter::FilterHciSco(
-    std::vector<uint8_t> const& packet) const {
+static std::vector<uint8_t> FilterHciSco(std::vector<uint8_t> const& packet) {
   auto sco = ScoView::Create(create_packet_view(packet));
   std::vector<uint8_t> data;
   data.resize(sco.GetData().size());
@@ -155,8 +157,7 @@ std::vector<uint8_t> PcapFilter::FilterHciSco(
       ->SerializeToBytes();
 }
 
-std::vector<uint8_t> PcapFilter::FilterHciIso(
-    std::vector<uint8_t> const& packet) const {
+static std::vector<uint8_t> FilterHciIso(std::vector<uint8_t> const& packet) {
   auto iso = IsoView::Create(create_packet_view(packet));
   std::vector<uint8_t> payload;
   payload.resize(iso.GetPayload().size());
