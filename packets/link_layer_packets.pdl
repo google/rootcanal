@@ -446,11 +446,6 @@ packet ScoDisconnect : LinkLayerPacket (type = SCO_DISCONNECT) {
   reason : 8,
 }
 
-packet RssiWrapper : LinkLayerPacket (type = RSSI_WRAPPER) {
-  rssi : 8,
-  _payload_,
-}
-
 packet Lmp : LinkLayerPacket (type = LMP) {
   _payload_,
 }

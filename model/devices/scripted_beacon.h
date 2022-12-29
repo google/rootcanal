@@ -48,7 +48,8 @@ class ScriptedBeacon : public Beacon {
 
   void TimerTick() override;
 
-  void IncomingPacket(model::packets::LinkLayerPacketView packet_view) override;
+  void IncomingPacket(model::packets::LinkLayerPacketView packet_view,
+                      int8_t rssi) override;
 
  private:
   static bool registered_;

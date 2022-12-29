@@ -23,8 +23,8 @@ namespace rootcanal {
 class PhyLayer {
  public:
   PhyLayer(Phy::Type phy_type, uint32_t id,
-           const std::function<void(model::packets::LinkLayerPacketView)>&
-               device_receive,
+           const std::function<void(model::packets::LinkLayerPacketView,
+                                    int8_t rssi)>& device_receive,
            uint32_t device_id)
       : phy_type_(phy_type),
         id_(id),
@@ -32,10 +32,13 @@ class PhyLayer {
         transmit_to_device_(device_receive) {}
 
   virtual void Send(
-      std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet) = 0;
-  virtual void Send(model::packets::LinkLayerPacketView packet) = 0;
+      std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
+      int8_t tx_power) = 0;
+  virtual void Send(model::packets::LinkLayerPacketView packet,
+                    int8_t tx_power) = 0;
 
-  virtual void Receive(model::packets::LinkLayerPacketView packet) = 0;
+  virtual void Receive(model::packets::LinkLayerPacketView packet,
+                       int8_t rssi) = 0;
 
   virtual void TimerTick() = 0;
 
@@ -57,7 +60,7 @@ class PhyLayer {
   uint32_t device_id_;
 
  protected:
-  const std::function<void(model::packets::LinkLayerPacketView)>
+  const std::function<void(model::packets::LinkLayerPacketView, int8_t rssi)>
       transmit_to_device_;
 };
 

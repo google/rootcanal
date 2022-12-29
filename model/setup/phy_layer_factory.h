@@ -39,7 +39,7 @@ class PhyLayerFactory {
   uint32_t GetFactoryId() const;
 
   std::shared_ptr<PhyLayer> GetPhyLayer(
-      const std::function<void(model::packets::LinkLayerPacketView)>&
+      const std::function<void(model::packets::LinkLayerPacketView, int8_t)>&
           device_receive,
       uint32_t device_id);
 
@@ -54,11 +54,15 @@ class PhyLayerFactory {
  protected:
   virtual void Send(
       std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
-      uint32_t phy_id, uint32_t device_id);
-  virtual void Send(
-      model::packets::LinkLayerPacketView packet,
-      uint32_t phy_id, uint32_t device_id);
+      uint32_t phy_id, uint32_t device_id, int8_t tx_power);
+  virtual void Send(model::packets::LinkLayerPacketView packet, uint32_t phy_id,
+                    uint32_t device_id, int8_t tx_power);
   std::list<std::shared_ptr<PhyLayer>> phy_layers_;
+
+  // Compute the RSSI for a packet sent from one device to the other
+  // with the specified TX power.
+  virtual int8_t ComputeRssi(uint32_t sender_id, uint32_t receiver_id,
+                             int8_t tx_power);
 
  private:
   Phy::Type phy_type_;
@@ -69,15 +73,17 @@ class PhyLayerFactory {
 class PhyLayerImpl : public PhyLayer {
  public:
   PhyLayerImpl(Phy::Type phy_type, uint32_t id,
-               const std::function<void(model::packets::LinkLayerPacketView)>&
-                   device_receive,
+               const std::function<void(model::packets::LinkLayerPacketView,
+                                        int8_t)>& device_receive,
                uint32_t device_id, PhyLayerFactory* factory);
   ~PhyLayerImpl() override;
 
-  void Send(
-      std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet) override;
-  void Send(model::packets::LinkLayerPacketView packet) override;
-  void Receive(model::packets::LinkLayerPacketView packet) override;
+  void Send(std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
+            int8_t tx_power) override;
+  void Send(model::packets::LinkLayerPacketView packet,
+            int8_t tx_power) override;
+  void Receive(model::packets::LinkLayerPacketView packet,
+               int8_t rssi) override;
   void Unregister() override;
   bool IsFactoryId(uint32_t factory_id) override;
   void TimerTick() override;

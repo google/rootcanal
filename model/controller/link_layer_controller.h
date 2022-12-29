@@ -141,13 +141,11 @@ class LinkLayerController {
  private:
   void SendDisconnectionCompleteEvent(uint16_t handle, ErrorCode reason);
 
-  void IncomingPacketWithRssi(model::packets::LinkLayerPacketView incoming,
-                              uint8_t rssi);
-
  public:
   const Address& GetAddress() const;
 
-  void IncomingPacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingPacket(model::packets::LinkLayerPacketView incoming,
+                      int8_t rssi);
 
   void TimerTick();
 
@@ -180,9 +178,9 @@ class LinkLayerController {
           send_iso);
 
   void RegisterRemoteChannel(
-      const std::function<void(
-          std::shared_ptr<model::packets::LinkLayerPacketBuilder>, Phy::Type)>&
-          send_to_remote);
+      const std::function<
+          void(std::shared_ptr<model::packets::LinkLayerPacketBuilder>,
+               Phy::Type, int8_t)>& send_to_remote);
 
   // Set the callbacks for scheduling tasks.
   void RegisterTaskScheduler(
@@ -542,12 +540,11 @@ class LinkLayerController {
 
  protected:
   void SendLinkLayerPacket(
-      std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet);
+      std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
+      int8_t tx_power = 0);
   void SendLeLinkLayerPacket(
-      std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet);
-  void SendLeLinkLayerPacketWithRssi(
-      Address source_address, Address destination_address, uint8_t rssi,
-      std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet);
+      std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
+      int8_t tx_power = 0);
 
   void IncomingAclPacket(model::packets::LinkLayerPacketView incoming);
   void IncomingScoPacket(model::packets::LinkLayerPacketView incoming);
@@ -903,7 +900,7 @@ class LinkLayerController {
 
   // Callback to send packets to remote devices.
   std::function<void(std::shared_ptr<model::packets::LinkLayerPacketBuilder>,
-                     Phy::Type phy_type)>
+                     Phy::Type phy_type, int8_t tx_power)>
       send_to_remote_;
 
   uint32_t oob_id_{1};

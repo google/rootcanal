@@ -46,11 +46,9 @@ class Controller(rootcanal.BaseController):
         print(f"--> sending HCI command {cmd.__class__.__name__}")
         self.send_hci(rootcanal.HciType.Cmd, cmd.serialize())
 
-    def send_ll(self, pdu: ll.LinkLayerPacket, rssi: Optional[int] = None):
+    def send_ll(self, pdu: ll.LinkLayerPacket, rssi: int = -90):
         print(f"--> sending LL pdu {pdu.__class__.__name__}")
-        if rssi is not None:
-            pdu = ll.RssiWrapper(rssi=rssi, payload=pdu.serialize())
-        super().send_ll(pdu.serialize())
+        super().send_ll(pdu.serialize(), rssi)
 
     async def start(self):
         super().start()
@@ -66,7 +64,7 @@ class Controller(rootcanal.BaseController):
             raise Exception("evt queue not empty at stop()")
 
         if self.ll_queue:
-            for packet in self.ll_queue:
+            for (packet, _) in self.ll_queue:
                 pdu = ll.LinkLayerPacket.parse_all(packet)
                 pdu.show()
             raise Exception("ll queue not empty at stop()")
@@ -130,20 +128,9 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
             evt.show()
             self.assertTrue(False)
 
-    async def expect_ll(self, expected_pdu: ll.LinkLayerPacket, rssi: Optional[int] = None, timeout: int = 3):
+    async def expect_ll(self, expected_pdu: ll.LinkLayerPacket, timeout: int = 3):
         packet = await asyncio.wait_for(self.controller.receive_ll(), timeout=timeout)
         pdu = ll.LinkLayerPacket.parse_all(packet)
-
-        if rssi is not None and not (isinstance(pdu, ll.RssiWrapper) and pdu.rssi == rssi):
-            print(f"received pdu with invalid rssi, expected rssi {rssi}")
-            print("expected pdu:")
-            expected_pdu.show()
-            print("received pdu:")
-            pdu.show()
-            self.assertTrue(False)
-
-        if isinstance(pdu, ll.RssiWrapper):
-            pdu = ll.LinkLayerPacket.parse_all(pdu.payload)
 
         if pdu != expected_pdu:
             print("received unexpected pdu")

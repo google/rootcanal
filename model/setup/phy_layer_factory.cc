@@ -28,7 +28,7 @@ Phy::Type PhyLayerFactory::GetType() const { return phy_type_; }
 uint32_t PhyLayerFactory::GetFactoryId() const { return factory_id_; }
 
 std::shared_ptr<PhyLayer> PhyLayerFactory::GetPhyLayer(
-    const std::function<void(model::packets::LinkLayerPacketView)>&
+    const std::function<void(model::packets::LinkLayerPacketView, int8_t)>&
         device_receive,
     uint32_t device_id) {
   std::shared_ptr<PhyLayer> new_phy = std::make_shared<PhyLayerImpl>(
@@ -57,7 +57,7 @@ void PhyLayerFactory::UnregisterAllPhyLayers() {
 
 void PhyLayerFactory::Send(
     const std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
-    uint32_t id, [[maybe_unused]] uint32_t device_id) {
+    uint32_t id, [[maybe_unused]] uint32_t device_id, int8_t tx_power) {
   // Convert from a Builder to a View
   auto bytes = std::make_shared<std::vector<uint8_t>>();
   bluetooth::packet::BitInserter i(*bytes);
@@ -69,14 +69,25 @@ void PhyLayerFactory::Send(
       model::packets::LinkLayerPacketView::Create(packet_view);
   ASSERT(link_layer_packet_view.IsValid());
 
-  Send(link_layer_packet_view, id, device_id);
+  Send(link_layer_packet_view, id, device_id, tx_power);
+}
+
+int8_t PhyLayerFactory::ComputeRssi(uint32_t sender_id, uint32_t receiver_id,
+                                    int8_t tx_power) {
+  // Perform no RSSI computation by default.
+  // Clients overriding this function should use the TX power and
+  // positional information to derive correct device-to-device RSSI.
+  static uint8_t rssi = 0;
+  rssi = (rssi + 5) % 128;
+  return static_cast<int8_t>(-rssi);
 }
 
 void PhyLayerFactory::Send(model::packets::LinkLayerPacketView packet,
-                           uint32_t id, [[maybe_unused]] uint32_t device_id) {
+                           uint32_t id, [[maybe_unused]] uint32_t device_id,
+                           int8_t tx_power) {
   for (const auto& phy : phy_layers_) {
     if (id != phy->GetId()) {
-      phy->Receive(packet);
+      phy->Receive(packet, ComputeRssi(device_id, phy->GetId(), tx_power));
     }
   }
 }
@@ -109,7 +120,7 @@ std::string PhyLayerFactory::ToString() const {
 
 PhyLayerImpl::PhyLayerImpl(
     Phy::Type phy_type, uint32_t id,
-    const std::function<void(model::packets::LinkLayerPacketView)>&
+    const std::function<void(model::packets::LinkLayerPacketView, int8_t)>&
         device_receive,
     uint32_t device_id, PhyLayerFactory* factory)
     : PhyLayer(phy_type, id, device_receive, device_id), factory_(factory) {}
@@ -117,12 +128,14 @@ PhyLayerImpl::PhyLayerImpl(
 PhyLayerImpl::~PhyLayerImpl() {}
 
 void PhyLayerImpl::Send(
-    const std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet) {
-  factory_->Send(packet, GetId(), GetDeviceId());
+    const std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
+    int8_t tx_power) {
+  factory_->Send(packet, GetId(), GetDeviceId(), tx_power);
 }
 
-void PhyLayerImpl::Send(model::packets::LinkLayerPacketView packet) {
-  factory_->Send(packet, GetId(), GetDeviceId());
+void PhyLayerImpl::Send(model::packets::LinkLayerPacketView packet,
+                        int8_t tx_power) {
+  factory_->Send(packet, GetId(), GetDeviceId(), tx_power);
 }
 
 void PhyLayerImpl::Unregister() { factory_->UnregisterPhyLayer(GetId()); }
@@ -131,8 +144,9 @@ bool PhyLayerImpl::IsFactoryId(uint32_t id) {
   return factory_->GetFactoryId() == id;
 }
 
-void PhyLayerImpl::Receive(model::packets::LinkLayerPacketView packet) {
-  transmit_to_device_(packet);
+void PhyLayerImpl::Receive(model::packets::LinkLayerPacketView packet,
+                           int8_t rssi) {
+  transmit_to_device_(packet, rssi);
 }
 
 void PhyLayerImpl::TimerTick() {}

@@ -230,7 +230,7 @@ class Test(ControllerTest):
                                             conn_interval=self.LL_initiator_connInterval,
                                             conn_peripheral_latency=self.LL_initiator_connPeripheralLatency,
                                             conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout),
-                               rssi=0xf0)
+                               rssi=-16)
 
         # 8. Configure Lower Tester to use a device address on the IUT’s Filter Accept List but an incorrect
         # address type as the address parameter of the CONNECT_IND PDU.
@@ -252,7 +252,7 @@ class Test(ControllerTest):
                                             conn_interval=self.LL_initiator_connInterval,
                                             conn_peripheral_latency=self.LL_initiator_connPeripheralLatency,
                                             conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout),
-                               rssi=0xf0)
+                               rssi=-16)
 
         # 10. Configure Lower Tester to use a device address on the IUT’s Filter Accept List and correct
         # address type as the address parameter of the CONNECT_IND PDU.
@@ -275,7 +275,7 @@ class Test(ControllerTest):
                                         conn_interval=self.LL_initiator_connInterval,
                                         conn_peripheral_latency=self.LL_initiator_connPeripheralLatency,
                                         conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout),
-                           rssi=0xf0)
+                           rssi=-16)
 
         # Note: Link layer sends LeConnectComplete here.
         await self.expect_ll(
@@ -344,7 +344,7 @@ class Test(ControllerTest):
                                         conn_interval=self.LL_initiator_connInterval,
                                         conn_peripheral_latency=self.LL_initiator_connPeripheralLatency,
                                         conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout),
-                           rssi=0xf0)
+                           rssi=-16)
 
         # Note: Link layer sends LeConnectComplete here.
         await self.expect_ll(

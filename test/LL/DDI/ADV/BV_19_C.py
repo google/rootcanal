@@ -76,7 +76,7 @@ class Test(ControllerTest):
                                         conn_interval=self.LL_initiator_connInterval,
                                         conn_peripheral_latency=self.LL_initiator_connPeripheralLatency,
                                         conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout),
-                           rssi=0xf0)
+                           rssi=-16)
 
         # Note: Link layer sends LeConnectComplete here.
         await self.expect_ll(

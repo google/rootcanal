@@ -81,7 +81,7 @@ class Test(ControllerTest):
                                                      advertising_address_type=ll.AddressType.RANDOM,
                                                      advertising_type=ll.LegacyAdvertisingType.ADV_SCAN_IND,
                                                      advertising_data=[1, 2, 3]),
-                           rssi=0xf0)
+                           rssi=-16)
 
         # 6. Lower Tester receives a SCAN_REQ packet T_IFS after any of the
         # ADV_SCAN_IND packets. The ScanA field in the SCAN_REQ packet shall
@@ -116,7 +116,7 @@ class Test(ControllerTest):
         controller.send_ll(ll.LeScanResponse(source_address=peer_resolvable_address,
                                              advertising_address_type=ll.AddressType.RANDOM,
                                              scan_response_data=[4, 5, 6]),
-                           rssi=0xf0)
+                           rssi=-16)
 
         # 9. Interleave with step 7: Upper Tester receives an
         # HCI_LE_Advertising_Report event containing the scan response

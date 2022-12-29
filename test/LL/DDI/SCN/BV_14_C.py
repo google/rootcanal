@@ -64,7 +64,7 @@ class Test(ControllerTest):
                                                      target_address_type=ll.AddressType.RANDOM,
                                                      advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
                                                      advertising_data=[1, 2, 3]),
-                           rssi=0xf0)
+                           rssi=-16)
 
         # 5. The Upper Tester receives at least one HCI_LE_Direct_Advertising_Report reporting the
         # advertising packets sent by the Lower Tester.

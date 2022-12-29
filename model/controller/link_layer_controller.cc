@@ -48,16 +48,6 @@ constexpr uint16_t kNumCommandPackets = 0x01;
 
 constexpr milliseconds kNoDelayMs(0);
 
-// TODO: Model Rssi?
-static uint8_t GetRssi() {
-  static uint8_t rssi = 0;
-  rssi += 5;
-  if (rssi > 128) {
-    rssi = rssi % 7;
-  }
-  return -(rssi);
-}
-
 const Address& LinkLayerController::GetAddress() const { return address_; }
 
 AddressWithType PeerDeviceAddress(Address address,
@@ -1422,31 +1412,22 @@ LinkLayerController::LinkLayerController(const Address& address,
 #endif
 
 void LinkLayerController::SendLeLinkLayerPacket(
-    std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet) {
+    std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
+    int8_t tx_power) {
   std::shared_ptr<model::packets::LinkLayerPacketBuilder> shared_packet =
       std::move(packet);
-  ScheduleTask(kNoDelayMs, [this, shared_packet]() {
-    send_to_remote_(shared_packet, Phy::Type::LOW_ENERGY);
+  ScheduleTask(kNoDelayMs, [this, shared_packet, tx_power]() {
+    send_to_remote_(shared_packet, Phy::Type::LOW_ENERGY, tx_power);
   });
 }
 
 void LinkLayerController::SendLinkLayerPacket(
-    std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet) {
+    std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
+    int8_t tx_power) {
   std::shared_ptr<model::packets::LinkLayerPacketBuilder> shared_packet =
       std::move(packet);
-  ScheduleTask(kNoDelayMs, [this, shared_packet]() {
-    send_to_remote_(shared_packet, Phy::Type::BR_EDR);
-  });
-}
-
-void LinkLayerController::SendLeLinkLayerPacketWithRssi(
-    Address source_address, Address destination_address, uint8_t rssi,
-    std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet) {
-  std::shared_ptr<model::packets::RssiWrapperBuilder> shared_packet =
-      model::packets::RssiWrapperBuilder::Create(
-          source_address, destination_address, rssi, std::move(packet));
-  ScheduleTask(kNoDelayMs, [this, shared_packet]() {
-    send_to_remote_(shared_packet, Phy::Type::LOW_ENERGY);
+  ScheduleTask(kNoDelayMs, [this, shared_packet, tx_power]() {
+    send_to_remote_(shared_packet, Phy::Type::BR_EDR, tx_power);
   });
 }
 
@@ -1596,21 +1577,7 @@ ErrorCode LinkLayerController::SendScoToRemote(
 }
 
 void LinkLayerController::IncomingPacket(
-    model::packets::LinkLayerPacketView incoming) {
-  ASSERT(incoming.IsValid());
-  if (incoming.GetType() == PacketType::RSSI_WRAPPER) {
-    auto rssi_wrapper = model::packets::RssiWrapperView::Create(incoming);
-    ASSERT(rssi_wrapper.IsValid());
-    auto wrapped =
-        model::packets::LinkLayerPacketView::Create(rssi_wrapper.GetPayload());
-    IncomingPacketWithRssi(wrapped, rssi_wrapper.GetRssi());
-  } else {
-    IncomingPacketWithRssi(incoming, GetRssi());
-  }
-}
-
-void LinkLayerController::IncomingPacketWithRssi(
-    model::packets::LinkLayerPacketView incoming, uint8_t rssi) {
+    model::packets::LinkLayerPacketView incoming, int8_t rssi) {
   ASSERT(incoming.IsValid());
   auto destination_address = incoming.GetDestinationAddress();
 
@@ -4278,14 +4245,13 @@ void LinkLayerController::ProcessIncomingLegacyScanRequest(
   // device address (AdvA field) in the SCAN_RSP PDU shall be the same as
   // the advertiser’s device address (AdvA field) in the SCAN_REQ PDU to
   // which it is responding.
-  SendLeLinkLayerPacketWithRssi(
-      advertising_address.GetAddress(), scanning_address.GetAddress(),
-      properties_.le_advertising_physical_channel_tx_power,
+  SendLeLinkLayerPacket(
       model::packets::LeScanResponseBuilder::Create(
           advertising_address.GetAddress(), scanning_address.GetAddress(),
           static_cast<model::packets::AddressType>(
               advertising_address.GetAddressType()),
-          legacy_advertiser_.scan_response_data));
+          legacy_advertiser_.scan_response_data),
+      properties_.le_advertising_physical_channel_tx_power);
 }
 
 void LinkLayerController::ProcessIncomingExtendedScanRequest(
@@ -4363,14 +4329,13 @@ void LinkLayerController::ProcessIncomingExtendedScanRequest(
   // device address (AdvA field) in the SCAN_RSP PDU shall be the same as
   // the advertiser’s device address (AdvA field) in the SCAN_REQ PDU to
   // which it is responding.
-  SendLeLinkLayerPacketWithRssi(
-      advertising_address.GetAddress(), scanning_address.GetAddress(),
-      advertiser.advertising_tx_power,
+  SendLeLinkLayerPacket(
       model::packets::LeScanResponseBuilder::Create(
           advertising_address.GetAddress(), scanning_address.GetAddress(),
           static_cast<model::packets::AddressType>(
               advertising_address.GetAddressType()),
-          advertiser.scan_response_data));
+          advertiser.scan_response_data),
+      advertiser.advertising_tx_power);
 }
 
 void LinkLayerController::IncomingLeScanPacket(
@@ -4807,9 +4772,9 @@ void LinkLayerController::RegisterIsoChannel(
 }
 
 void LinkLayerController::RegisterRemoteChannel(
-    const std::function<void(
-        std::shared_ptr<model::packets::LinkLayerPacketBuilder>, Phy::Type)>&
-        send_to_remote) {
+    const std::function<
+        void(std::shared_ptr<model::packets::LinkLayerPacketBuilder>, Phy::Type,
+             int8_t)>& send_to_remote) {
   send_to_remote_ = send_to_remote;
 }
 
