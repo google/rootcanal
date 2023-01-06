@@ -25,6 +25,8 @@ tests = [
   'LL.DDI.ADV.BV_06_C',
   'LL.DDI.ADV.BV_07_C',
   'LL.DDI.ADV.BV_08_C',
+  'LL.DDI.ADV.BV_09_C',
+  'LL.DDI.ADV.BV_11_C',
   'LL.DDI.SCN.BV_13_C',
   'LL.DDI.SCN.BV_14_C',
   'LL.DDI.SCN.BV_18_C',
