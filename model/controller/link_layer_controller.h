@@ -71,6 +71,7 @@ class LinkLayerController {
 
   LinkLayerController(const Address& address,
                       const ControllerProperties& properties);
+  ~LinkLayerController();
 
   ErrorCode SendCommandToRemoteByAddress(
       OpCode opcode, bluetooth::packet::PacketView<true> args,
@@ -154,11 +155,11 @@ class LinkLayerController {
   void Close();
 
   AsyncTaskId ScheduleTask(std::chrono::milliseconds delay_ms,
-                           const TaskCallback& task_callback);
+                           TaskCallback task_callback);
 
   AsyncTaskId SchedulePeriodicTask(std::chrono::milliseconds delay_ms,
                                    std::chrono::milliseconds period_ms,
-                                   const TaskCallback& task_callback);
+                                   TaskCallback task_callback);
 
   void CancelScheduledTask(AsyncTaskId task_id);
 
@@ -186,12 +187,12 @@ class LinkLayerController {
 
   // Set the callbacks for scheduling tasks.
   void RegisterTaskScheduler(
-      std::function<AsyncTaskId(std::chrono::milliseconds, const TaskCallback&)>
+      std::function<AsyncTaskId(std::chrono::milliseconds, TaskCallback)>
           task_scheduler);
 
   void RegisterPeriodicTaskScheduler(
       std::function<AsyncTaskId(std::chrono::milliseconds,
-                                std::chrono::milliseconds, const TaskCallback&)>
+                                std::chrono::milliseconds, TaskCallback)>
           periodic_task_scheduler);
 
   void RegisterTaskCancel(std::function<void(AsyncTaskId)> cancel);
@@ -887,10 +888,10 @@ class LinkLayerController {
   AclConnectionHandler connections_;
 
   // Callbacks to schedule tasks.
-  std::function<AsyncTaskId(std::chrono::milliseconds, const TaskCallback&)>
+  std::function<AsyncTaskId(std::chrono::milliseconds, TaskCallback)>
       schedule_task_;
   std::function<AsyncTaskId(std::chrono::milliseconds,
-                            std::chrono::milliseconds, const TaskCallback&)>
+                            std::chrono::milliseconds, TaskCallback)>
       schedule_periodic_task_;
   std::function<void(AsyncTaskId)> cancel_task_;
 

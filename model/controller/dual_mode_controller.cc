@@ -331,16 +331,50 @@ void DualModeController::SniffSubrating(CommandView command) {
 }
 
 void DualModeController::RegisterTaskScheduler(
-    std::function<AsyncTaskId(std::chrono::milliseconds, const TaskCallback&)>
+    std::function<AsyncTaskId(std::chrono::milliseconds, TaskCallback)>
         task_scheduler) {
-  link_layer_controller_.RegisterTaskScheduler(task_scheduler);
+  link_layer_controller_.RegisterTaskScheduler(
+      [this, schedule = std::move(task_scheduler)](
+          std::chrono::milliseconds delay_ms, TaskCallback callback) {
+        // weak_from_this is valid only if [this] is already protected
+        // behind a shared_ptr; this is the case in TestModel.
+        return schedule(delay_ms, [lifetime = weak_from_this(),
+                                   callback = std::move(callback)] {
+          // Capture a weak_ptr of the DualModeController object to protect
+          // against the execution of callbacks capturing dead pointers.
+          // This can occur if the device is deleted with scheduled events.
+          if (lifetime.lock() != nullptr) {
+            callback();
+          }
+        });
+      });
 }
 
 void DualModeController::RegisterPeriodicTaskScheduler(
     std::function<AsyncTaskId(std::chrono::milliseconds,
-                              std::chrono::milliseconds, const TaskCallback&)>
+                              std::chrono::milliseconds, TaskCallback)>
         periodic_task_scheduler) {
-  link_layer_controller_.RegisterPeriodicTaskScheduler(periodic_task_scheduler);
+  link_layer_controller_.RegisterPeriodicTaskScheduler(
+      [this, schedule = std::move(periodic_task_scheduler)](
+          std::chrono::milliseconds delay_ms,
+          std::chrono::milliseconds interval_ms, TaskCallback callback) {
+        // weak_from_this is valid only if [this] is already protected
+        // behind a shared_ptr; this is the case in TestModel.
+        return schedule(
+            delay_ms, interval_ms,
+            [lifetime = weak_from_this(), callback = std::move(callback)] {
+              // Capture a weak_ptr of the DualModeController object to protect
+              // against the execution of callbacks capturing dead pointers.
+              // This can occur if the device is deleted with scheduled events.
+              //
+              // Note: the task handle cannot be cancelled from this context;
+              // we depend on the link layer to properly clean-up pending
+              // periodic tasks when deleted.
+              if (lifetime.lock() != nullptr) {
+                callback();
+              }
+            });
+      });
 }
 
 void DualModeController::RegisterTaskCancel(

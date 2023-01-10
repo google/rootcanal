@@ -51,7 +51,9 @@ using ::bluetooth::hci::CommandView;
 // the controller's default constructor. Be sure to name your method after the
 // corresponding Bluetooth command in the Core Specification with the prefix
 // "Hci" to distinguish it as a controller command.
-class DualModeController : public Device {
+class DualModeController
+    : public Device,
+      public std::enable_shared_from_this<DualModeController> {
   static constexpr uint16_t kSecurityManagerNumKeys = 15;
 
  public:
@@ -78,12 +80,12 @@ class DualModeController : public Device {
 
   // Set the callbacks for scheduling tasks.
   void RegisterTaskScheduler(
-      std::function<AsyncTaskId(std::chrono::milliseconds, const TaskCallback&)>
+      std::function<AsyncTaskId(std::chrono::milliseconds, TaskCallback)>
           task_scheduler);
 
   void RegisterPeriodicTaskScheduler(
       std::function<AsyncTaskId(std::chrono::milliseconds,
-                                std::chrono::milliseconds, const TaskCallback&)>
+                                std::chrono::milliseconds, TaskCallback)>
           periodic_task_scheduler);
 
   void RegisterTaskCancel(std::function<void(AsyncTaskId)> cancel);

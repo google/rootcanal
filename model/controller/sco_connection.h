@@ -91,7 +91,7 @@ class ScoConnection {
         datapath_(datapath),
         legacy_(legacy) {}
 
-  virtual ~ScoConnection() = default;
+  ~ScoConnection();
 
   bool IsLegacy() const { return legacy_; }
   Address GetAddress() const { return address_; }

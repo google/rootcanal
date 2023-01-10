@@ -24,6 +24,8 @@
 using namespace rootcanal;
 using namespace bluetooth::hci;
 
+ScoConnection::~ScoConnection() { ASSERT(!stream_handle_.has_value()); }
+
 bool ScoConnectionParameters::IsExtended() const {
   uint16_t legacy = (uint16_t)SynchronousPacketTypeBits::HV1_ALLOWED |
                     (uint16_t)SynchronousPacketTypeBits::HV2_ALLOWED |
