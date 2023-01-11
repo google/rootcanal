@@ -44,11 +44,10 @@ DEFINE_string(default_commands_file, "",
 DEFINE_bool(enable_hci_sniffer, false, "enable hci sniffer");
 DEFINE_bool(enable_baseband_sniffer, false, "enable baseband sniffer");
 DEFINE_bool(enable_pcap_filter, false, "enable PCAP filter");
-
-constexpr uint16_t kTestPort = 6401;
-constexpr uint16_t kHciServerPort = 6402;
-constexpr uint16_t kLinkServerPort = 6403;
-constexpr uint16_t kLinkBleServerPort = 6404;
+DEFINE_uint32(test_port, 6401, "test tcp port");
+DEFINE_uint32(hci_port, 6402, "hci server tcp port");
+DEFINE_uint32(link_port, 6403, "link server tcp port");
+DEFINE_uint32(link_ble_port, 6404, "le link server tcp port");
 
 extern "C" const char* __asan_default_options() {
   return "detect_container_overflow=0";
@@ -93,43 +92,37 @@ int main(int argc, char** argv) {
   android::base::InitLogging(argv);
 
   LOG_INFO("main");
-  uint16_t test_port = kTestPort;
-  uint16_t hci_server_port = kHciServerPort;
-  uint16_t link_server_port = kLinkServerPort;
-  uint16_t link_ble_server_port = kLinkBleServerPort;
 
-  for (int arg = 0; arg < argc; arg++) {
-    int port = (int)strtol(argv[arg], nullptr, 0);
-    LOG_INFO("%d: %s (%d)", arg, argv[arg], port);
-    if (port < 0 || port > UINT16_MAX) {
-      LOG_WARN("%s out of range", argv[arg]);
-    } else {
-      switch (arg) {
-        case 0:  // executable name
-          break;
-        case 1:
-          test_port = port;
-          break;
-        case 2:
-          hci_server_port = port;
-          break;
-        case 3:
-          link_server_port = port;
-          break;
-        case 4:
-          link_ble_server_port = port;
-          break;
-        default:
-          LOG_WARN("Ignored option %s", argv[arg]);
-      }
-    }
+  if (FLAGS_test_port > UINT16_MAX) {
+    LOG_ERROR("test_port out of range: %" PRIu32, FLAGS_test_port);
+    return -1;
   }
+
+  if (FLAGS_hci_port > UINT16_MAX) {
+    LOG_ERROR("hci_port out of range: %" PRIu32, FLAGS_hci_port);
+    return -1;
+  }
+
+  if (FLAGS_link_port > UINT16_MAX) {
+    LOG_ERROR("link_port out of range: %" PRIu32, FLAGS_link_port);
+    return -1;
+  }
+
+  if (FLAGS_link_ble_port > UINT16_MAX) {
+    LOG_ERROR("link_ble_port out of range: %" PRIu32, FLAGS_link_ble_port);
+    return -1;
+  }
+
   AsyncManager am;
   TestEnvironment root_canal(
-      std::make_shared<PosixAsyncSocketServer>(test_port, &am),
-      std::make_shared<PosixAsyncSocketServer>(hci_server_port, &am),
-      std::make_shared<PosixAsyncSocketServer>(link_server_port, &am),
-      std::make_shared<PosixAsyncSocketServer>(link_ble_server_port, &am),
+      std::make_shared<PosixAsyncSocketServer>(
+          static_cast<int>(FLAGS_test_port), &am),
+      std::make_shared<PosixAsyncSocketServer>(static_cast<int>(FLAGS_hci_port),
+                                               &am),
+      std::make_shared<PosixAsyncSocketServer>(
+          static_cast<int>(FLAGS_link_port), &am),
+      std::make_shared<PosixAsyncSocketServer>(
+          static_cast<int>(FLAGS_link_ble_port), &am),
       std::make_shared<PosixAsyncSocketConnector>(&am),
       FLAGS_controller_properties_file, FLAGS_default_commands_file,
       FLAGS_enable_hci_sniffer, FLAGS_enable_baseband_sniffer,
@@ -139,4 +132,5 @@ int main(int argc, char** argv) {
   root_canal.initialize(std::move(barrier));
   barrier_future.wait();
   root_canal.close();
+  return 0;
 }
