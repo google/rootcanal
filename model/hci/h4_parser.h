@@ -45,14 +45,14 @@ using ClientDisconnectCallback = std::function<void()>;
 // The parser keeps internal state and is not thread safe.
 class H4Parser {
  public:
-  enum State { HCI_TYPE, HCI_PREAMBLE, HCI_PAYLOAD };
+  enum State { HCI_TYPE, HCI_PREAMBLE, HCI_PAYLOAD, HCI_RECOVERY };
 
   H4Parser(PacketReadCallback command_cb, PacketReadCallback event_cb,
            PacketReadCallback acl_cb, PacketReadCallback sco_cb,
-           PacketReadCallback iso_cb);
+           PacketReadCallback iso_cb, bool enable_recovery_state = false);
 
   // Consumes the given number of bytes, returns true on success.
-  bool Consume(uint8_t* buffer, int32_t bytes);
+  bool Consume(const uint8_t* buffer, int32_t bytes);
 
   // The maximum number of bytes the parser can consume in the current state.
   size_t BytesRequested();
@@ -62,13 +62,15 @@ class H4Parser {
 
   State CurrentState() { return state_; };
 
+  void EnableRecovery() { enable_recovery_state_ = true; }
+  void DisableRecovery() { enable_recovery_state_ = false; }
+
  private:
   void OnPacketReady();
 
   // 2 bytes for opcode, 1 byte for parameter length (Volume 2, Part E, 5.4.1)
   static constexpr size_t COMMAND_PREAMBLE_SIZE = 3;
   static constexpr size_t COMMAND_LENGTH_OFFSET = 2;
-
   // 2 bytes for handle, 2 bytes for data length (Volume 2, Part E, 5.4.2)
   static constexpr size_t ACL_PREAMBLE_SIZE = 4;
   static constexpr size_t ACL_LENGTH_OFFSET = 2;
@@ -101,13 +103,28 @@ class H4Parser {
   uint8_t packet_type_{};
   std::vector<uint8_t> packet_;
   size_t bytes_wanted_{0};
+  bool enable_recovery_state_{false};
 };
 
 inline std::ostream& operator<<(std::ostream& os,
                                 H4Parser::State const& state_) {
-  os << (state_ == H4Parser::State::HCI_TYPE       ? "HCI_TYPE"
-         : state_ == H4Parser::State::HCI_PREAMBLE ? "HCI_PREAMBLE"
-                                                   : "HCI_PAYLOAD");
+  switch (state_) {
+    case H4Parser::State::HCI_TYPE:
+      os << "HCI_TYPE";
+      break;
+    case H4Parser::State::HCI_PREAMBLE:
+      os << "HCI_PREAMBLE";
+      break;
+    case H4Parser::State::HCI_PAYLOAD:
+      os << "HCI_PAYLOAD";
+      break;
+    case H4Parser::State::HCI_RECOVERY:
+      os << "HCI_RECOVERY";
+      break;
+    default:
+      os << "unknown state " << static_cast<int>(state_);
+      break;
+  }
   return os;
 }
 
