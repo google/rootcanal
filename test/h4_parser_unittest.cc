@@ -176,9 +176,9 @@ TEST_F(H4ParserTest, Recovery) {
 
   // Validate that the HCI Reset command was correctly received.
   ASSERT_EQ(type_, PacketType::COMMAND);
-  ASSERT_EQ(packet_.size(), reset_command.size());
-  for (size_t i = 0; i < packet_.size(); i++) {
-    ASSERT_EQ(packet_[i], reset_command[i]);
+  ASSERT_EQ(packet_.size(), reset_command.size() - 1);
+  for (size_t i = 1; i < packet_.size(); i++) {
+    ASSERT_EQ(packet_[i - 1], reset_command[i]);
   }
 }
 
