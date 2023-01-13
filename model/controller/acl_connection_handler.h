@@ -35,12 +35,11 @@ static constexpr uint16_t kReservedHandle = 0xF00;
 class AclConnectionHandler {
  public:
   AclConnectionHandler() = default;
-
   virtual ~AclConnectionHandler() = default;
 
-  void RegisterTaskScheduler(
-      std::function<AsyncTaskId(std::chrono::milliseconds, const TaskCallback&)>
-          event_scheduler);
+  // Reset the connection manager state, stopping any pending
+  // SCO connections.
+  void Reset(std::function<void(AsyncTaskId)> stopStream);
 
   bool CreatePendingConnection(bluetooth::hci::Address addr,
                                bool authenticate_on_connect);
@@ -151,9 +150,6 @@ class AclConnectionHandler {
  private:
   std::unordered_map<uint16_t, AclConnection> acl_connections_;
   std::unordered_map<uint16_t, ScoConnection> sco_connections_;
-
-  std::function<AsyncTaskId(std::chrono::milliseconds, const TaskCallback&)>
-      schedule_task_;
 
   bool classic_connection_pending_{false};
   bluetooth::hci::Address pending_connection_address_{

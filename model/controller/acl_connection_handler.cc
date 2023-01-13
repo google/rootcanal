@@ -27,10 +27,14 @@ using ::bluetooth::hci::Address;
 using ::bluetooth::hci::AddressType;
 using ::bluetooth::hci::AddressWithType;
 
-void AclConnectionHandler::RegisterTaskScheduler(
-    std::function<AsyncTaskId(std::chrono::milliseconds, const TaskCallback&)>
-        event_scheduler) {
-  schedule_task_ = event_scheduler;
+void AclConnectionHandler::Reset(std::function<void(AsyncTaskId)> stopStream) {
+  // Leave no dangling periodic task.
+  for (auto& [_, sco_connection] : sco_connections_) {
+    sco_connection.StopStream(stopStream);
+  }
+
+  sco_connections_.clear();
+  acl_connections_.clear();
 }
 
 bool AclConnectionHandler::HasHandle(uint16_t handle) const {

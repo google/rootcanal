@@ -1421,6 +1421,12 @@ LinkLayerController::LinkLayerController(const Address& address,
     : address_(address), properties_(properties) {}
 #endif
 
+LinkLayerController::~LinkLayerController() {
+  // Clear out periodic tasks for opened SCO connections in the
+  // connection manager state.
+  connections_.Reset(cancel_task_);
+}
+
 void LinkLayerController::SendLeLinkLayerPacket(
     std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet) {
   std::shared_ptr<model::packets::LinkLayerPacketBuilder> shared_packet =
@@ -4814,36 +4820,31 @@ void LinkLayerController::RegisterRemoteChannel(
 }
 
 void LinkLayerController::RegisterTaskScheduler(
-    std::function<AsyncTaskId(milliseconds, const TaskCallback&)>
-        task_scheduler) {
+    std::function<AsyncTaskId(milliseconds, TaskCallback)> task_scheduler) {
   schedule_task_ = task_scheduler;
 }
 
-AsyncTaskId LinkLayerController::ScheduleTask(
-    milliseconds delay_ms, const TaskCallback& task_callback) {
+AsyncTaskId LinkLayerController::ScheduleTask(milliseconds delay_ms,
+                                              TaskCallback task_callback) {
   if (schedule_task_) {
-    return schedule_task_(delay_ms, task_callback);
-  }
-  if (delay_ms == milliseconds::zero()) {
-    task_callback();
-    return 0;
+    return schedule_task_(delay_ms, std::move(task_callback));
   }
   LOG_ERROR("Unable to schedule task on delay");
   return 0;
 }
 
 AsyncTaskId LinkLayerController::SchedulePeriodicTask(
-    milliseconds delay_ms, milliseconds period_ms,
-    const TaskCallback& task_callback) {
+    milliseconds delay_ms, milliseconds period_ms, TaskCallback task_callback) {
   if (schedule_periodic_task_) {
-    return schedule_periodic_task_(delay_ms, period_ms, task_callback);
+    return schedule_periodic_task_(delay_ms, period_ms,
+                                   std::move(task_callback));
   }
   LOG_ERROR("Unable to schedule task on delay");
   return 0;
 }
 
 void LinkLayerController::RegisterPeriodicTaskScheduler(
-    std::function<AsyncTaskId(milliseconds, milliseconds, const TaskCallback&)>
+    std::function<AsyncTaskId(milliseconds, milliseconds, TaskCallback)>
         periodic_task_scheduler) {
   schedule_periodic_task_ = periodic_task_scheduler;
 }
