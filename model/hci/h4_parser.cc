@@ -131,6 +131,7 @@ bool H4Parser::Consume(const uint8_t* buffer, int32_t bytes_read) {
       packet_type_ = *buffer;
       packet_.clear();
       break;
+
     case HCI_RECOVERY: {
       // Skip all received bytes until the HCI Reset command is received.
       // The parser can end up in a bad state when the host is restarted.
@@ -150,12 +151,16 @@ bool H4Parser::Consume(const uint8_t* buffer, int32_t bytes_read) {
         }
       }
 
+      // Received full reset command.
       if (packet_.size() == reset_command.size()) {
         LOG_INFO("Received HCI Reset command, exiting recovery state");
+        // Pop the Idc from the received packet.
+        packet_.erase(packet_.begin());
         bytes_wanted_ = 0;
       }
       break;
     }
+
     case HCI_PREAMBLE:
     case HCI_PAYLOAD:
       packet_.insert(packet_.end(), buffer, buffer + bytes_read);
