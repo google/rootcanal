@@ -69,7 +69,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
             await self.expect_ll(
                 ll.LeScanResponse(source_address=controller.address,
@@ -92,7 +92,7 @@ class Test(ControllerTest):
                                         conn_interval=LL_initiator_connInterval,
                                         conn_peripheral_latency=LL_initiator_connPeripheralLatency,
                                         conn_supervision_timeout=LL_initiator_connSupervisionTimeout),
-                           rssi=0xf0)
+                           rssi=-16)
 
         # 8. The Lower Tester receives no ADV_IND packet after advertising interval from the IUT after
         # sending the connection request to indicate that the IUT has stopped advertising.

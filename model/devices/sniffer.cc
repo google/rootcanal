@@ -32,7 +32,8 @@ Sniffer::Sniffer(const vector<std::string>& args) {
   }
 }
 
-void Sniffer::IncomingPacket(model::packets::LinkLayerPacketView packet) {
+void Sniffer::IncomingPacket(model::packets::LinkLayerPacketView packet,
+                             int8_t /*rssi*/) {
   Address source = packet.GetSourceAddress();
   Address dest = packet.GetDestinationAddress();
   model::packets::PacketType packet_type = packet.GetType();
@@ -43,26 +44,10 @@ void Sniffer::IncomingPacket(model::packets::LinkLayerPacketView packet) {
     return;
   }
 
-  if (packet_type == model::packets::PacketType::RSSI_WRAPPER) {
-    auto wrapper_view = model::packets::RssiWrapperView::Create(packet);
-    ASSERT(wrapper_view.IsValid());
-    auto wrapped_view =
-        model::packets::LinkLayerPacketView::Create(wrapper_view.GetPayload());
-    ASSERT(wrapped_view.IsValid());
-    LOG_INFO(
-        "%s %s -> %s (Type %s wrapping %s)",
-        (match_source ? (match_dest ? "<->" : "<--") : "-->"),
-        source.ToString().c_str(), dest.ToString().c_str(),
-        model::packets::PacketTypeText(packet_type).c_str(),
-        (packet_type == model::packets::PacketType::RSSI_WRAPPER
-             ? model::packets::PacketTypeText(wrapped_view.GetType()).c_str()
-             : ""));
-  } else {
-    LOG_INFO("%s %s -> %s (Type %s)",
-             (match_source ? (match_dest ? "<->" : "<--") : "-->"),
-             source.ToString().c_str(), dest.ToString().c_str(),
-             model::packets::PacketTypeText(packet_type).c_str());
-  }
+  LOG_INFO("%s %s -> %s (Type %s)",
+           (match_source ? (match_dest ? "<->" : "<--") : "-->"),
+           source.ToString().c_str(), dest.ToString().c_str(),
+           model::packets::PacketTypeText(packet_type).c_str());
 }
 
 }  // namespace rootcanal

@@ -59,7 +59,7 @@ void Beacon::TimerTick() {
   }
 }
 
-void Beacon::IncomingPacket(LinkLayerPacketView packet) {
+void Beacon::IncomingPacket(LinkLayerPacketView packet, int8_t /*rssi*/) {
   if (packet.GetDestinationAddress() == address_ &&
       packet.GetType() == PacketType::LE_SCAN &&
       (advertising_type_ == LegacyAdvertisingType::ADV_IND ||

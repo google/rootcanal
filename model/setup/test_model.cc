@@ -26,6 +26,7 @@
 
 #include "include/phy.h"  // for Phy, Phy::Type
 #include "log.h"          // for LOG_WARN, LOG_INFO
+#include "phy_layer.h"
 
 namespace rootcanal {
 
@@ -131,8 +132,8 @@ void TestModel::AddDeviceToPhy(size_t device_index, size_t phy_index) {
   }
   auto dev = devices_[device_index];
   dev->RegisterPhyLayer(phys_[phy_index]->GetPhyLayer(
-      [dev](model::packets::LinkLayerPacketView packet) {
-        dev->IncomingPacket(std::move(packet));
+      [dev](model::packets::LinkLayerPacketView packet, int8_t rssi) {
+        dev->IncomingPacket(std::move(packet), rssi);
       },
       device_index));
 }

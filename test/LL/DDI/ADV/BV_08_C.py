@@ -82,7 +82,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
         # 8. Configure Lower Tester to monitor the advertising and scan response procedures of the IUT and
         # send a SCAN_REQ packet on the selected supported advertising channel (defined as an IXIT)
@@ -99,7 +99,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=0xf0)
+                               rssi=-16)
 
         # 10. Configure Lower Tester to monitor the advertising and scan response procedures of the IUT and
         # send a SCAN_REQ packet on the selected supported advertising channel (defined as an IXIT)
@@ -120,7 +120,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
             await self.expect_ll(
                 ll.LeScanResponse(source_address=controller.address,
@@ -145,7 +145,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=0xf0)
+                               rssi=-16)
 
         for n in range(2):
             await self.expect_ll(
@@ -158,7 +158,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
         for n in range(2):
             await self.expect_ll(
@@ -171,7 +171,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=0xf0)
+                               rssi=-16)
 
             await self.expect_ll(
                 ll.LeScanResponse(source_address=controller.address,
@@ -215,7 +215,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
         for n in range(2):
             await self.expect_ll(
@@ -228,7 +228,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=0xf0)
+                               rssi=-16)
 
         for n in range(2):
             await self.expect_ll(
@@ -241,7 +241,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
             await self.expect_ll(
                 ll.LeScanResponse(source_address=controller.address,
@@ -268,7 +268,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=0xf0)
+                               rssi=-16)
 
         for n in range(2):
             await self.expect_ll(
@@ -281,7 +281,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
         for n in range(2):
             await self.expect_ll(
@@ -294,7 +294,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=0xf0)
+                               rssi=-16)
 
             await self.expect_ll(
                 ll.LeScanResponse(source_address=controller.address,

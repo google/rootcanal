@@ -62,7 +62,7 @@ class Test(ControllerTest):
                                         conn_interval=LL_initiator_connInterval,
                                         conn_peripheral_latency=LL_initiator_connPeripheralLatency,
                                         conn_supervision_timeout=LL_initiator_connSupervisionTimeout),
-                           rssi=0xf0)
+                           rssi=-16)
 
         # 5. The Lower Tester receives no ADV_IND packet after the advertising interval from the IUT. Wait
         # for a time equal to 4 advertising intervals to check that no ADV_IND is received.
@@ -127,7 +127,7 @@ class Test(ControllerTest):
                                         conn_interval=LL_initiator_connInterval,
                                         conn_peripheral_latency=LL_initiator_connPeripheralLatency,
                                         conn_supervision_timeout=LL_initiator_connSupervisionTimeout),
-                           rssi=0xf0)
+                           rssi=-16)
 
         # Connect rejected, another ADV_IND event should be received.
         await self.expect_ll(

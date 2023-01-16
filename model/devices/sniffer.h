@@ -38,8 +38,8 @@ class Sniffer : public Device {
 
   virtual std::string GetTypeString() const override { return "sniffer"; }
 
-  virtual void IncomingPacket(
-      model::packets::LinkLayerPacketView packet) override;
+  virtual void IncomingPacket(model::packets::LinkLayerPacketView packet,
+                              int8_t rssi) override;
 
  private:
   static bool registered_;

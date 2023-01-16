@@ -169,7 +169,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=peer_address_type),
-                               rssi=0xf0)
+                               rssi=-16)
 
         # 7. Configure Lower Tester to monitor the advertising and scan response procedures of the IUT and
         # send a SCAN_REQ packet on the selected supported advertising channel (defined as an IXIT)
@@ -186,7 +186,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=invalid_peer_address_type),
-                               rssi=0xf0)
+                               rssi=-16)
 
         # 9. Configure Lower Tester to monitor the advertising and scan response procedures of the IUT and
         # send a SCAN_REQ packet on the selected supported advertising channel (defined as an IXIT)
@@ -204,7 +204,7 @@ class Test(ControllerTest):
                                      destination_address=controller.address,
                                      advertising_address_type=ll.AddressType.PUBLIC,
                                      scanning_address_type=peer_address_type),
-                           rssi=0xf0)
+                           rssi=-16)
 
         # 11. Lower Tester receives a SCAN_RSP packet from the IUT addressed to the Lower Tester T_IFS
         # after the end of the request packet.

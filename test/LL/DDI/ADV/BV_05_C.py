@@ -67,7 +67,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
             await self.expect_ll(
                 ll.LeScanResponse(source_address=controller.address,
@@ -101,7 +101,7 @@ class Test(ControllerTest):
                                          destination_address=controller.address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
             await self.expect_ll(
                 ll.LeScanResponse(source_address=controller.address,
@@ -139,7 +139,7 @@ class Test(ControllerTest):
                                          destination_address=invalid_local_address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
         # 12. Configure Scan Response Data in the IUT using device name length of 31 as response data.
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=False))
@@ -167,7 +167,7 @@ class Test(ControllerTest):
                                          destination_address=invalid_local_address,
                                          advertising_address_type=ll.AddressType.PUBLIC,
                                          scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=0xf0)
+                               rssi=-16)
 
         # Note: this last iteration is very redundant, not implementing it
         # to save on execution time.

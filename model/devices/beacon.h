@@ -39,8 +39,8 @@ class Beacon : public Device {
   virtual std::string GetTypeString() const override { return "beacon"; }
 
   virtual void TimerTick() override;
-  virtual void IncomingPacket(
-      model::packets::LinkLayerPacketView packet) override;
+  virtual void IncomingPacket(model::packets::LinkLayerPacketView packet,
+                              int8_t rssi) override;
 
  protected:
   model::packets::LegacyAdvertisingType advertising_type_{};

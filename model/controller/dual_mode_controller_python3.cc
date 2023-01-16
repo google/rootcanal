@@ -77,8 +77,7 @@ class BaseController : public DualModeController {
 
   virtual void SendLinkLayerPacket(
       std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
-      Phy::Type phy_type_) override {
-    (void)phy_type_;
+      Phy::Type /*phy_type*/, int8_t /*tx_power*/) override {
     auto bytes = std::make_shared<std::vector<uint8_t>>();
     bluetooth::packet::BitInserter inserter(*bytes);
     bytes->reserve(packet->size());
@@ -212,11 +211,11 @@ PYBIND11_MODULE(lib_rootcanal_python3, m) {
         }
       });
 
-  // Implement method BaseController.receive_hci which
+  // Implement method BaseController.send_ll which
   // injects LL packets into the controller as if sent over the air.
   basic_controller.def(
       "send_ll", [](std::shared_ptr<rootcanal::BaseController> controller,
-                    py::bytes data) {
+                    py::bytes data, int rssi) {
         std::string data_str = data;
         std::shared_ptr<std::vector<uint8_t>> bytes =
             std::make_shared<std::vector<uint8_t>>(data_str.begin(),
@@ -230,7 +229,7 @@ PYBIND11_MODULE(lib_rootcanal_python3, m) {
           std::cerr << "Dropping malformed LL packet" << std::endl;
           return;
         }
-        controller->IncomingPacket(std::move(packet));
+        controller->IncomingPacket(std::move(packet), rssi);
       });
 }
 
