@@ -39,25 +39,23 @@ class LinkLayerSocketDevice : public Device {
   LinkLayerSocketDevice(LinkLayerSocketDevice&& s) = default;
   virtual ~LinkLayerSocketDevice() = default;
 
-  static std::shared_ptr<Device> Create(
+  static std::unique_ptr<Device> Create(
       std::shared_ptr<AsyncDataChannel> socket_fd, Phy::Type phy_type) {
-    return std::make_shared<LinkLayerSocketDevice>(socket_fd, phy_type);
+    return std::make_unique<LinkLayerSocketDevice>(socket_fd, phy_type);
   }
 
   virtual std::string GetTypeString() const override {
     return "link_layer_socket_device";
   }
 
-  virtual void IncomingPacket(model::packets::LinkLayerPacketView packet,
-                              int8_t rssi) override;
+  virtual void ReceiveLinkLayerPacket(
+      model::packets::LinkLayerPacketView packet, Phy::Type type,
+      int8_t rssi) override;
 
-  virtual void TimerTick() override;
+  virtual void Tick() override;
+  virtual void Close() override;
 
   static constexpr size_t kSizeBytes = sizeof(uint32_t);
-
-  void RegisterCloseCallback(std::function<void()>);
-
-  void Close() override;
 
  private:
   std::shared_ptr<AsyncDataChannel> socket_;

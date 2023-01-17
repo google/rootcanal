@@ -84,9 +84,9 @@ HciDevice::HciDevice(std::shared_ptr<HciTransport> transport,
       });
 }
 
-void HciDevice::TimerTick() {
-  transport_->TimerTick();
-  DualModeController::TimerTick();
+void HciDevice::Tick() {
+  transport_->Tick();
+  DualModeController::Tick();
 }
 
 void HciDevice::Close() {

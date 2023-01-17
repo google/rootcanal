@@ -36,7 +36,7 @@ class BeaconSwarm : public Beacon {
   // Return a string representation of the type of device.
   virtual std::string GetTypeString() const override { return "beacon_swarm"; }
 
-  virtual void TimerTick() override;
+  virtual void Tick() override;
 
  private:
   static bool registered_;

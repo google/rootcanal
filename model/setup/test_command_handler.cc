@@ -36,13 +36,13 @@ TestCommandHandler::TestCommandHandler(TestModel& test_model)
   active_commands_[command_name] = [this](const vector<std::string>& param) { \
     method(param);                                                            \
   };
-  SET_HANDLER("add", Add);
+  SET_HANDLER("add", AddDevice);
   SET_HANDLER("add_remote", AddRemote);
-  SET_HANDLER("del", Del);
+  SET_HANDLER("del", RemoveDevice);
   SET_HANDLER("add_phy", AddPhy);
-  SET_HANDLER("del_phy", DelPhy);
+  SET_HANDLER("del_phy", RemovePhy);
   SET_HANDLER("add_device_to_phy", AddDeviceToPhy);
-  SET_HANDLER("del_device_from_phy", DelDeviceFromPhy);
+  SET_HANDLER("del_device_from_phy", RemoveDeviceFromPhy);
   SET_HANDLER("list", List);
   SET_HANDLER("set_device_address", SetDeviceAddress);
   SET_HANDLER("set_timer_period", SetTimerPeriod);
@@ -118,7 +118,7 @@ void TestCommandHandler::RegisterSendResponse(
   send_response_("RegisterSendResponse called");
 }
 
-void TestCommandHandler::Add(const vector<std::string>& args) {
+void TestCommandHandler::AddDevice(const vector<std::string>& args) {
   if (args.empty()) {
     response_string_ = "TestCommandHandler 'add' takes an argument";
     send_response_(response_string_);
@@ -134,7 +134,7 @@ void TestCommandHandler::Add(const vector<std::string>& args) {
   }
 
   LOG_INFO("Add %s", new_dev->ToString().c_str());
-  size_t dev_index = model_.Add(new_dev);
+  size_t dev_index = model_.AddDevice(new_dev);
   response_string_ =
       std::to_string(dev_index) + std::string(":") + new_dev->ToString();
   send_response_(response_string_);
@@ -168,10 +168,10 @@ void TestCommandHandler::AddRemote(const vector<std::string>& args) {
   send_response_(response_string_);
 }
 
-void TestCommandHandler::Del(const vector<std::string>& args) {
+void TestCommandHandler::RemoveDevice(const vector<std::string>& args) {
   size_t dev_index = std::stoi(args[0]);
 
-  model_.Del(dev_index);
+  model_.RemoveDevice(dev_index);
   response_string_ = "TestCommandHandler 'del' called with device at index " +
                      std::to_string(dev_index);
   send_response_(response_string_);
@@ -193,10 +193,10 @@ void TestCommandHandler::AddPhy(const vector<std::string>& args) {
   send_response_(response_string_);
 }
 
-void TestCommandHandler::DelPhy(const vector<std::string>& args) {
+void TestCommandHandler::RemovePhy(const vector<std::string>& args) {
   size_t phy_index = std::stoi(args[0]);
 
-  model_.DelPhy(phy_index);
+  model_.RemovePhy(phy_index);
   response_string_ = "TestCommandHandler 'del_phy' called with phy at index " +
                      std::to_string(phy_index);
   send_response_(response_string_);
@@ -218,7 +218,7 @@ void TestCommandHandler::AddDeviceToPhy(const vector<std::string>& args) {
   send_response_(response_string_);
 }
 
-void TestCommandHandler::DelDeviceFromPhy(const vector<std::string>& args) {
+void TestCommandHandler::RemoveDeviceFromPhy(const vector<std::string>& args) {
   if (args.size() != 2) {
     response_string_ =
         "TestCommandHandler 'del_device_from_phy' takes two arguments";
@@ -227,7 +227,7 @@ void TestCommandHandler::DelDeviceFromPhy(const vector<std::string>& args) {
   }
   size_t dev_index = std::stoi(args[0]);
   size_t phy_index = std::stoi(args[1]);
-  model_.DelDeviceFromPhy(dev_index, phy_index);
+  model_.RemoveDeviceFromPhy(dev_index, phy_index);
   response_string_ =
       "TestCommandHandler 'del_device_from_phy' called with device " +
       std::to_string(dev_index) + " and phy " + std::to_string(phy_index);

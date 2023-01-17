@@ -120,10 +120,10 @@ void ScriptedBeacon::set_state(PlaybackEvent::PlaybackEventType state) {
   events_ostream_.flush();
 }
 
-void ScriptedBeacon::TimerTick() {
+void ScriptedBeacon::Tick() {
   switch (current_state_) {
     case PlaybackEvent::INITIALIZED:
-      Beacon::TimerTick();
+      Beacon::Tick();
       break;
     case PlaybackEvent::SCANNED_ONCE:
       next_check_time_ =
@@ -194,8 +194,9 @@ void ScriptedBeacon::TimerTick() {
   }
 }
 
-void ScriptedBeacon::IncomingPacket(model::packets::LinkLayerPacketView packet,
-                                    int8_t /*rssi*/) {
+void ScriptedBeacon::ReceiveLinkLayerPacket(
+    model::packets::LinkLayerPacketView packet, Phy::Type /*type*/,
+    int8_t /*rssi*/) {
   if (current_state_ == PlaybackEvent::INITIALIZED) {
     if (packet.GetDestinationAddress() == address_ &&
         packet.GetType() == PacketType::LE_SCAN) {

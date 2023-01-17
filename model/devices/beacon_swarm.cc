@@ -62,11 +62,11 @@ BeaconSwarm::BeaconSwarm(const vector<std::string>& args) : Beacon(args) {
       0x06 /* Length */, 0x08 /* TYPE_NAME_SHORT */, 'c', 'b', 'e', 'a', 'c'};
 }
 
-void BeaconSwarm::TimerTick() {
+void BeaconSwarm::Tick() {
   // Rotate the advertising address.
   uint8_t* low_order_byte = address_.data();
   *low_order_byte += 1;
-  Beacon::TimerTick();
+  Beacon::Tick();
 }
 
 }  // namespace rootcanal

@@ -100,7 +100,7 @@ void HciSniffer::RegisterCallbacks(PacketCallback command_callback,
       close_callback);
 }
 
-void HciSniffer::TimerTick() { transport_->TimerTick(); }
+void HciSniffer::Tick() { transport_->Tick(); }
 
 void HciSniffer::Close() {
   transport_->Close();

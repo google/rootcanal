@@ -38,7 +38,7 @@ class HciDevice : public DualModeController {
 
   std::string GetTypeString() const override { return "hci_device"; }
 
-  void TimerTick() override;
+  void Tick() override;
 
   void Close() override;
 

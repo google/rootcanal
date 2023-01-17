@@ -46,7 +46,7 @@ Beacon::Beacon(const std::vector<std::string>& args) : Beacon() {
   }
 }
 
-void Beacon::TimerTick() {
+void Beacon::Tick() {
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
   if ((now - advertising_last_) >= advertising_interval_) {
     advertising_last_ = now;
@@ -59,7 +59,8 @@ void Beacon::TimerTick() {
   }
 }
 
-void Beacon::IncomingPacket(LinkLayerPacketView packet, int8_t /*rssi*/) {
+void Beacon::ReceiveLinkLayerPacket(LinkLayerPacketView packet,
+                                    Phy::Type /*type*/, int8_t /*rssi*/) {
   if (packet.GetDestinationAddress() == address_ &&
       packet.GetType() == PacketType::LE_SCAN &&
       (advertising_type_ == LegacyAdvertisingType::ADV_IND ||

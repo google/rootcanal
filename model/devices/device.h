@@ -23,8 +23,8 @@
 #include <vector>
 
 #include "hci/address.h"
-#include "model/setup/phy_layer.h"
 #include "packets/link_layer_packets.h"
+#include "phy.h"
 
 namespace rootcanal {
 
@@ -49,39 +49,36 @@ class Device {
   // Get the device's Bluetooth address.
   const Address& GetAddress() const { return address_; }
 
-  // Let the device know that time has passed.
-  virtual void TimerTick() {}
-
-  void RegisterPhyLayer(std::shared_ptr<PhyLayer> phy);
-
-  void UnregisterPhyLayers();
-
-  void UnregisterPhyLayer(Phy::Type phy_type, uint32_t factory_id);
-
-  virtual void IncomingPacket(model::packets::LinkLayerPacketView packet,
-                              int8_t rssi){};
-
-  virtual void SendLinkLayerPacket(
-      std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
-      Phy::Type phy_type, int8_t tx_power = 0);
-
-  virtual void SendLinkLayerPacket(model::packets::LinkLayerPacketView packet,
-                                   Phy::Type phy_type, int8_t tx_power = 0);
-
+  virtual void Tick() {}
   virtual void Close();
+
+  virtual void ReceiveLinkLayerPacket(
+      model::packets::LinkLayerPacketView packet, Phy::Type type,
+      int8_t rssi){};
+
+  void SendLinkLayerPacket(
+      std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
+      Phy::Type type, int8_t tx_power = 0);
+
+  void SendLinkLayerPacket(std::vector<uint8_t> const& packet, Phy::Type type,
+                           int8_t tx_power = 0);
+
+  void RegisterLinkLayerChannel(
+      std::function<void(std::vector<uint8_t> const&, Phy::Type, int8_t)>
+          send_ll);
 
   void RegisterCloseCallback(std::function<void()> close_callback);
 
  protected:
-  // List phy layers this device is listening on.
-  std::vector<std::shared_ptr<PhyLayer>> phy_layers_;
-
   // Unique device address. Used as public device address for
   // Bluetooth activities.
   Address address_;
 
   // Callback to be invoked when this device is closed.
   std::function<void()> close_callback_;
+
+  // Callback function to send link layer packets.
+  std::function<void(std::vector<uint8_t> const&, Phy::Type, uint8_t)> send_ll_;
 };
 
 }  // namespace rootcanal

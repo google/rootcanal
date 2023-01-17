@@ -55,16 +55,10 @@ class BaseController : public DualModeController {
   }
   ~BaseController() = default;
 
-  void RegisterLLChannel(
-      std::function<void(std::shared_ptr<std::vector<uint8_t>>)> const&
-          send_ll) {
-    send_ll_ = send_ll;
-  }
-
   void Start() {
     if (timer_task_id_ == kInvalidTaskId) {
       timer_task_id_ = async_manager_.ExecAsyncPeriodically(
-          0, 0ms, 5ms, [this]() { this->TimerTick(); });
+          0, 0ms, 5ms, [this]() { this->Tick(); });
     }
   }
 
@@ -75,18 +69,7 @@ class BaseController : public DualModeController {
     }
   }
 
-  virtual void SendLinkLayerPacket(
-      std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
-      Phy::Type /*phy_type*/, int8_t /*tx_power*/) override {
-    auto bytes = std::make_shared<std::vector<uint8_t>>();
-    bluetooth::packet::BitInserter inserter(*bytes);
-    bytes->reserve(packet->size());
-    packet->Serialize(inserter);
-    send_ll_(bytes);
-  }
-
  private:
-  std::function<void(std::shared_ptr<std::vector<uint8_t>>)> send_ll_{};
   AsyncManager async_manager_{};
   AsyncTaskId timer_task_id_{kInvalidTaskId};
 
@@ -168,12 +151,13 @@ PYBIND11_MODULE(lib_rootcanal_python3, m) {
               hci::Type::ISO,
               py::bytes(reinterpret_cast<char*>(data->data()), data->size()));
         });
-    controller->RegisterLLChannel(
-        [=](std::shared_ptr<std::vector<uint8_t>> data) {
-          pybind11::gil_scoped_acquire acquire;
-          ll_handler(
-              py::bytes(reinterpret_cast<char*>(data->data()), data->size()));
-        });
+    controller->RegisterLinkLayerChannel([=](std::vector<uint8_t> const& data,
+                                             Phy::Type /*type*/,
+                                             int8_t /*tx_power*/) {
+      pybind11::gil_scoped_acquire acquire;
+      ll_handler(
+          py::bytes(reinterpret_cast<const char*>(data.data()), data.size()));
+    });
     return controller;
   }));
 
@@ -229,7 +213,9 @@ PYBIND11_MODULE(lib_rootcanal_python3, m) {
           std::cerr << "Dropping malformed LL packet" << std::endl;
           return;
         }
-        controller->IncomingPacket(std::move(packet), rssi);
+        // TODO: pass correct phy information to ReceiveLinkLayerPacket.
+        controller->ReceiveLinkLayerPacket(std::move(packet),
+                                           Phy::Type::LOW_ENERGY, rssi);
       });
 }
 

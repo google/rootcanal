@@ -66,7 +66,7 @@ class HciSniffer : public HciTransport {
                          PacketCallback iso_callback,
                          CloseCallback close_callback) override;
 
-  void TimerTick() override;
+  void Tick() override;
 
   void Close() override;
 

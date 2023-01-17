@@ -24,57 +24,33 @@ std::string Device::ToString() const {
   return GetTypeString() + "@" + address_.ToString();
 }
 
-void Device::RegisterPhyLayer(std::shared_ptr<PhyLayer> phy) {
-  phy_layers_.push_back(phy);
-}
-
-void Device::UnregisterPhyLayers() {
-  for (auto phy : phy_layers_) {
-    if (phy != nullptr) {
-      phy->Unregister();
-    }
-  }
-  phy_layers_.clear();
-}
-
-void Device::UnregisterPhyLayer(Phy::Type phy_type, uint32_t factory_id) {
-  for (auto& phy : phy_layers_) {
-    if (phy != nullptr && phy->IsFactoryId(factory_id) &&
-        phy->GetType() == phy_type) {
-      phy->Unregister();
-      phy.reset();
-      return;
-    }
+void Device::Close() {
+  if (close_callback_ != nullptr) {
+    close_callback_();
   }
 }
 
 void Device::SendLinkLayerPacket(
     std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
-    Phy::Type phy_type, int8_t tx_power) {
-  for (auto phy : phy_layers_) {
-    if (phy != nullptr && phy->GetType() == phy_type) {
-      phy->Send(packet, tx_power);
-    }
-  }
+    Phy::Type type, int8_t tx_power) {
+  SendLinkLayerPacket(packet->SerializeToBytes(), type, tx_power);
 }
 
-void Device::SendLinkLayerPacket(model::packets::LinkLayerPacketView packet,
-                                 Phy::Type phy_type, int8_t tx_power) {
-  for (auto phy : phy_layers_) {
-    if (phy != nullptr && phy->GetType() == phy_type) {
-      phy->Send(packet, tx_power);
-    }
-  }
-}
-
-void Device::Close() {
-  if (close_callback_) {
-    close_callback_();
+void Device::SendLinkLayerPacket(std::vector<uint8_t> const& packet,
+                                 Phy::Type type, int8_t tx_power) {
+  if (send_ll_ != nullptr) {
+    send_ll_(packet, type, tx_power);
   }
 }
 
 void Device::RegisterCloseCallback(std::function<void()> close_callback) {
   close_callback_ = close_callback;
+}
+
+void Device::RegisterLinkLayerChannel(
+    std::function<void(std::vector<uint8_t> const&, Phy::Type, int8_t)>
+        send_ll) {
+  send_ll_ = send_ll;
 }
 
 }  // namespace rootcanal

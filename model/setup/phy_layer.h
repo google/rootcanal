@@ -16,52 +16,47 @@
 
 #pragma once
 
-#include "include/phy.h"
-#include "packets/link_layer_packets.h"
+#include <list>
+#include <memory>
+#include <vector>
+
+#include "phy.h"
+#include "phy_device.h"
+
 namespace rootcanal {
+
+using rootcanal::PhyDevice;
 
 class PhyLayer {
  public:
-  PhyLayer(Phy::Type phy_type, uint32_t id,
-           const std::function<void(model::packets::LinkLayerPacketView,
-                                    int8_t rssi)>& device_receive,
-           uint32_t device_id)
-      : phy_type_(phy_type),
-        id_(id),
-        device_id_(device_id),
-        transmit_to_device_(device_receive) {}
+  using Identifier = uint32_t;
 
-  virtual void Send(
-      std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
-      int8_t tx_power) = 0;
-  virtual void Send(model::packets::LinkLayerPacketView packet,
-                    int8_t tx_power) = 0;
+  PhyLayer(Identifier id, Phy::Type type);
+  virtual ~PhyLayer() {}
 
-  virtual void Receive(model::packets::LinkLayerPacketView packet,
-                       int8_t rssi) = 0;
+  void Tick();
+  virtual void Send(std::vector<uint8_t> const& packet, int8_t tx_power,
+                    PhyDevice::Identifier sender_id);
 
-  virtual void TimerTick() = 0;
+  // Compute the RSSI for a packet sent from one device to the other
+  // with the specified TX power.
+  virtual int8_t ComputeRssi(PhyDevice::Identifier sender_id,
+                             PhyDevice::Identifier receiver_id,
+                             int8_t tx_power);
 
-  virtual bool IsFactoryId(uint32_t factory_id) = 0;
+  void Register(std::shared_ptr<PhyDevice> device);
+  void Unregister(PhyDevice::Identifier device_id);
+  void UnregisterAll();
 
-  virtual void Unregister() = 0;
+  std::string ToString() const;
 
-  Phy::Type GetType() const { return phy_type_; }
-
-  uint32_t GetId() const { return id_; }
-
-  uint32_t GetDeviceId() const { return device_id_; }
-
-  virtual ~PhyLayer() = default;
-
- private:
-  Phy::Type phy_type_;
-  uint32_t id_;
-  uint32_t device_id_;
+  // Id and type are public but immutable.
+  const Identifier id;
+  const Phy::Type type;
 
  protected:
-  const std::function<void(model::packets::LinkLayerPacketView, int8_t rssi)>
-      transmit_to_device_;
+  // List of devices currently connected to the phy.
+  std::list<std::shared_ptr<rootcanal::PhyDevice>> phy_devices_;
 };
 
 }  // namespace rootcanal

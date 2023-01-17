@@ -44,7 +44,7 @@ class HciTransport {
                                  PacketCallback iso_callback,
                                  CloseCallback close_callback) = 0;
 
-  virtual void TimerTick() = 0;
+  virtual void Tick() = 0;
 
   virtual void Close() = 0;
 };

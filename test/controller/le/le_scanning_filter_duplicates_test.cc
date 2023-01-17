@@ -385,7 +385,7 @@ TEST_F(LeScanningFilterDuplicates, ResetHistoryAfterEachPeriod) {
   ASSERT_EQ(kFiltered, SendPacketAndCheck(LeScanResponse({0})));
 
   std::this_thread::sleep_for(std::chrono::milliseconds(1300));
-  controller_.TimerTick();
+  controller_.Tick();
 
   ASSERT_EQ(kReported, SendPacketAndCheck(LeExtendedAdvertisingPdu()));
   ASSERT_EQ(kReported, SendPacketAndCheck(LeScanResponse({0})));

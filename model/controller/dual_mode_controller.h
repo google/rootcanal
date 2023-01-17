@@ -66,10 +66,11 @@ class DualModeController
   // Device methods.
   virtual std::string GetTypeString() const override;
 
-  virtual void IncomingPacket(model::packets::LinkLayerPacketView incoming,
-                              int8_t rssi) override;
+  virtual void ReceiveLinkLayerPacket(
+      model::packets::LinkLayerPacketView incoming, Phy::Type type,
+      int8_t rssi) override;
 
-  virtual void TimerTick() override;
+  virtual void Tick() override;
   virtual void Close() override;
 
   // Route commands and data from the stack.
