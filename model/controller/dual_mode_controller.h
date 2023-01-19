@@ -649,17 +649,23 @@ class DualModeController
   std::function<void(std::shared_ptr<bluetooth::hci::ScoBuilder>)> send_sco_;
   std::function<void(std::shared_ptr<bluetooth::hci::IsoBuilder>)> send_iso_;
 
-  // Map supported opcodes to the function implementing the handler
+  // Map all implemented opcodes to the function implementing the handler
   // for the associated command. The map should be a subset of the
-  // supported_command field in the properties_ object.
+  // supported_command field in the properties_ object. Commands
+  // that are supported but not implemented will raise a fatal assert.
   std::unordered_map<bluetooth::hci::OpCode,
                      std::function<void(bluetooth::hci::CommandView)>>
-      active_hci_commands_;
+      hci_command_handlers_;
 
   // Loopback mode (Vol 4, Part E § 7.6.1).
   // The local loopback mode is used to pass the android Vendor Test Suite
   // with RootCanal.
   bluetooth::hci::LoopbackMode loopback_mode_;
+
+  // Map command opcodes to the corresponding bit index in the
+  // supported command mask.
+  static const std::unordered_map<OpCode, OpCodeIndex>
+      hci_command_op_code_to_index_;
 
 #ifndef ROOTCANAL_LMP
   SecurityManager security_manager_;
