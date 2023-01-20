@@ -122,6 +122,301 @@ static constexpr uint64_t LlFeatures() {
   return value;
 }
 
+static std::array<uint8_t, 64> SupportedCommands() {
+  OpCodeIndex supported_commands[] = {
+      // LINK_CONTROL
+      OpCodeIndex::INQUIRY, OpCodeIndex::INQUIRY_CANCEL,
+      // OpCodeIndex::PERIODIC_INQUIRY_MODE,
+      // OpCodeIndex::EXIT_PERIODIC_INQUIRY_MODE,
+      OpCodeIndex::CREATE_CONNECTION, OpCodeIndex::DISCONNECT,
+      OpCodeIndex::ADD_SCO_CONNECTION, OpCodeIndex::CREATE_CONNECTION_CANCEL,
+      OpCodeIndex::ACCEPT_CONNECTION_REQUEST,
+      OpCodeIndex::REJECT_CONNECTION_REQUEST,
+      OpCodeIndex::LINK_KEY_REQUEST_REPLY,
+      OpCodeIndex::LINK_KEY_REQUEST_NEGATIVE_REPLY,
+      OpCodeIndex::PIN_CODE_REQUEST_REPLY,
+      OpCodeIndex::PIN_CODE_REQUEST_NEGATIVE_REPLY,
+      OpCodeIndex::CHANGE_CONNECTION_PACKET_TYPE,
+      OpCodeIndex::AUTHENTICATION_REQUESTED,
+      OpCodeIndex::SET_CONNECTION_ENCRYPTION,
+      OpCodeIndex::CHANGE_CONNECTION_LINK_KEY, OpCodeIndex::CENTRAL_LINK_KEY,
+      OpCodeIndex::REMOTE_NAME_REQUEST,
+      // OpCodeIndex::REMOTE_NAME_REQUEST_CANCEL,
+      OpCodeIndex::READ_REMOTE_SUPPORTED_FEATURES,
+      OpCodeIndex::READ_REMOTE_EXTENDED_FEATURES,
+      OpCodeIndex::READ_REMOTE_VERSION_INFORMATION,
+      OpCodeIndex::READ_CLOCK_OFFSET,
+      // OpCodeIndex::READ_LMP_HANDLE,
+      OpCodeIndex::SETUP_SYNCHRONOUS_CONNECTION,
+      OpCodeIndex::ACCEPT_SYNCHRONOUS_CONNECTION,
+      OpCodeIndex::REJECT_SYNCHRONOUS_CONNECTION,
+      OpCodeIndex::IO_CAPABILITY_REQUEST_REPLY,
+      OpCodeIndex::USER_CONFIRMATION_REQUEST_REPLY,
+      OpCodeIndex::USER_CONFIRMATION_REQUEST_NEGATIVE_REPLY,
+      OpCodeIndex::USER_PASSKEY_REQUEST_REPLY,
+      OpCodeIndex::USER_PASSKEY_REQUEST_NEGATIVE_REPLY,
+      OpCodeIndex::REMOTE_OOB_DATA_REQUEST_REPLY,
+      OpCodeIndex::REMOTE_OOB_DATA_REQUEST_NEGATIVE_REPLY,
+      OpCodeIndex::IO_CAPABILITY_REQUEST_NEGATIVE_REPLY,
+      OpCodeIndex::ENHANCED_SETUP_SYNCHRONOUS_CONNECTION,
+      OpCodeIndex::ENHANCED_ACCEPT_SYNCHRONOUS_CONNECTION,
+      // OpCodeIndex::TRUNCATED_PAGE,
+      // OpCodeIndex::TRUNCATED_PAGE_CANCEL,
+      // OpCodeIndex::SET_CONNECTIONLESS_PERIPHERAL_BROADCAST,
+      // OpCodeIndex::SET_CONNECTIONLESS_PERIPHERAL_BROADCAST_RECEIVE,
+      // OpCodeIndex::START_SYNCHRONIZATION_TRAIN,
+      // OpCodeIndex::RECEIVE_SYNCHRONIZATION_TRAIN,
+      OpCodeIndex::REMOTE_OOB_EXTENDED_DATA_REQUEST_REPLY,
+
+      // LINK_POLICY
+      OpCodeIndex::HOLD_MODE, OpCodeIndex::SNIFF_MODE,
+      OpCodeIndex::EXIT_SNIFF_MODE, OpCodeIndex::QOS_SETUP,
+      OpCodeIndex::ROLE_DISCOVERY, OpCodeIndex::SWITCH_ROLE,
+      OpCodeIndex::READ_LINK_POLICY_SETTINGS,
+      OpCodeIndex::WRITE_LINK_POLICY_SETTINGS,
+      OpCodeIndex::READ_DEFAULT_LINK_POLICY_SETTINGS,
+      OpCodeIndex::WRITE_DEFAULT_LINK_POLICY_SETTINGS,
+      OpCodeIndex::FLOW_SPECIFICATION, OpCodeIndex::SNIFF_SUBRATING,
+
+      // CONTROLLER_AND_BASEBAND
+      OpCodeIndex::SET_EVENT_MASK, OpCodeIndex::RESET,
+      OpCodeIndex::SET_EVENT_FILTER,
+      // OpCodeIndex::FLUSH,
+      // OpCodeIndex::READ_PIN_TYPE,
+      // OpCodeIndex::WRITE_PIN_TYPE,
+      // OpCodeIndex::READ_STORED_LINK_KEY,
+      // OpCodeIndex::WRITE_STORED_LINK_KEY,
+      OpCodeIndex::DELETE_STORED_LINK_KEY, OpCodeIndex::WRITE_LOCAL_NAME,
+      OpCodeIndex::READ_LOCAL_NAME, OpCodeIndex::READ_CONNECTION_ACCEPT_TIMEOUT,
+      OpCodeIndex::WRITE_CONNECTION_ACCEPT_TIMEOUT,
+      OpCodeIndex::READ_PAGE_TIMEOUT, OpCodeIndex::WRITE_PAGE_TIMEOUT,
+      OpCodeIndex::READ_SCAN_ENABLE, OpCodeIndex::WRITE_SCAN_ENABLE,
+      OpCodeIndex::READ_PAGE_SCAN_ACTIVITY,
+      OpCodeIndex::WRITE_PAGE_SCAN_ACTIVITY,
+      OpCodeIndex::READ_INQUIRY_SCAN_ACTIVITY,
+      OpCodeIndex::WRITE_INQUIRY_SCAN_ACTIVITY,
+      OpCodeIndex::READ_AUTHENTICATION_ENABLE,
+      OpCodeIndex::WRITE_AUTHENTICATION_ENABLE,
+      OpCodeIndex::READ_CLASS_OF_DEVICE, OpCodeIndex::WRITE_CLASS_OF_DEVICE,
+      OpCodeIndex::READ_VOICE_SETTING, OpCodeIndex::WRITE_VOICE_SETTING,
+      // OpCodeIndex::READ_AUTOMATIC_FLUSH_TIMEOUT,
+      // OpCodeIndex::WRITE_AUTOMATIC_FLUSH_TIMEOUT,
+      // OpCodeIndex::READ_NUM_BROADCAST_RETRANSMITS,
+      // OpCodeIndex::WRITE_NUM_BROADCAST_RETRANSMITS,
+      // OpCodeIndex::READ_HOLD_MODE_ACTIVITY,
+      // OpCodeIndex::WRITE_HOLD_MODE_ACTIVITY,
+      // OpCodeIndex::READ_TRANSMIT_POWER_LEVEL,
+      OpCodeIndex::READ_SYNCHRONOUS_FLOW_CONTROL_ENABLE,
+      OpCodeIndex::WRITE_SYNCHRONOUS_FLOW_CONTROL_ENABLE,
+      // OpCodeIndex::SET_CONTROLLER_TO_HOST_FLOW_CONTROL,
+      OpCodeIndex::HOST_BUFFER_SIZE,
+      // OpCodeIndex::HOST_NUMBER_OF_COMPLETED_PACKETS,
+      // OpCodeIndex::READ_LINK_SUPERVISION_TIMEOUT,
+      OpCodeIndex::WRITE_LINK_SUPERVISION_TIMEOUT,
+      OpCodeIndex::READ_NUMBER_OF_SUPPORTED_IAC,
+      OpCodeIndex::READ_CURRENT_IAC_LAP, OpCodeIndex::WRITE_CURRENT_IAC_LAP,
+      // OpCodeIndex::SET_AFH_HOST_CHANNEL_CLASSIFICATION,
+      OpCodeIndex::READ_INQUIRY_SCAN_TYPE, OpCodeIndex::WRITE_INQUIRY_SCAN_TYPE,
+      OpCodeIndex::READ_INQUIRY_MODE, OpCodeIndex::WRITE_INQUIRY_MODE,
+      OpCodeIndex::READ_PAGE_SCAN_TYPE, OpCodeIndex::WRITE_PAGE_SCAN_TYPE,
+      // OpCodeIndex::READ_AFH_CHANNEL_ASSESSMENT_MODE,
+      // OpCodeIndex::WRITE_AFH_CHANNEL_ASSESSMENT_MODE,
+      // OpCodeIndex::READ_EXTENDED_INQUIRY_RESPONSE,
+      OpCodeIndex::WRITE_EXTENDED_INQUIRY_RESPONSE,
+      OpCodeIndex::REFRESH_ENCRYPTION_KEY,
+      // OpCodeIndex::READ_SIMPLE_PAIRING_MODE,
+      OpCodeIndex::WRITE_SIMPLE_PAIRING_MODE, OpCodeIndex::READ_LOCAL_OOB_DATA,
+      OpCodeIndex::READ_INQUIRY_RESPONSE_TRANSMIT_POWER_LEVEL,
+      // OpCodeIndex::WRITE_INQUIRY_TRANSMIT_POWER_LEVEL,
+      // OpCodeIndex::READ_DEFAULT_ERRONEOUS_DATA_REPORTING,
+      // OpCodeIndex::WRITE_DEFAULT_ERRONEOUS_DATA_REPORTING,
+      OpCodeIndex::ENHANCED_FLUSH, OpCodeIndex::SEND_KEYPRESS_NOTIFICATION,
+      OpCodeIndex::SET_EVENT_MASK_PAGE_2,
+      // OpCodeIndex::READ_FLOW_CONTROL_MODE,
+      // OpCodeIndex::WRITE_FLOW_CONTROL_MODE,
+      // OpCodeIndex::READ_ENHANCED_TRANSMIT_POWER_LEVEL,
+      // OpCodeIndex::READ_LE_HOST_SUPPORT,
+      OpCodeIndex::WRITE_LE_HOST_SUPPORT,
+      // OpCodeIndex::SET_MWS_CHANNEL_PARAMETERS,
+      // OpCodeIndex::SET_EXTERNAL_FRAME_CONFIGURATION,
+      // OpCodeIndex::SET_MWS_SIGNALING,
+      // OpCodeIndex::SET_MWS_TRANSPORT_LAYER,
+      // OpCodeIndex::SET_MWS_SCAN_FREQUENCY_TABLE,
+      // OpCodeIndex::SET_MWS_PATTERN_CONFIGURATION,
+      // OpCodeIndex::SET_RESERVED_LT_ADDR,
+      // OpCodeIndex::DELETE_RESERVED_LT_ADDR,
+      // OpCodeIndex::SET_CONNECTIONLESS_PERIPHERAL_BROADCAST_DATA,
+      // OpCodeIndex::READ_SYNCHRONIZATION_TRAIN_PARAMETERS,
+      // OpCodeIndex::WRITE_SYNCHRONIZATION_TRAIN_PARAMETERS,
+      // OpCodeIndex::READ_SECURE_CONNECTIONS_HOST_SUPPORT,
+      OpCodeIndex::WRITE_SECURE_CONNECTIONS_HOST_SUPPORT,
+      // OpCodeIndex::READ_AUTHENTICATED_PAYLOAD_TIMEOUT,
+      // OpCodeIndex::WRITE_AUTHENTICATED_PAYLOAD_TIMEOUT,
+      OpCodeIndex::READ_LOCAL_OOB_EXTENDED_DATA,
+      // OpCodeIndex::READ_EXTENDED_PAGE_TIMEOUT,
+      // OpCodeIndex::WRITE_EXTENDED_PAGE_TIMEOUT,
+      // OpCodeIndex::READ_EXTENDED_INQUIRY_LENGTH,
+      // OpCodeIndex::WRITE_EXTENDED_INQUIRY_LENGTH,
+      // OpCodeIndex::SET_ECOSYSTEM_BASE_INTERVAL,
+      // OpCodeIndex::CONFIGURE_DATA_PATH,
+      // OpCodeIndex::SET_MIN_ENCRYPTION_KEY_SIZE,
+
+      // INFORMATIONAL_PARAMETERS
+      OpCodeIndex::READ_LOCAL_VERSION_INFORMATION,
+      OpCodeIndex::READ_LOCAL_SUPPORTED_FEATURES,
+      OpCodeIndex::READ_LOCAL_EXTENDED_FEATURES, OpCodeIndex::READ_BUFFER_SIZE,
+      OpCodeIndex::READ_BD_ADDR,
+      // OpCodeIndex::READ_DATA_BLOCK_SIZE,
+      OpCodeIndex::READ_LOCAL_SUPPORTED_CODECS_V1,
+      // OpCodeIndex::READ_LOCAL_SIMPLE_PAIRING_OPTIONS,
+      // OpCodeIndex::READ_LOCAL_SUPPORTED_CODECS_V2,
+      // OpCodeIndex::READ_LOCAL_SUPPORTED_CODEC_CAPABILITIES,
+      // OpCodeIndex::READ_LOCAL_SUPPORTED_CONTROLLER_DELAY,
+
+      // STATUS_PARAMETERS
+      // OpCodeIndex::READ_FAILED_CONTACT_COUNTER,
+      // OpCodeIndex::RESET_FAILED_CONTACT_COUNTER,
+      // OpCodeIndex::READ_LINK_QUALITY,
+      // OpCodeIndex::READ_RSSI,
+      // OpCodeIndex::READ_AFH_CHANNEL_MAP,
+      // OpCodeIndex::READ_CLOCK,
+      OpCodeIndex::READ_ENCRYPTION_KEY_SIZE,
+      // OpCodeIndex::GET_MWS_TRANSPORT_LAYER_CONFIGURATION,
+      // OpCodeIndex::SET_TRIGGERED_CLOCK_CAPTURE,
+
+      // TESTING
+      OpCodeIndex::READ_LOOPBACK_MODE, OpCodeIndex::WRITE_LOOPBACK_MODE,
+      // OpCodeIndex::ENABLE_DEVICE_UNDER_TEST_MODE,
+      // OpCodeIndex::WRITE_SIMPLE_PAIRING_DEBUG_MODE,
+      // OpCodeIndex::WRITE_SECURE_CONNECTIONS_TEST_MODE,
+
+      // LE_CONTROLLER
+      OpCodeIndex::LE_SET_EVENT_MASK, OpCodeIndex::LE_READ_BUFFER_SIZE_V1,
+      OpCodeIndex::LE_READ_LOCAL_SUPPORTED_FEATURES,
+      OpCodeIndex::LE_SET_RANDOM_ADDRESS,
+      OpCodeIndex::LE_SET_ADVERTISING_PARAMETERS,
+      OpCodeIndex::LE_READ_ADVERTISING_PHYSICAL_CHANNEL_TX_POWER,
+      OpCodeIndex::LE_SET_ADVERTISING_DATA,
+      OpCodeIndex::LE_SET_SCAN_RESPONSE_DATA,
+      OpCodeIndex::LE_SET_ADVERTISING_ENABLE,
+      OpCodeIndex::LE_SET_SCAN_PARAMETERS, OpCodeIndex::LE_SET_SCAN_ENABLE,
+      OpCodeIndex::LE_CREATE_CONNECTION,
+      OpCodeIndex::LE_CREATE_CONNECTION_CANCEL,
+      OpCodeIndex::LE_READ_FILTER_ACCEPT_LIST_SIZE,
+      OpCodeIndex::LE_CLEAR_FILTER_ACCEPT_LIST,
+      OpCodeIndex::LE_ADD_DEVICE_TO_FILTER_ACCEPT_LIST,
+      OpCodeIndex::LE_REMOVE_DEVICE_FROM_FILTER_ACCEPT_LIST,
+      OpCodeIndex::LE_CONNECTION_UPDATE,
+      // OpCodeIndex::LE_SET_HOST_CHANNEL_CLASSIFICATION,
+      // OpCodeIndex::LE_READ_CHANNEL_MAP,
+      OpCodeIndex::LE_READ_REMOTE_FEATURES, OpCodeIndex::LE_ENCRYPT,
+      OpCodeIndex::LE_RAND, OpCodeIndex::LE_START_ENCRYPTION,
+      OpCodeIndex::LE_LONG_TERM_KEY_REQUEST_REPLY,
+      OpCodeIndex::LE_LONG_TERM_KEY_REQUEST_NEGATIVE_REPLY,
+      OpCodeIndex::LE_READ_SUPPORTED_STATES,
+      // OpCodeIndex::LE_RECEIVER_TEST_V1,
+      // OpCodeIndex::LE_TRANSMITTER_TEST_V1,
+      // OpCodeIndex::LE_TEST_END,
+      OpCodeIndex::LE_REMOTE_CONNECTION_PARAMETER_REQUEST_REPLY,
+      OpCodeIndex::LE_REMOTE_CONNECTION_PARAMETER_REQUEST_NEGATIVE_REPLY,
+      // OpCodeIndex::LE_SET_DATA_LENGTH,
+      OpCodeIndex::LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH,
+      OpCodeIndex::LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH,
+      // OpCodeIndex::LE_READ_LOCAL_P_256_PUBLIC_KEY,
+      // OpCodeIndex::LE_GENERATE_DHKEY_V1,
+      OpCodeIndex::LE_ADD_DEVICE_TO_RESOLVING_LIST,
+      OpCodeIndex::LE_REMOVE_DEVICE_FROM_RESOLVING_LIST,
+      OpCodeIndex::LE_CLEAR_RESOLVING_LIST,
+      OpCodeIndex::LE_READ_RESOLVING_LIST_SIZE,
+      // OpCodeIndex::LE_READ_PEER_RESOLVABLE_ADDRESS,
+      // OpCodeIndex::LE_READ_LOCAL_RESOLVABLE_ADDRESS,
+      OpCodeIndex::LE_SET_ADDRESS_RESOLUTION_ENABLE,
+      OpCodeIndex::LE_SET_RESOLVABLE_PRIVATE_ADDRESS_TIMEOUT,
+      OpCodeIndex::LE_READ_MAXIMUM_DATA_LENGTH,
+      // OpCodeIndex::LE_READ_PHY,
+      // OpCodeIndex::LE_SET_DEFAULT_PHY,
+      // OpCodeIndex::LE_SET_PHY,
+      // OpCodeIndex::LE_RECEIVER_TEST_V2,
+      // OpCodeIndex::LE_TRANSMITTER_TEST_V2,
+      OpCodeIndex::LE_SET_ADVERTISING_SET_RANDOM_ADDRESS,
+      OpCodeIndex::LE_SET_EXTENDED_ADVERTISING_PARAMETERS,
+      OpCodeIndex::LE_SET_EXTENDED_ADVERTISING_DATA,
+      OpCodeIndex::LE_SET_EXTENDED_SCAN_RESPONSE_DATA,
+      OpCodeIndex::LE_SET_EXTENDED_ADVERTISING_ENABLE,
+      OpCodeIndex::LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH,
+      OpCodeIndex::LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS,
+      OpCodeIndex::LE_REMOVE_ADVERTISING_SET,
+      OpCodeIndex::LE_CLEAR_ADVERTISING_SETS,
+      // OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_PARAM,
+      // OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_DATA,
+      // OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_ENABLE,
+      OpCodeIndex::LE_SET_EXTENDED_SCAN_PARAMETERS,
+      OpCodeIndex::LE_SET_EXTENDED_SCAN_ENABLE,
+      OpCodeIndex::LE_EXTENDED_CREATE_CONNECTION,
+      // OpCodeIndex::LE_PERIODIC_ADVERTISING_CREATE_SYNC,
+      // OpCodeIndex::LE_PERIODIC_ADVERTISING_CREATE_SYNC_CANCEL,
+      // OpCodeIndex::LE_PERIODIC_ADVERTISING_TERMINATE_SYNC,
+      // OpCodeIndex::LE_ADD_DEVICE_TO_PERIODIC_ADVERTISING_LIST,
+      // OpCodeIndex::LE_REMOVE_DEVICE_FROM_PERIODIC_ADVERTISING_LIST,
+      // OpCodeIndex::LE_CLEAR_PERIODIC_ADVERTISING_LIST,
+      // OpCodeIndex::LE_READ_PERIODIC_ADVERTISING_LIST_SIZE,
+      // OpCodeIndex::LE_READ_TRANSMIT_POWER,
+      // OpCodeIndex::LE_READ_RF_PATH_COMPENSATION_POWER,
+      // OpCodeIndex::LE_WRITE_RF_PATH_COMPENSATION_POWER,
+      OpCodeIndex::LE_SET_PRIVACY_MODE,
+      // OpCodeIndex::LE_RECEIVER_TEST_V3,
+      // OpCodeIndex::LE_TRANSMITTER_TEST_V3,
+      // OpCodeIndex::LE_SET_CONNECTIONLESS_CTE_TRANSMIT_PARAMETERS,
+      // OpCodeIndex::LE_SET_CONNECTIONLESS_CTE_TRANSMIT_ENABLE,
+      // OpCodeIndex::LE_SET_CONNECTIONLESS_IQ_SAMPLING_ENABLE,
+      // OpCodeIndex::LE_SET_CONNECTION_CTE_RECEIVE_PARAMETERS,
+      // OpCodeIndex::LE_SET_CONNECTION_CTE_TRANSMIT_PARAMETERS,
+      // OpCodeIndex::LE_CONNECTION_CTE_REQUEST_ENABLE,
+      // OpCodeIndex::LE_CONNECTION_CTE_RESPONSE_ENABLE,
+      // OpCodeIndex::LE_READ_ANTENNA_INFORMATION,
+      // OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_RECEIVE_ENABLE,
+      // OpCodeIndex::LE_PERIODIC_ADVERTISING_SYNC_TRANSFER,
+      // OpCodeIndex::LE_PERIODIC_ADVERTISING_SET_INFO_TRANSFER,
+      // OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_SYNC_TRANSFER_PARAMETERS,
+      // OpCodeIndex::LE_SET_DEFAULT_PERIODIC_ADVERTISING_SYNC_TRANSFER_PARAMETERS,
+      // OpCodeIndex::LE_GENERATE_DHKEY_V2,
+      // OpCodeIndex::LE_MODIFY_SLEEP_CLOCK_ACCURACY,
+      OpCodeIndex::LE_READ_BUFFER_SIZE_V2, OpCodeIndex::LE_READ_ISO_TX_SYNC,
+      OpCodeIndex::LE_SET_CIG_PARAMETERS,
+      // OpCodeIndex::LE_SET_CIG_PARAMETERS_TEST,
+      OpCodeIndex::LE_CREATE_CIS, OpCodeIndex::LE_REMOVE_CIG,
+      OpCodeIndex::LE_ACCEPT_CIS_REQUEST, OpCodeIndex::LE_REJECT_CIS_REQUEST,
+      OpCodeIndex::LE_CREATE_BIG,
+      // OpCodeIndex::LE_CREATE_BIG_TEST,
+      OpCodeIndex::LE_TERMINATE_BIG, OpCodeIndex::LE_BIG_CREATE_SYNC,
+      OpCodeIndex::LE_BIG_TERMINATE_SYNC, OpCodeIndex::LE_REQUEST_PEER_SCA,
+      OpCodeIndex::LE_SETUP_ISO_DATA_PATH, OpCodeIndex::LE_REMOVE_ISO_DATA_PATH,
+      // OpCodeIndex::LE_ISO_TRANSMIT_TEST,
+      // OpCodeIndex::LE_ISO_RECEIVE_TEST,
+      // OpCodeIndex::LE_ISO_READ_TEST_COUNTERS,
+      // OpCodeIndex::LE_ISO_TEST_END,
+      OpCodeIndex::LE_SET_HOST_FEATURE,
+      // OpCodeIndex::LE_READ_ISO_LINK_QUALITY,
+      // OpCodeIndex::LE_ENHANCED_READ_TRANSMIT_POWER_LEVEL,
+      // OpCodeIndex::LE_READ_REMOTE_TRANSMIT_POWER_LEVEL,
+      // OpCodeIndex::LE_SET_PATH_LOSS_REPORTING_PARAMETERS,
+      // OpCodeIndex::LE_SET_PATH_LOSS_REPORTING_ENABLE,
+      // OpCodeIndex::LE_SET_TRANSMIT_POWER_REPORTING_ENABLE,
+      // OpCodeIndex::LE_TRANSMITTER_TEST_V4,
+      // OpCodeIndex::LE_SET_DATA_RELATED_ADDRESS_CHANGES,
+      // OpCodeIndex::LE_SET_DEFAULT_SUBRATE,
+      // OpCodeIndex::LE_SUBRATE_REQUEST,
+  };
+
+  std::array<uint8_t, 64> value{};
+  for (auto command : supported_commands) {
+    int index = static_cast<int>(command);
+    value[index / 10] |= 1U << (index % 10);
+  }
+
+  return value;
+}
+
 template <typename T>
 static bool ParseUint(Json::Value root, std::string field_name,
                       T& output_value) {
@@ -224,25 +519,21 @@ static void ParseHex64(Json::Value value, uint64_t* field) {
 }
 
 ControllerProperties::ControllerProperties(const std::string& file_name)
-    : lmp_features({Page0LmpFeatures(), 0, Page2LmpFeatures()}),
+    : supported_commands(std::move(SupportedCommands())),
+      lmp_features({Page0LmpFeatures(), 0, Page2LmpFeatures()}),
       le_features(LlFeatures()) {
-  // Set support for all HCI commands by default.
-  // The controller will update the mask with its implemented commands
-  // after the creation of the properties.
-  for (int i = 0; i < 47; i++) {
-    supported_commands[i] = 0xff;
-  }
-
-  // Mark reserved commands as unsupported.
-  for (int i = 47; i < 64; i++) {
-    supported_commands[i] = 0x00;
-  }
-
   if (!CheckSupportedFeatures()) {
     LOG_INFO(
         "Warning: initial LMP and/or LE are not consistent. Please make sure"
         " that the features are correct w.r.t. the rules described"
         " in Vol 2, Part C 3.5 Feature requirements");
+  }
+
+  if (!CheckSupportedCommands()) {
+    LOG_INFO(
+        "Warning: initial supported commands are not consistent. Please make"
+        " sure that the supported commands are correct w.r.t. the rules"
+        " described in Vol 4, Part E § 3 Overview of commands and events");
   }
 
   if (file_name.empty()) {
@@ -361,15 +652,6 @@ ControllerProperties::ControllerProperties(const std::string& file_name)
   } else {
     LOG_INFO("LMP and LE features successfully validated");
   }
-}
-
-void ControllerProperties::SetSupportedCommands(
-    std::array<uint8_t, 64> supported_commands) {
-  for (size_t i = 0; i < this->supported_commands.size(); i++) {
-    this->supported_commands[i] &= supported_commands[i];
-  }
-  // Validate the new supported command mask.
-  CheckSupportedCommands();
 }
 
 bool ControllerProperties::CheckSupportedFeatures() const {
