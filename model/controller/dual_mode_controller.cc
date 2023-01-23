@@ -390,6 +390,13 @@ void DualModeController::HandleAcl(
   if (loopback_mode_ == LoopbackMode::ENABLE_LOCAL) {
     uint16_t handle = acl_packet.GetHandle();
 
+    std::vector<uint8_t> payload{acl_packet.GetPayload().begin(),
+                                 acl_packet.GetPayload().end()};
+    send_acl_(bluetooth::hci::AclBuilder::Create(
+        handle, acl_packet.GetPacketBoundaryFlag(),
+        acl_packet.GetBroadcastFlag(),
+        std::make_unique<bluetooth::packet::RawBuilder>(payload)));
+
     std::vector<bluetooth::hci::CompletedPackets> completed_packets;
     bluetooth::hci::CompletedPackets cp;
     cp.connection_handle_ = handle;
