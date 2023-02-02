@@ -28,7 +28,7 @@
 #include "hci/address.h"
 #include "hci/hci_packets.h"
 #include "link_layer_controller.h"
-#include "model/controller/vendor/csr.h"
+#include "model/controller/vendor_commands/csr.h"
 #include "model/devices/device.h"
 #include "model/setup/async_manager.h"
 #ifndef ROOTCANAL_LMP
