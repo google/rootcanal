@@ -28,7 +28,7 @@ void PhyLayer::Register(std::shared_ptr<PhyDevice> device) {
 }
 
 void PhyLayer::Unregister(PhyDevice::Identifier id) {
-  for (auto device : phy_devices_) {
+  for (auto& device : phy_devices_) {
     if (device->id == id) {
       device->Unregister(this);
       phy_devices_.remove(device);
@@ -38,7 +38,7 @@ void PhyLayer::Unregister(PhyDevice::Identifier id) {
 }
 
 void PhyLayer::UnregisterAll() {
-  for (auto device : phy_devices_) {
+  for (auto& device : phy_devices_) {
     device->Unregister(this);
   }
   phy_devices_.clear();

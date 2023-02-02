@@ -1464,7 +1464,7 @@ void LinkLayerController::LeAdvertising() {
             type = model::packets::LegacyAdvertisingType::ADV_NONCONN_IND;
             break;
           default:
-            ASSERT(
+            LOG_ALWAYS_FATAL(
                 "unexpected raw advertising event properties;"
                 " please check the extended advertising parameter validation");
             break;
