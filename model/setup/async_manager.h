@@ -119,8 +119,6 @@ class AsyncManager {
   // destroying the other one
   std::unique_ptr<AsyncFdWatcher> fdWatcher_p_;
   std::unique_ptr<AsyncTaskManager> taskManager_p_;
-
-  std::mutex synchronization_mutex_;
 };
 }  // namespace rootcanal
 #endif  // TEST_VENDOR_LIB_ASYNC_MANAGER_H_
