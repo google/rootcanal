@@ -30,14 +30,11 @@
 #include "model/controller/le_advertiser.h"
 #include "packets/link_layer_packets.h"
 
-#ifdef ROOTCANAL_LMP
 extern "C" {
 struct LinkManager;
 }
+
 #include "lmp.h"
-#else
-#include "security_manager.h"
-#endif /* ROOTCANAL_LMP */
 
 namespace rootcanal {
 
@@ -84,47 +81,7 @@ class LinkLayerController {
   ErrorCode SendScoToRemote(bluetooth::hci::ScoView sco_packet);
   ErrorCode SendAclToRemote(bluetooth::hci::AclView acl_packet);
 
-#ifdef ROOTCANAL_LMP
   void ForwardToLm(bluetooth::hci::CommandView command);
-#else
-  void StartSimplePairing(const Address& address);
-  void AuthenticateRemoteStage1(const Address& address,
-                                PairingType pairing_type);
-  void AuthenticateRemoteStage2(const Address& address);
-  void SaveKeyAndAuthenticate(uint8_t key_type, const Address& peer);
-  ErrorCode LinkKeyRequestReply(const Address& address,
-                                const std::array<uint8_t, 16>& key);
-  ErrorCode LinkKeyRequestNegativeReply(const Address& address);
-  ErrorCode IoCapabilityRequestReply(const Address& peer, uint8_t io_capability,
-                                     uint8_t oob_data_present_flag,
-                                     uint8_t authentication_requirements);
-  ErrorCode IoCapabilityRequestNegativeReply(const Address& peer,
-                                             ErrorCode reason);
-  ErrorCode PinCodeRequestReply(const Address& peer, std::vector<uint8_t> pin);
-  ErrorCode PinCodeRequestNegativeReply(const Address& peer);
-  ErrorCode UserConfirmationRequestReply(const Address& peer);
-  ErrorCode UserConfirmationRequestNegativeReply(const Address& peer);
-  ErrorCode UserPasskeyRequestReply(const Address& peer,
-                                    uint32_t numeric_value);
-  ErrorCode UserPasskeyRequestNegativeReply(const Address& peer);
-  ErrorCode RemoteOobDataRequestReply(const Address& peer,
-                                      const std::array<uint8_t, 16>& c,
-                                      const std::array<uint8_t, 16>& r);
-  ErrorCode RemoteOobDataRequestNegativeReply(const Address& peer);
-  ErrorCode RemoteOobExtendedDataRequestReply(
-      const Address& peer, const std::array<uint8_t, 16>& c_192,
-      const std::array<uint8_t, 16>& r_192,
-      const std::array<uint8_t, 16>& c_256,
-      const std::array<uint8_t, 16>& r_256);
-  ErrorCode SendKeypressNotification(
-      const Address& peer,
-      bluetooth::hci::KeypressNotificationType notification_type);
-  void HandleSetConnectionEncryption(const Address& address, uint16_t handle,
-                                     uint8_t encryption_enable);
-  ErrorCode SetConnectionEncryption(uint16_t handle, uint8_t encryption_enable);
-  void HandleAuthenticationRequest(const Address& address, uint16_t handle);
-  ErrorCode AuthenticationRequested(uint16_t handle);
-#endif /* ROOTCANAL_LMP */
 
   std::vector<bluetooth::hci::Lap> const& ReadCurrentIacLap() const;
   void WriteCurrentIacLap(std::vector<bluetooth::hci::Lap> iac_lap);
@@ -659,23 +616,7 @@ class LinkLayerController {
                              uint8_t rssi);
   void IncomingInquiryResponsePacket(
       model::packets::LinkLayerPacketView incoming);
-#ifdef ROOTCANAL_LMP
   void IncomingLmpPacket(model::packets::LinkLayerPacketView incoming);
-#else
-  void IncomingIoCapabilityRequestPacket(
-      model::packets::LinkLayerPacketView incoming);
-  void IncomingIoCapabilityResponsePacket(
-      model::packets::LinkLayerPacketView incoming);
-  void IncomingIoCapabilityNegativeResponsePacket(
-      model::packets::LinkLayerPacketView incoming);
-  void IncomingKeypressNotificationPacket(
-      model::packets::LinkLayerPacketView incoming);
-  void IncomingPasskeyPacket(model::packets::LinkLayerPacketView incoming);
-  void IncomingPasskeyFailedPacket(
-      model::packets::LinkLayerPacketView incoming);
-  void IncomingPinRequestPacket(model::packets::LinkLayerPacketView incoming);
-  void IncomingPinResponsePacket(model::packets::LinkLayerPacketView incoming);
-#endif /* ROOTCANAL_LMP */
   void IncomingIsoPacket(model::packets::LinkLayerPacketView incoming);
   void IncomingIsoConnectionRequestPacket(
       model::packets::LinkLayerPacketView incoming);
@@ -1169,12 +1110,8 @@ class LinkLayerController {
   std::unordered_map<uint16_t, Synchronized> synchronized_{};
 
   // Classic state
-#ifdef ROOTCANAL_LMP
   std::unique_ptr<const LinkManager, void (*)(const LinkManager*)> lm_;
   struct LinkManagerOps ops_;
-#else
-  SecurityManager security_manager_{10};
-#endif /* ROOTCANAL_LMP */
 
   TaskId page_timeout_task_id_ = kInvalidTaskId;
 

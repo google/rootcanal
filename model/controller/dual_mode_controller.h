@@ -30,9 +30,6 @@
 #include "link_layer_controller.h"
 #include "model/controller/vendor_commands/csr.h"
 #include "model/devices/device.h"
-#ifndef ROOTCANAL_LMP
-#include "security_manager.h"
-#endif /* !ROOTCANAL_LMP */
 
 namespace rootcanal {
 
@@ -668,10 +665,6 @@ class DualModeController : public Device {
   using CommandHandler =
       std::function<void(DualModeController*, bluetooth::hci::CommandView)>;
   static const std::unordered_map<OpCode, CommandHandler> hci_command_handlers_;
-
-#ifndef ROOTCANAL_LMP
-  SecurityManager security_manager_;
-#endif /* ROOTCANAL_LMP */
 
   DualModeController(const DualModeController& other) = delete;
   DualModeController& operator=(const DualModeController& other) = delete;
