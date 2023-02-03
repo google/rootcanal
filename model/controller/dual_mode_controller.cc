@@ -457,7 +457,7 @@ void DualModeController::HandleCommand(
       op != OpCode::RESET &&
       op != OpCode::SET_CONTROLLER_TO_HOST_FLOW_CONTROL &&
       op != OpCode::HOST_BUFFER_SIZE &&
-      op != OpCode::HOST_NUM_COMPLETED_PACKETS &&
+      op != OpCode::HOST_NUMBER_OF_COMPLETED_PACKETS &&
       op != OpCode::READ_BUFFER_SIZE && op != OpCode::READ_LOOPBACK_MODE &&
       op != OpCode::WRITE_LOOPBACK_MODE) {
     std::unique_ptr<bluetooth::packet::RawBuilder> raw_builder_ptr =

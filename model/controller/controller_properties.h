@@ -50,12 +50,20 @@ struct ControllerProperties {
   // Check if the feature masks are valid according to the specification.
   bool CheckSupportedFeatures() const;
 
+  // Check if the supported command mask is valid according to the
+  // specification.
+  bool CheckSupportedCommands() const;
+
   // Local Version Information (Vol 4, Part E § 7.4.1).
   HciVersion hci_version{HciVersion::V_5_3};
   LmpVersion lmp_version{LmpVersion::V_5_3};
   uint16_t hci_subversion{0};
   uint16_t lmp_subversion{0};
   uint16_t company_identifier{0x00E0};  // Google
+
+  // Transports.
+  bool br_supported{true};
+  bool le_supported{true};
 
   // Local Supported Commands (Vol 4, Part E § 7.4.2).
   std::array<uint8_t, 64> supported_commands;
@@ -118,6 +126,16 @@ struct ControllerProperties {
 
   bool SupportsLMPFeature(bluetooth::hci::LMPFeaturesPage2Bits bit) const {
     return (lmp_features[2] & static_cast<uint64_t>(bit)) != 0;
+  }
+
+  bool SupportsLLFeature(bluetooth::hci::LLFeaturesBits bit) const {
+    return (le_features & static_cast<uint64_t>(bit)) != 0;
+  }
+
+  bool SupportsCommand(bluetooth::hci::OpCodeIndex op_code) const {
+    int index = static_cast<int>(op_code);
+    return (supported_commands[index / 10] & (UINT64_C(1) << (index % 10))) !=
+           0;
   }
 };
 
