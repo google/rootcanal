@@ -1842,8 +1842,8 @@ void LinkLayerController::IncomingAclPacket(
     size_t start_index = acl_buffer_size * i;
     size_t end_index =
         std::min(start_index + acl_buffer_size, payload_data.size());
-    std::vector<uint8_t> fragment(&payload_data[start_index],
-                                  &payload_data[end_index]);
+    std::vector<uint8_t> fragment(payload_data.begin() + start_index,
+                                  payload_data.begin() + end_index);
     std::unique_ptr<bluetooth::packet::RawBuilder> raw_builder_ptr =
         std::make_unique<bluetooth::packet::RawBuilder>(fragment);
     auto acl_packet = bluetooth::hci::AclBuilder::Create(
