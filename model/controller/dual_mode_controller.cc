@@ -55,16 +55,11 @@ void DualModeController::Close() {
 }
 
 void DualModeController::SendCommandCompleteUnknownOpCodeEvent(
-    uint16_t op_code) const {
-  std::unique_ptr<bluetooth::packet::RawBuilder> raw_builder_ptr =
-      std::make_unique<bluetooth::packet::RawBuilder>();
-  raw_builder_ptr->AddOctets1(kNumCommandPackets);
-  raw_builder_ptr->AddOctets2(op_code);
-  raw_builder_ptr->AddOctets1(
-      static_cast<uint8_t>(ErrorCode::UNKNOWN_HCI_COMMAND));
-
-  send_event_(gd_hci::EventBuilder::Create(gd_hci::EventCode::COMMAND_COMPLETE,
-                                           std::move(raw_builder_ptr)));
+    bluetooth::hci::OpCode op_code) const {
+  send_event_(gd_hci::CommandCompleteBuilder::Create(
+      kNumCommandPackets, op_code,
+      std::make_unique<bluetooth::packet::RawBuilder>(std::vector<uint8_t>{
+          static_cast<uint8_t>(ErrorCode::UNKNOWN_HCI_COMMAND)})));
 }
 
 #ifdef ROOTCANAL_LMP
@@ -505,10 +500,10 @@ void DualModeController::HandleCommand(
   // The command is not supported.
   // Respond with the status code Unknown Command.
   else {
-    uint16_t opcode = static_cast<uint16_t>(op_code);
-    SendCommandCompleteUnknownOpCodeEvent(opcode);
+    SendCommandCompleteUnknownOpCodeEvent(op_code);
+    uint16_t raw_op_code = static_cast<uint16_t>(op_code);
     LOG_INFO("Unknown command, opcode: 0x%04X, OGF: 0x%04X, OCF: 0x%04X",
-             opcode, (opcode & 0xFC00) >> 10, opcode & 0x03FF);
+             raw_op_code, (raw_op_code & 0xFC00) >> 10, raw_op_code & 0x03FF);
   }
 }
 
@@ -2752,8 +2747,7 @@ void DualModeController::LeVendorCap(CommandView command) {
   ASSERT(command_view.IsValid());
   vector<uint8_t> caps = properties_.le_vendor_capabilities;
   if (caps.empty()) {
-    SendCommandCompleteUnknownOpCodeEvent(
-        static_cast<uint16_t>(OpCode::LE_GET_VENDOR_CAPABILITIES));
+    SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_GET_VENDOR_CAPABILITIES);
     return;
   }
 
@@ -2771,24 +2765,21 @@ void DualModeController::LeVendorMultiAdv(CommandView command) {
   auto command_view = gd_hci::LeMultiAdvtView::Create(
       gd_hci::LeAdvertisingCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  SendCommandCompleteUnknownOpCodeEvent(
-      static_cast<uint16_t>(OpCode::LE_MULTI_ADVT));
+  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_MULTI_ADVT);
 }
 
 void DualModeController::LeAdvertisingFilter(CommandView command) {
   auto command_view = gd_hci::LeAdvFilterView::Create(
       gd_hci::LeScanningCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  SendCommandCompleteUnknownOpCodeEvent(
-      static_cast<uint16_t>(OpCode::LE_ADV_FILTER));
+  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_ADV_FILTER);
 }
 
 void DualModeController::LeEnergyInfo(CommandView command) {
   auto command_view = gd_hci::LeEnergyInfoView::Create(
       gd_hci::VendorCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  SendCommandCompleteUnknownOpCodeEvent(
-      static_cast<uint16_t>(OpCode::LE_ENERGY_INFO));
+  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_ENERGY_INFO);
 }
 
 // CSR vendor command.
@@ -3090,8 +3081,7 @@ void DualModeController::LeExtendedScanParams(CommandView command) {
   auto command_view = gd_hci::LeExtendedScanParamsView::Create(
       gd_hci::LeScanningCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  SendCommandCompleteUnknownOpCodeEvent(
-      static_cast<uint16_t>(OpCode::LE_EXTENDED_SCAN_PARAMS));
+  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_EXTENDED_SCAN_PARAMS);
 }
 
 void DualModeController::LeStartEncryption(CommandView command) {
