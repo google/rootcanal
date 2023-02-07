@@ -56,6 +56,10 @@ class TestModel {
   TestModel(TestModel& model) = delete;
   TestModel& operator=(const TestModel& model) = delete;
 
+  void SetReuseDeviceIds(bool reuse_device_ids) {
+    reuse_device_ids_ = reuse_device_ids;
+  }
+
   // Allow derived classes to use custom phy layer.
   virtual std::unique_ptr<PhyLayer> CreatePhyLayer(PhyLayer::Identifier id,
                                                    Phy::Type type);
@@ -109,6 +113,10 @@ class TestModel {
   std::map<PhyLayer::Identifier, std::shared_ptr<PhyLayer>> phy_layers_;
   std::map<PhyDevice::Identifier, std::shared_ptr<PhyDevice>> phy_devices_;
   std::string list_string_;
+
+  // Generator for device identifiers.
+  PhyDevice::Identifier next_device_id_{0};
+  bool reuse_device_ids_{true};
 
   // Prefix used to generate public device addresses for hosts
   // connecting over TCP.
