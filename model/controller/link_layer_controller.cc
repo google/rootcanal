@@ -5420,7 +5420,8 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, ErrorCode reason) {
 
     connections_.Disconnect(
         handle, [this](TaskId task_id) { CancelScheduledTask(task_id); });
-    SendDisconnectionCompleteEvent(handle, reason);
+    SendDisconnectionCompleteEvent(
+        handle, ErrorCode::CONNECTION_TERMINATED_BY_LOCAL_HOST);
     return ErrorCode::SUCCESS;
   }
 
@@ -5441,7 +5442,8 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, ErrorCode reason) {
 
       connections_.Disconnect(
           sco_handle, [this](TaskId task_id) { CancelScheduledTask(task_id); });
-      SendDisconnectionCompleteEvent(sco_handle, reason);
+      SendDisconnectionCompleteEvent(
+          sco_handle, ErrorCode::CONNECTION_TERMINATED_BY_LOCAL_HOST);
     }
 
     SendLinkLayerPacket(model::packets::DisconnectBuilder::Create(
@@ -5456,7 +5458,8 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, ErrorCode reason) {
 
   connections_.Disconnect(
       handle, [this](TaskId task_id) { CancelScheduledTask(task_id); });
-  SendDisconnectionCompleteEvent(handle, ErrorCode(reason));
+  SendDisconnectionCompleteEvent(
+      handle, ErrorCode::CONNECTION_TERMINATED_BY_LOCAL_HOST);
 #ifdef ROOTCANAL_LMP
   if (is_br_edr) {
     ASSERT(link_manager_remove_link(
