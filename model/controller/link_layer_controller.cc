@@ -25,7 +25,6 @@
 #include "log.h"
 #include "packet/raw_builder.h"
 
-using std::vector;
 using namespace std::chrono;
 using bluetooth::hci::Address;
 using bluetooth::hci::AddressType;
@@ -38,6 +37,8 @@ using bluetooth::hci::SubeventCode;
 using namespace model::packets;
 using model::packets::PacketType;
 using namespace std::literals;
+
+using TaskId = rootcanal::LinkLayerController::TaskId;
 
 // Temporay define, to be replaced when verbose log level is implemented.
 #define LOG_VERB(...) LOG_INFO(__VA_ARGS__)
@@ -1411,11 +1412,7 @@ LinkLayerController::LinkLayerController(const Address& address,
     : address_(address), properties_(properties) {}
 #endif
 
-LinkLayerController::~LinkLayerController() {
-  // Clear out periodic tasks for opened SCO connections in the
-  // connection manager state.
-  connections_.Reset(cancel_task_);
-}
+LinkLayerController::~LinkLayerController() {}
 
 void LinkLayerController::SendLeLinkLayerPacket(
     std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
@@ -2058,8 +2055,10 @@ void LinkLayerController::IncomingDisconnectPacket(
 #ifdef ROOTCANAL_LMP
   auto is_br_edr = connections_.GetPhyType(handle) == Phy::Type::BR_EDR;
 #endif
-  ASSERT_LOG(connections_.Disconnect(handle, cancel_task_),
-             "GetHandle() returned invalid handle %hx", handle);
+  ASSERT_LOG(
+      connections_.Disconnect(
+          handle, [this](TaskId task_id) { CancelScheduledTask(task_id); }),
+      "GetHandle() returned invalid handle %hx", handle);
 
   uint8_t reason = disconnect.GetReason();
   SendDisconnectionCompleteEvent(handle, ErrorCode(reason));
@@ -3651,7 +3650,8 @@ void LinkLayerController::IncomingScoDisconnect(
       incoming.GetSourceAddress().ToString().c_str());
 
   if (handle != kReservedHandle) {
-    connections_.Disconnect(handle, cancel_task_);
+    connections_.Disconnect(
+        handle, [this](TaskId task_id) { CancelScheduledTask(task_id); });
     SendDisconnectionCompleteEvent(handle, ErrorCode(reason));
   }
 }
@@ -4742,6 +4742,7 @@ void LinkLayerController::IncomingPageResponsePacket(
 }
 
 void LinkLayerController::Tick() {
+  RunPendingTasks();
   if (inquiry_timer_task_id_ != kInvalidTaskId) {
     Inquiry();
   }
@@ -4787,47 +4788,6 @@ void LinkLayerController::RegisterRemoteChannel(
         void(std::shared_ptr<model::packets::LinkLayerPacketBuilder>, Phy::Type,
              int8_t)>& send_to_remote) {
   send_to_remote_ = send_to_remote;
-}
-
-void LinkLayerController::RegisterTaskScheduler(
-    std::function<AsyncTaskId(milliseconds, TaskCallback)> task_scheduler) {
-  schedule_task_ = task_scheduler;
-}
-
-AsyncTaskId LinkLayerController::ScheduleTask(milliseconds delay_ms,
-                                              TaskCallback task_callback) {
-  if (schedule_task_) {
-    return schedule_task_(delay_ms, std::move(task_callback));
-  }
-  LOG_ERROR("Unable to schedule task on delay");
-  return 0;
-}
-
-AsyncTaskId LinkLayerController::SchedulePeriodicTask(
-    milliseconds delay_ms, milliseconds period_ms, TaskCallback task_callback) {
-  if (schedule_periodic_task_) {
-    return schedule_periodic_task_(delay_ms, period_ms,
-                                   std::move(task_callback));
-  }
-  LOG_ERROR("Unable to schedule task on delay");
-  return 0;
-}
-
-void LinkLayerController::RegisterPeriodicTaskScheduler(
-    std::function<AsyncTaskId(milliseconds, milliseconds, TaskCallback)>
-        periodic_task_scheduler) {
-  schedule_periodic_task_ = periodic_task_scheduler;
-}
-
-void LinkLayerController::CancelScheduledTask(AsyncTaskId task_id) {
-  if (schedule_task_ && cancel_task_) {
-    cancel_task_(task_id);
-  }
-}
-
-void LinkLayerController::RegisterTaskCancel(
-    std::function<void(AsyncTaskId)> task_cancel) {
-  cancel_task_ = task_cancel;
 }
 
 #ifdef ROOTCANAL_LMP
@@ -5458,7 +5418,8 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, ErrorCode reason) {
     SendLinkLayerPacket(model::packets::ScoDisconnectBuilder::Create(
         GetAddress(), remote, static_cast<uint8_t>(reason)));
 
-    connections_.Disconnect(handle, cancel_task_);
+    connections_.Disconnect(
+        handle, [this](TaskId task_id) { CancelScheduledTask(task_id); });
     SendDisconnectionCompleteEvent(handle, reason);
     return ErrorCode::SUCCESS;
   }
@@ -5478,7 +5439,8 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, ErrorCode reason) {
       SendLinkLayerPacket(model::packets::ScoDisconnectBuilder::Create(
           GetAddress(), remote.GetAddress(), static_cast<uint8_t>(reason)));
 
-      connections_.Disconnect(sco_handle, cancel_task_);
+      connections_.Disconnect(
+          sco_handle, [this](TaskId task_id) { CancelScheduledTask(task_id); });
       SendDisconnectionCompleteEvent(sco_handle, reason);
     }
 
@@ -5492,7 +5454,8 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, ErrorCode reason) {
         static_cast<uint8_t>(reason)));
   }
 
-  connections_.Disconnect(handle, cancel_task_);
+  connections_.Disconnect(
+      handle, [this](TaskId task_id) { CancelScheduledTask(task_id); });
   SendDisconnectionCompleteEvent(handle, ErrorCode(reason));
 #ifdef ROOTCANAL_LMP
   if (is_br_edr) {
@@ -6376,7 +6339,7 @@ void LinkLayerController::IncomingPingRequest(
       incoming.GetDestinationAddress(), incoming.GetSourceAddress()));
 }
 
-AsyncTaskId LinkLayerController::StartScoStream(Address address) {
+TaskId LinkLayerController::StartScoStream(Address address) {
   auto sco_builder = bluetooth::hci::ScoBuilder::Create(
       connections_.GetScoHandle(address), PacketStatusFlag::CORRECTLY_RECEIVED,
       {0, 0, 0, 0, 0});
@@ -6394,4 +6357,64 @@ AsyncTaskId LinkLayerController::StartScoStream(Address address) {
     SendScoToRemote(sco_view);
   });
 }
+
+TaskId LinkLayerController::NextTaskId() {
+  TaskId task_id = task_counter_++;
+  while (
+      task_id == kInvalidTaskId ||
+      std::any_of(task_queue_.begin(), task_queue_.end(),
+                  [=](Task const& task) { return task.task_id == task_id; })) {
+    task_id = task_counter_++;
+  }
+  return task_id;
+}
+
+TaskId LinkLayerController::ScheduleTask(std::chrono::milliseconds delay,
+                                         TaskCallback task_callback) {
+  TaskId task_id = NextTaskId();
+  task_queue_.emplace(std::chrono::steady_clock::now() + delay,
+                      std::move(task_callback), task_id);
+  return task_id;
+}
+
+TaskId LinkLayerController::SchedulePeriodicTask(
+    std::chrono::milliseconds delay, std::chrono::milliseconds period,
+    TaskCallback task_callback) {
+  TaskId task_id = NextTaskId();
+  task_queue_.emplace(std::chrono::steady_clock::now() + delay, period,
+                      std::move(task_callback), task_id);
+  return task_id;
+}
+
+void LinkLayerController::CancelScheduledTask(TaskId task_id) {
+  auto it = task_queue_.cbegin();
+  for (; it != task_queue_.cend(); it++) {
+    if (it->task_id == task_id) {
+      task_queue_.erase(it);
+      return;
+    }
+  }
+}
+
+void LinkLayerController::RunPendingTasks() {
+  std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+  while (!task_queue_.empty()) {
+    auto it = task_queue_.begin();
+    if (it->time > now) {
+      break;
+    }
+
+    Task task = *it;
+    task_queue_.erase(it);
+    task.callback();
+
+    // Re-insert periodic tasks after updating the
+    // time by the period.
+    if (task.periodic) {
+      task.time = now + task.period;
+      task_queue_.insert(task);
+    }
+  }
+}
+
 }  // namespace rootcanal

@@ -27,7 +27,7 @@ using ::bluetooth::hci::Address;
 using ::bluetooth::hci::AddressType;
 using ::bluetooth::hci::AddressWithType;
 
-void AclConnectionHandler::Reset(std::function<void(AsyncTaskId)> stopStream) {
+void AclConnectionHandler::Reset(std::function<void(TaskId)> stopStream) {
   // Leave no dangling periodic task.
   for (auto& [_, sco_connection] : sco_connections_) {
     sco_connection.StopStream(stopStream);
@@ -158,8 +158,8 @@ uint16_t AclConnectionHandler::CreateLeConnection(AddressWithType addr,
   return kReservedHandle;
 }
 
-bool AclConnectionHandler::Disconnect(
-    uint16_t handle, std::function<void(AsyncTaskId)> stopStream) {
+bool AclConnectionHandler::Disconnect(uint16_t handle,
+                                      std::function<void(TaskId)> stopStream) {
   if (HasScoHandle(handle)) {
     sco_connections_.at(handle).StopStream(std::move(stopStream));
     sco_connections_.erase(handle);
@@ -515,7 +515,7 @@ void AclConnectionHandler::CancelPendingScoConnection(
 
 bool AclConnectionHandler::AcceptPendingScoConnection(
     bluetooth::hci::Address addr, ScoLinkParameters const& parameters,
-    std::function<AsyncTaskId()> startStream) {
+    std::function<TaskId()> startStream) {
   for (auto& pair : sco_connections_) {
     if (std::get<ScoConnection>(pair).GetAddress() == addr) {
       std::get<ScoConnection>(pair).SetLinkParameters(parameters);
@@ -529,7 +529,7 @@ bool AclConnectionHandler::AcceptPendingScoConnection(
 
 bool AclConnectionHandler::AcceptPendingScoConnection(
     bluetooth::hci::Address addr, ScoConnectionParameters const& parameters,
-    std::function<AsyncTaskId()> startStream) {
+    std::function<TaskId()> startStream) {
   for (auto& pair : sco_connections_) {
     if (std::get<ScoConnection>(pair).GetAddress() == addr) {
       bool ok =
