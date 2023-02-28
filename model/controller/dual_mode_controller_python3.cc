@@ -19,6 +19,7 @@
 #include <pybind11/stl.h>
 
 #include "dual_mode_controller.h"
+#include "model/setup/async_manager.h"
 
 using namespace std::literals;
 namespace py = pybind11;
@@ -39,20 +40,7 @@ enum Type {
 // SendLinkLayerPacket as forwarding packets to a registered handler.
 class BaseController : public DualModeController {
  public:
-  BaseController() {
-    RegisterTaskScheduler(
-        [this](std::chrono::milliseconds delay, TaskCallback const& task) {
-          return this->async_manager_.ExecAsync(0, delay, task);
-        });
-    RegisterPeriodicTaskScheduler([this](std::chrono::milliseconds delay,
-                                         std::chrono::milliseconds period,
-                                         TaskCallback const& task) {
-      return this->async_manager_.ExecAsyncPeriodically(0, delay, period, task);
-    });
-    RegisterTaskCancel([this](AsyncTaskId task_id) {
-      this->async_manager_.CancelAsyncTask(task_id);
-    });
-  }
+  BaseController() {}
   ~BaseController() = default;
 
   void Start() {

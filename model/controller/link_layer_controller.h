@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <chrono>
 #include <map>
+#include <set>
 #include <vector>
 
 #include "hci/address.h"
@@ -27,7 +28,6 @@
 #include "model/controller/acl_connection_handler.h"
 #include "model/controller/controller_properties.h"
 #include "model/controller/le_advertiser.h"
-#include "model/setup/async_manager.h"
 #include "packets/link_layer_packets.h"
 
 #ifdef ROOTCANAL_LMP
@@ -139,6 +139,32 @@ class LinkLayerController {
   ErrorCode CreateConnectionCancel(const Address& addr);
   ErrorCode Disconnect(uint16_t handle, ErrorCode reason);
 
+  // Internal task scheduler.
+  // This scheduler is driven by the tick function only,
+  // hence the precision of the scheduler is within a tick period.
+  class Task;
+  using TaskId = uint32_t;
+  using TaskCallback = std::function<void(void)>;
+  static constexpr TaskId kInvalidTaskId = 0;
+
+  /// Schedule a task to be executed \p delay ms in the future.
+  TaskId ScheduleTask(std::chrono::milliseconds delay,
+                      TaskCallback task_callback);
+
+  /// Schedule a task to be executed every \p period ms starting
+  /// \p delay ms in the future. Note that the task will be executed
+  /// at most once per \ref Tick() invocation, hence the period
+  /// cannot be lower than the \ref Tick() period.
+  TaskId SchedulePeriodicTask(std::chrono::milliseconds delay,
+                              std::chrono::milliseconds period,
+                              TaskCallback task_callback);
+
+  /// Cancel the selected task.
+  void CancelScheduledTask(TaskId task_id);
+
+  // Execute tasks that are pending at the current time.
+  void RunPendingTasks();
+
  private:
   void SendDisconnectionCompleteEvent(uint16_t handle, ErrorCode reason);
 
@@ -151,15 +177,6 @@ class LinkLayerController {
   void Tick();
 
   void Close();
-
-  AsyncTaskId ScheduleTask(std::chrono::milliseconds delay_ms,
-                           TaskCallback task_callback);
-
-  AsyncTaskId SchedulePeriodicTask(std::chrono::milliseconds delay_ms,
-                                   std::chrono::milliseconds period_ms,
-                                   TaskCallback task_callback);
-
-  void CancelScheduledTask(AsyncTaskId task_id);
 
   // Set the callbacks for sending packets to the HCI.
   void RegisterEventChannel(
@@ -183,17 +200,6 @@ class LinkLayerController {
           void(std::shared_ptr<model::packets::LinkLayerPacketBuilder>,
                Phy::Type, int8_t)>& send_to_remote);
 
-  // Set the callbacks for scheduling tasks.
-  void RegisterTaskScheduler(
-      std::function<AsyncTaskId(std::chrono::milliseconds, TaskCallback)>
-          task_scheduler);
-
-  void RegisterPeriodicTaskScheduler(
-      std::function<AsyncTaskId(std::chrono::milliseconds,
-                                std::chrono::milliseconds, TaskCallback)>
-          periodic_task_scheduler);
-
-  void RegisterTaskCancel(std::function<void(AsyncTaskId)> cancel);
   void Reset();
 
   void LeAdvertising();
@@ -786,7 +792,7 @@ class LinkLayerController {
     le_suggested_max_tx_time_ = max_tx_time;
   }
 
-  AsyncTaskId StartScoStream(Address address);
+  TaskId StartScoStream(Address address);
 
  private:
   const Address& address_;
@@ -883,14 +889,6 @@ class LinkLayerController {
   PageScanRepetitionMode page_scan_repetition_mode_{PageScanRepetitionMode::R0};
 
   AclConnectionHandler connections_;
-
-  // Callbacks to schedule tasks.
-  std::function<AsyncTaskId(std::chrono::milliseconds, TaskCallback)>
-      schedule_task_;
-  std::function<AsyncTaskId(std::chrono::milliseconds,
-                            std::chrono::milliseconds, TaskCallback)>
-      schedule_periodic_task_;
-  std::function<void(AsyncTaskId)> cancel_task_;
 
   // Callbacks to send packets back to the HCI.
   std::function<void(std::shared_ptr<bluetooth::hci::AclBuilder>)> send_acl_;
@@ -1038,14 +1036,57 @@ class LinkLayerController {
   SecurityManager security_manager_{10};
 #endif /* ROOTCANAL_LMP */
 
-  AsyncTaskId page_timeout_task_id_ = kInvalidTaskId;
+  TaskId page_timeout_task_id_ = kInvalidTaskId;
 
   std::chrono::steady_clock::time_point last_inquiry_;
   model::packets::InquiryType inquiry_mode_{
       model::packets::InquiryType::STANDARD};
-  AsyncTaskId inquiry_timer_task_id_ = kInvalidTaskId;
+  TaskId inquiry_timer_task_id_ = kInvalidTaskId;
   uint64_t inquiry_lap_{};
   uint8_t inquiry_max_responses_{};
+
+ public:
+  // Type of scheduled tasks.
+  class Task {
+   public:
+    Task(std::chrono::steady_clock::time_point time,
+         std::chrono::milliseconds period, TaskCallback callback,
+         TaskId task_id)
+        : time(time),
+          periodic(true),
+          period(period),
+          callback(std::move(callback)),
+          task_id(task_id) {}
+
+    Task(std::chrono::steady_clock::time_point time, TaskCallback callback,
+         TaskId task_id)
+        : time(time),
+          periodic(false),
+          callback(std::move(callback)),
+          task_id(task_id) {}
+
+    // Operators needed to be in a collection
+    bool operator<(const Task& another) const {
+      return std::make_pair(time, task_id) <
+             std::make_pair(another.time, another.task_id);
+    }
+
+    // These fields should no longer be public if the class ever becomes
+    // public or gets more complex
+    std::chrono::steady_clock::time_point time;
+    const bool periodic;
+    std::chrono::milliseconds period{};
+    TaskCallback callback;
+    TaskId task_id;
+  };
+
+ private:
+  // List currently pending tasks.
+  std::set<Task> task_queue_{};
+  TaskId task_counter_{0};
+
+  // Return the next valid unused task identifier.
+  TaskId NextTaskId();
 };
 
 }  // namespace rootcanal

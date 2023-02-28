@@ -216,11 +216,6 @@ PhyDevice::Identifier TestModel::AddHciConnection(
   }
 
   AsyncUserId user_id = get_user_id_();
-  device->RegisterTaskScheduler([user_id, this](std::chrono::milliseconds delay,
-                                                TaskCallback task_callback) {
-    return schedule_task_(user_id, delay, std::move(task_callback));
-  });
-  device->RegisterTaskCancel(cancel_task_);
   device->RegisterCloseCallback([this, device_id, user_id] {
     schedule_task_(user_id, std::chrono::milliseconds(0),
                    [this, device_id, user_id]() {
