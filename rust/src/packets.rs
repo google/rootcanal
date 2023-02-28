@@ -95,3 +95,11 @@ pub mod lmp {
 
     include!(concat!(env!("OUT_DIR"), "/lmp_packets.rs"));
 }
+
+pub mod llcp {
+    #![allow(clippy::all)]
+    #![allow(unused)]
+    #![allow(missing_docs)]
+
+    include!(concat!(env!("OUT_DIR"), "/llcp_packets.rs"));
+}

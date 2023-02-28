@@ -3,6 +3,7 @@
 mod either;
 mod ffi;
 mod future;
+mod llcp;
 mod lmp;
 mod packets;
 

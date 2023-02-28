@@ -77,6 +77,10 @@ void DualModeController::ForwardToLm(CommandView command) {
   link_layer_controller_.ForwardToLm(command);
 }
 
+void DualModeController::ForwardToLl(CommandView command) {
+  link_layer_controller_.ForwardToLl(command);
+}
+
 void DualModeController::SniffSubrating(CommandView command) {
   auto command_view = bluetooth::hci::SniffSubratingView::Create(command);
   ASSERT(command_view.IsValid());
@@ -1729,13 +1733,18 @@ void DualModeController::Disconnect(CommandView command) {
   auto command_view = bluetooth::hci::DisconnectView::Create(command);
   ASSERT(command_view.IsValid());
 
-  uint16_t handle = command_view.GetConnectionHandle();
+  uint16_t connection_handle = command_view.GetConnectionHandle();
 
-  auto status = link_layer_controller_.Disconnect(
-      handle, ErrorCode(command_view.GetReason()));
+  if (connection_handle >= kCisHandleRangeStart &&
+      connection_handle < kCisHandleRangeEnd) {
+    link_layer_controller_.ForwardToLl(command);
+  } else {
+    auto status = link_layer_controller_.Disconnect(
+        connection_handle, ErrorCode(command_view.GetReason()));
 
-  send_event_(bluetooth::hci::DisconnectStatusBuilder::Create(
-      status, kNumCommandPackets));
+    send_event_(bluetooth::hci::DisconnectStatusBuilder::Create(
+        status, kNumCommandPackets));
+  }
 }
 
 void DualModeController::LeReadFilterAcceptListSize(CommandView command) {
@@ -3621,16 +3630,12 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
         {OpCode::LE_READ_BUFFER_SIZE_V2,
          &DualModeController::LeReadBufferSizeV2},
         //{OpCode::LE_READ_ISO_TX_SYNC, &DualModeController::LeReadIsoTxSync},
-        //{OpCode::LE_SET_CIG_PARAMETERS,
-        //&DualModeController::LeSetCigParameters},
-        //{OpCode::LE_SET_CIG_PARAMETERS_TEST,
-        //&DualModeController::LeSetCigParametersTest},
-        //{OpCode::LE_CREATE_CIS, &DualModeController::LeCreateCis},
-        //{OpCode::LE_REMOVE_CIG, &DualModeController::LeRemoveCig},
-        //{OpCode::LE_ACCEPT_CIS_REQUEST,
-        //&DualModeController::LeAcceptCisRequest},
-        //{OpCode::LE_REJECT_CIS_REQUEST,
-        //&DualModeController::LeRejectCisRequest},
+        {OpCode::LE_SET_CIG_PARAMETERS, &DualModeController::ForwardToLl},
+        {OpCode::LE_SET_CIG_PARAMETERS_TEST, &DualModeController::ForwardToLl},
+        {OpCode::LE_CREATE_CIS, &DualModeController::ForwardToLl},
+        {OpCode::LE_REMOVE_CIG, &DualModeController::ForwardToLl},
+        {OpCode::LE_ACCEPT_CIS_REQUEST, &DualModeController::ForwardToLl},
+        {OpCode::LE_REJECT_CIS_REQUEST, &DualModeController::ForwardToLl},
         //{OpCode::LE_CREATE_BIG, &DualModeController::LeCreateBig},
         //{OpCode::LE_CREATE_BIG_TEST, &DualModeController::LeCreateBigTest},
         //{OpCode::LE_TERMINATE_BIG, &DualModeController::LeTerminateBig},
@@ -3638,10 +3643,8 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
         //{OpCode::LE_BIG_TERMINATE_SYNC,
         //&DualModeController::LeBigTerminateSync},
         //{OpCode::LE_REQUEST_PEER_SCA, &DualModeController::LeRequestPeerSca},
-        //{OpCode::LE_SETUP_ISO_DATA_PATH,
-        //&DualModeController::LeSetupIsoDataPath},
-        //{OpCode::LE_REMOVE_ISO_DATA_PATH,
-        //&DualModeController::LeRemoveIsoDataPath},
+        {OpCode::LE_SETUP_ISO_DATA_PATH, &DualModeController::ForwardToLl},
+        {OpCode::LE_REMOVE_ISO_DATA_PATH, &DualModeController::ForwardToLl},
         //{OpCode::LE_ISO_TRANSMIT_TEST,
         //&DualModeController::LeIsoTransmitTest},
         //{OpCode::LE_ISO_RECEIVE_TEST, &DualModeController::LeIsoReceiveTest},

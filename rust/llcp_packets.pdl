@@ -1,0 +1,327 @@
+little_endian_packets
+
+enum Opcode : 8 {
+  LL_CONNECTION_UPDATE_IND = 0x00,
+  LL_CHANNEL_MAP_IND = 0x01,
+  LL_TERMINATE_IND = 0x02,
+  LL_ENC_REQ = 0x03,
+  LL_ENC_RSP = 0x04,
+  LL_START_ENC_REQ = 0x05,
+  LL_START_ENC_RSP = 0x06,
+  LL_UNKNOWN_RSP = 0x07,
+  LL_FEATURE_REQ = 0x08,
+  LL_FEATURE_RSP = 0x09,
+  LL_PAUSE_ENC_REQ = 0x0A,
+  LL_PAUSE_ENC_RSP = 0x0B,
+  LL_VERSION_IND = 0x0C,
+  LL_REJECT_IND = 0x0D,
+  LL_PERIPHERAL_FEATURE_REQ = 0x0E,
+  LL_CONNECTION_PARAM_REQ = 0x0F,
+  LL_CONNECTION_PARAM_RSP = 0x10,
+  LL_REJECT_EXT_IND = 0x11,
+  LL_PING_REQ = 0x12,
+  LL_PING_RSP = 0x13,
+  LL_LENGTH_REQ = 0x14,
+  LL_LENGTH_RSP = 0x15,
+  LL_PHY_REQ = 0x16,
+  LL_PHY_RSP = 0x17,
+  LL_PHY_UPDATE_IND = 0x18,
+  LL_MIN_USED_CHANNELS_IND = 0x19,
+  LL_CTE_REQ = 0x1A,
+  LL_CTE_RSP = 0x1B,
+  LL_PERIODIC_SYNC_IND = 0x1C,
+  LL_CLOCK_ACCURACY_REQ = 0x1D,
+  LL_CLOCK_ACCURACY_RSP = 0x1E,
+  LL_CIS_REQ = 0x1F,
+  LL_CIS_RSP = 0x20,
+  LL_CIS_IND = 0x21,
+  LL_CIS_TERMINATE_IND = 0x22,
+  LL_POWER_CONTROL_REQ = 0x23,
+  LL_POWER_CONTROL_RSP = 0x24,
+  LL_POWER_CHANGE_IND = 0x25,
+  LL_SUBRATE_REQ = 0x26,
+  LL_SUBRATE_IND = 0x27,
+  LL_CHANNEL_REPORTING_IND = 0x28,
+  LL_CHANNEL_STATUS_IND = 0x29,
+}
+
+packet LlcpPacket {
+  opcode: Opcode,
+  _payload_,
+}
+
+packet ConnectionUpdateInd : LlcpPacket (opcode = LL_CONNECTION_UPDATE_IND) {
+  window_size: 8,
+  window_offset: 16,
+  interval: 16,
+  latency: 16,
+  timeout: 16,
+  instant: 16,
+}
+
+packet ChannelMapInd : LlcpPacket (opcode = LL_CHANNEL_MAP_IND) {
+  channel_map: 40,
+  instant: 16,
+}
+
+packet TerminateInd : LlcpPacket (opcode = LL_TERMINATE_IND) {
+  error_code: 8,
+}
+
+packet EncReq : LlcpPacket (opcode = LL_ENC_REQ) {
+  rand: 64,
+  ediv: 16,
+  skd_c: 64,
+  iv_c: 16,
+}
+
+packet EncRsp : LlcpPacket (opcode = LL_ENC_RSP) {
+  skd_p: 64,
+  iv_p: 16,
+}
+
+packet StartEncReq : LlcpPacket (opcode = LL_START_ENC_REQ) {
+}
+
+packet StartEncRsp : LlcpPacket (opcode = LL_START_ENC_RSP) {
+}
+
+packet UnknownRsp : LlcpPacket (opcode = LL_UNKNOWN_RSP) {
+  unknown_type: 8,
+}
+
+packet FeatureReq : LlcpPacket (opcode = LL_FEATURE_REQ) {
+  feature_set: 64,
+}
+
+packet FeatureRsp : LlcpPacket (opcode = LL_FEATURE_RSP) {
+  feature_set: 64,
+}
+
+packet PauseEncReq : LlcpPacket (opcode = LL_PAUSE_ENC_REQ) {
+}
+
+packet PauseEncRsp : LlcpPacket (opcode = LL_PAUSE_ENC_RSP) {
+}
+
+packet VersionInd : LlcpPacket (opcode = LL_VERSION_IND) {
+  version: 8,
+  company_identifier: 16,
+  subversion: 16,
+}
+
+packet RejectInd : LlcpPacket (opcode = LL_REJECT_IND) {
+  error_code: 16,
+}
+
+packet PeripheralFeatureReq : LlcpPacket (opcode = LL_PERIPHERAL_FEATURE_REQ) {
+  feature_set: 64,
+}
+
+packet ConnectionParamReq : LlcpPacket (opcode = LL_CONNECTION_PARAM_REQ) {
+  interval_min: 16,
+  interval_max: 16,
+  latency: 16,
+  timeout: 16,
+  preferred_periodicity: 8,
+  reference_conn_event_count: 16,
+  offset0: 16,
+  offset1: 16,
+  offset2: 16,
+  offset3: 16,
+  offset4: 16,
+  offset5: 16,
+}
+
+packet ConnectionParamRsp : LlcpPacket (opcode = LL_CONNECTION_PARAM_RSP) {
+  interval_min: 16,
+  interval_max: 16,
+  latency: 16,
+  timeout: 16,
+  preferred_periodicity: 8,
+  reference_conn_event_count: 16,
+  offset0: 16,
+  offset1: 16,
+  offset2: 16,
+  offset3: 16,
+  offset4: 16,
+  offset5: 16,
+}
+
+packet RejectExtInd : LlcpPacket (opcode = LL_REJECT_EXT_IND) {
+  reject_opcode: 8,
+  error_code: 8,
+}
+
+packet PingReq : LlcpPacket (opcode = LL_PING_REQ) {
+}
+
+packet PingRsp : LlcpPacket (opcode = LL_PING_RSP) {
+}
+
+packet LengthReq : LlcpPacket (opcode = LL_LENGTH_REQ) {
+  max_rx_octets: 16,
+  max_rx_time: 16,
+  max_tx_octets: 16,
+  max_tx_time: 16,
+}
+
+packet LengthRsp : LlcpPacket (opcode = LL_LENGTH_RSP) {
+  max_rx_octets: 16,
+  max_rx_time: 16,
+  max_tx_octets: 16,
+  max_tx_time: 16,
+}
+
+packet PhyReq : LlcpPacket (opcode = LL_PHY_REQ) {
+  tx_phys: 8,
+  rx_phys: 8,
+}
+
+packet PhyRsp : LlcpPacket (opcode = LL_PHY_RSP) {
+  tx_phys: 8,
+  rx_phys: 8,
+}
+
+packet PhyUpdateInd : LlcpPacket (opcode = LL_PHY_UPDATE_IND) {
+  phy_c_to_p: 8,
+  phy_p_to_c: 8,
+  instant: 16,
+}
+
+packet MinUsedChannelsInd : LlcpPacket (opcode = LL_MIN_USED_CHANNELS_IND) {
+  phys: 8,
+  min_used_channels: 8,
+}
+
+packet CteReq : LlcpPacket (opcode = LL_CTE_REQ) {
+  min_cte_len_req: 5,
+  _reserved_: 1,
+  cte_type_req: 2,
+}
+
+packet CteRsp : LlcpPacket (opcode = LL_CTE_RSP) {
+}
+
+packet PeriodicSyncInd : LlcpPacket (opcode = LL_PERIODIC_SYNC_IND) {
+  id: 16,
+  sync_info: 8[18],
+  conn_event_count: 16,
+  last_pa_event_counter: 16,
+  sid: 4,
+  atype: 1,
+  sca: 3,
+  phy: 8,
+  adva: 48,
+  sync_conn_event_count: 16,
+}
+
+packet ClockAccuracyReq : LlcpPacket (opcode = LL_CLOCK_ACCURACY_REQ) {
+  sca: 8,
+}
+
+packet ClockAccuracyRsp : LlcpPacket (opcode = LL_CLOCK_ACCURACY_RSP) {
+  sca: 8,
+}
+
+// 2.4.2.29 LL_CIS_REQ
+packet CisReq : LlcpPacket (opcode = LL_CIS_REQ) {
+  cig_id : 8,
+  cis_id : 8,
+  phy_c_to_p : 8,
+  phy_p_to_c : 8,
+  framed : 1,
+  _reserved_ : 3,
+  max_sdu_c_to_p : 12,
+  _reserved_ : 4,
+  max_sdu_p_to_c : 12,
+  _reserved_ : 4,
+  sdu_interval_c_to_p : 20,
+  _reserved_ : 4,
+  sdu_interval_p_to_c : 20,
+  max_pdu_c_to_p : 16,
+  max_pdu_p_to_c : 16,
+  nse : 8,
+  sub_interval : 24,
+  bn_p_to_c : 4,
+  bn_c_to_p : 4,
+  ft_c_to_p : 8,
+  ft_p_to_c : 8,
+  iso_interval : 16,
+  cis_offset_min : 24,
+  cis_offset_max : 24,
+  conn_event_count : 16,
+}
+
+// 2.4.2.30 LL_CIS_RSP
+packet CisRsp : LlcpPacket (opcode = LL_CIS_RSP) {
+  cis_offset_min: 24,
+  cis_offset_max: 24,
+  conn_event_count: 16,
+}
+
+// 2.4.2.31 LL_CIS_IND
+packet CisInd : LlcpPacket (opcode = LL_CIS_IND) {
+  aa: 32,
+  cis_offset: 24,
+  cig_sync_delay: 24,
+  cis_sync_delay: 24,
+  conn_event_count: 16,
+}
+
+// 2.4.2.32 LL_CIS_TERMINATE_IND
+packet CisTerminateInd : LlcpPacket (opcode = LL_CIS_TERMINATE_IND) {
+  cig_id: 8,
+  cis_id: 8,
+  error_code: 8,
+}
+
+packet PowerControlReq : LlcpPacket (opcode = LL_POWER_CONTROL_REQ) {
+  phy: 8,
+  delta: 8,
+  tx_power: 8,
+}
+
+packet PowerControlRsp : LlcpPacket (opcode = LL_POWER_CONTROL_RSP) {
+  min: 1,
+  max: 1,
+  _reserved_: 6,
+  delta: 8,
+  tx_power: 8,
+  apr: 8,
+}
+
+packet PowerChangeInd : LlcpPacket (opcode = LL_POWER_CHANGE_IND) {
+  phy: 8,
+  min: 1,
+  max: 1,
+  _reserved_: 6,
+  delta: 8,
+  tx_power: 8,
+}
+
+packet SubrateReq : LlcpPacket (opcode = LL_SUBRATE_REQ) {
+  subrate_factor_min: 16,
+  subrate_factor_max: 16,
+  max_latency: 16,
+  continuation_number: 16,
+  timeout: 16,
+}
+
+packet SubrateInd : LlcpPacket (opcode = LL_SUBRATE_IND) {
+  subrate_factor: 16,
+  subrate_base_event: 16,
+  latency: 16,
+  continuation_number: 16,
+  timeout: 16,
+}
+
+packet ChannelReportingInd : LlcpPacket (opcode = LL_CHANNEL_REPORTING_IND) {
+  enable: 8,
+  min_spacing: 8,
+  max_delay: 8,
+}
+
+packet ChannelStatusInd : LlcpPacket (opcode = LL_CHANNEL_STATUS_IND) {
+  channel_classification: 8[10],
+}

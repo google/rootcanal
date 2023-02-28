@@ -16,13 +16,14 @@
 
 #include "link_layer_controller.h"
 
-#include <algorithm>
 #include <hci/hci_packets.h>
-#include <lmp.h>
+
+#include <algorithm>
 
 #include "crypto/crypto.h"
 #include "log.h"
 #include "packet/raw_builder.h"
+#include "rootcanal_rs.h"
 
 using namespace std::chrono;
 using bluetooth::hci::Address;
@@ -1974,14 +1975,14 @@ LinkLayerController::LinkLayerController(const Address& address,
                                          const ControllerProperties& properties)
     : address_(address),
       properties_(properties),
-      lm_(nullptr, link_manager_destroy) {
-
+      lm_(nullptr, link_manager_destroy),
+      ll_(nullptr, link_layer_destroy) {
   if (properties_.quirks.has_default_random_address) {
     LOG_WARN("Configuring a default random address for this controller");
     random_address_ = Address { 0xba, 0xdb, 0xad, 0xba, 0xdb, 0xad };
   }
 
-  ops_ = {
+  controller_ops_ = {
       .user_pointer = this,
       .get_handle =
           [](void* user, const uint8_t(*address)[6]) {
@@ -2003,10 +2004,22 @@ LinkLayerController::LinkLayerController(const Address& address,
                       reinterpret_cast<uint8_t*>(result));
           },
 
-      .extended_features =
+      .get_extended_features =
           [](void* user, uint8_t features_page) {
             auto controller = static_cast<LinkLayerController*>(user);
             return controller->GetLmpFeatures(features_page);
+          },
+
+      .get_le_features =
+          [](void* user) {
+            auto controller = static_cast<LinkLayerController*>(user);
+            return controller->GetLeSupportedFeatures();
+          },
+
+      .get_le_event_mask =
+          [](void* user) {
+            auto controller = static_cast<LinkLayerController*>(user);
+            return controller->le_event_mask_;
           },
 
       .send_hci_event =
@@ -2034,9 +2047,35 @@ LinkLayerController::LinkLayerController(const Address& address,
 
             controller->SendLinkLayerPacket(model::packets::LmpBuilder::Create(
                 source, dest, std::move(payload)));
+          },
+
+      .send_llcp_packet =
+          [](void* user, uint16_t acl_connection_handle, const uint8_t* data,
+             uintptr_t len) {
+            auto controller = static_cast<LinkLayerController*>(user);
+            auto payload = std::make_unique<bluetooth::packet::RawBuilder>(
+                std::vector(data, data + len));
+
+            if (!controller->connections_.HasHandle(acl_connection_handle)) {
+              LOG_ERROR(
+                  "Dropping LLCP packet sent for unknown connection handle "
+                  "0x%x",
+                  acl_connection_handle);
+              return;
+            }
+
+            AclConnection const& connection =
+                controller->connections_.GetAclConnection(
+                    acl_connection_handle);
+            Address source = connection.GetOwnAddress().GetAddress();
+            Address destination = connection.GetAddress().GetAddress();
+
+            controller->SendLinkLayerPacket(model::packets::LlcpBuilder::Create(
+                source, destination, std::move(payload)));
           }};
 
-  lm_.reset(link_manager_create(ops_));
+  lm_.reset(link_manager_create(controller_ops_));
+  ll_.reset(link_layer_create(controller_ops_));
 }
 
 LinkLayerController::~LinkLayerController() {}
@@ -2251,11 +2290,17 @@ void LinkLayerController::IncomingPacket(
     case model::packets::PacketType::SCO:
       IncomingScoPacket(incoming);
       break;
+    case model::packets::PacketType::LE_CONNECTED_ISOCHRONOUS_PDU:
+      IncomingLeConnectedIsochronousPdu(incoming);
+      break;
     case model::packets::PacketType::DISCONNECT:
       IncomingDisconnectPacket(incoming);
       break;
     case model::packets::PacketType::LMP:
       IncomingLmpPacket(incoming);
+      break;
+    case model::packets::PacketType::LLCP:
+      IncomingLlcpPacket(incoming);
       break;
     case model::packets::PacketType::INQUIRY:
       if (inquiry_scan_enable_) {
@@ -2264,9 +2309,6 @@ void LinkLayerController::IncomingPacket(
       break;
     case model::packets::PacketType::INQUIRY_RESPONSE:
       IncomingInquiryResponsePacket(incoming);
-      break;
-    case PacketType::ISO:
-      IncomingIsoPacket(incoming);
       break;
     case model::packets::PacketType::LE_LEGACY_ADVERTISING_PDU:
       IncomingLeLegacyAdvertisingPdu(incoming, rssi);
@@ -2647,6 +2689,8 @@ void LinkLayerController::IncomingDisconnectPacket(
   if (is_br_edr) {
     ASSERT(link_manager_remove_link(
         lm_.get(), reinterpret_cast<uint8_t(*)[6]>(peer.data())));
+  } else {
+    ASSERT(link_layer_remove_link(ll_.get(), handle));
   }
 }
 
@@ -2764,16 +2808,6 @@ void LinkLayerController::IncomingInquiryResponsePacket(
       LOG_WARN("Unhandled Incoming Inquiry Response of type %d",
                static_cast<int>(basic_inquiry_response.GetInquiryType()));
   }
-}
-
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-void LinkLayerController::IncomingIsoPacket(LinkLayerPacketView incoming) {
-  LOG_ALWAYS_FATAL("ISO not supported; no ISO packets expected");
-}
-
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-void LinkLayerController::HandleIso(bluetooth::hci::IsoView iso) {
-  LOG_ALWAYS_FATAL("ISO not supported; no ISO packets expected");
 }
 
 Address LinkLayerController::generate_rpa(
@@ -4033,6 +4067,160 @@ void LinkLayerController::IncomingLmpPacket(
       packet.size()));
 }
 
+void LinkLayerController::IncomingLlcpPacket(
+    model::packets::LinkLayerPacketView incoming) {
+  Address address = incoming.GetSourceAddress();
+  auto request = model::packets::LlcpView::Create(incoming);
+  ASSERT(request.IsValid());
+  auto payload = request.GetPayload();
+  auto packet = std::vector(payload.begin(), payload.end());
+  uint16_t acl_connection_handle = connections_.GetHandleOnlyAddress(address);
+
+  if (acl_connection_handle == kReservedHandle) {
+    LOG_INFO("Dropping LLCP packet since connection does not exist");
+    return;
+  }
+
+  ASSERT(link_layer_ingest_llcp(ll_.get(), acl_connection_handle, packet.data(),
+                                packet.size()));
+}
+
+void LinkLayerController::IncomingLeConnectedIsochronousPdu(
+    LinkLayerPacketView incoming) {
+  auto pdu = model::packets::LeConnectedIsochronousPduView::Create(incoming);
+  ASSERT(pdu.IsValid());
+  auto data = pdu.GetData();
+  auto packet = std::vector(data.begin(), data.end());
+  uint8_t cig_id = pdu.GetCigId();
+  uint8_t cis_id = pdu.GetCisId();
+  uint16_t cis_connection_handle = 0;
+  uint16_t iso_sdu_length = packet.size();
+
+  if (!link_layer_get_cis_connection_handle(ll_.get(), cig_id, cis_id,
+                                            &cis_connection_handle)) {
+    LOG_INFO(
+        "Dropping CIS pdu received on disconnected CIS cig_id=%d, cis_id=%d",
+        cig_id, cis_id);
+    return;
+  }
+
+  // Fragment the ISO SDU if larger than the maximum payload size (4095).
+  constexpr size_t kMaxPayloadSize = 4095 - 4;  // remove sequence_number and
+                                                // iso_sdu_length
+  size_t remaining_size = packet.size();
+  size_t offset = 0;
+  auto packet_boundary_flag =
+      remaining_size <= kMaxPayloadSize
+          ? bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU
+          : bluetooth::hci::IsoPacketBoundaryFlag::FIRST_FRAGMENT;
+
+  do {
+    size_t fragment_size = std::min(kMaxPayloadSize, remaining_size);
+    std::vector<uint8_t> fragment(packet.data() + offset,
+                                  packet.data() + offset + fragment_size);
+
+    send_iso_(bluetooth::hci::IsoWithoutTimestampBuilder::Create(
+        cis_connection_handle, packet_boundary_flag, pdu.GetSequenceNumber(),
+        iso_sdu_length, bluetooth::hci::IsoPacketStatusFlag::VALID,
+        std::make_unique<bluetooth::packet::RawBuilder>(std::move(fragment))));
+
+    remaining_size -= fragment_size;
+    offset += fragment_size;
+    packet_boundary_flag =
+        remaining_size <= kMaxPayloadSize
+            ? bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT
+            : bluetooth::hci::IsoPacketBoundaryFlag::CONTINUATION_FRAGMENT;
+  } while (remaining_size > 0);
+}
+
+void LinkLayerController::HandleIso(bluetooth::hci::IsoView iso) {
+  uint16_t cis_connection_handle = iso.GetConnectionHandle();
+  auto pb_flag = iso.GetPbFlag();
+  auto ts_flag = iso.GetTsFlag();
+  auto iso_data_load = iso.GetPayload();
+
+  // In the Host to Controller direction, ISO_Data_Load_Length
+  // shall be less than or equal to the size of the buffer supported by the
+  // Controller (which is returned using the ISO_Data_Packet_Length return
+  // parameter of the LE Read Buffer Size command).
+  if (iso_data_load.size() > properties_.iso_data_packet_length) {
+    LOG_ALWAYS_FATAL(
+        "Received ISO HCI packet with ISO_Data_Load_Length (%zu) larger than"
+        " the controller buffer size ISO_Data_Packet_Length (%d)",
+        iso_data_load.size(), properties_.iso_data_packet_length);
+  }
+
+  // The TS_Flag bit shall only be set if the PB_Flag field equals 0b00 or 0b10.
+  if (ts_flag == bluetooth::hci::TimeStampFlag::PRESENT &&
+      (pb_flag ==
+           bluetooth::hci::IsoPacketBoundaryFlag::CONTINUATION_FRAGMENT ||
+       pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT)) {
+    LOG_ALWAYS_FATAL(
+        "Received ISO HCI packet with TS_Flag set, but no ISO Header is "
+        "expected");
+  }
+
+  uint8_t cig_id = 0;
+  uint8_t cis_id = 0;
+  uint16_t acl_connection_handle = kReservedHandle;
+  uint16_t packet_sequence_number = 0;
+  uint16_t max_sdu_length = 0;
+
+  if (!link_layer_get_cis_information(ll_.get(), cis_connection_handle,
+                                      &acl_connection_handle, &cig_id, &cis_id,
+                                      &max_sdu_length)) {
+    LOG_INFO("Ignoring CIS pdu received on disconnected CIS handle=%d",
+             cis_connection_handle);
+    return;
+  }
+
+  if (pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::FIRST_FRAGMENT ||
+      pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU) {
+    iso_sdu_.clear();
+  }
+
+  switch (ts_flag) {
+    case bluetooth::hci::TimeStampFlag::PRESENT: {
+      auto iso_with_timestamp =
+          bluetooth::hci::IsoWithTimestampView::Create(iso);
+      ASSERT(iso_with_timestamp.IsValid());
+      auto iso_payload = iso_with_timestamp.GetPayload();
+      iso_sdu_.insert(iso_sdu_.end(), iso_payload.begin(), iso_payload.end());
+      packet_sequence_number = iso_with_timestamp.GetPacketSequenceNumber();
+      break;
+    }
+    default:
+    case bluetooth::hci::TimeStampFlag::NOT_PRESENT: {
+      auto iso_without_timestamp =
+          bluetooth::hci::IsoWithoutTimestampView::Create(iso);
+      ASSERT(iso_without_timestamp.IsValid());
+      auto iso_payload = iso_without_timestamp.GetPayload();
+      iso_sdu_.insert(iso_sdu_.end(), iso_payload.begin(), iso_payload.end());
+      packet_sequence_number = iso_without_timestamp.GetPacketSequenceNumber();
+      break;
+    }
+  }
+
+  if (pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT ||
+      pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU) {
+    // Validate that the Host stack is not sending ISO SDUs that are larger
+    // that what was configured for the CIS.
+    if (iso_sdu_.size() > max_sdu_length) {
+      LOG_WARN(
+          "attempted to send an SDU of length %zu that exceeds the configure "
+          "Max_SDU_Length (%u)",
+          iso_sdu_.size(), max_sdu_length);
+      return;
+    }
+
+    SendLeLinkLayerPacket(
+        model::packets::LeConnectedIsochronousPduBuilder::Create(
+            address_,
+            connections_.GetAddress(acl_connection_handle).GetAddress(), cig_id,
+            cis_id, packet_sequence_number, std::move(iso_sdu_)));
+  }
+}
+
 uint16_t LinkLayerController::HandleLeConnection(
     AddressWithType address, AddressWithType own_address,
     bluetooth::hci::Role role, uint16_t connection_interval,
@@ -4087,6 +4275,12 @@ uint16_t LinkLayerController::HandleLeConnection(
         address.GetAddress(), connection_interval, connection_latency,
         supervision_timeout, static_cast<bluetooth::hci::ClockAccuracy>(0x00)));
   }
+
+  // Update the link layer with the new link.
+  ASSERT(link_layer_add_link(
+      ll_.get(), handle,
+      reinterpret_cast<const uint8_t(*)[6]>(address.GetAddress().data()),
+      static_cast<uint8_t>(role)));
 
   // Note: the HCI_LE_Connection_Complete event is immediately followed by
   // an HCI_LE_Channel_Selection_Algorithm event if the connection is created
@@ -5051,6 +5245,11 @@ void LinkLayerController::ForwardToLm(bluetooth::hci::CommandView command) {
   ASSERT(link_manager_ingest_hci(lm_.get(), packet.data(), packet.size()));
 }
 
+void LinkLayerController::ForwardToLl(bluetooth::hci::CommandView command) {
+  auto packet = std::vector(command.begin(), command.end());
+  ASSERT(link_layer_ingest_hci(ll_.get(), packet.data(), packet.size()));
+}
+
 std::vector<bluetooth::hci::Lap> const& LinkLayerController::ReadCurrentIacLap()
     const {
   return current_iac_lap_list_;
@@ -5287,6 +5486,8 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle,
     ASSERT(link_manager_remove_link(
         lm_.get(),
         reinterpret_cast<uint8_t(*)[6]>(remote.GetAddress().data())));
+  } else {
+    ASSERT(link_layer_remove_link(ll_.get(), handle));
   }
   return ErrorCode::SUCCESS;
 }
@@ -5803,7 +6004,8 @@ void LinkLayerController::Reset() {
     page_timeout_task_id_ = kInvalidTaskId;
   }
 
-  lm_.reset(link_manager_create(ops_));
+  lm_.reset(link_manager_create(controller_ops_));
+  ll_.reset(link_layer_create(controller_ops_));
 }
 
 void LinkLayerController::StartInquiry(milliseconds timeout) {

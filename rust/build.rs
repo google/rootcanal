@@ -25,6 +25,11 @@ fn main() {
         &PathBuf::from("lmp_packets.pdl").canonicalize().unwrap(),
     );
     install_generated_module(
+        "llcp_packets.rs",
+        "LLCP_PACKETS_PREBUILT",
+        &PathBuf::from("llcp_packets.pdl").canonicalize().unwrap(),
+    );
+    install_generated_module(
         "hci_packets.rs",
         "HCI_PACKETS_PREBUILT",
         &PathBuf::from("../packets/hci/hci_packets.pdl").canonicalize().unwrap(),

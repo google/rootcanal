@@ -29,12 +29,7 @@
 #include "model/controller/controller_properties.h"
 #include "model/controller/le_advertiser.h"
 #include "packets/link_layer_packets.h"
-
-extern "C" {
-struct LinkManager;
-}
-
-#include "lmp.h"
+#include "rootcanal_rs.h"
 
 namespace rootcanal {
 
@@ -82,6 +77,7 @@ class LinkLayerController {
   ErrorCode SendAclToRemote(bluetooth::hci::AclView acl_packet);
 
   void ForwardToLm(bluetooth::hci::CommandView command);
+  void ForwardToLl(bluetooth::hci::CommandView command);
 
   std::vector<bluetooth::hci::Lap> const& ReadCurrentIacLap() const;
   void WriteCurrentIacLap(std::vector<bluetooth::hci::Lap> iac_lap);
@@ -581,7 +577,9 @@ class LinkLayerController {
   void IncomingInquiryResponsePacket(
       model::packets::LinkLayerPacketView incoming);
   void IncomingLmpPacket(model::packets::LinkLayerPacketView incoming);
-  void IncomingIsoPacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingLlcpPacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingLeConnectedIsochronousPdu(
+      model::packets::LinkLayerPacketView incoming);
 
   void ScanIncomingLeLegacyAdvertisingPdu(
       model::packets::LeLegacyAdvertisingPduView& pdu, uint8_t rssi);
@@ -1079,10 +1077,16 @@ class LinkLayerController {
   std::optional<Synchronizing> synchronizing_{};
   std::unordered_map<uint16_t, Synchronized> synchronized_{};
 
-  // Classic state
-  std::unique_ptr<const LinkManager, void (*)(const LinkManager*)> lm_;
-  struct LinkManagerOps ops_;
+  // Buffer to contain the ISO SDU sent from the host stack over HCI.
+  // The SDU is forwarded to the peer only when complete.
+  std::vector<uint8_t> iso_sdu_{};
 
+  // Rust state.
+  std::unique_ptr<const LinkManager, void (*)(const LinkManager*)> lm_;
+  std::unique_ptr<const LinkLayer, void (*)(const LinkLayer*)> ll_;
+  struct ControllerOps controller_ops_;
+
+  // Classic state.
   TaskId page_timeout_task_id_ = kInvalidTaskId;
 
   std::chrono::steady_clock::time_point last_inquiry_;
