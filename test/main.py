@@ -35,6 +35,8 @@ tests = [
   # TODO: Implement HCI command Le Set Default Phy
   # 'LL.DDI.ADV.BV_20_C',
   'LL.DDI.ADV.BV_21_C',
+  'LL.DDI.ADV.BV_22_C',
+  'LL.DDI.ADV.BV_47_C',
   'LL.DDI.SCN.BV_13_C',
   'LL.DDI.SCN.BV_14_C',
   'LL.DDI.SCN.BV_18_C',

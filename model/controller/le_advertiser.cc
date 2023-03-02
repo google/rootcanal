@@ -1015,10 +1015,11 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingEnable(
     // If the advertising is high duty cycle connectable directed advertising,
     // then Duration[i] shall be less than or equal to 1.28 seconds and shall
     // not be equal to 0.
+    std::chrono::milliseconds duration =
+        std::chrono::milliseconds(set.duration_ * 10);
     if (connectable_advertising && directed_advertising &&
         high_duty_cycle_advertising &&
-        (set.duration_ == 0 ||
-         slots(set.duration_) > adv_direct_ind_high_timeout)) {
+        (set.duration_ == 0 || duration > adv_direct_ind_high_timeout)) {
       LOG_INFO(
           "extended advertising is high duty cycle connectable directed"
           " but the duration is either 0 or larger than 1.28 seconds");
@@ -1141,10 +1142,19 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingEnable(
     ExtendedAdvertiser& advertiser =
         extended_advertisers_[set.advertising_handle_];
 
+    advertiser.max_extended_advertising_events =
+        set.max_extended_advertising_events_;
     advertiser.num_completed_extended_advertising_events = 0;
     advertiser.advertising_enable = true;
     advertiser.next_event = std::chrono::steady_clock::now() +
                             advertiser.primary_advertising_interval;
+    if (set.duration_ > 0) {
+      std::chrono::milliseconds duration =
+          std::chrono::milliseconds(set.duration_ * 10);
+      advertiser.timeout = std::chrono::steady_clock::now() + duration;
+    } else {
+      advertiser.timeout.reset();
+    }
   }
 
   return ErrorCode::SUCCESS;
@@ -1374,7 +1384,7 @@ void LinkLayerController::LeAdvertising() {
   for (auto& [_, advertiser] : extended_advertisers_) {
     // Extended Advertising Timeouts
 
-    if (advertiser.IsEnabled() && advertiser.timeout &&
+    if (advertiser.IsEnabled() && advertiser.timeout.has_value() &&
         now >= advertiser.timeout.value()) {
       // If the Duration[i] parameter is set to a value other than 0x0000, an
       // HCI_LE_Advertising_Set_Terminated event shall be generated when the
@@ -1412,9 +1422,16 @@ void LinkLayerController::LeAdvertising() {
       }
 
       if (IsLeEventUnmasked(SubeventCode::ADVERTISING_SET_TERMINATED)) {
+        // The parameter Num_Completed_Extended_Advertising_Events is set
+        // only when Max_Extended_Advertising_Events was configured as
+        // non-zero in the advertising parameters.
+        uint8_t num_completed_extended_advertising_events =
+            advertiser.max_extended_advertising_events != 0
+                ? advertiser.num_completed_extended_advertising_events
+                : 0;
         send_event_(bluetooth::hci::LeAdvertisingSetTerminatedBuilder::Create(
             ErrorCode::ADVERTISING_TIMEOUT, advertiser.advertising_handle, 0,
-            advertiser.num_completed_extended_advertising_events));
+            num_completed_extended_advertising_events));
       }
     }
 

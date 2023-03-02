@@ -32,7 +32,7 @@ using std::vector;
 
 namespace rootcanal {
 constexpr uint16_t kNumCommandPackets = 0x01;
-constexpr uint16_t kLeMaximumAdvertisingDataLength = 256;
+constexpr uint16_t kLeMaximumAdvertisingDataLength = 512;
 constexpr uint16_t kLeMaximumDataLength = 64;
 constexpr uint16_t kLeMaximumDataTime = 0x148;
 
