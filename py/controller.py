@@ -128,6 +128,22 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
             evt.show()
             self.assertTrue(False)
 
+    async def expect_cmd_complete(self, expected_evt: type, timeout: int = 3) -> hci.Event:
+        packet = await asyncio.wait_for(self.controller.receive_evt(), timeout=timeout)
+        evt = hci.Event.parse_all(packet)
+
+        if not isinstance(evt, expected_evt):
+            print("received unexpected event")
+            print("expected event:")
+            print(expected_evt)
+            print("received event:")
+            evt.show()
+            self.assertTrue(False)
+
+        assert evt.status == ErrorCode.SUCCESS
+        assert evt.num_hci_command_packets == 1
+        return evt
+
     async def expect_ll(self, expected_pdu: ll.LinkLayerPacket, timeout: int = 3):
         packet = await asyncio.wait_for(self.controller.receive_ll(), timeout=timeout)
         pdu = ll.LinkLayerPacket.parse_all(packet)
