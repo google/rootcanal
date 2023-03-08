@@ -200,6 +200,12 @@ AddressWithType AclConnectionHandler::GetAddress(uint16_t handle) const {
   return acl_connections_.at(handle).GetAddress();
 }
 
+std::optional<AddressWithType> AclConnectionHandler::GetAddressSafe(
+    uint16_t handle) const {
+  return HasHandle(handle) ? acl_connections_.at(handle).GetAddress()
+                           : std::optional<AddressWithType>();
+}
+
 Address AclConnectionHandler::GetScoAddress(uint16_t handle) const {
   ASSERT_LOG(HasScoHandle(handle), "Unknown SCO handle %hd", handle);
   return sco_connections_.at(handle).GetAddress();

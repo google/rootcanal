@@ -1365,8 +1365,10 @@ LinkLayerController::LinkLayerController(const Address& address,
           [](void* user, uint16_t handle, uint8_t(*result)[6]) {
             auto controller = static_cast<LinkLayerController*>(user);
 
-            auto address =
-                controller->connections_.GetAddress(handle).GetAddress();
+            auto address_opt = controller->connections_.GetAddressSafe(handle);
+            Address address = address_opt.has_value()
+                                  ? address_opt.value().GetAddress()
+                                  : Address::kEmpty;
             std::copy(address.data(), address.data() + 6,
                       reinterpret_cast<uint8_t*>(result));
           },
