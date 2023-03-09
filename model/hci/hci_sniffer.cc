@@ -52,6 +52,9 @@ void HciSniffer::AppendRecord(PacketDirection packet_direction,
   pcap::WriteRecordHeader(*output_, 4 + 1 + packet.size());
 
   // http://www.tcpdump.org/linktypes.html LINKTYPE_BLUETOOTH_HCI_H4_WITH_PHDR
+  // Note: the description given for the direction bit by tcpdump
+  // is in opposition with the implementation in wireshark.
+  // The values match wireshark's implementation here.
   char direction[4] = {0, 0, 0, static_cast<char>(packet_direction)};
   uint8_t idc = static_cast<uint8_t>(packet_type);
   output_->write(direction, sizeof(direction));
