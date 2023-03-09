@@ -1,11 +1,10 @@
 import asyncio
-import lib_rootcanal_python3 as rootcanal
 import hci_packets as hci
 import link_layer_packets as ll
 import unittest
 from hci_packets import ErrorCode
 from py.bluetooth import Address
-from py.controller import ControllerTest
+from py.controller import ControllerTest, generate_rpa
 
 
 class Test(ControllerTest):
@@ -26,7 +25,7 @@ class Test(ControllerTest):
         local_irk = bytes([2] * 16)
         peer_identity_address = Address('aa:bb:cc:dd:ff:c0')
         peer_identity_address_type = hci.PeerAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS
-        peer_resolvable_address = Address(rootcanal.generate_rpa(peer_irk))
+        peer_resolvable_address = generate_rpa(peer_irk)
 
         if not controller.le_features.ll_privacy:
             self.skipTest("LL privacy not supported")

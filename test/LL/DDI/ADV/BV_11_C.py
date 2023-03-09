@@ -1,5 +1,4 @@
 import asyncio
-import lib_rootcanal_python3 as rootcanal
 import hci_packets as hci
 import link_layer_packets as ll
 import unittest
@@ -101,6 +100,10 @@ class Test(ControllerTest):
                                         conn_peripheral_latency=self.LL_initiator_connPeripheralLatency,
                                         conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout),
                            rssi=-16)
+
+        # Note: another advertising pdu is received waiting from the connect
+        # complete.
+        await self.expect_ll(ll.LeLegacyAdvertisingPdu)
 
         # Note: Link layer sends LeConnectComplete here.
         await self.expect_ll(

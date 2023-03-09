@@ -1,12 +1,35 @@
 import asyncio
 import collections
+import enum
 import hci_packets as hci
-import lib_rootcanal_python3 as rootcanal
 import link_layer_packets as ll
 import py.bluetooth
+import sys
+import typing
 import unittest
 from typing import Optional
 from hci_packets import ErrorCode
+
+from ctypes import *
+
+rootcanal = cdll.LoadLibrary("lib_rootcanal_ffi.so")
+rootcanal.ffi_controller_new.restype = c_void_p
+
+SEND_HCI_FUNC = CFUNCTYPE(None, c_int, POINTER(c_ubyte), c_size_t)
+SEND_LL_FUNC = CFUNCTYPE(None, POINTER(c_ubyte), c_size_t, c_int, c_int)
+
+
+class Idc(enum.IntEnum):
+    Cmd = 1
+    Acl = 2
+    Sco = 3
+    Evt = 4
+    Iso = 5
+
+
+class Phy(enum.IntEnum):
+    LowEnergy = 0
+    BrEdr = 1
 
 
 class LeFeatures:
@@ -17,14 +40,42 @@ class LeFeatures:
         self.le_extended_advertising = (le_features & hci.LLFeaturesBits.LE_EXTENDED_ADVERTISING) != 0
 
 
-class Controller(rootcanal.BaseController):
-    """Binder class to DualModeController.
+def generate_rpa(irk: bytes) -> hci.Address:
+    rpa = bytearray(6)
+    rpa_type = c_char * 6
+    rootcanal.ffi_generate_rpa(c_char_p(irk), rpa_type.from_buffer(rpa))
+    return hci.Address(bytes(rpa))
+
+
+class Controller:
+    """Binder class over RootCanal's ffi interfaces.
     The methods send_cmd, send_hci, send_ll are used to inject HCI or LL
     packets into the controller, and receive_hci, receive_ll to
     catch outgoing HCI packets of LL pdus."""
 
     def __init__(self, address: hci.Address):
-        super().__init__(repr(address), self.receive_hci_, self.receive_ll_)
+        # Write the callbacks for handling HCI and LL send events.
+        @SEND_HCI_FUNC
+        def send_hci(idc: c_int, data: POINTER(c_ubyte), data_len: c_size_t):
+            packet = []
+            for n in range(data_len):
+                packet.append(data[n])
+            self.receive_hci_(int(idc), bytes(packet))
+
+        @SEND_LL_FUNC
+        def send_ll(data: POINTER(c_ubyte), data_len: c_size_t, phy: c_int, tx_power: c_int):
+            packet = []
+            for n in range(data_len):
+                packet.append(data[n])
+            self.receive_ll_(bytes(packet), int(phy), int(tx_power))
+
+        self.send_hci_callback = SEND_HCI_FUNC(send_hci)
+        self.send_ll_callback = SEND_LL_FUNC(send_ll)
+
+        # Create a c++ controller instance.
+        self.instance = rootcanal.ffi_controller_new(c_char_p(address.address), self.send_hci_callback,
+                                                     self.send_ll_callback)
+
         self.address = address
         self.evt_queue = collections.deque()
         self.acl_queue = collections.deque()
@@ -33,37 +84,51 @@ class Controller(rootcanal.BaseController):
         self.acl_queue_event = asyncio.Event()
         self.ll_queue_event = asyncio.Event()
 
-    def receive_hci_(self, typ: rootcanal.HciType, packet: bytes):
-        if typ == rootcanal.HciType.Evt:
+    def __del__(self):
+        rootcanal.ffi_controller_delete(c_void_p(self.instance))
+
+    def receive_hci_(self, idc: int, packet: bytes):
+        if idc == Idc.Evt:
             print(f"<-- received HCI event data={len(packet)}[..]")
             self.evt_queue.append(packet)
-            self.loop.call_soon_threadsafe(self.evt_queue_event.set)
-        elif typ == rootcanal.HciType.Acl:
+            self.evt_queue_event.set()
+        elif idc == Idc.Acl:
             print(f"<-- received HCI ACL packet data={len(packet)}[..]")
             self.acl_queue.append(packet)
-            self.loop.call_soon_threadsafe(self.acl_queue_event.set)
+            self.acl_queue_event.set()
         else:
             print(f"ignoring HCI packet typ={typ}")
 
-    def receive_ll_(self, packet: bytes):
+    def receive_ll_(self, packet: bytes, phy: int, tx_power: int):
         print(f"<-- received LL pdu data={len(packet)}[..]")
         self.ll_queue.append(packet)
-        self.loop.call_soon_threadsafe(self.ll_queue_event.set)
+        self.ll_queue_event.set()
 
     def send_cmd(self, cmd: hci.Command):
         print(f"--> sending HCI command {cmd.__class__.__name__}")
-        self.send_hci(rootcanal.HciType.Cmd, cmd.serialize())
+        data = cmd.serialize()
+        rootcanal.ffi_controller_receive_hci(c_void_p(self.instance), c_int(Idc.Cmd), c_char_p(data), c_int(len(data)))
 
-    def send_ll(self, pdu: ll.LinkLayerPacket, rssi: int = -90):
+    def send_ll(self, pdu: ll.LinkLayerPacket, phy: Phy = Phy.LowEnergy, rssi: int = -90):
         print(f"--> sending LL pdu {pdu.__class__.__name__}")
-        super().send_ll(pdu.serialize(), rssi)
+        data = pdu.serialize()
+        rootcanal.ffi_controller_receive_ll(c_void_p(self.instance), c_char_p(data), c_int(len(data)), c_int(phy),
+                                            c_int(rssi))
 
     async def start(self):
-        super().start()
-        self.loop = asyncio.get_event_loop()
+
+        async def timer():
+            while True:
+                await asyncio.sleep(0.005)
+                rootcanal.ffi_controller_tick(c_void_p(self.instance))
+
+        # Spawn the controller timer task.
+        self.timer_task = asyncio.create_task(timer())
 
     def stop(self):
-        super().stop()
+        # Cancel the controller timer task.
+        del self.timer_task
+
         if self.evt_queue:
             print("evt queue not empty at stop():")
             for packet in self.evt_queue:
@@ -123,10 +188,10 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
         await controller.expect_evt(hci.SetEventMaskComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
         controller.send_cmd(hci.LeSetEventMask(le_event_mask=0xffffffffffffffff))
         await controller.expect_evt(hci.LeSetEventMaskComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
-        controller.send_cmd(hci.LeReadLocalSupportedFeatures())
 
         # Load the local supported features to be able to disable tests
         # that rely on unsupported features.
+        controller.send_cmd(hci.LeReadLocalSupportedFeatures())
         evt = await self.expect_cmd_complete(hci.LeReadLocalSupportedFeaturesComplete)
         controller.le_features = LeFeatures(evt.le_features)
 
@@ -158,11 +223,18 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
         assert evt.num_hci_command_packets == 1
         return evt
 
-    async def expect_ll(self, expected_pdu: ll.LinkLayerPacket, timeout: int = 3):
+    async def expect_ll(self, expected_pdu: typing.Union[ll.LinkLayerPacket, type], timeout: int = 3):
         packet = await asyncio.wait_for(self.controller.receive_ll(), timeout=timeout)
         pdu = ll.LinkLayerPacket.parse_all(packet)
 
-        if pdu != expected_pdu:
+        if isinstance(expected_pdu, type) and not isinstance(pdu, expected_pdu):
+            print("received pdu of unexpected type")
+            print(f"expected pdu: {expected_pdu.__name__}")
+            print("received pdu:")
+            pdu.show()
+            self.assertTrue(False)
+
+        if isinstance(expected_pdu, ll.LinkLayerPacket) and pdu != expected_pdu:
             print("received unexpected pdu")
             print("expected pdu:")
             expected_pdu.show()
