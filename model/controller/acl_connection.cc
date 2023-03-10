@@ -61,6 +61,10 @@ bluetooth::hci::Role AclConnection::GetRole() const { return role_; };
 
 void AclConnection::SetRole(bluetooth::hci::Role role) { role_ = role; }
 
+int8_t AclConnection::GetRssi() const { return rssi_; }
+
+void AclConnection::SetRssi(int8_t rssi) { rssi_ = rssi; }
+
 void AclConnection::ResetLinkTimer() {
   last_packet_timestamp_ = std::chrono::steady_clock::now();
 }

@@ -300,6 +300,19 @@ void DualModeController::ReadBufferSize(CommandView command) {
       properties_.total_num_sco_data_packets));
 }
 
+void DualModeController::ReadRssi(CommandView command) {
+  auto command_view =
+      gd_hci::ReadRssiView::Create(gd_hci::AclCommandView::Create(command));
+  ASSERT(command_view.IsValid());
+
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+  int8_t rssi = 0;
+
+  ErrorCode status = link_layer_controller_.ReadRssi(connection_handle, &rssi);
+  send_event_(bluetooth::hci::ReadRssiCompleteBuilder::Create(
+      kNumCommandPackets, status, connection_handle, rssi));
+}
+
 void DualModeController::ReadEncryptionKeySize(CommandView command) {
   auto command_view = gd_hci::ReadEncryptionKeySizeView::Create(
       gd_hci::SecurityCommandView::Create(command));
@@ -3711,7 +3724,7 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
         //{OpCode::RESET_FAILED_CONTACT_COUNTER,
         //&DualModeController::ResetFailedContactCounter},
         //{OpCode::READ_LINK_QUALITY, &DualModeController::ReadLinkQuality},
-        //{OpCode::READ_RSSI, &DualModeController::ReadRssi},
+        {OpCode::READ_RSSI, &DualModeController::ReadRssi},
         //{OpCode::READ_AFH_CHANNEL_MAP,
         //&DualModeController::ReadAfhChannelMap},
         //{OpCode::READ_CLOCK, &DualModeController::ReadClock},
