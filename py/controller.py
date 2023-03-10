@@ -9,6 +9,14 @@ from typing import Optional
 from hci_packets import ErrorCode
 
 
+class LeFeatures:
+
+    def __init__(self, le_features: int):
+        self.mask = le_features
+        self.ll_privacy = (le_features & hci.LLFeaturesBits.LL_PRIVACY) != 0
+        self.le_extended_advertising = (le_features & hci.LLFeaturesBits.LE_EXTENDED_ADVERTISING) != 0
+
+
 class Controller(rootcanal.BaseController):
     """Binder class to DualModeController.
     The methods send_cmd, send_hci, send_ll are used to inject HCI or LL
@@ -115,6 +123,12 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
         await controller.expect_evt(hci.SetEventMaskComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
         controller.send_cmd(hci.LeSetEventMask(le_event_mask=0xffffffffffffffff))
         await controller.expect_evt(hci.LeSetEventMaskComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        controller.send_cmd(hci.LeReadLocalSupportedFeatures())
+
+        # Load the local supported features to be able to disable tests
+        # that rely on unsupported features.
+        evt = await self.expect_cmd_complete(hci.LeReadLocalSupportedFeaturesComplete)
+        controller.le_features = LeFeatures(evt.le_features)
 
     async def expect_evt(self, expected_evt: hci.Event, timeout: int = 3):
         packet = await asyncio.wait_for(self.controller.receive_evt(), timeout=timeout)
