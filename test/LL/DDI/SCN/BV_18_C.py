@@ -28,6 +28,9 @@ class Test(ControllerTest):
         peer_identity_address_type = hci.PeerAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS
         peer_resolvable_address = Address(rootcanal.generate_rpa(peer_irk))
 
+        if not controller.le_features.ll_privacy:
+            self.skipTest("LL privacy not supported")
+
         # 1. Upper Tester sends an HCI_LE_Set_Random_Address to the IUT with a
         # random static address.
         controller.send_cmd(hci.LeSetRandomAddress(random_address=local_random_address))

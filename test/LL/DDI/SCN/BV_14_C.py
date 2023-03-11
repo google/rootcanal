@@ -27,6 +27,9 @@ class Test(ControllerTest):
         local_resolvable_address_1 = Address(rootcanal.generate_rpa(local_irk))
         local_resolvable_address_2 = Address(rootcanal.generate_rpa(local_irk))
 
+        if not controller.le_features.ll_privacy:
+            self.skipTest("LL privacy not supported")
+
         # 1. The Upper Tester sets a resolvable private address for the IUT to use.
         controller.send_cmd(hci.LeSetRandomAddress(random_address=local_resolvable_address_1))
 
