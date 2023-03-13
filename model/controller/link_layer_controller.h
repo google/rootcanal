@@ -137,7 +137,14 @@ class LinkLayerController {
                              uint8_t page_scan_mode, uint16_t clock_offset,
                              uint8_t allow_role_switch);
   ErrorCode CreateConnectionCancel(const Address& addr);
-  ErrorCode Disconnect(uint16_t handle, ErrorCode reason);
+
+  // Disconnect a link.
+  // \p host_reason is taken from the Disconnect command, and sent over
+  // to the remote as disconnect error. \p controller_reason is the code
+  // used in the DisconnectionComplete event.
+  ErrorCode Disconnect(uint16_t handle, ErrorCode host_reason,
+                       ErrorCode controller_reason =
+                           ErrorCode::CONNECTION_TERMINATED_BY_LOCAL_HOST);
 
   // Internal task scheduler.
   // This scheduler is driven by the tick function only,
