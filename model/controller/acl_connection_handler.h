@@ -85,6 +85,7 @@ class AclConnectionHandler {
   uint16_t GetHandle(bluetooth::hci::AddressWithType addr) const;
   uint16_t GetHandleOnlyAddress(bluetooth::hci::Address addr) const;
   bluetooth::hci::AddressWithType GetAddress(uint16_t handle) const;
+  std::optional<AddressWithType> GetAddressSafe(uint16_t handle) const;
   bluetooth::hci::Address GetScoAddress(uint16_t handle) const;
   bluetooth::hci::AddressWithType GetOwnAddress(uint16_t handle) const;
   bluetooth::hci::AddressWithType GetResolvedAddress(uint16_t handle) const;

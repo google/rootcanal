@@ -117,19 +117,152 @@ impl LinkManager {
         Ok(())
     }
 
-    pub fn ingest_hci(&self, command: hci::CommandPacket) -> Result<(), LinkManagerError> {
-        // Try to find the peer address from the command arguments
-        let peer = hci::command_connection_handle(&command)
-            .map(|handle| self.ops.get_address(handle))
-            .or_else(|| hci::command_remote_device_address(&command));
+    /// Send a command complete or command status event
+    /// with the specified error code.
+    fn send_command_complete_event(
+        &self,
+        command: &hci::CommandPacket,
+        status: hci::ErrorCode,
+    ) -> Result<(), LinkManagerError> {
+        use hci::ConnectionManagementCommandChild::*;
+        use hci::SecurityCommandChild::*;
+        #[allow(unused_imports)]
+        use Option::None; // Overwrite `None` variant of `Child` enum
 
-        if let Some(peer) = peer {
-            if let Some(link) = self.get_link(peer) {
-                link.ingest_hci(command);
-            };
+        let event: hci::EventPacket = match command.specialize() {
+            hci::CommandChild::SecurityCommand(command) => match command.specialize() {
+                LinkKeyRequestReply(packet) => hci::LinkKeyRequestReplyCompleteBuilder {
+                    status,
+                    bd_addr: packet.get_bd_addr(),
+                    num_hci_command_packets,
+                }
+                .into(),
+                LinkKeyRequestNegativeReply(packet) => {
+                    hci::LinkKeyRequestNegativeReplyCompleteBuilder {
+                        status,
+                        bd_addr: packet.get_bd_addr(),
+                        num_hci_command_packets,
+                    }
+                    .into()
+                }
+                PinCodeRequestReply(packet) => hci::PinCodeRequestReplyCompleteBuilder {
+                    status,
+                    bd_addr: packet.get_bd_addr(),
+                    num_hci_command_packets,
+                }
+                .into(),
+                PinCodeRequestNegativeReply(packet) => {
+                    hci::PinCodeRequestNegativeReplyCompleteBuilder {
+                        status,
+                        bd_addr: packet.get_bd_addr(),
+                        num_hci_command_packets,
+                    }
+                    .into()
+                }
+                IoCapabilityRequestReply(packet) => hci::IoCapabilityRequestReplyCompleteBuilder {
+                    status,
+                    bd_addr: packet.get_bd_addr(),
+                    num_hci_command_packets,
+                }
+                .into(),
+                IoCapabilityRequestNegativeReply(packet) => {
+                    hci::IoCapabilityRequestNegativeReplyCompleteBuilder {
+                        status,
+                        bd_addr: packet.get_bd_addr(),
+                        num_hci_command_packets,
+                    }
+                    .into()
+                }
+                UserConfirmationRequestReply(packet) => {
+                    hci::UserConfirmationRequestReplyCompleteBuilder {
+                        status,
+                        bd_addr: packet.get_bd_addr(),
+                        num_hci_command_packets,
+                    }
+                    .into()
+                }
+                UserConfirmationRequestNegativeReply(packet) => {
+                    hci::UserConfirmationRequestNegativeReplyCompleteBuilder {
+                        status,
+                        bd_addr: packet.get_bd_addr(),
+                        num_hci_command_packets,
+                    }
+                    .into()
+                }
+                UserPasskeyRequestReply(packet) => hci::UserPasskeyRequestReplyCompleteBuilder {
+                    status,
+                    bd_addr: packet.get_bd_addr(),
+                    num_hci_command_packets,
+                }
+                .into(),
+                UserPasskeyRequestNegativeReply(packet) => {
+                    hci::UserPasskeyRequestNegativeReplyCompleteBuilder {
+                        status,
+                        bd_addr: packet.get_bd_addr(),
+                        num_hci_command_packets,
+                    }
+                    .into()
+                }
+                RemoteOobDataRequestReply(packet) => {
+                    hci::RemoteOobDataRequestReplyCompleteBuilder {
+                        status,
+                        bd_addr: packet.get_bd_addr(),
+                        num_hci_command_packets,
+                    }
+                    .into()
+                }
+                RemoteOobDataRequestNegativeReply(packet) => {
+                    hci::RemoteOobDataRequestNegativeReplyCompleteBuilder {
+                        status,
+                        bd_addr: packet.get_bd_addr(),
+                        num_hci_command_packets,
+                    }
+                    .into()
+                }
+                SendKeypressNotification(packet) => hci::SendKeypressNotificationCompleteBuilder {
+                    status,
+                    bd_addr: packet.get_bd_addr(),
+                    num_hci_command_packets,
+                }
+                .into(),
+                _ => return Err(LinkManagerError::UnhandledHciPacket),
+            },
+            hci::CommandChild::AclCommand(command) => match command.specialize() {
+                hci::AclCommandChild::ConnectionManagementCommand(command) => {
+                    match command.specialize() {
+                        AuthenticationRequested(_) => hci::AuthenticationRequestedStatusBuilder {
+                            status,
+                            num_hci_command_packets,
+                        }
+                        .into(),
+                        SetConnectionEncryption(_) => hci::SetConnectionEncryptionStatusBuilder {
+                            status,
+                            num_hci_command_packets,
+                        }
+                        .into(),
+                        _ => return Err(LinkManagerError::UnhandledHciPacket),
+                    }
+                }
+                _ => return Err(LinkManagerError::UnhandledHciPacket),
+            },
+            _ => return Err(LinkManagerError::UnhandledHciPacket),
+        };
+        self.ops.send_hci_event(&event.to_vec());
+        Ok(())
+    }
+
+    pub fn ingest_hci(&self, command: hci::CommandPacket) -> Result<(), LinkManagerError> {
+        // Try to find the matching link from the command arguments
+        let link = hci::command_connection_handle(&command)
+            .and_then(|handle| self.ops.get_address(handle))
+            .or_else(|| hci::command_remote_device_address(&command))
+            .and_then(|peer| self.get_link(peer));
+
+        if let Some(link) = link {
+            link.ingest_hci(command);
             Ok(())
         } else {
-            Err(LinkManagerError::UnhandledHciPacket)
+            self.send_command_complete_event(&command, hci::ErrorCode::InvalidHciCommandParameters)
         }
     }
 

@@ -19,10 +19,14 @@ pub struct LinkManagerOps {
 }
 
 impl LinkManagerOps {
-    pub(crate) fn get_address(&self, handle: u16) -> hci::Address {
+    pub(crate) fn get_address(&self, handle: u16) -> Option<hci::Address> {
         let mut result = hci::EMPTY_ADDRESS;
         unsafe { (self.get_address)(self.user_pointer, handle, &mut result.bytes as *mut _) };
-        result
+        if result == hci::EMPTY_ADDRESS {
+            None
+        } else {
+            Some(result)
+        }
     }
 
     pub(crate) fn get_handle(&self, addr: hci::Address) -> u16 {
