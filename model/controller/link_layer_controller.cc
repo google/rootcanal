@@ -4755,7 +4755,8 @@ void LinkLayerController::Tick() {
 
 void LinkLayerController::Close() {
   for (auto handle : connections_.GetAclHandles()) {
-    Disconnect(handle, ErrorCode::CONNECTION_TIMEOUT);
+    Disconnect(handle, ErrorCode::CONNECTION_TIMEOUT,
+               ErrorCode::CONNECTION_TIMEOUT);
   }
 }
 
@@ -5409,18 +5410,20 @@ void LinkLayerController::SendDisconnectionCompleteEvent(uint16_t handle,
   }
 }
 
-ErrorCode LinkLayerController::Disconnect(uint16_t handle, ErrorCode reason) {
+ErrorCode LinkLayerController::Disconnect(uint16_t handle,
+                                          ErrorCode host_reason,
+                                          ErrorCode controller_reason) {
   if (connections_.HasScoHandle(handle)) {
     const Address remote = connections_.GetScoAddress(handle);
     LOG_INFO("Disconnecting eSCO connection with %s",
              remote.ToString().c_str());
 
     SendLinkLayerPacket(model::packets::ScoDisconnectBuilder::Create(
-        GetAddress(), remote, static_cast<uint8_t>(reason)));
+        GetAddress(), remote, static_cast<uint8_t>(host_reason)));
 
     connections_.Disconnect(
         handle, [this](TaskId task_id) { CancelScheduledTask(task_id); });
-    SendDisconnectionCompleteEvent(handle, reason);
+    SendDisconnectionCompleteEvent(handle, controller_reason);
     return ErrorCode::SUCCESS;
   }
 
@@ -5437,26 +5440,27 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle, ErrorCode reason) {
     uint16_t sco_handle = connections_.GetScoHandle(remote.GetAddress());
     if (sco_handle != kReservedHandle) {
       SendLinkLayerPacket(model::packets::ScoDisconnectBuilder::Create(
-          GetAddress(), remote.GetAddress(), static_cast<uint8_t>(reason)));
+          GetAddress(), remote.GetAddress(),
+          static_cast<uint8_t>(host_reason)));
 
       connections_.Disconnect(
           sco_handle, [this](TaskId task_id) { CancelScheduledTask(task_id); });
-      SendDisconnectionCompleteEvent(sco_handle, reason);
+      SendDisconnectionCompleteEvent(sco_handle, controller_reason);
     }
 
     SendLinkLayerPacket(model::packets::DisconnectBuilder::Create(
-        GetAddress(), remote.GetAddress(), static_cast<uint8_t>(reason)));
+        GetAddress(), remote.GetAddress(), static_cast<uint8_t>(host_reason)));
   } else {
     LOG_INFO("Disconnecting LE connection with %s", remote.ToString().c_str());
 
     SendLeLinkLayerPacket(model::packets::DisconnectBuilder::Create(
         connections_.GetOwnAddress(handle).GetAddress(), remote.GetAddress(),
-        static_cast<uint8_t>(reason)));
+        static_cast<uint8_t>(host_reason)));
   }
 
   connections_.Disconnect(
       handle, [this](TaskId task_id) { CancelScheduledTask(task_id); });
-  SendDisconnectionCompleteEvent(handle, ErrorCode(reason));
+  SendDisconnectionCompleteEvent(handle, controller_reason);
 #ifdef ROOTCANAL_LMP
   if (is_br_edr) {
     ASSERT(link_manager_remove_link(
@@ -6311,7 +6315,8 @@ void LinkLayerController::CheckExpiringConnection(uint16_t handle) {
   }
 
   if (connections_.HasLinkExpired(handle)) {
-    Disconnect(handle, ErrorCode::CONNECTION_TIMEOUT);
+    Disconnect(handle, ErrorCode::CONNECTION_TIMEOUT,
+               ErrorCode::CONNECTION_TIMEOUT);
     return;
   }
 
