@@ -2739,8 +2739,7 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
       // shall be ignored unless either:
       //  • the TargetA field is identical to the scanner's device address, or
       //  • the TargetA field is a resolvable private address, address
-      //  resolution is
-      //    enabled, and the address is resolved successfully
+      //  resolution is enabled, and the address is resolved successfully
       case bluetooth::hci::LeScanningFilterPolicy::ACCEPT_ALL:
       case bluetooth::hci::LeScanningFilterPolicy::FILTER_ACCEPT_LIST_ONLY:
         if (!IsLocalPublicOrRandomAddress(target_address) &&
@@ -2855,13 +2854,20 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
     response.address_ = resolved_advertising_address.GetAddress();
     response.primary_phy_ = bluetooth::hci::PrimaryPhyType::LE_1M;
     response.secondary_phy_ = bluetooth::hci::SecondaryPhyType::NO_PACKETS;
-    response.advertising_sid_ = 0xff;  // Not ADI field provided.
+    response.advertising_sid_ = 0xff;  // ADI not provided.
     response.tx_power_ = 0x7f;         // TX power information not available.
     response.rssi_ = rssi;
     response.periodic_advertising_interval_ = 0;  // No periodic advertising.
-    response.direct_address_type_ =
-        bluetooth::hci::DirectAdvertisingAddressType::NO_ADDRESS_PROVIDED;
-    response.direct_address_ = Address::kEmpty;
+    if (directed_advertising) {
+      response.direct_address_type_ =
+          bluetooth::hci::DirectAdvertisingAddressType(
+              target_address.GetAddressType());
+      response.direct_address_ = target_address.GetAddress();
+    } else {
+      response.direct_address_type_ =
+          bluetooth::hci::DirectAdvertisingAddressType::NO_ADDRESS_PROVIDED;
+      response.direct_address_ = Address::kEmpty;
+    }
     response.advertising_data_ = advertising_data;
 
     send_event_(bluetooth::hci::LeExtendedAdvertisingReportRawBuilder::Create(
@@ -3271,17 +3277,40 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
     response.address_ = resolved_advertising_address.GetAddress();
     response.primary_phy_ = bluetooth::hci::PrimaryPhyType::LE_1M;
     response.secondary_phy_ = bluetooth::hci::SecondaryPhyType::NO_PACKETS;
-    response.advertising_sid_ = 0xff;  // Not ADI field provided.
+    response.advertising_sid_ = pdu.GetSid();
     response.tx_power_ = 0x7f;         // TX power information not available.
     response.rssi_ = rssi;
     response.periodic_advertising_interval_ = 0;  // No periodic advertising.
-    response.direct_address_type_ =
-        bluetooth::hci::DirectAdvertisingAddressType::NO_ADDRESS_PROVIDED;
-    response.direct_address_ = Address::kEmpty;
+    if (directed_advertising) {
+      response.direct_address_type_ =
+          bluetooth::hci::DirectAdvertisingAddressType(
+              target_address.GetAddressType());
+      response.direct_address_ = target_address.GetAddress();
+    } else {
+      response.direct_address_type_ =
+          bluetooth::hci::DirectAdvertisingAddressType::NO_ADDRESS_PROVIDED;
+      response.direct_address_ = Address::kEmpty;
+    }
     response.advertising_data_ = advertising_data;
 
-    send_event_(bluetooth::hci::LeExtendedAdvertisingReportRawBuilder::Create(
-        {response}));
+    // Each extended advertising report can only pass 229 bytes of
+    // advertising data (255 - size of report fields).
+    // RootCanal must fragment the report as necessary.
+    const size_t max_fragment_size = 229;
+    size_t offset = 0;
+    do {
+      size_t remaining_size = advertising_data.size() - offset;
+      size_t fragment_size = std::min(max_fragment_size, remaining_size);
+      response.data_status_ = remaining_size <= max_fragment_size
+                                  ? bluetooth::hci::DataStatus::COMPLETE
+                                  : bluetooth::hci::DataStatus::CONTINUING;
+      response.advertising_data_ =
+          std::vector(advertising_data.begin() + offset,
+                      advertising_data.begin() + offset + fragment_size);
+      offset += fragment_size;
+      send_event_(bluetooth::hci::LeExtendedAdvertisingReportRawBuilder::Create(
+          {response}));
+    } while (offset < advertising_data.size());
   }
 
   // Did the user enable Active scanning ?

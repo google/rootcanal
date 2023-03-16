@@ -29,6 +29,7 @@ tests = [
     'LL.DDI.SCN.BV_13_C',
     'LL.DDI.SCN.BV_14_C',
     'LL.DDI.SCN.BV_18_C',
+    'LL.DDI.SCN.BV_19_C',
 ]
 
 if __name__ == "__main__":
