@@ -236,6 +236,16 @@ bool AclConnectionHandler::IsEncrypted(uint16_t handle) const {
   return acl_connections_.at(handle).IsEncrypted();
 }
 
+void AclConnectionHandler::SetRssi(uint16_t handle, int8_t rssi) {
+  if (HasHandle(handle)) {
+    acl_connections_.at(handle).SetRssi(rssi);
+  }
+}
+
+int8_t AclConnectionHandler::GetRssi(uint16_t handle) const {
+  return HasHandle(handle) ? acl_connections_.at(handle).GetRssi() : 0;
+}
+
 Phy::Type AclConnectionHandler::GetPhyType(uint16_t handle) const {
   if (!HasHandle(handle)) {
     return Phy::Type::BR_EDR;

@@ -402,6 +402,9 @@ class DualModeController : public Device {
   // Status Parameters Commands
   // Bluetooth Core Specification Version 4.2 Volume 2 Part E 7.5
 
+  // 7.5.4
+  void ReadRssi(CommandView command);
+
   // 7.5.7
   void ReadEncryptionKeySize(CommandView command);
 

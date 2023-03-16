@@ -59,6 +59,10 @@ class AclConnection {
 
   void SetRole(bluetooth::hci::Role role);
 
+  int8_t GetRssi() const;
+
+  void SetRssi(int8_t rssi);
+
   void ResetLinkTimer();
 
   std::chrono::steady_clock::duration TimeUntilNearExpiring() const;
@@ -74,6 +78,10 @@ class AclConnection {
   AddressWithType own_address_;
   AddressWithType resolved_address_;
   Phy::Type type_{Phy::Type::BR_EDR};
+
+  // Reports the RSSI measured for the last packet received on
+  // this connection.
+  int8_t rssi_{0};
 
   // State variables
   bool encrypted_{false};
