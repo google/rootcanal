@@ -329,34 +329,59 @@ const PASSKEY_ENTRY_REPEAT_NUMBER: usize = 20;
 pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     let initiator = {
         ctx.send_hci_event(hci::IoCapabilityRequestBuilder { bd_addr: ctx.peer_address() }.build());
-        let reply = ctx.receive_hci_command::<hci::IoCapabilityRequestReplyPacket>().await;
-        ctx.send_hci_event(
-            hci::IoCapabilityRequestReplyCompleteBuilder {
-                num_hci_command_packets,
-                status: hci::ErrorCode::Success,
-                bd_addr: ctx.peer_address(),
+        match ctx
+                .receive_hci_command::<Either<
+                    hci::IoCapabilityRequestReplyPacket,
+                    hci::IoCapabilityRequestNegativeReplyPacket,
+                >>()
+                .await
+            {
+                Either::Left(reply) => {
+                    ctx.send_hci_event(
+                        hci::IoCapabilityRequestReplyCompleteBuilder {
+                            num_hci_command_packets,
+                            status : hci::ErrorCode::Success,
+                            bd_addr: ctx.peer_address(),
+                        }
+                        .build(),
+                    );
+                    ctx.send_lmp_packet(
+                        lmp::IoCapabilityReqBuilder {
+                            transaction_id: 0,
+                            io_capabilities: reply.get_io_capability().to_u8().unwrap(),
+                            oob_authentication_data: reply.get_oob_present().to_u8().unwrap(),
+                            authentication_requirement: reply
+                                .get_authentication_requirements()
+                                .to_u8()
+                                .unwrap(),
+                        }
+                        .build(),
+                    );
+                    AuthenticationParams {
+                        io_capability: reply.get_io_capability(),
+                        oob_data_present: reply.get_oob_present(),
+                        authentication_requirements: reply.get_authentication_requirements(),
+                    }
+                }
+                Either::Right(_) => {
+                    ctx.send_hci_event(
+                        hci::IoCapabilityRequestNegativeReplyCompleteBuilder {
+                            num_hci_command_packets,
+                            status : hci::ErrorCode::Success,
+                            bd_addr: ctx.peer_address(),
+                        }
+                        .build(),
+                    );
+                    ctx.send_hci_event(
+                        hci::SimplePairingCompleteBuilder {
+                            status : hci::ErrorCode::AuthenticationFailure,
+                            bd_addr: ctx.peer_address(),
+                        }
+                        .build(),
+                    );
+                    return Err(());
+                }
             }
-            .build(),
-        );
-
-        ctx.send_lmp_packet(
-            lmp::IoCapabilityReqBuilder {
-                transaction_id: 0,
-                io_capabilities: reply.get_io_capability().to_u8().unwrap(),
-                oob_authentication_data: reply.get_oob_present().to_u8().unwrap(),
-                authentication_requirement: reply
-                    .get_authentication_requirements()
-                    .to_u8()
-                    .unwrap(),
-            }
-            .build(),
-        );
-
-        AuthenticationParams {
-            io_capability: reply.get_io_capability(),
-            oob_data_present: reply.get_oob_present(),
-            authentication_requirements: reply.get_authentication_requirements(),
-        }
     };
     let responder = {
         let response = ctx.receive_lmp_packet::<lmp::IoCapabilityResPacket>().await;
@@ -534,33 +559,67 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReqPacket) ->
 
     let responder = {
         ctx.send_hci_event(hci::IoCapabilityRequestBuilder { bd_addr: ctx.peer_address() }.build());
-        let reply = ctx.receive_hci_command::<hci::IoCapabilityRequestReplyPacket>().await;
-        ctx.send_hci_event(
-            hci::IoCapabilityRequestReplyCompleteBuilder {
-                num_hci_command_packets,
-                status: hci::ErrorCode::Success,
-                bd_addr: ctx.peer_address(),
+        match ctx
+                .receive_hci_command::<Either<
+                    hci::IoCapabilityRequestReplyPacket,
+                    hci::IoCapabilityRequestNegativeReplyPacket,
+                >>()
+                .await
+            {
+                Either::Left(reply) => {
+                    ctx.send_hci_event(
+                        hci::IoCapabilityRequestReplyCompleteBuilder {
+                            num_hci_command_packets,
+                            status: hci::ErrorCode::Success,
+                            bd_addr: ctx.peer_address(),
+                        }
+                        .build(),
+                    );
+                    ctx.send_lmp_packet(
+                        lmp::IoCapabilityResBuilder {
+                            transaction_id: 0,
+                            io_capabilities: reply.get_io_capability().to_u8().unwrap(),
+                            oob_authentication_data: reply.get_oob_present().to_u8().unwrap(),
+                            authentication_requirement: reply
+                                .get_authentication_requirements()
+                                .to_u8()
+                                .unwrap(),
+                        }
+                        .build(),
+                    );
+                    AuthenticationParams {
+                        io_capability: reply.get_io_capability(),
+                        oob_data_present: reply.get_oob_present(),
+                        authentication_requirements: reply.get_authentication_requirements(),
+                    }
+                }
+                Either::Right(reply) => {
+                    ctx.send_hci_event(
+                        hci::IoCapabilityRequestNegativeReplyCompleteBuilder {
+                            num_hci_command_packets,
+                            status: hci::ErrorCode::Success,
+                            bd_addr: ctx.peer_address(),
+                        }
+                        .build(),
+                    );
+                    ctx.send_lmp_packet(
+                        lmp::NotAcceptedExtBuilder {
+                            transaction_id: 0,
+                            error_code: reply.get_reason().to_u8().unwrap(),
+                            not_accepted_opcode: lmp::ExtendedOpcode::IoCapabilityReq,
+                        }
+                        .build(),
+                    );
+                    ctx.send_hci_event(
+                        hci::SimplePairingCompleteBuilder {
+                            status: hci::ErrorCode::AuthenticationFailure,
+                            bd_addr: reply.get_bd_addr(),
+                        }
+                        .build(),
+                    );
+                    return Err(());
+                }
             }
-            .build(),
-        );
-
-        ctx.send_lmp_packet(
-            lmp::IoCapabilityResBuilder {
-                transaction_id: 0,
-                io_capabilities: reply.get_io_capability().to_u8().unwrap(),
-                oob_authentication_data: reply.get_oob_present().to_u8().unwrap(),
-                authentication_requirement: reply
-                    .get_authentication_requirements()
-                    .to_u8()
-                    .unwrap(),
-            }
-            .build(),
-        );
-        AuthenticationParams {
-            io_capability: reply.get_io_capability(),
-            oob_data_present: reply.get_oob_present(),
-            authentication_requirements: reply.get_authentication_requirements(),
-        }
     };
 
     // Public Key Exchange
@@ -929,7 +988,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic] // TODO: make the test pass
     fn secure_simple_pairing_failed_responder() {
         let context = TestContext::new();
         let procedure = respond;
@@ -938,7 +996,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic] // TODO: make the test pass
     fn host_rejects_secure_simple_pairing_initiator() {
         let context = TestContext::new();
         let procedure = initiate;
@@ -947,7 +1004,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic] // TODO: make the test pass
     fn host_rejects_secure_simple_pairing_responder() {
         let context = TestContext::new();
         let procedure = respond;
