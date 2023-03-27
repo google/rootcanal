@@ -4730,9 +4730,11 @@ void LinkLayerController::IncomingPagePacket(
   ASSERT(page.IsValid());
   LOG_INFO("from %s", incoming.GetSourceAddress().ToString().c_str());
 
+  bool allow_role_switch = page.GetAllowRoleSwitch();
   if (!connections_.CreatePendingConnection(
           incoming.GetSourceAddress(),
-          authentication_enable_ == AuthenticationEnable::REQUIRED)) {
+          authentication_enable_ == AuthenticationEnable::REQUIRED,
+          allow_role_switch)) {
     // Send a response to indicate that we're busy, or drop the packet?
     LOG_WARN("Failed to create a pending connection for %s",
              incoming.GetSourceAddress().ToString().c_str());
@@ -4791,9 +4793,9 @@ void LinkLayerController::IncomingPageResponsePacket(
    * Android-capatable Bluetooth controllers.
    * On the initiator side, only connection in peripheral role should be
    * accompanied with a role change event */
-  // TODO(b/274248798): Reject role switch if disabled by host
   // TODO(b/274476773): Add a config option for this quirk
-  if (response.GetTryRoleSwitch()) {
+  if (connections_.IsRoleSwitchAllowedForPendingConnection() &&
+      response.GetTryRoleSwitch()) {
     auto role = bluetooth::hci::Role::PERIPHERAL;
     connections_.SetAclRole(handle, role);
     if (IsEventUnmasked(EventCode::ROLE_CHANGE)) {
@@ -5411,10 +5413,11 @@ void LinkLayerController::MakePeripheralConnection(const Address& addr,
    * Android-capatable Bluetooth controllers.
    * On the responder side, any connection should be accompanied with a role
    * change event */
-  // TODO(b/274248798): Reject role switch if disabled by host
   // TODO(b/274476773): Add a config option for this quirk
-  auto role = try_role_switch ? bluetooth::hci::Role::CENTRAL
-                              : bluetooth::hci::Role::PERIPHERAL;
+  auto role =
+      try_role_switch && connections_.IsRoleSwitchAllowedForPendingConnection()
+          ? bluetooth::hci::Role::CENTRAL
+          : bluetooth::hci::Role::PERIPHERAL;
   connections_.SetAclRole(handle, role);
   if (IsEventUnmasked(EventCode::ROLE_CHANGE)) {
     send_event_(bluetooth::hci::RoleChangeBuilder::Create(ErrorCode::SUCCESS,
@@ -5463,7 +5466,8 @@ ErrorCode LinkLayerController::CreateConnection(const Address& addr,
                                                 uint16_t /* clock_offset */,
                                                 uint8_t allow_role_switch) {
   if (!connections_.CreatePendingConnection(
-          addr, authentication_enable_ == AuthenticationEnable::REQUIRED)) {
+          addr, authentication_enable_ == AuthenticationEnable::REQUIRED,
+          allow_role_switch)) {
     return ErrorCode::CONTROLLER_BUSY;
   }
 
@@ -5666,6 +5670,7 @@ ErrorCode LinkLayerController::SwitchRole(Address addr,
   if (handle == rootcanal::kReservedHandle) {
     return ErrorCode::UNKNOWN_CONNECTION;
   }
+  // TODO(b/274248798): Reject role switch if disabled in link policy
   SendLinkLayerPacket(model::packets::RoleSwitchRequestBuilder::Create(
       GetAddress(), addr, static_cast<uint8_t>(role)));
   return ErrorCode::SUCCESS;
@@ -5678,6 +5683,7 @@ void LinkLayerController::IncomingRoleSwitchRequest(
   auto request = model::packets::RoleSwitchRequestView::Create(incoming);
   ASSERT(request.IsValid());
 
+  // TODO(b/274248798): Reject role switch if disabled in link policy
   Role remote_role = static_cast<Role>(request.GetInitiatorNewRole());
   Role local_role =
       remote_role == Role::CENTRAL ? Role::PERIPHERAL : Role::CENTRAL;
@@ -5688,7 +5694,6 @@ void LinkLayerController::IncomingRoleSwitchRequest(
                                                             addr, local_role));
     });
   }
-  // TODO(b/274248798): Reject if role switching is not allowed
   ScheduleTask(kNoDelayMs, [this, addr, remote_role]() {
     SendLinkLayerPacket(model::packets::RoleSwitchResponseBuilder::Create(
         GetAddress(), addr, static_cast<uint8_t>(ErrorCode::SUCCESS),
@@ -5703,13 +5708,19 @@ void LinkLayerController::IncomingRoleSwitchResponse(
   auto response = model::packets::RoleSwitchResponseView::Create(incoming);
   ASSERT(response.IsValid());
 
-  // TODO(b/274248798): Handle if role switching is not allowed
+  // TODO(b/274248798): Reject role switch if disabled in link policy
+  ErrorCode status = ErrorCode::SUCCESS;
   Role role = static_cast<Role>(response.GetInitiatorNewRole());
-  connections_.SetAclRole(handle, role);
+  if (response.GetStatus() == static_cast<uint8_t>(ErrorCode::SUCCESS)) {
+    connections_.SetAclRole(handle, role);
+  } else {
+    status = static_cast<ErrorCode>(response.GetStatus());
+  }
+
   if (IsEventUnmasked(EventCode::ROLE_CHANGE)) {
-    ScheduleTask(kNoDelayMs, [this, addr, role]() {
-      send_event_(bluetooth::hci::RoleChangeBuilder::Create(ErrorCode::SUCCESS,
-                                                            addr, role));
+    ScheduleTask(kNoDelayMs, [this, status, addr, role]() {
+      send_event_(
+          bluetooth::hci::RoleChangeBuilder::Create(status, addr, role));
     });
   }
 }
