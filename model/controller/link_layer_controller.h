@@ -401,6 +401,22 @@ class LinkLayerController {
   // (Vol 4, Part E § 7.8.45).
   ErrorCode LeSetResolvablePrivateAddressTimeout(uint16_t rpa_timeout);
 
+  // HCI LE Read Phy command (Vol 4, Part E § 7.8.47).
+  ErrorCode LeReadPhy(uint16_t connection_handle,
+                      bluetooth::hci::PhyType* tx_phy,
+                      bluetooth::hci::PhyType* rx_phy);
+
+  // HCI LE Set Default Phy command (Vol 4, Part E § 7.8.48).
+  ErrorCode LeSetDefaultPhy(bool all_phys_no_transmit_preference,
+                            bool all_phys_no_receive_preference,
+                            uint8_t tx_phys, uint8_t rx_phys);
+
+  // HCI LE Set Phy command (Vol 4, Part E § 7.8.49).
+  ErrorCode LeSetPhy(uint16_t connection_handle,
+                     bool all_phys_no_transmit_preference,
+                     bool all_phys_no_receive_preference, uint8_t tx_phys,
+                     uint8_t rx_phys, bluetooth::hci::PhyOptions phy_options);
+
   // HCI LE Set Host Feature command (Vol 4, Part E § 7.8.115).
   ErrorCode LeSetHostFeature(uint8_t bit_number, uint8_t bit_value);
 

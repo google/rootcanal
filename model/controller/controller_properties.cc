@@ -106,9 +106,11 @@ static constexpr uint64_t LlFeatures() {
       LLFeaturesBits::EXTENDED_REJECT_INDICATION,
       LLFeaturesBits::PERIPHERAL_INITIATED_FEATURES_EXCHANGE,
       LLFeaturesBits::LE_PING,
-
+      // LLFeaturesBits::LL_PRIVACY,
       LLFeaturesBits::EXTENDED_SCANNER_FILTER_POLICIES,
+      LLFeaturesBits::LE_2M_PHY, LLFeaturesBits::LE_CODED_PHY,
       LLFeaturesBits::LE_EXTENDED_ADVERTISING,
+      // LLFeaturesBits::LE_PERIODIC_ADVERTISING,
 
       // TODO: breaks AVD boot tests with LE audio
       // LLFeaturesBits::CONNECTED_ISOCHRONOUS_STREAM_CENTRAL,
@@ -326,10 +328,8 @@ static std::array<uint8_t, 64> SupportedCommands() {
       // OpCodeIndex::LE_READ_LOCAL_RESOLVABLE_ADDRESS,
       // OpCodeIndex::LE_SET_ADDRESS_RESOLUTION_ENABLE,
       // OpCodeIndex::LE_SET_RESOLVABLE_PRIVATE_ADDRESS_TIMEOUT,
-      OpCodeIndex::LE_READ_MAXIMUM_DATA_LENGTH,
-      // OpCodeIndex::LE_READ_PHY,
-      // OpCodeIndex::LE_SET_DEFAULT_PHY,
-      // OpCodeIndex::LE_SET_PHY,
+      OpCodeIndex::LE_READ_MAXIMUM_DATA_LENGTH, OpCodeIndex::LE_READ_PHY,
+      OpCodeIndex::LE_SET_DEFAULT_PHY, OpCodeIndex::LE_SET_PHY,
       // OpCodeIndex::LE_RECEIVER_TEST_V2,
       // OpCodeIndex::LE_TRANSMITTER_TEST_V2,
       OpCodeIndex::LE_SET_ADVERTISING_SET_RANDOM_ADDRESS,
