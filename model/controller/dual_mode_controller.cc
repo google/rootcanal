@@ -2150,6 +2150,48 @@ void DualModeController::LeReadMaximumDataLength(CommandView command) {
       kNumCommandPackets, ErrorCode::SUCCESS, data_length));
 }
 
+void DualModeController::LeReadPhy(CommandView command) {
+  auto command_view = gd_hci::LeReadPhyView::Create(
+      gd_hci::LeConnectionManagementCommandView::Create(
+          gd_hci::AclCommandView::Create(command)));
+  ASSERT(command_view.IsValid());
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+  bluetooth::hci::PhyType tx_phy{};
+  bluetooth::hci::PhyType rx_phy{};
+  ErrorCode status =
+      link_layer_controller_.LeReadPhy(connection_handle, &tx_phy, &rx_phy);
+  send_event_(bluetooth::hci::LeReadPhyCompleteBuilder::Create(
+      kNumCommandPackets, status, connection_handle, tx_phy, rx_phy));
+}
+
+void DualModeController::LeSetDefaultPhy(CommandView command) {
+  auto command_view = gd_hci::LeSetDefaultPhyView::Create(
+      gd_hci::LeConnectionManagementCommandView::Create(
+          gd_hci::AclCommandView::Create(command)));
+  ASSERT(command_view.IsValid());
+  ErrorCode status = link_layer_controller_.LeSetDefaultPhy(
+      command_view.GetAllPhysNoTransmitPreference(),
+      command_view.GetAllPhysNoReceivePreference(),
+      command_view.GetTxPhysBitmask(), command_view.GetRxPhysBitmask());
+  send_event_(bluetooth::hci::LeSetDefaultPhyCompleteBuilder::Create(
+      kNumCommandPackets, status));
+}
+
+void DualModeController::LeSetPhy(CommandView command) {
+  auto command_view = gd_hci::LeSetPhyView::Create(
+      gd_hci::LeConnectionManagementCommandView::Create(
+          gd_hci::AclCommandView::Create(command)));
+  ASSERT(command_view.IsValid());
+  ErrorCode status = link_layer_controller_.LeSetPhy(
+      command_view.GetConnectionHandle(),
+      command_view.GetAllPhysNoTransmitPreference(),
+      command_view.GetAllPhysNoReceivePreference(),
+      command_view.GetTxPhysBitmask(), command_view.GetRxPhysBitmask(),
+      command_view.GetPhyOptions());
+  send_event_(bluetooth::hci::LeSetPhyStatusBuilder::Create(
+      status, kNumCommandPackets));
+}
+
 void DualModeController::LeReadSuggestedDefaultDataLength(CommandView command) {
   auto command_view = gd_hci::LeReadSuggestedDefaultDataLengthView::Create(
       gd_hci::LeConnectionManagementCommandView::Create(
@@ -3827,9 +3869,9 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
          &DualModeController::LeSetResolvablePrivateAddressTimeout},
         {OpCode::LE_READ_MAXIMUM_DATA_LENGTH,
          &DualModeController::LeReadMaximumDataLength},
-        //{OpCode::LE_READ_PHY, &DualModeController::LeReadPhy},
-        //{OpCode::LE_SET_DEFAULT_PHY, &DualModeController::LeSetDefaultPhy},
-        //{OpCode::LE_SET_PHY, &DualModeController::LeSetPhy},
+        {OpCode::LE_READ_PHY, &DualModeController::LeReadPhy},
+        {OpCode::LE_SET_DEFAULT_PHY, &DualModeController::LeSetDefaultPhy},
+        {OpCode::LE_SET_PHY, &DualModeController::LeSetPhy},
         //{OpCode::LE_RECEIVER_TEST_V2, &DualModeController::LeReceiverTestV2},
         //{OpCode::LE_TRANSMITTER_TEST_V2,
         //&DualModeController::LeTransmitterTestV2},

@@ -284,6 +284,132 @@ ErrorCode LinkLayerController::LeSetResolvablePrivateAddressTimeout(
   return ErrorCode::SUCCESS;
 }
 
+// HCI LE Read Phy command (Vol 4, Part E § 7.8.47).
+ErrorCode LinkLayerController::LeReadPhy(uint16_t connection_handle,
+                                         bluetooth::hci::PhyType* tx_phy,
+                                         bluetooth::hci::PhyType* rx_phy) {
+  // Note: no documented status code for this case.
+  if (!connections_.HasHandle(connection_handle) ||
+      connections_.GetPhyType(connection_handle) != Phy::Type::LOW_ENERGY) {
+    LOG_INFO("unknown or invalid connection handle");
+    return ErrorCode::UNKNOWN_CONNECTION;
+  }
+
+  // TODO(b/275970864) save the phy in the connection state.
+  *tx_phy = bluetooth::hci::PhyType::LE_1M;
+  *rx_phy = bluetooth::hci::PhyType::LE_1M;
+  return ErrorCode::SUCCESS;
+}
+
+// HCI LE Set Default Phy command (Vol 4, Part E § 7.8.48).
+ErrorCode LinkLayerController::LeSetDefaultPhy(
+    bool all_phys_no_transmit_preference, bool all_phys_no_receive_preference,
+    uint8_t tx_phys, uint8_t rx_phys) {
+  uint8_t supported_phys = properties_.LeSupportedPhys();
+
+  // If the All_PHYs parameter specifies that the Host has no preference,
+  // the TX_PHYs parameter shall be ignored; otherwise at least one bit shall
+  // be set to 1.
+  if (all_phys_no_transmit_preference) {
+    tx_phys = 0x1;  // LE_1M_PHY by default.
+  }
+  if (tx_phys == 0) {
+    LOG_INFO("TX_Phys does not configure any bit");
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  // If the All_PHYs parameter specifies that the Host has no preference,
+  // the RX_PHYs parameter shall be ignored; otherwise at least one bit shall
+  // be set to 1.
+  if (all_phys_no_receive_preference) {
+    rx_phys = 0x1;  // LE_1M_PHY by default.
+  }
+  if (rx_phys == 0) {
+    LOG_INFO("RX_Phys does not configure any bit");
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  // If the Host sets, in the TX_PHYs or RX_PHYs parameter, a bit for a PHY that
+  // the Controller does not support, including a bit that is reserved for
+  // future use, the Controller shall return the error code Unsupported Feature
+  // or Parameter Value (0x11).
+  if ((tx_phys & ~supported_phys) != 0) {
+    LOG_INFO("TX_PhyS (%x) configures unsupported or reserved bits", tx_phys);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+  if ((rx_phys & ~supported_phys) != 0) {
+    LOG_INFO("RX_PhyS (%x) configures unsupported or reserved bits", rx_phys);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  // TODO(b/275970864) save the phy default preference.
+  return ErrorCode::SUCCESS;
+}
+
+// HCI LE Set Phy command (Vol 4, Part E § 7.8.49).
+ErrorCode LinkLayerController::LeSetPhy(
+    uint16_t connection_handle, bool all_phys_no_transmit_preference,
+    bool all_phys_no_receive_preference, uint8_t tx_phys, uint8_t rx_phys,
+    bluetooth::hci::PhyOptions phy_options) {
+  uint8_t supported_phys = properties_.LeSupportedPhys();
+
+  // Note: no documented status code for this case.
+  if (!connections_.HasHandle(connection_handle) ||
+      connections_.GetPhyType(connection_handle) != Phy::Type::LOW_ENERGY) {
+    LOG_INFO("unknown or invalid connection handle");
+    return ErrorCode::UNKNOWN_CONNECTION;
+  }
+
+  // If the All_PHYs parameter specifies that the Host has no preference,
+  // the TX_PHYs parameter shall be ignored; otherwise at least one bit shall
+  // be set to 1.
+  if (all_phys_no_transmit_preference) {
+    tx_phys = 0x1;  // LE_1M_PHY by default.
+  }
+  if (tx_phys == 0) {
+    LOG_INFO("TX_Phys does not configure any bit");
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  // If the All_PHYs parameter specifies that the Host has no preference,
+  // the RX_PHYs parameter shall be ignored; otherwise at least one bit shall
+  // be set to 1.
+  if (all_phys_no_receive_preference) {
+    rx_phys = 0x1;  // LE_1M_PHY by default.
+  }
+  if (rx_phys == 0) {
+    LOG_INFO("RX_Phys does not configure any bit");
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  // If the Host sets, in the TX_PHYs or RX_PHYs parameter, a bit for a PHY that
+  // the Controller does not support, including a bit that is reserved for
+  // future use, the Controller shall return the error code Unsupported Feature
+  // or Parameter Value (0x11).
+  if ((tx_phys & ~supported_phys) != 0) {
+    LOG_INFO("TX_PhyS (%x) configures unsupported or reserved bits", tx_phys);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+  if ((rx_phys & ~supported_phys) != 0) {
+    LOG_INFO("RX_PhyS (%x) configures unsupported or reserved bits", rx_phys);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  // The HCI_LE_PHY_Update_Complete event shall be generated either when one
+  // or both PHY changes or when the Controller determines that neither PHY
+  // will change immediately.
+  // TODO(b/275970864) send LL_PHY_REQ to the peer.
+  ScheduleTask(0ms, [this, connection_handle] {
+    send_event_(bluetooth::hci::LePhyUpdateCompleteBuilder::Create(
+        ErrorCode::SUCCESS, connection_handle,
+        static_cast<uint8_t>(bluetooth::hci::PhyType::LE_1M),
+        static_cast<uint8_t>(bluetooth::hci::PhyType::LE_1M)));
+  });
+
+  // TODO(b/275970864) save the phy preference.
+  return ErrorCode::SUCCESS;
+}
+
 // HCI LE Set Host Feature command (Vol 4, Part E § 7.8.115).
 ErrorCode LinkLayerController::LeSetHostFeature(uint8_t bit_number,
                                                 uint8_t bit_value) {
@@ -683,6 +809,8 @@ ErrorCode LinkLayerController::LeSetExtendedScanParameters(
     bluetooth::hci::LeScanningFilterPolicy scanning_filter_policy,
     uint8_t scanning_phys,
     std::vector<bluetooth::hci::PhyScanParameters> scanning_phy_parameters) {
+  uint8_t supported_phys = properties_.LeSupportedPhys();
+
   // Extended advertising commands are disallowed when legacy advertising
   // commands were used since the last reset.
   if (!SelectExtendedAdvertising()) {
@@ -702,7 +830,7 @@ ErrorCode LinkLayerController::LeSetExtendedScanParameters(
   // If the Host specifies a PHY that is not supported by the Controller,
   // including a bit that is reserved for future use, it should return the
   // error code Unsupported Feature or Parameter Value (0x11).
-  if ((scanning_phys & 0xfa) != 0) {
+  if ((scanning_phys & ~supported_phys) != 0) {
     LOG_INFO(
         "scanning_phys (%02x) enables PHYs that are not supported by"
         " the controller",
