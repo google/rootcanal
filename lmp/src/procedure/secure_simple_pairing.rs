@@ -24,8 +24,8 @@ fn has_mitm(requirements: hci::AuthenticationRequirements) -> bool {
 
 enum AuthenticationMethod {
     OutOfBand,
-    NumericComparaisonJustWork,
-    NumericComparaisonUserConfirm,
+    NumericComparisonJustWork,
+    NumericComparisonUserConfirm,
     PasskeyEntry,
 }
 
@@ -49,16 +49,16 @@ fn authentication_method(
     } else if !has_mitm(initiator.authentication_requirements)
         && !has_mitm(responder.authentication_requirements)
     {
-        AuthenticationMethod::NumericComparaisonJustWork
+        AuthenticationMethod::NumericComparisonJustWork
     } else if (initiator.io_capability == KeyboardOnly
         && responder.io_capability != NoInputNoOutput)
         || (responder.io_capability == KeyboardOnly && initiator.io_capability != NoInputNoOutput)
     {
         AuthenticationMethod::PasskeyEntry
     } else if initiator.io_capability == DisplayYesNo && responder.io_capability == DisplayYesNo {
-        AuthenticationMethod::NumericComparaisonUserConfirm
+        AuthenticationMethod::NumericComparisonUserConfirm
     } else {
-        AuthenticationMethod::NumericComparaisonJustWork
+        AuthenticationMethod::NumericComparisonJustWork
     }
 }
 
@@ -68,14 +68,14 @@ fn link_key_type(auth_method: AuthenticationMethod, dh_key: DhKey) -> hci::KeyTy
     use AuthenticationMethod::*;
 
     match (dh_key, auth_method) {
-        (DhKey::P256(_), OutOfBand | PasskeyEntry | NumericComparaisonUserConfirm) => {
+        (DhKey::P256(_), OutOfBand | PasskeyEntry | NumericComparisonUserConfirm) => {
             AuthenticatedP256
         }
-        (DhKey::P192(_), OutOfBand | PasskeyEntry | NumericComparaisonUserConfirm) => {
+        (DhKey::P192(_), OutOfBand | PasskeyEntry | NumericComparisonUserConfirm) => {
             AuthenticatedP192
         }
-        (DhKey::P256(_), NumericComparaisonJustWork) => UnauthenticatedP256,
-        (DhKey::P192(_), NumericComparaisonJustWork) => UnauthenticatedP192,
+        (DhKey::P256(_), NumericComparisonJustWork) => UnauthenticatedP256,
+        (DhKey::P192(_), NumericComparisonJustWork) => UnauthenticatedP192,
     }
 }
 
@@ -427,8 +427,8 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     let auth_method = authentication_method(initiator, responder);
     let result: Result<(), ()> = async {
         match auth_method {
-            AuthenticationMethod::NumericComparaisonJustWork
-            | AuthenticationMethod::NumericComparaisonUserConfirm => {
+            AuthenticationMethod::NumericComparisonJustWork
+            | AuthenticationMethod::NumericComparisonUserConfirm => {
                 send_commitment(ctx, true).await;
 
                 user_confirmation_request(ctx).await?;
@@ -464,7 +464,7 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     .await;
 
     if result.is_err() {
-        ctx.send_lmp_packet(lmp::NumericComparaisonFailedBuilder { transaction_id: 0 }.build());
+        ctx.send_lmp_packet(lmp::NumericComparisonFailedBuilder { transaction_id: 0 }.build());
         ctx.send_hci_event(
             hci::SimplePairingCompleteBuilder {
                 status: hci::ErrorCode::AuthenticationFailure,
@@ -638,8 +638,8 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReqPacket) ->
     // Authentication Stage 1
     let auth_method = authentication_method(initiator, responder);
     let negative_user_confirmation = match auth_method {
-        AuthenticationMethod::NumericComparaisonJustWork
-        | AuthenticationMethod::NumericComparaisonUserConfirm => {
+        AuthenticationMethod::NumericComparisonJustWork
+        | AuthenticationMethod::NumericComparisonUserConfirm => {
             receive_commitment(ctx, true).await;
 
             let user_confirmation = user_confirmation_request(ctx).await;
@@ -672,11 +672,11 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReqPacket) ->
     };
 
     let _dhkey = match ctx
-        .receive_lmp_packet::<Either<lmp::NumericComparaisonFailedPacket, lmp::DhkeyCheckPacket>>()
+        .receive_lmp_packet::<Either<lmp::NumericComparisonFailedPacket, lmp::DhkeyCheckPacket>>()
         .await
     {
         Either::Left(_) => {
-            // Numeric comparaison failed
+            // Numeric comparison failed
             ctx.send_hci_event(
                 hci::SimplePairingCompleteBuilder {
                     status: hci::ErrorCode::AuthenticationFailure,
@@ -798,7 +798,7 @@ mod tests {
     }
 
     #[test]
-    fn numeric_comparaison_initiator_success() {
+    fn numeric_comparison_initiator_success() {
         let context = TestContext::new();
         let procedure = initiate;
 
@@ -806,7 +806,7 @@ mod tests {
     }
 
     #[test]
-    fn numeric_comparaison_responder_success() {
+    fn numeric_comparison_responder_success() {
         let context = TestContext::new();
         let procedure = respond;
 
@@ -814,7 +814,7 @@ mod tests {
     }
 
     #[test]
-    fn numeric_comparaison_initiator_failure_on_initiating_side() {
+    fn numeric_comparison_initiator_failure_on_initiating_side() {
         let context = TestContext::new();
         let procedure = initiate;
 
@@ -822,7 +822,7 @@ mod tests {
     }
 
     #[test]
-    fn numeric_comparaison_responder_failure_on_initiating_side() {
+    fn numeric_comparison_responder_failure_on_initiating_side() {
         let context = TestContext::new();
         let procedure = respond;
 
@@ -830,7 +830,7 @@ mod tests {
     }
 
     #[test]
-    fn numeric_comparaison_initiator_failure_on_responding_side() {
+    fn numeric_comparison_initiator_failure_on_responding_side() {
         let context = TestContext::new();
         let procedure = initiate;
 
@@ -838,7 +838,7 @@ mod tests {
     }
 
     #[test]
-    fn numeric_comparaison_responder_failure_on_responding_side() {
+    fn numeric_comparison_responder_failure_on_responding_side() {
         let context = TestContext::new();
         let procedure = respond;
 
