@@ -4329,9 +4329,11 @@ void LinkLayerController::IncomingLeEncryptConnectionResponse(
       model::packets::LeEncryptConnectionResponseView::Create(incoming);
   ASSERT(response.IsValid());
 
+  bool success = true;
   // Zero LTK is a rejection
   if (response.GetLtk() == std::array<uint8_t, 16>{0}) {
     status = ErrorCode::AUTHENTICATION_FAILURE;
+    success = false;
   }
 
   if (connections_.IsEncrypted(handle)) {
@@ -4339,11 +4341,16 @@ void LinkLayerController::IncomingLeEncryptConnectionResponse(
       send_event_(bluetooth::hci::EncryptionKeyRefreshCompleteBuilder::Create(
           status, handle));
     }
-  } else {
+  } else if (success) {
     connections_.Encrypt(handle);
     if (IsEventUnmasked(EventCode::ENCRYPTION_CHANGE)) {
       send_event_(bluetooth::hci::EncryptionChangeBuilder::Create(
           status, handle, bluetooth::hci::EncryptionEnabled::ON));
+    }
+  } else {
+    if (IsEventUnmasked(EventCode::ENCRYPTION_CHANGE)) {
+      send_event_(bluetooth::hci::EncryptionChangeBuilder::Create(
+          status, handle, bluetooth::hci::EncryptionEnabled::OFF));
     }
   }
 }
