@@ -82,7 +82,7 @@ enum ExtendedOpcode : 8 {
   RESUME_ENCRYPTION_REQ = 24,
   IO_CAPABILITY_REQ = 25,
   IO_CAPABILITY_RES = 26,
-  NUMERIC_COMPARAISON_FAILED = 27,
+  NUMERIC_COMPARISON_FAILED = 27,
   PASSKEY_FAILED = 28,
   OOB_FAILED = 29,
   KEYPRESS_NOTIFICATION = 30,
@@ -168,7 +168,7 @@ packet Sres : Packet(opcode = SRES) {
   authentication_rsp: 8[4],
 }
 
-packet NumericComparaisonFailed: ExtendedPacket(extended_opcode = NUMERIC_COMPARAISON_FAILED) {}
+packet NumericComparisonFailed: ExtendedPacket(extended_opcode = NUMERIC_COMPARISON_FAILED) {}
 
 packet PasskeyFailed: ExtendedPacket(extended_opcode = PASSKEY_FAILED) {}
 

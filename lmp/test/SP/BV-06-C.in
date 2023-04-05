@@ -91,7 +91,7 @@ sequence! { procedure, context,
             accepted_opcode: Opcode::EncapsulatedPayload,
         }
     }
-    // Authentication Stage 1: Numeric Comparaison Protocol
+    // Authentication Stage 1: Numeric Comparison Protocol
     Lower Tester -> IUT: SimplePairingConfirm {
         transaction_id: 0,
         commitment_value: [0; 16],

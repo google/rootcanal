@@ -91,7 +91,7 @@ sequence! { procedure, context,
             accepted_opcode: Opcode::EncapsulatedPayload,
         }
     }
-    // Authentication Stage 1: Numeric Comparaison Protocol
+    // Authentication Stage 1: Numeric Comparison Protocol
     Lower Tester -> IUT: SimplePairingConfirm {
         transaction_id: 0,
         commitment_value: [0; 16],
@@ -119,7 +119,7 @@ sequence! { procedure, context,
         status: ErrorCode::Success,
         bd_addr: context.peer_address(),
     }
-    IUT -> Lower Tester: NumericComparaisonFailed {
+    IUT -> Lower Tester: NumericComparisonFailed {
         transaction_id: 0,
     }
     IUT -> Upper Tester: SimplePairingComplete {
