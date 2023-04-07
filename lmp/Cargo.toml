@@ -29,7 +29,6 @@ paste = "1.0.4"
 pin-utils = "0.1.0"
 rand = "0.8.3"
 thiserror = "1.0.23"
-bt_packets = { path = "../../../system/gd/rust/packets/" }
 
 [lib]
 path="src/lib.rs"
