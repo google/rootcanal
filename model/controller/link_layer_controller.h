@@ -583,6 +583,23 @@ class LinkLayerController {
       std::vector<bluetooth::hci::LeCreateConnPhyScanParameters>
           initiating_phy_parameters);
 
+  // Periodic Advertising
+
+  // HCI LE Set Periodic Advertising Parameters command (Vol 4, Part E
+  // § 7.8.61).
+  ErrorCode LeSetPeriodicAdvertisingParameters(
+      uint8_t advertising_handle, uint16_t periodic_advertising_interval_min,
+      uint16_t periodic_advertising_interval_max, bool include_tx_power);
+
+  // HCI LE Set Periodic Advertising Data command (Vol 4, Part E § 7.8.62).
+  ErrorCode LeSetPeriodicAdvertisingData(
+      uint8_t advertising_handle, bluetooth::hci::Operation operation,
+      const std::vector<uint8_t>& advertising_data);
+
+  // HCI LE Set Periodic Advertising Enable command (Vol 4, Part E § 7.8.63).
+  ErrorCode LeSetPeriodicAdvertisingEnable(bool enable, bool include_adi,
+                                           uint8_t advertising_handle);
+
  protected:
   void SendLinkLayerPacket(
       std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,

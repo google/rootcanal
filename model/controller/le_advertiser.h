@@ -110,6 +110,24 @@ class ExtendedAdvertiser : public Advertiser {
       : advertising_handle(advertising_handle) {}
   ~ExtendedAdvertiser() = default;
 
+  void Enable() {
+    advertising_enable = true;
+    periodic_advertising_enable_latch = periodic_advertising_enable;
+    next_event = std::chrono::steady_clock::now();
+  }
+
+  void EnablePeriodic() {
+    periodic_advertising_enable = true;
+    periodic_advertising_enable_latch = advertising_enable;
+    next_periodic_event = std::chrono::steady_clock::now();
+  }
+
+  void DisablePeriodic() {
+    periodic_advertising_enable = false;
+    periodic_advertising_enable_latch = false;
+  }
+
+  bool IsPeriodicEnabled() const { return periodic_advertising_enable_latch; }
   bool IsScannable() const { return advertising_event_properties.scannable_; }
 
   bool IsConnectable() const {
@@ -121,7 +139,6 @@ class ExtendedAdvertiser : public Advertiser {
   // Host configuration parameters. Gather the configuration from the
   // extended advertising HCI commands.
   uint8_t advertising_handle;
-  bool periodic_advertising_enable{false};
   AdvertisingEventProperties advertising_event_properties{};
   slots primary_advertising_interval{};
   uint8_t primary_advertising_channel_map{};
@@ -140,6 +157,30 @@ class ExtendedAdvertiser : public Advertiser {
   std::vector<uint8_t> scan_response_data{};
   bool partial_advertising_data{false};
   bool partial_scan_response_data{false};
+
+  // Periodic advertising configuration.
+  // Note: the enable flag has a latch because of the semantic describe in the
+  // specification:
+  //
+  // If the advertising set is not currently enabled, the periodic advertising
+  // is not started until the advertising set is enabled. Once the advertising
+  // set has been enabled, the Controller shall continue periodic advertising
+  // until the Host issues an HCI_LE_Set_Periodic_Advertising_Enable command
+  // with bit 0 of Enable set to 0 (periodic advertising is disabled).
+  // Disabling the advertising set has no effect on the periodic advertising
+  // once the advertising set has been enabled.
+  //
+  // Thus the enable latch is set when the advertising set is enabled and
+  // periodic advertising is enabled, and cleared when periodic advertising
+  // gets disabled.
+  bool periodic_advertising_enable{false};
+  bool periodic_advertising_enable_latch{false};
+  slots periodic_advertising_interval{};
+  std::vector<uint8_t> periodic_advertising_data{};
+  bool partial_periodic_advertising_data{false};
+
+  // Time keeping for periodic advertising.
+  std::chrono::steady_clock::time_point next_periodic_event{};
 
   // Enabled state.
   uint8_t max_extended_advertising_events{0};
@@ -163,6 +204,11 @@ class ExtendedAdvertiser : public Advertiser {
   // Reconstitute the raw Advertising_Event_Properties bitmask.
   static uint16_t GetRawAdvertisingEventProperties(
       const AdvertisingEventProperties& properties);
+
+  // Compute the maximum periodic advertising data payload size for the
+  // selected periodic advertising interval.
+  static uint16_t GetMaxPeriodicAdvertisingDataLength(
+      slots periodic_advertising_interval);
 };
 
 }  // namespace rootcanal

@@ -17,6 +17,7 @@ enum PacketType : 8 {
     IO_CAPABILITY_NEGATIVE_RESPONSE = 0x0A,
     LE_LEGACY_ADVERTISING_PDU = 0x0B,
     LE_EXTENDED_ADVERTISING_PDU = 0x37,
+    LE_PERIODIC_ADVERTISING_PDU = 0x40,
     LE_CONNECT = 0x0C,
     LE_CONNECT_COMPLETE = 0x0D,
     LE_SCAN = 0x0E,
@@ -189,6 +190,15 @@ packet LeExtendedAdvertisingPdu : LinkLayerPacket (type = LE_EXTENDED_ADVERTISIN
   tx_power: 8,
   primary_phy: PrimaryPhyType,
   secondary_phy: SecondaryPhyType,
+  periodic_advertising_interval: 16,
+  advertising_data: 8[],
+}
+
+packet LePeriodicAdvertisingPdu : LinkLayerPacket (type = LE_PERIODIC_ADVERTISING_PDU) {
+  advertising_address_type: AddressType,
+  sid: 8, // 0xff when not provided
+  tx_power: 8,
+  advertising_interval: 16,
   advertising_data: 8[],
 }
 

@@ -27,7 +27,7 @@ enum : unsigned {
 };
 
 [[maybe_unused]] static bluetooth::hci::AdvertisingEventProperties
-MakeAdvertisingEventProperties(unsigned mask) {
+MakeAdvertisingEventProperties(unsigned mask = 0) {
   bluetooth::hci::AdvertisingEventProperties properties;
   properties.connectable_ = (mask & CONNECTABLE) != 0;
   properties.scannable_ = (mask & SCANNABLE) != 0;

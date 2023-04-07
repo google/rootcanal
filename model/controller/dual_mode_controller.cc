@@ -2308,6 +2308,48 @@ void DualModeController::LeRemoveDeviceFromResolvingList(CommandView command) {
           kNumCommandPackets, status));
 }
 
+void DualModeController::LeSetPeriodicAdvertisingParameters(
+    CommandView command) {
+  auto command_view =
+      bluetooth::hci::LeSetPeriodicAdvertisingParametersView::Create(
+          bluetooth::hci::LeAdvertisingCommandView::Create(command));
+  ASSERT(command_view.IsValid());
+  ErrorCode status = link_layer_controller_.LeSetPeriodicAdvertisingParameters(
+      command_view.GetAdvertisingHandle(),
+      command_view.GetPeriodicAdvertisingIntervalMin(),
+      command_view.GetPeriodicAdvertisingIntervalMax(),
+      command_view.GetIncludeTxPower());
+  send_event_(
+      bluetooth::hci::LeSetPeriodicAdvertisingParametersCompleteBuilder::Create(
+          kNumCommandPackets, status));
+}
+
+void DualModeController::LeSetPeriodicAdvertisingData(CommandView command) {
+  auto command_view =
+      bluetooth::hci::LeSetPeriodicAdvertisingDataRawView::Create(
+          bluetooth::hci::LeAdvertisingCommandView::Create(command));
+  ASSERT(command_view.IsValid());
+  ErrorCode status = link_layer_controller_.LeSetPeriodicAdvertisingData(
+      command_view.GetAdvertisingHandle(), command_view.GetOperation(),
+      command_view.GetAdvertisingData());
+  send_event_(
+      bluetooth::hci::LeSetPeriodicAdvertisingDataCompleteBuilder::Create(
+          kNumCommandPackets, status));
+}
+
+void DualModeController::LeSetPeriodicAdvertisingEnable(CommandView command) {
+  auto command_view =
+      bluetooth::hci::LeSetPeriodicAdvertisingEnableView::Create(
+          bluetooth::hci::LeAdvertisingCommandView::Create(command));
+  ASSERT(command_view.IsValid());
+  ErrorCode status = link_layer_controller_.LeSetPeriodicAdvertisingEnable(
+      command_view.GetEnable(), command_view.GetIncludeAdi(),
+      command_view.GetAdvertisingHandle());
+  send_event_(
+      bluetooth::hci::LeSetPeriodicAdvertisingEnableCompleteBuilder::Create(
+          kNumCommandPackets, status));
+}
+
 void DualModeController::LeSetExtendedScanParameters(CommandView command) {
   auto command_view = bluetooth::hci::LeSetExtendedScanParametersView::Create(
       bluetooth::hci::LeScanningCommandView::Create(command));
@@ -3960,12 +4002,12 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
          &DualModeController::LeRemoveAdvertisingSet},
         {OpCode::LE_CLEAR_ADVERTISING_SETS,
          &DualModeController::LeClearAdvertisingSets},
-        //{OpCode::LE_SET_PERIODIC_ADVERTISING_PARAMETERS,
-        //&DualModeController::LeSetPeriodicAdvertisingParameters},
-        //{OpCode::LE_SET_PERIODIC_ADVERTISING_DATA,
-        //&DualModeController::LeSetPeriodicAdvertisingData},
-        //{OpCode::LE_SET_PERIODIC_ADVERTISING_ENABLE,
-        //&DualModeController::LeSetPeriodicAdvertisingEnable},
+        {OpCode::LE_SET_PERIODIC_ADVERTISING_PARAMETERS,
+         &DualModeController::LeSetPeriodicAdvertisingParameters},
+        {OpCode::LE_SET_PERIODIC_ADVERTISING_DATA,
+         &DualModeController::LeSetPeriodicAdvertisingData},
+        {OpCode::LE_SET_PERIODIC_ADVERTISING_ENABLE,
+         &DualModeController::LeSetPeriodicAdvertisingEnable},
         {OpCode::LE_SET_EXTENDED_SCAN_PARAMETERS,
          &DualModeController::LeSetExtendedScanParameters},
         {OpCode::LE_SET_EXTENDED_SCAN_ENABLE,

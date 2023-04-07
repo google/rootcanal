@@ -3479,9 +3479,10 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
     response.primary_phy_ = bluetooth::hci::PrimaryPhyType::LE_1M;
     response.secondary_phy_ = bluetooth::hci::SecondaryPhyType::NO_PACKETS;
     response.advertising_sid_ = pdu.GetSid();
-    response.tx_power_ = 0x7f;         // TX power information not available.
+    response.tx_power_ = pdu.GetTxPower();
     response.rssi_ = rssi;
-    response.periodic_advertising_interval_ = 0;  // No periodic advertising.
+    response.periodic_advertising_interval_ =
+        pdu.GetPeriodicAdvertisingInterval();
     if (directed_advertising) {
       response.direct_address_type_ =
           bluetooth::hci::DirectAdvertisingAddressType(

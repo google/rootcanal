@@ -116,7 +116,7 @@ class LeScanningFilterDuplicates : public ::testing::Test {
         Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC,
         model::packets::AddressType::PUBLIC, 0, 1, 0, 0, 0,
         model::packets::PrimaryPhyType::LE_1M,
-        model::packets::SecondaryPhyType::LE_1M, data));
+        model::packets::SecondaryPhyType::LE_1M, 0, data));
   }
 
   enum Filtered {

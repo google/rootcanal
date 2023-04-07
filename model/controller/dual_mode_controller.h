@@ -558,6 +558,11 @@ class DualModeController : public Device {
   // 7.8.60
   void LeClearAdvertisingSets(CommandView command);
 
+  // 7.8.61 - 7.8.63
+  void LeSetPeriodicAdvertisingParameters(CommandView command);
+  void LeSetPeriodicAdvertisingData(CommandView command);
+  void LeSetPeriodicAdvertisingEnable(CommandView command);
+
   // 7.8.64
   void LeSetExtendedScanParameters(CommandView command);
 
