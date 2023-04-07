@@ -211,6 +211,7 @@ class LinkLayerController {
 
   void LeAdvertising();
   void LeScanning();
+  void LeSynchronization();
 
   void LeConnectionUpdateComplete(uint16_t handle, uint16_t interval_min,
                                   uint16_t interval_max, uint16_t latency,
@@ -237,6 +238,10 @@ class LinkLayerController {
   bool LeFilterAcceptListContainsDevice(
       FilterAcceptListAddressType address_type, Address address);
   bool LeFilterAcceptListContainsDevice(AddressWithType address);
+
+  bool LePeriodicAdvertiserListContainsDevice(
+      bluetooth::hci::AdvertiserAddressType advertiser_address_type,
+      Address advertiser_address, uint8_t advertising_sid);
 
   enum IrkSelection {
     Peer,  // Use Peer IRK for RPA resolution or generation.
@@ -600,6 +605,41 @@ class LinkLayerController {
   ErrorCode LeSetPeriodicAdvertisingEnable(bool enable, bool include_adi,
                                            uint8_t advertising_handle);
 
+  // Periodic Sync
+
+  // HCI LE Periodic Advertising Create Sync command (Vol 4, Part E § 7.8.67).
+  ErrorCode LePeriodicAdvertisingCreateSync(
+      bluetooth::hci::PeriodicAdvertisingOptions options,
+      uint8_t advertising_sid,
+      bluetooth::hci::AdvertiserAddressType advertiser_address_type,
+      Address advertiser_address, uint16_t skip, uint16_t sync_timeout,
+      uint8_t sync_cte_type);
+
+  // HCI LE Periodic Advertising Create Sync Cancel command (Vol 4, Part E
+  // § 7.8.68).
+  ErrorCode LePeriodicAdvertisingCreateSyncCancel();
+
+  // HCI LE Periodic Advertising Terminate Sync command (Vol 4, Part E
+  // § 7.8.69).
+  ErrorCode LePeriodicAdvertisingTerminateSync(uint16_t sync_handle);
+
+  // Periodic Advertiser List
+
+  // HCI LE Add Device To Periodic Advertiser List command (Vol 4, Part E
+  // § 7.8.70).
+  ErrorCode LeAddDeviceToPeriodicAdvertiserList(
+      bluetooth::hci::AdvertiserAddressType advertiser_address_type,
+      Address advertiser_address, uint8_t advertising_sid);
+
+  // HCI LE Remove Device From Periodic Advertiser List command
+  // (Vol 4, Part E § 7.8.71).
+  ErrorCode LeRemoveDeviceFromPeriodicAdvertiserList(
+      bluetooth::hci::AdvertiserAddressType advertiser_address_type,
+      Address advertiser_address, uint8_t advertising_sid);
+
+  // HCI LE Clear Periodic Advertiser List command (Vol 4, Part E § 7.8.72).
+  ErrorCode LeClearPeriodicAdvertiserList();
+
  protected:
   void SendLinkLayerPacket(
       std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
@@ -654,6 +694,8 @@ class LinkLayerController {
   void IncomingLeLegacyAdvertisingPdu(
       model::packets::LinkLayerPacketView incoming, uint8_t rssi);
   void IncomingLeExtendedAdvertisingPdu(
+      model::packets::LinkLayerPacketView incoming, uint8_t rssi);
+  void IncomingLePeriodicAdvertisingPdu(
       model::packets::LinkLayerPacketView incoming, uint8_t rssi);
 
   void IncomingLeConnectPacket(model::packets::LinkLayerPacketView incoming);
@@ -1008,6 +1050,14 @@ class LinkLayerController {
   // Extended advertising sets.
   std::unordered_map<uint8_t, ExtendedAdvertiser> extended_advertisers_{};
 
+  struct PeriodicAdvertiserListEntry {
+    bluetooth::hci::AdvertiserAddressType advertiser_address_type;
+    Address advertiser_address;
+    uint8_t advertising_sid;
+  };
+
+  std::vector<PeriodicAdvertiserListEntry> le_periodic_advertiser_list_;
+
   struct Scanner {
     bool scan_enable;
     std::chrono::steady_clock::duration period;
@@ -1094,6 +1144,29 @@ class LinkLayerController {
   // of legacy_advertising_in_use_ and extended_advertising_in_use_ flags.
   // Only one type of advertising may be used during a controller session.
   Initiator initiator_{};
+
+  struct Synchronizing {
+    bluetooth::hci::PeriodicAdvertisingOptions options{};
+    bluetooth::hci::AdvertiserAddressType advertiser_address_type{};
+    Address advertiser_address{};
+    uint8_t advertising_sid{};
+    std::chrono::steady_clock::duration sync_timeout{};
+  };
+
+  struct Synchronized {
+    bluetooth::hci::AdvertiserAddressType advertiser_address_type;
+    Address advertiser_address;
+    uint8_t advertising_sid;
+    uint16_t sync_handle;
+    std::chrono::steady_clock::duration sync_timeout;
+    std::chrono::steady_clock::time_point timeout;
+  };
+
+  // Periodic advertising synchronizing and synchronized states.
+  // Contains information for the currently established syncs, and the
+  // pending sync.
+  std::optional<Synchronizing> synchronizing_{};
+  std::unordered_map<uint16_t, Synchronized> synchronized_{};
 
   // Classic state
 #ifdef ROOTCANAL_LMP

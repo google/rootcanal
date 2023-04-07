@@ -116,6 +116,9 @@ struct ControllerProperties {
   // at any time. This behaviour is not emulated here.
   uint8_t le_num_supported_advertising_sets{8};
 
+  // LE Periodic Advertiser List Size (Vol 4, Part E § 7.8.73).
+  uint8_t le_periodic_advertiser_list_size{8};
+
   // Vendor Information.
   // Provide parameters returned by vendor specific commands.
   std::vector<uint8_t> le_vendor_capabilities{};

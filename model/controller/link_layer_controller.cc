@@ -136,6 +136,20 @@ bool LinkLayerController::LeFilterAcceptListContainsDevice(
   return false;
 }
 
+bool LinkLayerController::LePeriodicAdvertiserListContainsDevice(
+    bluetooth::hci::AdvertiserAddressType advertiser_address_type,
+    Address advertiser_address, uint8_t advertising_sid) {
+  for (auto const& entry : le_periodic_advertiser_list_) {
+    if (entry.advertiser_address_type == advertiser_address_type &&
+        entry.advertiser_address == advertiser_address &&
+        entry.advertising_sid == advertising_sid) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool LinkLayerController::LeFilterAcceptListContainsDevice(
     AddressWithType address) {
   FilterAcceptListAddressType address_type;
@@ -759,6 +773,235 @@ ErrorCode LinkLayerController::LeRemoveDeviceFromFilterAcceptList(
 
   // Note: this case is not documented.
   LOG_INFO("address not found in the filter accept list");
+  return ErrorCode::SUCCESS;
+}
+
+// =============================================================================
+//  LE Periodic Advertiser List
+// =============================================================================
+
+// HCI LE Add Device To Periodic Advertiser List command (Vol 4, Part E
+// § 7.8.70).
+ErrorCode LinkLayerController::LeAddDeviceToPeriodicAdvertiserList(
+    bluetooth::hci::AdvertiserAddressType advertiser_address_type,
+    Address advertiser_address, uint8_t advertising_sid) {
+  // If the Host issues this command when an HCI_LE_Periodic_Advertising_-
+  // Create_Sync command is pending, the Controller shall return the error code
+  // Command Disallowed (0x0C).
+  if (synchronizing_.has_value()) {
+    LOG_INFO(
+        "LE Periodic Advertising Create Sync command is currently pending");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  // When a Controller cannot add an entry to the Periodic Advertiser list
+  // because the list is full, the Controller shall return the error code Memory
+  // Capacity Exceeded (0x07).
+  if (le_periodic_advertiser_list_.size() >=
+      properties_.le_periodic_advertiser_list_size) {
+    LOG_INFO("periodic advertiser list is full");
+    return ErrorCode::MEMORY_CAPACITY_EXCEEDED;
+  }
+
+  // If the entry is already on the list, the Controller shall
+  // return the error code Invalid HCI Command Parameters (0x12).
+  for (auto& entry : le_periodic_advertiser_list_) {
+    if (entry.advertiser_address_type == advertiser_address_type &&
+        entry.advertiser_address == advertiser_address &&
+        entry.advertising_sid == advertising_sid) {
+      LOG_INFO("entry is already found in the periodic advertiser list");
+      return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+    }
+  }
+
+  le_periodic_advertiser_list_.emplace_back(PeriodicAdvertiserListEntry{
+      advertiser_address_type, advertiser_address, advertising_sid});
+  return ErrorCode::SUCCESS;
+}
+
+// HCI LE Remove Device From Periodic Advertiser List command
+// (Vol 4, Part E § 7.8.71).
+ErrorCode LinkLayerController::LeRemoveDeviceFromPeriodicAdvertiserList(
+    bluetooth::hci::AdvertiserAddressType advertiser_address_type,
+    Address advertiser_address, uint8_t advertising_sid) {
+  // If this command is used when an HCI_LE_Periodic_Advertising_Create_Sync
+  // command is pending, the Controller shall return the error code Command
+  // Disallowed (0x0C).
+  if (synchronizing_.has_value()) {
+    LOG_INFO(
+        "LE Periodic Advertising Create Sync command is currently pending");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  for (auto it = le_periodic_advertiser_list_.begin();
+       it != le_periodic_advertiser_list_.end(); it++) {
+    if (it->advertiser_address_type == advertiser_address_type &&
+        it->advertiser_address == advertiser_address &&
+        it->advertising_sid == advertising_sid) {
+      le_periodic_advertiser_list_.erase(it);
+      return ErrorCode::SUCCESS;
+    }
+  }
+
+  // When a Controller cannot remove an entry from the Periodic Advertiser list
+  // because it is not found, the Controller shall return the error code Unknown
+  // Advertising Identifier (0x42).
+  LOG_INFO("entry not found in the periodic advertiser list");
+  return ErrorCode::UNKNOWN_ADVERTISING_IDENTIFIER;
+}
+
+// HCI LE Clear Periodic Advertiser List command (Vol 4, Part E § 7.8.72).
+ErrorCode LinkLayerController::LeClearPeriodicAdvertiserList() {
+  // If this command is used when an HCI_LE_Periodic_Advertising_Create_Sync
+  // command is pending, the Controller shall return the error code Command
+  // Disallowed (0x0C).
+  if (synchronizing_.has_value()) {
+    LOG_INFO(
+        "LE Periodic Advertising Create Sync command is currently pending");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  le_periodic_advertiser_list_.clear();
+  return ErrorCode::SUCCESS;
+}
+
+// =============================================================================
+//  LE Periodic Sync
+// =============================================================================
+
+// HCI LE Periodic Advertising Create Sync command (Vol 4, Part E § 7.8.67).
+ErrorCode LinkLayerController::LePeriodicAdvertisingCreateSync(
+    bluetooth::hci::PeriodicAdvertisingOptions options, uint8_t advertising_sid,
+    bluetooth::hci::AdvertiserAddressType advertiser_address_type,
+    Address advertiser_address, uint16_t /*skip*/, uint16_t sync_timeout,
+    uint8_t sync_cte_type) {
+  // If the Host issues this command when another HCI_LE_Periodic_Advertising_-
+  // Create_Sync command is pending, the Controller shall return the error code
+  // Command Disallowed (0x0C).
+  if (synchronizing_.has_value()) {
+    LOG_INFO(
+        "LE Periodic Advertising Create Sync command is currently pending");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  // If the Host sets all the non-reserved bits of the Sync_CTE_Type parameter
+  // to 1, the Controller shall return the error code Command Disallowed (0x0C).
+  uint8_t sync_cte_type_mask = 0x1f;
+  if ((sync_cte_type & sync_cte_type_mask) == sync_cte_type_mask) {
+    LOG_INFO(
+        "Sync_CTE_Type is configured to ignore all types of advertisement");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  // If the Host issues this command with bit 0 of Options not set and with
+  // Advertising_SID, Advertiser_Address_Type, and Advertiser_Address the same
+  // as those of a periodic advertising train that the Controller is already
+  // synchronized to, the Controller shall return the error code
+  // Connection Already Exists (0x0B).
+  bool has_synchronized_train = false;
+  for (auto& [_, sync] : synchronized_) {
+    has_synchronized_train |=
+        sync.advertiser_address_type == advertiser_address_type &&
+        sync.advertiser_address == advertiser_address &&
+        sync.advertising_sid == advertising_sid;
+  }
+  if (!options.use_periodic_advertiser_list_ && has_synchronized_train) {
+    LOG_INFO(
+        "the controller is already synchronized on the periodic advertising"
+        " train from %s[%s] - SID=0x%x",
+        advertiser_address.ToString().c_str(),
+        bluetooth::hci::AdvertiserAddressTypeText(advertiser_address_type)
+            .c_str(),
+        advertising_sid);
+    return ErrorCode::CONNECTION_ALREADY_EXISTS;
+  }
+
+  // If the Host issues this command and the Controller has insufficient
+  // resources to handle any more periodic advertising trains, the Controller
+  // shall return the error code Memory Capacity Exceeded (0x07)
+  // TODO emulate LE state limits.
+
+  // If bit 1 of Options is set to 0, bit 2 is set to 1, and the Controller does
+  // not support the Periodic Advertising ADI Support feature, then the
+  // Controller shall return an error which should use the error code
+  // Unsupported Feature or Parameter Value (0x11).
+  if (!options.disable_reporting_ && options.enable_duplicate_filtering_ &&
+      !properties_.SupportsLLFeature(
+          LLFeaturesBits::PERIODIC_ADVERTISING_ADI_SUPPORT)) {
+    LOG_INFO(
+        "reporting and duplicate filtering are enabled in the options,"
+        " but the controller does not support the Periodic Advertising ADI"
+        " Support feature");
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  // If bit 1 of the Options parameter is set to 1 and the Controller does not
+  // support the HCI_LE_Set_Periodic_Advertising_Receive_Enable command, the
+  // Controller shall return the error code Connection Failed to be Established
+  // / Synchronization Timeout (0x3E).
+  if (options.disable_reporting_ &&
+      !properties_.SupportsCommand(
+          bluetooth::hci::OpCodeIndex::
+              LE_SET_PERIODIC_ADVERTISING_RECEIVE_ENABLE)) {
+    LOG_INFO(
+        "reporting is disabled in the options, but the controller does not"
+        " support the HCI_LE_Set_Periodic_Advertising_Receive_Enable command");
+    return ErrorCode::CONNECTION_FAILED_ESTABLISHMENT;
+  }
+
+  synchronizing_ = Synchronizing{
+      .options = options,
+      .advertiser_address_type = advertiser_address_type,
+      .advertiser_address = advertiser_address,
+      .advertising_sid = advertising_sid,
+      .sync_timeout = 10ms * sync_timeout,
+  };
+  return ErrorCode::SUCCESS;
+}
+
+// HCI LE Periodic Advertising Create Sync Cancel command (Vol 4, Part E
+// § 7.8.68).
+ErrorCode LinkLayerController::LePeriodicAdvertisingCreateSyncCancel() {
+  // If the Host issues this command while no HCI_LE_Periodic_Advertising_-
+  // Create_Sync command is pending, the Controller shall return the error code
+  // Command Disallowed (0x0C).
+  if (!synchronizing_.has_value()) {
+    LOG_INFO("no LE Periodic Advertising Create Sync command is pending");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  // After the HCI_Command_Complete is sent and if the cancellation was
+  // successful, the Controller sends an HCI_LE_Periodic_Advertising_Sync_-
+  // Established event to the Host with the error code Operation Cancelled
+  // by Host (0x44).
+  if (IsLeEventUnmasked(SubeventCode::PERIODIC_ADVERTISING_SYNC_ESTABLISHED)) {
+    ScheduleTask(0ms, [this] {
+      send_event_(
+          bluetooth::hci::LePeriodicAdvertisingSyncEstablishedBuilder::Create(
+              ErrorCode::OPERATION_CANCELLED_BY_HOST, 0, 0,
+              AddressType::PUBLIC_DEVICE_ADDRESS, Address::kEmpty,
+              bluetooth::hci::SecondaryPhyType::NO_PACKETS, 0,
+              bluetooth::hci::ClockAccuracy::PPM_500));
+    });
+  }
+
+  synchronizing_ = {};
+  return ErrorCode::SUCCESS;
+}
+
+// HCI LE Periodic Advertising Terminate Sync command (Vol 4, Part E
+// § 7.8.69).
+ErrorCode LinkLayerController::LePeriodicAdvertisingTerminateSync(
+    uint16_t sync_handle) {
+  // If the periodic advertising train corresponding to the Sync_Handle
+  // parameter does not exist, then the Controller shall return the error
+  // code Unknown Advertising Identifier (0x42).
+  if (synchronized_.count(sync_handle) == 0) {
+    LOG_INFO("the Sync_Handle 0x%x does not exist", sync_handle);
+    return ErrorCode::UNKNOWN_ADVERTISING_IDENTIFIER;
+  }
+
+  synchronized_.erase(sync_handle);
   return ErrorCode::SUCCESS;
 }
 
@@ -1916,6 +2159,9 @@ void LinkLayerController::IncomingPacket(
       return;
     case model::packets::PacketType::LE_EXTENDED_ADVERTISING_PDU:
       IncomingLeExtendedAdvertisingPdu(incoming, rssi);
+      return;
+    case model::packets::PacketType::LE_PERIODIC_ADVERTISING_PDU:
+      IncomingLePeriodicAdvertisingPdu(incoming, rssi);
       return;
     case model::packets::PacketType::LE_CONNECT:
       IncomingLeConnectPacket(incoming);
@@ -3784,6 +4030,161 @@ void LinkLayerController::IncomingLeExtendedAdvertisingPdu(
   ConnectIncomingLeExtendedAdvertisingPdu(pdu);
 }
 
+void LinkLayerController::IncomingLePeriodicAdvertisingPdu(
+    model::packets::LinkLayerPacketView incoming, uint8_t rssi) {
+  auto pdu = model::packets::LePeriodicAdvertisingPduView::Create(incoming);
+  ASSERT(pdu.IsValid());
+
+  // Synchronization with periodic advertising only occurs while extended
+  // scanning is enabled.
+  if (!scanner_.IsEnabled()) {
+    return;
+  }
+  if (!ExtendedAdvertising()) {
+    LOG_VERB("Extended advertising ignored because the scanner is legacy");
+    return;
+  }
+
+  AddressWithType advertiser_address{
+      pdu.GetSourceAddress(),
+      static_cast<AddressType>(pdu.GetAdvertisingAddressType())};
+  uint8_t advertising_sid = pdu.GetSid();
+
+  // When a scanner receives an advertising packet that contains a resolvable
+  // private address for the advertiser's device address (AdvA field) and
+  // address resolution is enabled, the Link Layer shall resolve the private
+  // address. The scanner's periodic sync establishment filter policy shall
+  // determine if the scanner processes the advertising packet.
+  AddressWithType resolved_advertiser_address =
+      ResolvePrivateAddress(advertiser_address, IrkSelection::Peer)
+          .value_or(advertiser_address);
+
+  bluetooth::hci::AdvertiserAddressType advertiser_address_type;
+  switch (resolved_advertiser_address.GetAddressType()) {
+    case AddressType::PUBLIC_DEVICE_ADDRESS:
+    case AddressType::PUBLIC_IDENTITY_ADDRESS:
+    default:
+      advertiser_address_type = bluetooth::hci::AdvertiserAddressType::
+          PUBLIC_DEVICE_OR_IDENTITY_ADDRESS;
+      break;
+    case AddressType::RANDOM_DEVICE_ADDRESS:
+    case AddressType::RANDOM_IDENTITY_ADDRESS:
+      advertiser_address_type = bluetooth::hci::AdvertiserAddressType::
+          RANDOM_DEVICE_OR_IDENTITY_ADDRESS;
+      break;
+  }
+
+  // Check if the periodic advertising PDU matches a pending
+  // LE Periodic Advertising Create Sync command.
+  // The direct parameters or the periodic advertiser list are used
+  // depending on the synchronizing options.
+  bool matches_synchronizing = false;
+  if (synchronizing_.has_value()) {
+    matches_synchronizing =
+        synchronizing_->options.use_periodic_advertiser_list_
+            ? LePeriodicAdvertiserListContainsDevice(
+                  advertiser_address_type,
+                  resolved_advertiser_address.GetAddress(), advertising_sid)
+            : synchronizing_->advertiser_address_type ==
+                      advertiser_address_type &&
+                  synchronizing_->advertiser_address ==
+                      resolved_advertiser_address.GetAddress() &&
+                  synchronizing_->advertising_sid == advertising_sid;
+  }
+
+  // If the periodic advertising event matches the synchronizing state,
+  // create the synchronized train and report to the Host.
+  if (matches_synchronizing) {
+    LOG_INFO("Established Sync with advertiser %s[%s] - SID 0x%x",
+             advertiser_address.ToString().c_str(),
+             bluetooth::hci::AdvertiserAddressTypeText(advertiser_address_type)
+                 .c_str(),
+             advertising_sid);
+    // Use the first unused Sync_Handle.
+    // Note: sync handles are allocated from a different number space
+    // compared to connection handles.
+    uint16_t sync_handle = 0;
+    for (; synchronized_.count(sync_handle) != 0; sync_handle++) {
+    }
+
+    // Notify of the new Synchronized train.
+    if (IsLeEventUnmasked(
+            SubeventCode::PERIODIC_ADVERTISING_SYNC_ESTABLISHED)) {
+      send_event_(
+          bluetooth::hci::LePeriodicAdvertisingSyncEstablishedBuilder::Create(
+              ErrorCode::SUCCESS, sync_handle, advertising_sid,
+              resolved_advertiser_address.GetAddressType(),
+              resolved_advertiser_address.GetAddress(),
+              bluetooth::hci::SecondaryPhyType::LE_1M,
+              pdu.GetAdvertisingInterval(),
+              bluetooth::hci::ClockAccuracy::PPM_500));
+    }
+
+    // Update the synchronization state.
+    synchronized_.insert(
+        {sync_handle,
+         Synchronized{
+             .advertiser_address_type = advertiser_address_type,
+             .advertiser_address = resolved_advertiser_address.GetAddress(),
+             .advertising_sid = advertising_sid,
+             .sync_handle = sync_handle,
+             .sync_timeout = synchronizing_->sync_timeout,
+             .timeout = std::chrono::steady_clock::now() +
+                        synchronizing_->sync_timeout,
+         }});
+
+    // Quit synchronizing state.
+    synchronizing_ = {};
+
+    // Create Sync ensure that they are no other established syncs that
+    // already match the advertiser address and advertising SID;
+    // no need to check again.
+    return;
+  }
+
+  // Check if the periodic advertising PDU matches any of the established
+  // syncs.
+  for (auto& [_, sync] : synchronized_) {
+    if (sync.advertiser_address_type != advertiser_address_type ||
+        sync.advertiser_address != resolved_advertiser_address.GetAddress() ||
+        sync.advertising_sid != advertising_sid) {
+      continue;
+    }
+
+    // Send a Periodic Advertising event for the matching Sync,
+    // and refresh the timeout for sync termination. The periodic
+    // advertising event might need to be fragmented to fit the maximum
+    // size of an HCI event.
+    if (IsLeEventUnmasked(SubeventCode::PERIODIC_ADVERTISING_REPORT)) {
+      // Each extended advertising report can only pass 229 bytes of
+      // advertising data (255 - 8 = size of report fields).
+      std::vector<uint8_t> advertising_data = pdu.GetAdvertisingData();
+      const size_t max_fragment_size = 247;
+      size_t offset = 0;
+      do {
+        size_t remaining_size = advertising_data.size() - offset;
+        size_t fragment_size = std::min(max_fragment_size, remaining_size);
+
+        bluetooth::hci::DataStatus data_status =
+            remaining_size <= max_fragment_size
+                ? bluetooth::hci::DataStatus::COMPLETE
+                : bluetooth::hci::DataStatus::CONTINUING;
+        std::vector<uint8_t> fragment_data(
+            advertising_data.begin() + offset,
+            advertising_data.begin() + offset + fragment_size);
+        offset += fragment_size;
+        send_event_(bluetooth::hci::LePeriodicAdvertisingReportBuilder::Create(
+            sync.sync_handle, pdu.GetTxPower(), rssi,
+            bluetooth::hci::CteType::NO_CONSTANT_TONE_EXTENSION, data_status,
+            fragment_data));
+      } while (offset < advertising_data.size());
+    }
+
+    // Refresh the timeout for the sync disconnection.
+    sync.timeout = std::chrono::steady_clock::now() + sync.sync_timeout;
+  }
+}
+
 void LinkLayerController::IncomingScoConnectionRequest(
     model::packets::LinkLayerPacketView incoming) {
   Address address = incoming.GetSourceAddress();
@@ -4788,6 +5189,25 @@ void LinkLayerController::LeScanning() {
     }
     scanner_.timeout = now + scanner_.duration;
     scanner_.periodical_timeout = now + scanner_.period;
+  }
+}
+
+void LinkLayerController::LeSynchronization() {
+  std::vector<uint16_t> removed_sync_handles;
+  for (auto& [_, sync] : synchronized_) {
+    if (sync.timeout > std::chrono::steady_clock::now()) {
+      LOG_INFO("Periodic advertising sync with handle 0x%x lost",
+               sync.sync_handle);
+      removed_sync_handles.push_back(sync.sync_handle);
+    }
+    if (IsLeEventUnmasked(SubeventCode::PERIODIC_ADVERTISING_SYNC_LOST)) {
+      send_event_(bluetooth::hci::LePeriodicAdvertisingSyncLostBuilder::Create(
+          sync.sync_handle));
+    }
+  }
+
+  for (auto sync_handle : removed_sync_handles) {
+    synchronized_.erase(sync_handle);
   }
 }
 
@@ -6400,6 +6820,7 @@ void LinkLayerController::Reset() {
   connections_ = AclConnectionHandler();
   oob_id_ = 1;
   key_id_ = 1;
+  le_periodic_advertiser_list_.clear();
   le_filter_accept_list_.clear();
   le_resolving_list_.clear();
   le_resolving_list_enabled_ = false;
@@ -6409,6 +6830,8 @@ void LinkLayerController::Reset() {
   extended_advertisers_.clear();
   scanner_ = Scanner{};
   initiator_ = Initiator{};
+  synchronizing_ = {};
+  synchronized_ = {};
   last_inquiry_ = steady_clock::now();
   inquiry_mode_ = InquiryType::STANDARD;
   inquiry_lap_ = 0;
