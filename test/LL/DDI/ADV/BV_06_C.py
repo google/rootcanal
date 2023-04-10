@@ -104,7 +104,7 @@ class Test(ControllerTest):
         await self.expect_evt(
             hci.DisconnectionComplete(status=ErrorCode.SUCCESS,
                                       connection_handle=connection_handle,
-                                      reason=hci.DisconnectReason.REMOTE_USER_TERMINATED_CONNECTION))
+                                      reason=hci.ErrorCode.CONNECTION_TERMINATED_BY_LOCAL_HOST))
 
         # 9. Configure Lower Tester to use a public device address that differs from the IUT address in the
         # most significant octet as parameter of CONNECT_IND.
