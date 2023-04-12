@@ -2165,6 +2165,32 @@ void DualModeController::LeReadResolvingListSize(CommandView command) {
       properties_.le_resolving_list_size));
 }
 
+void DualModeController::LeReadPeerResolvableAddress(CommandView command) {
+  auto command_view = bluetooth::hci::LeReadPeerResolvableAddressView::Create(
+      bluetooth::hci::LeSecurityCommandView::Create(command));
+  ASSERT(command_view.IsValid());
+  Address peer_resolvable_address;
+  ErrorCode status = link_layer_controller_.LeReadPeerResolvableAddress(
+      command_view.GetPeerIdentityAddressType(),
+      command_view.GetPeerIdentityAddress(), &peer_resolvable_address);
+  send_event_(
+      bluetooth::hci::LeReadPeerResolvableAddressCompleteBuilder::Create(
+          kNumCommandPackets, status, peer_resolvable_address));
+}
+
+void DualModeController::LeReadLocalResolvableAddress(CommandView command) {
+  auto command_view = bluetooth::hci::LeReadLocalResolvableAddressView::Create(
+      bluetooth::hci::LeSecurityCommandView::Create(command));
+  ASSERT(command_view.IsValid());
+  Address local_resolvable_address;
+  ErrorCode status = link_layer_controller_.LeReadLocalResolvableAddress(
+      command_view.GetPeerIdentityAddressType(),
+      command_view.GetPeerIdentityAddress(), &local_resolvable_address);
+  send_event_(
+      bluetooth::hci::LeReadLocalResolvableAddressCompleteBuilder::Create(
+          kNumCommandPackets, status, local_resolvable_address));
+}
+
 void DualModeController::LeReadMaximumDataLength(CommandView command) {
   auto command_view = bluetooth::hci::LeReadMaximumDataLengthView::Create(
       bluetooth::hci::LeSecurityCommandView::Create(command));
@@ -3900,10 +3926,10 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
          &DualModeController::LeClearResolvingList},
         {OpCode::LE_READ_RESOLVING_LIST_SIZE,
          &DualModeController::LeReadResolvingListSize},
-        //{OpCode::LE_READ_PEER_RESOLVABLE_ADDRESS,
-        //&DualModeController::LeReadPeerResolvableAddress},
-        //{OpCode::LE_READ_LOCAL_RESOLVABLE_ADDRESS,
-        //&DualModeController::LeReadLocalResolvableAddress},
+        {OpCode::LE_READ_PEER_RESOLVABLE_ADDRESS,
+         &DualModeController::LeReadPeerResolvableAddress},
+        {OpCode::LE_READ_LOCAL_RESOLVABLE_ADDRESS,
+         &DualModeController::LeReadLocalResolvableAddress},
         {OpCode::LE_SET_ADDRESS_RESOLUTION_ENABLE,
          &DualModeController::LeSetAddressResolutionEnable},
         {OpCode::LE_SET_RESOLVABLE_PRIVATE_ADDRESS_TIMEOUT,

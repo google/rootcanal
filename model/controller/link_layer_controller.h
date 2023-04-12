@@ -450,6 +450,16 @@ class LinkLayerController {
   // HCI command LE_Clear_Resolving_List (Vol 4, Part E § 7.8.40).
   ErrorCode LeClearResolvingList();
 
+  // HCI command LE_Read_Peer_Resolvable_Address (Vol 4, Part E § 7.8.42).
+  ErrorCode LeReadPeerResolvableAddress(
+      PeerAddressType peer_identity_address_type, Address peer_identity_address,
+      Address* peer_resolvable_address);
+
+  // HCI command LE_Read_Local_Resolvable_Address (Vol 4, Part E § 7.8.43).
+  ErrorCode LeReadLocalResolvableAddress(
+      PeerAddressType peer_identity_address_type, Address peer_identity_address,
+      Address* local_resolvable_address);
+
   // HCI command LE_Set_Address_Resolution_Enable (Vol 4, Part E § 7.8.44).
   ErrorCode LeSetAddressResolutionEnable(bool enable);
 
@@ -949,6 +959,15 @@ class LinkLayerController {
     std::array<uint8_t, kIrkSize> peer_irk;
     std::array<uint8_t, kIrkSize> local_irk;
     bluetooth::hci::PrivacyMode privacy_mode;
+
+    // Resolvable Private Address being used by the local device.
+    // It is the last resolvable private address generated for
+    // this identity address.
+    std::optional<Address> local_resolvable_address;
+    // Resolvable Private Address being used by the peer device.
+    // It is the last resolvable private address received that resolved
+    // to this identity address.
+    std::optional<Address> peer_resolvable_address;
   };
 
   std::vector<ResolvingListEntry> le_resolving_list_;

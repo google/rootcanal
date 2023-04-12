@@ -190,11 +190,17 @@ std::optional<AddressWithType> LinkLayerController::ResolvePrivateAddress(
     return {};
   }
 
-  for (auto const& entry : le_resolving_list_) {
+  for (auto& entry : le_resolving_list_) {
     std::array<uint8_t, LinkLayerController::kIrkSize> const& used_irk =
         irk == IrkSelection::Local ? entry.local_irk : entry.peer_irk;
 
     if (address.IsRpaThatMatchesIrk(used_irk)) {
+      // Update the peer resolvable address used for the peer
+      // with the returned identity address.
+      if (irk == IrkSelection::Peer) {
+        entry.peer_resolvable_address = address.GetAddress();
+      }
+
       return PeerIdentityAddress(entry.peer_identity_address,
                                  entry.peer_identity_address_type);
     }
@@ -210,13 +216,20 @@ LinkLayerController::GenerateResolvablePrivateAddress(AddressWithType address,
     return {};
   }
 
-  for (auto const& entry : le_resolving_list_) {
+  for (auto& entry : le_resolving_list_) {
     if (address.GetAddress() == entry.peer_identity_address &&
         address.ToPeerAddressType() == entry.peer_identity_address_type) {
       std::array<uint8_t, LinkLayerController::kIrkSize> const& used_irk =
           irk == IrkSelection::Local ? entry.local_irk : entry.peer_irk;
+      Address local_resolvable_address = generate_rpa(used_irk);
 
-      return AddressWithType{generate_rpa(used_irk),
+      // Update the local resolvable address used for the peer
+      // with the returned identity address.
+      if (irk == IrkSelection::Local) {
+        entry.local_resolvable_address = local_resolvable_address;
+      }
+
+      return AddressWithType{local_resolvable_address,
                              AddressType::RANDOM_DEVICE_ADDRESS};
     }
   }
@@ -498,9 +511,13 @@ ErrorCode LinkLayerController::LeAddDeviceToResolvingList(
     }
   }
 
-  le_resolving_list_.emplace_back(
-      ResolvingListEntry{peer_identity_address_type, peer_identity_address,
-                         peer_irk, local_irk, PrivacyMode::NETWORK});
+  le_resolving_list_.emplace_back(ResolvingListEntry{peer_identity_address_type,
+                                                     peer_identity_address,
+                                                     peer_irk,
+                                                     local_irk,
+                                                     PrivacyMode::NETWORK,
+                                                     {},
+                                                     {}});
   return ErrorCode::SUCCESS;
 }
 
@@ -553,6 +570,56 @@ ErrorCode LinkLayerController::LeClearResolvingList() {
 
   le_resolving_list_.clear();
   return ErrorCode::SUCCESS;
+}
+
+// HCI command LE_Read_Peer_Resolvable_Address (Vol 4, Part E § 7.8.42).
+ErrorCode LinkLayerController::LeReadPeerResolvableAddress(
+    PeerAddressType peer_identity_address_type, Address peer_identity_address,
+    Address* peer_resolvable_address) {
+  for (auto const& entry : le_resolving_list_) {
+    if (entry.peer_identity_address_type == peer_identity_address_type &&
+        entry.peer_identity_address == peer_identity_address &&
+        entry.peer_resolvable_address.has_value()) {
+      *peer_resolvable_address = entry.peer_resolvable_address.value();
+      return ErrorCode::SUCCESS;
+    }
+  }
+
+  // When a Controller cannot find a Resolvable Private Address associated with
+  // the Peer Identity Address, or if the Peer Identity Address cannot be found
+  // in the resolving list, it shall return the error code
+  // Unknown Connection Identifier (0x02).
+  LOG_INFO(
+      "peer identity address %s[%s] not found in the resolving list,"
+      " or peer resolvable address unavailable",
+      peer_identity_address.ToString().c_str(),
+      PeerAddressTypeText(peer_identity_address_type).c_str());
+  return ErrorCode::UNKNOWN_CONNECTION;
+}
+
+// HCI command LE_Read_Local_Resolvable_Address (Vol 4, Part E § 7.8.43).
+ErrorCode LinkLayerController::LeReadLocalResolvableAddress(
+    PeerAddressType peer_identity_address_type, Address peer_identity_address,
+    Address* local_resolvable_address) {
+  for (auto const& entry : le_resolving_list_) {
+    if (entry.peer_identity_address_type == peer_identity_address_type &&
+        entry.peer_identity_address == peer_identity_address &&
+        entry.local_resolvable_address.has_value()) {
+      *local_resolvable_address = entry.local_resolvable_address.value();
+      return ErrorCode::SUCCESS;
+    }
+  }
+
+  // When a Controller cannot find a Resolvable Private Address associated with
+  // the Peer Identity Address, or if the Peer Identity Address cannot be found
+  // in the resolving list, it shall return the error code
+  // Unknown Connection Identifier (0x02).
+  LOG_INFO(
+      "peer identity address %s[%s] not found in the resolving list,"
+      " or peer resolvable address unavailable",
+      peer_identity_address.ToString().c_str(),
+      PeerAddressTypeText(peer_identity_address_type).c_str());
+  return ErrorCode::UNKNOWN_CONNECTION;
 }
 
 // HCI command LE_Set_Address_Resolution_Enable (Vol 4, Part E § 7.8.44).
