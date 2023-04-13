@@ -285,7 +285,7 @@ std::vector<uint8_t> PcapFilter::FilterLeSetExtendedScanResponseData(
       ->SerializeToBytes();
 }
 
-// Replace the device names in the GAP entries of the periodic scan response
+// Replace the device names in the GAP entries of the periodic advertising
 // data.
 std::vector<uint8_t> PcapFilter::FilterLeSetPeriodicAdvertisingData(
     bluetooth::hci::CommandView& command) {
@@ -293,11 +293,11 @@ std::vector<uint8_t> PcapFilter::FilterLeSetPeriodicAdvertisingData(
       LeAdvertisingCommandView::Create(command));
   ASSERT(parameters.IsValid());
 
-  std::vector<GapData> scan_response_data = parameters.GetScanResponseData();
-  FilterGapData(scan_response_data);
+  std::vector<GapData> advertising_data = parameters.GetAdvertisingData();
+  FilterGapData(advertising_data);
   return LeSetPeriodicAdvertisingDataBuilder::Create(
              parameters.GetAdvertisingHandle(), parameters.GetOperation(),
-             scan_response_data)
+             advertising_data)
       ->SerializeToBytes();
 }
 

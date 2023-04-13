@@ -341,7 +341,7 @@ static std::array<uint8_t, 64> SupportedCommands() {
       OpCodeIndex::LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS,
       OpCodeIndex::LE_REMOVE_ADVERTISING_SET,
       OpCodeIndex::LE_CLEAR_ADVERTISING_SETS,
-      // OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_PARAM,
+      // OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_PARAMETERS,
       // OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_DATA,
       // OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_ENABLE,
       OpCodeIndex::LE_SET_EXTENDED_SCAN_PARAMETERS,
@@ -350,10 +350,10 @@ static std::array<uint8_t, 64> SupportedCommands() {
       // OpCodeIndex::LE_PERIODIC_ADVERTISING_CREATE_SYNC,
       // OpCodeIndex::LE_PERIODIC_ADVERTISING_CREATE_SYNC_CANCEL,
       // OpCodeIndex::LE_PERIODIC_ADVERTISING_TERMINATE_SYNC,
-      // OpCodeIndex::LE_ADD_DEVICE_TO_PERIODIC_ADVERTISING_LIST,
-      // OpCodeIndex::LE_REMOVE_DEVICE_FROM_PERIODIC_ADVERTISING_LIST,
-      // OpCodeIndex::LE_CLEAR_PERIODIC_ADVERTISING_LIST,
-      // OpCodeIndex::LE_READ_PERIODIC_ADVERTISING_LIST_SIZE,
+      // OpCodeIndex::LE_ADD_DEVICE_TO_PERIODIC_ADVERTISER_LIST,
+      // OpCodeIndex::LE_REMOVE_DEVICE_FROM_PERIODIC_ADVERTISER_LIST,
+      // OpCodeIndex::LE_CLEAR_PERIODIC_ADVERTISER_LIST,
+      // OpCodeIndex::LE_READ_PERIODIC_ADVERTISER_LIST_SIZE,
       // OpCodeIndex::LE_READ_TRANSMIT_POWER,
       OpCodeIndex::LE_READ_RF_PATH_COMPENSATION_POWER,
       OpCodeIndex::LE_WRITE_RF_PATH_COMPENSATION_POWER,
@@ -1647,14 +1647,14 @@ bool ControllerProperties::CheckSupportedCommands() const {
   check_command_(IO_CAPABILITY_REQUEST_REPLY, mandatory, excluded);
   check_command_(LE_ACCEPT_CIS_REQUEST, excluded, c40);
   check_command_(LE_ADD_DEVICE_TO_FILTER_ACCEPT_LIST, excluded, mandatory);
-  check_command_(LE_ADD_DEVICE_TO_PERIODIC_ADVERTISING_LIST, excluded, c21);
+  check_command_(LE_ADD_DEVICE_TO_PERIODIC_ADVERTISER_LIST, excluded, c21);
   check_command_(LE_ADD_DEVICE_TO_RESOLVING_LIST, excluded, c9);
   // Table 3.1: Alphabetical list of commands and events (Sheet 9 of 49)
   check_command_(LE_BIG_CREATE_SYNC, excluded, c42);
   check_command_(LE_BIG_TERMINATE_SYNC, excluded, c42);
   check_command_(LE_CLEAR_ADVERTISING_SETS, excluded, c17);
   check_command_(LE_CLEAR_FILTER_ACCEPT_LIST, excluded, mandatory);
-  check_command_(LE_CLEAR_PERIODIC_ADVERTISING_LIST, excluded, c21);
+  check_command_(LE_CLEAR_PERIODIC_ADVERTISER_LIST, excluded, c21);
   check_command_(LE_CLEAR_RESOLVING_LIST, excluded, c9);
   // Table 3.1: Alphabetical list of commands and events (Sheet 10 of 49)
   check_command_(LE_CONNECTION_CTE_REQUEST_ENABLE, excluded, c25);
@@ -1704,7 +1704,7 @@ bool ControllerProperties::CheckSupportedCommands() const {
   check_command_(LE_READ_MAXIMUM_DATA_LENGTH, excluded, c8);
   check_command_(LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS, excluded, c17);
   check_command_(LE_READ_PEER_RESOLVABLE_ADDRESS, excluded, c10);
-  check_command_(LE_READ_PERIODIC_ADVERTISING_LIST_SIZE, excluded, c21);
+  check_command_(LE_READ_PERIODIC_ADVERTISER_LIST_SIZE, excluded, c21);
   check_command_(LE_READ_PHY, excluded, c11);
   check_command_(LE_READ_REMOTE_FEATURES, excluded, c3);
   // Table 3.1: Alphabetical list of commands and events (Sheet 17 of 49)
@@ -1725,8 +1725,7 @@ bool ControllerProperties::CheckSupportedCommands() const {
   check_command_(LE_REMOVE_ADVERTISING_SET, excluded, c17);
   check_command_(LE_REMOVE_CIG, excluded, c39);
   check_command_(LE_REMOVE_DEVICE_FROM_FILTER_ACCEPT_LIST, excluded, mandatory);
-  check_command_(LE_REMOVE_DEVICE_FROM_PERIODIC_ADVERTISING_LIST, excluded,
-                 c21);
+  check_command_(LE_REMOVE_DEVICE_FROM_PERIODIC_ADVERTISER_LIST, excluded, c21);
   check_command_(LE_REMOVE_DEVICE_FROM_RESOLVING_LIST, excluded, c9);
   // Table 3.1: Alphabetical list of commands and events (Sheet 19 of 49)
   check_command_(LE_REMOVE_ISO_DATA_PATH, excluded, c47);
@@ -1765,7 +1764,7 @@ bool ControllerProperties::CheckSupportedCommands() const {
   check_command_(LE_SET_PATH_LOSS_REPORTING_PARAMETERS, excluded, c52);
   check_command_(LE_SET_PERIODIC_ADVERTISING_DATA, excluded, c18);
   check_command_(LE_SET_PERIODIC_ADVERTISING_ENABLE, excluded, c18);
-  check_command_(LE_SET_PERIODIC_ADVERTISING_PARAM, excluded, c18);
+  check_command_(LE_SET_PERIODIC_ADVERTISING_PARAMETERS, excluded, c18);
   // Table 3.1: Alphabetical list of commands and events (Sheet 23 of 49)
   check_command_(LE_SET_PERIODIC_ADVERTISING_RECEIVE_ENABLE, excluded, c32);
   check_command_(LE_SET_PERIODIC_ADVERTISING_SYNC_TRANSFER_PARAMETERS, excluded,
