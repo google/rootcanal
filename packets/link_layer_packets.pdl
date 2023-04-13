@@ -1,7 +1,6 @@
 little_endian_packets
 
 custom_field Address : 48 "hci/"
-custom_field ClassOfDevice : 24 "hci/"
 
 enum PacketType : 8 {
     UNKNOWN = 0x00,
@@ -110,7 +109,7 @@ packet Inquiry : LinkLayerPacket (type = INQUIRY) {
 packet BasicInquiryResponse : LinkLayerPacket(type = INQUIRY_RESPONSE) {
   inquiry_type : InquiryType,
   page_scan_repetition_mode : 8,
-  class_of_device : ClassOfDevice,
+  class_of_device : 24,
   clock_offset : 15,
   _reserved_ : 1,
   _body_,
@@ -213,7 +212,7 @@ packet LeScanResponse : LinkLayerPacket (type = LE_SCAN_RESPONSE) {
 }
 
 packet Page : LinkLayerPacket (type = PAGE) {
-  class_of_device : ClassOfDevice,
+  class_of_device : 24,
   allow_role_switch : 8,
 }
 
@@ -323,7 +322,7 @@ packet ScoConnectionRequest : LinkLayerPacket (type = SCO_CONNECTION_REQUEST) {
   _reserved_ : 6,
   retransmission_effort : 8,
   packet_type : 16,
-  class_of_device : ClassOfDevice,
+  class_of_device : 24,
 }
 
 packet ScoConnectionResponse : LinkLayerPacket (type = SCO_CONNECTION_RESPONSE) {

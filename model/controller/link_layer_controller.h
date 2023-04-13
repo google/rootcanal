@@ -36,7 +36,6 @@ namespace rootcanal {
 using ::bluetooth::hci::Address;
 using ::bluetooth::hci::AddressType;
 using ::bluetooth::hci::AuthenticationEnable;
-using ::bluetooth::hci::ClassOfDevice;
 using ::bluetooth::hci::ErrorCode;
 using ::bluetooth::hci::FilterAcceptListAddressType;
 using ::bluetooth::hci::OpCode;
@@ -714,7 +713,7 @@ class LinkLayerController {
   }
 
   uint16_t GetVoiceSetting() const { return voice_setting_; }
-  const ClassOfDevice& GetClassOfDevice() const { return class_of_device_; }
+  uint32_t GetClassOfDevice() const { return class_of_device_; }
 
   uint8_t GetMaxLmpFeaturesPageNumber() {
     return properties_.lmp_features.size() - 1;
@@ -733,14 +732,8 @@ class LinkLayerController {
   void SetExtendedInquiryResponse(
       std::vector<uint8_t> const& extended_inquiry_response);
 
-  void SetClassOfDevice(ClassOfDevice class_of_device) {
-    class_of_device_ = class_of_device;
-  }
-
   void SetClassOfDevice(uint32_t class_of_device) {
-    class_of_device_.cod[0] = class_of_device & UINT8_MAX;
-    class_of_device_.cod[1] = (class_of_device >> 8) & UINT8_MAX;
-    class_of_device_.cod[2] = (class_of_device >> 16) & UINT8_MAX;
+    class_of_device_ = class_of_device;
   }
 
   void SetAuthenticationEnable(AuthenticationEnable enable) {
@@ -869,7 +862,7 @@ class LinkLayerController {
       extended_inquiry_response_{};
 
   // Class of Device (Vol 4, Part E § 6.26).
-  ClassOfDevice class_of_device_{{0, 0, 0}};
+  uint32_t class_of_device_{0};
 
   // Other configuration parameters.
 

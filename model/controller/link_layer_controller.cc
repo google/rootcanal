@@ -5931,7 +5931,7 @@ void LinkLayerController::Reset() {
   sco_flow_control_enable_ = false;
   local_name_.fill(0);
   extended_inquiry_response_.fill(0);
-  class_of_device_ = ClassOfDevice({0, 0, 0});
+  class_of_device_ = 0;
   min_encryption_key_size_ = 16;
   event_mask_ = 0x00001fffffffffff;
   event_mask_page_2_ = 0x0;

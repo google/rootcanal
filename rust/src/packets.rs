@@ -40,18 +40,6 @@ pub mod hci {
         }
     }
 
-    impl fmt::Display for ClassOfDevice {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "{:03X}-{:01X}-{:02X}",
-                (self.0 >> 12) & 0xfff,
-                (self.0 >> 8) & 0xf,
-                self.0 & 0xff,
-            )
-        }
-    }
-
     pub fn command_remote_device_address(command: &Command) -> Option<Address> {
         use CommandChild::*;
         #[allow(unused_imports)]
