@@ -76,7 +76,9 @@ packet LinkLayerPacket {
 }
 
 packet Acl : LinkLayerPacket (type = ACL) {
-  _payload_,
+  packet_boundary_flag : 8,
+  broadcast_flag : 8,
+  data: 8[],
 }
 
 packet Disconnect : LinkLayerPacket (type = DISCONNECT) {
