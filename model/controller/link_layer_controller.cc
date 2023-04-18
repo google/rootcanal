@@ -17,6 +17,8 @@
 #include "link_layer_controller.h"
 
 #include <hci/hci_packets.h>
+
+#include <algorithm>
 #ifdef ROOTCANAL_LMP
 #include <lmp.h>
 #endif /* ROOTCANAL_LMP */
@@ -44,8 +46,6 @@ using TaskId = rootcanal::LinkLayerController::TaskId;
 #define LOG_VERB(...) LOG_INFO(__VA_ARGS__)
 
 namespace rootcanal {
-
-constexpr uint16_t kNumCommandPackets = 0x01;
 
 constexpr milliseconds kNoDelayMs(0);
 
@@ -1978,33 +1978,12 @@ ErrorCode LinkLayerController::SendAclToRemote(
   AddressWithType destination = connections_.GetAddress(handle);
   Phy::Type phy = connections_.GetPhyType(handle);
 
-  ScheduleTask(kNoDelayMs, [this, handle]() {
-    std::vector<bluetooth::hci::CompletedPackets> completed_packets;
-    bluetooth::hci::CompletedPackets cp;
-    cp.connection_handle_ = handle;
-    cp.host_num_of_completed_packets_ = kNumCommandPackets;
-    completed_packets.push_back(cp);
-    send_event_(bluetooth::hci::NumberOfCompletedPacketsBuilder::Create(
-        completed_packets));
-  });
-
-  auto acl_payload = acl_packet.GetPayload();
-
-  std::unique_ptr<bluetooth::packet::RawBuilder> raw_builder_ptr =
-      std::make_unique<bluetooth::packet::RawBuilder>();
-  std::vector<uint8_t> payload_bytes(acl_payload.begin(), acl_payload.end());
-
-  uint16_t first_two_bytes =
-      static_cast<uint16_t>(acl_packet.GetHandle()) +
-      (static_cast<uint16_t>(acl_packet.GetPacketBoundaryFlag()) << 12) +
-      (static_cast<uint16_t>(acl_packet.GetBroadcastFlag()) << 14);
-  raw_builder_ptr->AddOctets2(first_two_bytes);
-  raw_builder_ptr->AddOctets2(static_cast<uint16_t>(payload_bytes.size()));
-  raw_builder_ptr->AddOctets(payload_bytes);
-
-  auto acl = model::packets::AclBuilder::Create(my_address.GetAddress(),
-                                                destination.GetAddress(),
-                                                std::move(raw_builder_ptr));
+  auto acl_packet_payload = acl_packet.GetPayload();
+  auto acl = model::packets::AclBuilder::Create(
+      my_address.GetAddress(), destination.GetAddress(),
+      static_cast<uint8_t>(acl_packet.GetPacketBoundaryFlag()),
+      static_cast<uint8_t>(acl_packet.GetBroadcastFlag()),
+      std::vector(acl_packet_payload.begin(), acl_packet_payload.end()));
 
   switch (phy) {
     case Phy::Type::BR_EDR:
@@ -2014,6 +1993,11 @@ ErrorCode LinkLayerController::SendAclToRemote(
       SendLeLinkLayerPacket(std::move(acl));
       break;
   }
+
+  ScheduleTask(kNoDelayMs, [this, handle]() {
+    send_event_(bluetooth::hci::NumberOfCompletedPacketsBuilder::Create(
+        {bluetooth::hci::CompletedPackets(handle, 1)}));
+  });
   return ErrorCode::SUCCESS;
 }
 
@@ -2274,57 +2258,51 @@ void LinkLayerController::IncomingAclPacket(
     model::packets::LinkLayerPacketView incoming, int8_t rssi) {
   auto acl = model::packets::AclView::Create(incoming);
   ASSERT(acl.IsValid());
-  auto payload = acl.GetPayload();
-  std::shared_ptr<std::vector<uint8_t>> payload_bytes =
-      std::make_shared<std::vector<uint8_t>>(payload.begin(), payload.end());
 
-  LOG_INFO("Acl Packet [%d] %s -> %s", static_cast<int>(payload_bytes->size()),
+  auto acl_data = acl.GetData();
+  auto packet_boundary_flag =
+      bluetooth::hci::PacketBoundaryFlag(acl.GetPacketBoundaryFlag());
+  auto broadcast_flag = bluetooth::hci::BroadcastFlag(acl.GetBroadcastFlag());
+
+  if (packet_boundary_flag ==
+      bluetooth::hci::PacketBoundaryFlag::FIRST_NON_AUTOMATICALLY_FLUSHABLE) {
+    packet_boundary_flag =
+        bluetooth::hci::PacketBoundaryFlag::FIRST_AUTOMATICALLY_FLUSHABLE;
+  }
+
+  LOG_INFO("Acl Packet [%zu] %s -> %s", acl_data.size(),
            incoming.GetSourceAddress().ToString().c_str(),
            incoming.GetDestinationAddress().ToString().c_str());
 
-  bluetooth::hci::PacketView<bluetooth::hci::kLittleEndian> raw_packet(
-      payload_bytes);
-  auto acl_view = bluetooth::hci::AclView::Create(raw_packet);
-  ASSERT(acl_view.IsValid());
-
-  uint16_t local_handle =
+  uint16_t connection_handle =
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
-
-  if (local_handle == kReservedHandle) {
-      LOG_INFO("Dropping packet since connection does not exist");
-      return;
+  if (connection_handle == kReservedHandle) {
+    LOG_INFO("Dropping packet since connection does not exist");
+    return;
   }
 
   // Update the RSSI for the local ACL connection.
-  connections_.SetRssi(local_handle, rssi);
+  connections_.SetRssi(connection_handle, rssi);
 
-  std::vector<uint8_t> payload_data(acl_view.GetPayload().begin(),
-                                    acl_view.GetPayload().end());
-  uint16_t acl_buffer_size = properties_.acl_data_packet_length;
-  int num_packets =
-      (payload_data.size() + acl_buffer_size - 1) / acl_buffer_size;
+  // Send the packet to the host segmented according to the
+  // controller ACL data packet length.
+  size_t acl_buffer_size = properties_.acl_data_packet_length;
+  size_t offset = 0;
 
-  auto pb_flag_controller_to_host = acl_view.GetPacketBoundaryFlag();
-  if (pb_flag_controller_to_host ==
-      bluetooth::hci::PacketBoundaryFlag::FIRST_NON_AUTOMATICALLY_FLUSHABLE) {
-    pb_flag_controller_to_host =
-        bluetooth::hci::PacketBoundaryFlag::FIRST_AUTOMATICALLY_FLUSHABLE;
-  }
-  for (int i = 0; i < num_packets; i++) {
-    size_t start_index = acl_buffer_size * i;
-    size_t end_index =
-        std::min(start_index + acl_buffer_size, payload_data.size());
-    std::vector<uint8_t> fragment(payload_data.begin() + start_index,
-                                  payload_data.begin() + end_index);
-    std::unique_ptr<bluetooth::packet::RawBuilder> raw_builder_ptr =
-        std::make_unique<bluetooth::packet::RawBuilder>(fragment);
+  while (offset < acl_data.size()) {
+    size_t fragment_size = std::min(acl_buffer_size, acl_data.size() - offset);
+    std::vector<uint8_t> fragment(acl_data.begin() + offset,
+                                  acl_data.begin() + offset + fragment_size);
+
     auto acl_packet = bluetooth::hci::AclBuilder::Create(
-        local_handle, pb_flag_controller_to_host, acl_view.GetBroadcastFlag(),
-        std::move(raw_builder_ptr));
-    pb_flag_controller_to_host =
-        bluetooth::hci::PacketBoundaryFlag::CONTINUING_FRAGMENT;
+        connection_handle, packet_boundary_flag, broadcast_flag,
+        std::make_unique<bluetooth::packet::RawBuilder>(std::move(fragment)));
 
     send_acl_(std::move(acl_packet));
+
+    packet_boundary_flag =
+        bluetooth::hci::PacketBoundaryFlag::CONTINUING_FRAGMENT;
+    offset += fragment_size;
   }
 }
 
@@ -2925,16 +2903,16 @@ void LinkLayerController::HandleIso(bluetooth::hci::IsoView iso) {
       auto timestamped = bluetooth::hci::IsoWithTimestampView::Create(iso);
       ASSERT(timestamped.IsValid());
       uint32_t timestamp = timestamped.GetTimeStamp();
-      std::unique_ptr<bluetooth::packet::RawBuilder> payload =
-          std::make_unique<bluetooth::packet::RawBuilder>();
+      std::vector<uint8_t> payload;
       for (const auto it : timestamped.GetPayload()) {
-        payload->AddOctets1(it);
+        payload.push_back(it);
       }
 
       SendLeLinkLayerPacket(model::packets::IsoStartBuilder::Create(
           connections_.GetOwnAddress(acl_handle).GetAddress(),
           connections_.GetAddress(acl_handle).GetAddress(), remote_handle,
-          complete_flag, timestamp, std::move(payload)));
+          complete_flag, timestamp,
+          std::make_unique<bluetooth::packet::RawBuilder>(std::move(payload))));
     } else {
       auto pkt = bluetooth::hci::IsoWithoutTimestampView::Create(iso);
       ASSERT(pkt.IsValid());
@@ -2951,9 +2929,8 @@ void LinkLayerController::HandleIso(bluetooth::hci::IsoView iso) {
   } else {
     auto pkt = bluetooth::hci::IsoWithoutTimestampView::Create(iso);
     ASSERT(pkt.IsValid());
-    std::unique_ptr<bluetooth::packet::RawBuilder> payload =
-        std::make_unique<bluetooth::packet::RawBuilder>(std::vector<uint8_t>(
-            pkt.GetPayload().begin(), pkt.GetPayload().end()));
+    auto payload = std::make_unique<bluetooth::packet::RawBuilder>(
+        std::vector<uint8_t>(pkt.GetPayload().begin(), pkt.GetPayload().end()));
     SendLeLinkLayerPacket(model::packets::IsoContinuationBuilder::Create(
         connections_.GetOwnAddress(acl_handle).GetAddress(),
         connections_.GetAddress(acl_handle).GetAddress(), remote_handle,
