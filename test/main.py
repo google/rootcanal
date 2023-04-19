@@ -21,15 +21,16 @@ tests = [
     'LL.DDI.ADV.BV_17_C',
     'LL.DDI.ADV.BV_18_C',
     'LL.DDI.ADV.BV_19_C',
-    # TODO: Implement HCI command Le Set Default Phy
-    # 'LL.DDI.ADV.BV_20_C',
+    'LL.DDI.ADV.BV_20_C',
     'LL.DDI.ADV.BV_21_C',
     'LL.DDI.ADV.BV_22_C',
+    'LL.DDI.ADV.BV_26_C',
     'LL.DDI.ADV.BV_47_C',
     'LL.DDI.SCN.BV_13_C',
     'LL.DDI.SCN.BV_14_C',
     'LL.DDI.SCN.BV_18_C',
     'LL.DDI.SCN.BV_19_C',
+    'LL.DDI.SCN.BV_79_C',
 ]
 
 if __name__ == "__main__":

@@ -38,6 +38,7 @@ class LeFeatures:
         self.mask = le_features
         self.ll_privacy = (le_features & hci.LLFeaturesBits.LL_PRIVACY) != 0
         self.le_extended_advertising = (le_features & hci.LLFeaturesBits.LE_EXTENDED_ADVERTISING) != 0
+        self.le_periodic_advertising = (le_features & hci.LLFeaturesBits.LE_PERIODIC_ADVERTISING) != 0
 
 
 def generate_rpa(irk: bytes) -> hci.Address:
@@ -223,24 +224,33 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
         assert evt.num_hci_command_packets == 1
         return evt
 
-    async def expect_ll(self, expected_pdu: typing.Union[ll.LinkLayerPacket, type], timeout: int = 3):
+    async def expect_ll(self,
+                        expected_pdus: typing.Union[list, typing.Union[ll.LinkLayerPacket, type]],
+                        timeout: int = 3) -> int:
+        if not isinstance(expected_pdus, list):
+            expected_pdus = [expected_pdus]
+
         packet = await asyncio.wait_for(self.controller.receive_ll(), timeout=timeout)
         pdu = ll.LinkLayerPacket.parse_all(packet)
 
-        if isinstance(expected_pdu, type) and not isinstance(pdu, expected_pdu):
-            print("received pdu of unexpected type")
-            print(f"expected pdu: {expected_pdu.__name__}")
-            print("received pdu:")
-            pdu.show()
-            self.assertTrue(False)
+        matched_index = -1
+        for (index, expected_pdu) in enumerate(expected_pdus):
+            if isinstance(expected_pdu, type) and isinstance(pdu, expected_pdu):
+                return index
+            if isinstance(expected_pdu, ll.LinkLayerPacket) and pdu == expected_pdu:
+                return index
 
-        if isinstance(expected_pdu, ll.LinkLayerPacket) and pdu != expected_pdu:
-            print("received unexpected pdu")
-            print("expected pdu:")
-            expected_pdu.show()
-            print("received pdu:")
-            pdu.show()
-            self.assertTrue(False)
+        print("received unexpected pdu:")
+        pdu.show()
+        print("expected pdus:")
+        for expected_pdu in expected_pdus:
+            if isinstance(expected_pdu, type):
+                print(f"- {expected_pdu.__name__}")
+            if isinstance(expected_pdu, ll.LinkLayerPacket):
+                print(f"- {expected_pdu.__class__.__name__}")
+                expected_pdu.show()
+
+        self.assertTrue(False)
 
     def tearDown(self):
         self.controller.stop()
