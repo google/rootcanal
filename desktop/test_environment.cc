@@ -61,14 +61,16 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
       });
 
   SetUpTestChannel();
-  SetUpHciServer([this](std::shared_ptr<AsyncDataChannel> socket,
+  SetUpHciServer([this, user_id](std::shared_ptr<AsyncDataChannel> socket,
                         AsyncDataChannelServer* srv) {
     auto transport = HciSocketTransport::Create(socket);
     if (enable_hci_sniffer_) {
       transport = HciSniffer::Create(transport);
     }
     auto device = HciDevice::Create(transport, controller_properties_file_);
-    test_model_.AddHciConnection(device);
+    async_manager_.ExecAsync(user_id, std::chrono::milliseconds(0), [=]() {
+      test_model_.AddHciConnection(device);
+    });
     if (enable_hci_sniffer_) {
       auto filename = device->GetAddress().ToString() + ".pcap";
       for (auto i = 0; std::filesystem::exists(filename); i++) {
