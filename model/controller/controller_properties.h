@@ -68,6 +68,9 @@ struct ControllerProperties {
   // Local Supported Commands (Vol 4, Part E § 7.4.2).
   std::array<uint8_t, 64> supported_commands;
 
+  // Vendor Supported Commands.
+  bool supports_le_get_vendor_capabilities_command{true};
+
   // Local Supported Features (Vol 4, Part E § 7.4.3) and
   // Local Extended Features (Vol 4, Part E § 7.4.3).
   std::array<uint64_t, 3> lmp_features;
