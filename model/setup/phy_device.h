@@ -32,6 +32,7 @@ class PhyDevice {
   using Identifier = uint32_t;
 
   PhyDevice(Identifier id, std::string type, std::shared_ptr<Device> device);
+  PhyDevice(PhyDevice &&) = delete;
   ~PhyDevice() = default;
 
   void Register(PhyLayer* phy);
