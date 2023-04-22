@@ -26,7 +26,7 @@ struct Link {
     // Only store one HCI packet as our Num_HCI_Command_Packets
     // is always 1
     hci: Cell<Option<hci::CommandPacket>>,
-    lmp: RefCell<VecDeque<lmp::PacketPacket>>,
+    lmp: RefCell<VecDeque<lmp::LmpPacket>>,
 }
 
 impl Default for Link {
@@ -40,7 +40,7 @@ impl Default for Link {
 }
 
 impl Link {
-    fn ingest_lmp(&self, packet: lmp::PacketPacket) {
+    fn ingest_lmp(&self, packet: lmp::LmpPacket) {
         self.lmp.borrow_mut().push_back(packet);
     }
 
@@ -59,7 +59,7 @@ impl Link {
         }
     }
 
-    fn poll_lmp_packet<P: TryFrom<lmp::PacketPacket>>(&self) -> Poll<P> {
+    fn poll_lmp_packet<P: TryFrom<lmp::LmpPacket>>(&self) -> Poll<P> {
         let mut queue = self.lmp.borrow_mut();
         let packet = queue.front().and_then(|packet| packet.clone().try_into().ok());
 
@@ -109,7 +109,7 @@ impl LinkManager {
     pub fn ingest_lmp(
         &self,
         from: hci::Address,
-        packet: lmp::PacketPacket,
+        packet: lmp::LmpPacket,
     ) -> Result<(), LinkManagerError> {
         if let Some(link) = self.get_link(from) {
             link.ingest_lmp(packet);
@@ -318,7 +318,7 @@ impl procedure::Context for LinkContext {
         }
     }
 
-    fn poll_lmp_packet<P: TryFrom<lmp::PacketPacket>>(&self) -> Poll<P> {
+    fn poll_lmp_packet<P: TryFrom<lmp::LmpPacket>>(&self) -> Poll<P> {
         if let Some(manager) = self.manager.upgrade() {
             manager.link(self.index).poll_lmp_packet()
         } else {
@@ -332,7 +332,7 @@ impl procedure::Context for LinkContext {
         }
     }
 
-    fn send_lmp_packet<P: Into<lmp::PacketPacket>>(&self, packet: P) {
+    fn send_lmp_packet<P: Into<lmp::LmpPacket>>(&self, packet: P) {
         if let Some(manager) = self.manager.upgrade() {
             manager.ops.send_lmp_packet(self.peer_address(), &packet.into().to_vec())
         }

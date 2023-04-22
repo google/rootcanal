@@ -14,8 +14,8 @@ use crate::procedure::Context;
 
 #[derive(Default)]
 pub struct TestContext {
-    pub in_lmp_packets: RefCell<VecDeque<lmp::PacketPacket>>,
-    pub out_lmp_packets: RefCell<VecDeque<lmp::PacketPacket>>,
+    pub in_lmp_packets: RefCell<VecDeque<lmp::LmpPacket>>,
+    pub out_lmp_packets: RefCell<VecDeque<lmp::LmpPacket>>,
     pub hci_events: RefCell<VecDeque<hci::EventPacket>>,
     pub hci_commands: RefCell<VecDeque<hci::CommandPacket>>,
     private_key: RefCell<Option<PrivateKey>>,
@@ -64,7 +64,7 @@ impl Context for TestContext {
         }
     }
 
-    fn poll_lmp_packet<P: TryFrom<lmp::PacketPacket>>(&self) -> Poll<P> {
+    fn poll_lmp_packet<P: TryFrom<lmp::LmpPacket>>(&self) -> Poll<P> {
         let packet =
             self.in_lmp_packets.borrow().front().and_then(|packet| packet.clone().try_into().ok());
 
@@ -80,7 +80,7 @@ impl Context for TestContext {
         self.hci_events.borrow_mut().push_back(event.into());
     }
 
-    fn send_lmp_packet<P: Into<lmp::PacketPacket>>(&self, packet: P) {
+    fn send_lmp_packet<P: Into<lmp::LmpPacket>>(&self, packet: P) {
         self.out_lmp_packets.borrow_mut().push_back(packet.into());
     }
 

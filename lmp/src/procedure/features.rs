@@ -17,12 +17,12 @@ pub async fn initiate(ctx: &impl Context, features_page: u8) -> u64 {
     );
 
     u64::from_le_bytes(
-        *ctx.receive_lmp_packet::<lmp::FeaturesResExtPacket>().await.get_extended_features(),
+        *ctx.receive_lmp_packet::<lmp::FeaturesResExt>().await.get_extended_features(),
     )
 }
 
 pub async fn respond(ctx: &impl Context) {
-    let req = ctx.receive_lmp_packet::<lmp::FeaturesReqExtPacket>().await;
+    let req = ctx.receive_lmp_packet::<lmp::FeaturesReqExt>().await;
     let features_page = req.get_features_page();
 
     ctx.send_lmp_packet(

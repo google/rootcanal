@@ -156,7 +156,7 @@ pub unsafe extern "C" fn link_manager_ingest_lmp(
     let lm = ManuallyDrop::new(Rc::from_raw(lm));
     let data = slice::from_raw_parts(data, len);
 
-    if let Ok(packet) = lmp::PacketPacket::parse(data) {
+    if let Ok(packet) = lmp::LmpPacket::parse(data) {
         lm.ingest_lmp(hci::Address { bytes: *from }, packet).is_ok()
     } else {
         false

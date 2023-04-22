@@ -59,13 +59,13 @@ pub async fn initiate(ctx: &impl Context) {
 
 pub async fn respond(ctx: &impl Context) {
     // TODO: handle
-    let _ = ctx.receive_lmp_packet::<lmp::EncryptionModeReqPacket>().await;
+    let _ = ctx.receive_lmp_packet::<lmp::EncryptionModeReq>().await;
     ctx.send_lmp_packet(
         lmp::AcceptedBuilder { transaction_id: 0, accepted_opcode: lmp::Opcode::EncryptionModeReq }
             .build(),
     );
 
-    let _ = ctx.receive_lmp_packet::<lmp::EncryptionKeySizeReqPacket>().await;
+    let _ = ctx.receive_lmp_packet::<lmp::EncryptionKeySizeReq>().await;
     ctx.send_lmp_packet(
         lmp::AcceptedBuilder {
             transaction_id: 0,
@@ -74,7 +74,7 @@ pub async fn respond(ctx: &impl Context) {
         .build(),
     );
 
-    let _ = ctx.receive_lmp_packet::<lmp::StartEncryptionReqPacket>().await;
+    let _ = ctx.receive_lmp_packet::<lmp::StartEncryptionReq>().await;
     ctx.send_lmp_packet(
         lmp::AcceptedBuilder {
             transaction_id: 0,

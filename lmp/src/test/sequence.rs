@@ -64,7 +64,7 @@ macro_rules! sequence_body {
             use crate::packets::lmp::*;
 
             paste! {
-                let packet: [<$packet Packet>] = $ctx.0.out_lmp_packets.borrow_mut().pop_front().expect("No lmp packet").try_into().unwrap();
+                let packet: $packet = $ctx.0.out_lmp_packets.borrow_mut().pop_front().expect("No lmp packet").try_into().unwrap();
             }
 
             $(

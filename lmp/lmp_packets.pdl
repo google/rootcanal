@@ -95,23 +95,23 @@ enum ExtendedOpcode : 8 {
   SAM_SWITCH = 37,
 }
 
-packet Packet {
+packet LmpPacket {
   transaction_id: 1,
   opcode: Opcode,
   _payload_,
 }
 
-packet ExtendedPacket : Packet(opcode = ESCAPED) {
+packet ExtendedPacket : LmpPacket(opcode = ESCAPED) {
   extended_opcode: ExtendedOpcode,
   _payload_,
 }
 
-packet Accepted : Packet(opcode = ACCEPTED) {
+packet Accepted : LmpPacket(opcode = ACCEPTED) {
   accepted_opcode: Opcode,
   _fixed_ = 0 : 1,
 }
 
-packet NotAccepted : Packet(opcode = NOT_ACCEPTED) {
+packet NotAccepted : LmpPacket(opcode = NOT_ACCEPTED) {
   not_accepted_opcode: Opcode,
   _fixed_ = 0 : 1,
   error_code: 8,
@@ -138,33 +138,33 @@ packet IoCapabilityRes : ExtendedPacket(extended_opcode = IO_CAPABILITY_RES) {
   authentication_requirement: 8,
 }
 
-packet EncapsulatedHeader : Packet(opcode = ENCAPSULATED_HEADER) {
+packet EncapsulatedHeader : LmpPacket(opcode = ENCAPSULATED_HEADER) {
   major_type: 8,
   minor_type: 8,
   payload_length: 8,
 }
 
-packet EncapsulatedPayload : Packet(opcode = ENCAPSULATED_PAYLOAD) {
+packet EncapsulatedPayload : LmpPacket(opcode = ENCAPSULATED_PAYLOAD) {
   data: 8[16],
 }
 
-packet SimplePairingConfirm : Packet(opcode = SIMPLE_PAIRING_CONFIRM) {
+packet SimplePairingConfirm : LmpPacket(opcode = SIMPLE_PAIRING_CONFIRM) {
   commitment_value: 8[16],
 }
 
-packet SimplePairingNumber : Packet(opcode = SIMPLE_PAIRING_NUMBER) {
+packet SimplePairingNumber : LmpPacket(opcode = SIMPLE_PAIRING_NUMBER) {
   nonce: 8[16],
 }
 
-packet DhkeyCheck : Packet(opcode = DHKEY_CHECK) {
+packet DhkeyCheck : LmpPacket(opcode = DHKEY_CHECK) {
   confirmation_value: 8[16],
 }
 
-packet AuRand : Packet(opcode = AU_RAND) {
+packet AuRand : LmpPacket(opcode = AU_RAND) {
   random_number: 8[16],
 }
 
-packet Sres : Packet(opcode = SRES) {
+packet Sres : LmpPacket(opcode = SRES) {
   authentication_rsp: 8[4],
 }
 
@@ -176,27 +176,27 @@ packet KeypressNotification: ExtendedPacket(extended_opcode = KEYPRESS_NOTIFICAT
   notification_type: 8,
 }
 
-packet InRand : Packet(opcode = IN_RAND) {
+packet InRand : LmpPacket(opcode = IN_RAND) {
   random_number: 8[16],
 }
 
-packet CombKey : Packet(opcode = COMB_KEY) {
+packet CombKey : LmpPacket(opcode = COMB_KEY) {
   random_number: 8[16],
 }
 
-packet EncryptionModeReq : Packet(opcode = ENCRYPTION_MODE_REQ) {
+packet EncryptionModeReq : LmpPacket(opcode = ENCRYPTION_MODE_REQ) {
   encryption_mode: 8,
 }
 
-packet EncryptionKeySizeReq : Packet(opcode = ENCRYPTION_KEY_SIZE_REQ) {
+packet EncryptionKeySizeReq : LmpPacket(opcode = ENCRYPTION_KEY_SIZE_REQ) {
   key_size: 8,
 }
 
-packet StartEncryptionReq : Packet(opcode = START_ENCRYPTION_REQ) {
+packet StartEncryptionReq : LmpPacket(opcode = START_ENCRYPTION_REQ) {
   random_number: 8[16]
 }
 
-packet StopEncryptionReq : Packet(opcode = STOP_ENCRYPTION_REQ) {}
+packet StopEncryptionReq : LmpPacket(opcode = STOP_ENCRYPTION_REQ) {}
 
 packet FeaturesReqExt : ExtendedPacket(extended_opcode = FEATURES_REQ) {
   features_page: 8,

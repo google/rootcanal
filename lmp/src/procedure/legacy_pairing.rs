@@ -28,7 +28,7 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
 
     ctx.send_lmp_packet(lmp::CombKeyBuilder { transaction_id: 0, random_number: [0; 16] }.build());
 
-    let _ = ctx.receive_lmp_packet::<lmp::CombKeyPacket>().await;
+    let _ = ctx.receive_lmp_packet::<lmp::CombKey>().await;
 
     // Post pairing authentication
     let link_key = [0; 16];
@@ -50,7 +50,7 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     Ok(())
 }
 
-pub async fn respond(ctx: &impl Context, _request: lmp::InRandPacket) -> Result<(), ()> {
+pub async fn respond(ctx: &impl Context, _request: lmp::InRand) -> Result<(), ()> {
     ctx.send_hci_event(hci::PinCodeRequestBuilder { bd_addr: ctx.peer_address() }.build());
 
     let _pin_code = ctx.receive_hci_command::<hci::PinCodeRequestReplyPacket>().await;
@@ -68,7 +68,7 @@ pub async fn respond(ctx: &impl Context, _request: lmp::InRandPacket) -> Result<
         lmp::AcceptedBuilder { transaction_id: 0, accepted_opcode: lmp::Opcode::InRand }.build(),
     );
 
-    let _ = ctx.receive_lmp_packet::<lmp::CombKeyPacket>().await;
+    let _ = ctx.receive_lmp_packet::<lmp::CombKey>().await;
 
     ctx.send_lmp_packet(lmp::CombKeyBuilder { transaction_id: 0, random_number: [0; 16] }.build());
 

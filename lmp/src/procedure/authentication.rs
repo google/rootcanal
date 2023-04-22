@@ -16,14 +16,14 @@ pub async fn send_challenge(
     let random_number = [0; 16];
     ctx.send_lmp_packet(lmp::AuRandBuilder { transaction_id, random_number }.build());
 
-    match ctx.receive_lmp_packet::<Either<lmp::SresPacket, lmp::NotAcceptedPacket>>().await {
+    match ctx.receive_lmp_packet::<Either<lmp::Sres, lmp::NotAccepted>>().await {
         Either::Left(_response) => Ok(()),
         Either::Right(_) => Err(()),
     }
 }
 
 pub async fn receive_challenge(ctx: &impl Context, _link_key: [u8; 16]) {
-    let _random_number = *ctx.receive_lmp_packet::<lmp::AuRandPacket>().await.get_random_number();
+    let _random_number = *ctx.receive_lmp_packet::<lmp::AuRand>().await.get_random_number();
     ctx.send_lmp_packet(lmp::SresBuilder { transaction_id: 0, authentication_rsp: [0; 4] }.build());
 }
 
@@ -83,23 +83,23 @@ pub async fn initiate(ctx: &impl Context) {
 }
 
 pub async fn respond(ctx: &impl Context) {
-    match ctx.receive_lmp_packet::<Either<
-        lmp::AuRandPacket,
-        Either<lmp::IoCapabilityReqPacket, lmp::InRandPacket>
-    >>()
-    .await
+    match ctx
+        .receive_lmp_packet::<Either<lmp::AuRand, Either<lmp::IoCapabilityReq, lmp::InRand>>>()
+        .await
     {
         Either::Left(_random_number) => {
             // TODO: Resolve authentication challenge
             // TODO: Ask for link key
-            ctx.send_lmp_packet(lmp::SresBuilder { transaction_id: 0, authentication_rsp: [0; 4] }.build());
-        },
+            ctx.send_lmp_packet(
+                lmp::SresBuilder { transaction_id: 0, authentication_rsp: [0; 4] }.build(),
+            );
+        }
         Either::Right(pairing) => {
             let _result = match pairing {
-                Either::Left(io_capability_request) =>
-                    secure_simple_pairing::respond(ctx, io_capability_request).await,
-                Either::Right(in_rand) =>
-                    legacy_pairing::respond(ctx, in_rand).await,
+                Either::Left(io_capability_request) => {
+                    secure_simple_pairing::respond(ctx, io_capability_request).await
+                }
+                Either::Right(in_rand) => legacy_pairing::respond(ctx, in_rand).await,
             };
         }
     }
