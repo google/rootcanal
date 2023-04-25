@@ -48,24 +48,22 @@ using ::bluetooth::hci::CommandView;
 // corresponding Bluetooth command in the Core Specification with the prefix
 // "Hci" to distinguish it as a controller command.
 class DualModeController : public Device {
-  static constexpr uint16_t kSecurityManagerNumKeys = 15;
-
  public:
-  // Sets all of the methods to be used as callbacks in the HciHandler.
-  DualModeController(const std::string& properties_filename = "",
-                     uint16_t num_keys = kSecurityManagerNumKeys);
-
+  DualModeController(const std::string& properties_filename = "");
+  DualModeController(DualModeController&&) = delete;
+  DualModeController(const DualModeController&) = delete;
   ~DualModeController() = default;
 
+  DualModeController& operator=(const DualModeController&) = delete;
+
   // Device methods.
-  virtual std::string GetTypeString() const override;
+  std::string GetTypeString() const override;
 
-  virtual void ReceiveLinkLayerPacket(
-      model::packets::LinkLayerPacketView incoming, Phy::Type type,
-      int8_t rssi) override;
+  void ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView incoming,
+                              Phy::Type type, int8_t rssi) override;
 
-  virtual void Tick() override;
-  virtual void Close() override;
+  void Tick() override;
+  void Close() override;
 
   // Route commands and data from the stack.
   void HandleAcl(std::shared_ptr<std::vector<uint8_t>> acl_packet);
@@ -120,26 +118,8 @@ class DualModeController : public Device {
   // 7.1.9
   void RejectConnectionRequest(CommandView command);
 
-  // 7.1.10
-  void LinkKeyRequestReply(CommandView command);
-
-  // 7.1.11
-  void LinkKeyRequestNegativeReply(CommandView command);
-
-  // 7.1.12
-  void PinCodeRequestReply(CommandView command);
-
-  // 7.1.13
-  void PinCodeRequestNegativeReply(CommandView command);
-
   // 7.1.14
   void ChangeConnectionPacketType(CommandView command);
-
-  // 7.1.15
-  void AuthenticationRequested(CommandView command);
-
-  // 7.1.16
-  void SetConnectionEncryption(CommandView command);
 
   // 7.1.17
   void ChangeConnectionLinkKey(CommandView command);
@@ -174,38 +154,11 @@ class DualModeController : public Device {
   // 7.1.28
   void RejectSynchronousConnection(CommandView command);
 
-  // 7.1.29
-  void IoCapabilityRequestReply(CommandView command);
-
-  // 7.1.30
-  void UserConfirmationRequestReply(CommandView command);
-
-  // 7.1.31
-  void UserConfirmationRequestNegativeReply(CommandView command);
-
-  // 7.1.32
-  void UserPasskeyRequestReply(CommandView command);
-
-  // 7.1.33
-  void UserPasskeyRequestNegativeReply(CommandView command);
-
-  // 7.1.34
-  void RemoteOobDataRequestReply(CommandView command);
-
-  // 7.1.35
-  void RemoteOobDataRequestNegativeReply(CommandView command);
-
-  // 7.1.36
-  void IoCapabilityRequestNegativeReply(CommandView command);
-
   // 7.1.45
   void EnhancedSetupSynchronousConnection(CommandView command);
 
   // 7.1.46
   void EnhancedAcceptSynchronousConnection(CommandView command);
-
-  // 7.1.53
-  void RemoteOobExtendedDataRequestReply(CommandView command);
 
   // Link Policy Commands
   // Bluetooth Core Specification Version 4.2 Volume 2 Part E 7.2
@@ -353,9 +306,6 @@ class DualModeController : public Device {
 
   // 7.3.61
   void ReadInquiryResponseTransmitPowerLevel(CommandView command);
-
-  // 7.3.63
-  void SendKeypressNotification(CommandView command);
 
   // 7.3.66
   void EnhancedFlush(CommandView command);
@@ -624,9 +574,8 @@ class DualModeController : public Device {
   void CsrReadPskey(CsrPskey pskey, std::vector<uint8_t>& value);
   void CsrWritePskey(CsrPskey pskey, std::vector<uint8_t> const& value);
 
-  void SetTimerPeriod(std::chrono::milliseconds new_period);
-  void StartTimer();
-  void StopTimer();
+  // Command pass-through.
+  void ForwardToLm(CommandView command);
 
  protected:
   // Controller configuration.
@@ -651,7 +600,7 @@ class DualModeController : public Device {
   // Loopback mode (Vol 4, Part E § 7.6.1).
   // The local loopback mode is used to pass the android Vendor Test Suite
   // with RootCanal.
-  bluetooth::hci::LoopbackMode loopback_mode_;
+  bluetooth::hci::LoopbackMode loopback_mode_{LoopbackMode::NO_LOOPBACK};
 
   // Map command opcodes to the corresponding bit index in the
   // supported command mask.
@@ -665,9 +614,6 @@ class DualModeController : public Device {
   using CommandHandler =
       std::function<void(DualModeController*, bluetooth::hci::CommandView)>;
   static const std::unordered_map<OpCode, CommandHandler> hci_command_handlers_;
-
-  DualModeController(const DualModeController& other) = delete;
-  DualModeController& operator=(const DualModeController& other) = delete;
 };
 
 }  // namespace rootcanal

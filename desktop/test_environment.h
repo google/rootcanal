@@ -68,9 +68,7 @@ class TestEnvironment {
         default_commands_file_(default_commands_file),
         enable_hci_sniffer_(enable_hci_sniffer),
         enable_baseband_sniffer_(enable_baseband_sniffer),
-        enable_pcap_filter_(enable_pcap_filter),
-        controller_(std::make_shared<rootcanal::DualModeController>(
-            controller_properties_file)) {
+        enable_pcap_filter_(enable_pcap_filter) {
     test_model_.SetReuseDeviceIds(!disable_address_reuse);
   }
 
@@ -99,8 +97,6 @@ class TestEnvironment {
   void SetUpLinkBleLayerServer();
   std::shared_ptr<Device> ConnectToRemoteServer(const std::string& server,
                                                 int port, Phy::Type phy_type);
-
-  std::shared_ptr<rootcanal::DualModeController> controller_;
 
   rootcanal::TestChannelTransport test_channel_transport_;
   rootcanal::TestChannelTransport remote_hci_transport_;
