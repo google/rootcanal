@@ -50,6 +50,7 @@ TestCommandHandler::TestCommandHandler(TestModel& test_model)
   SET_HANDLER("stop_timer", StopTimer);
   SET_HANDLER("reset", Reset);
 #undef SET_HANDLER
+  send_response_ = [](std::string const&) {};
 }
 
 void TestCommandHandler::AddDefaults() {

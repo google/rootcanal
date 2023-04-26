@@ -115,44 +115,32 @@ void TestEnvironment::close() {
 }
 
 void TestEnvironment::SetUpHciServer(ConnectCallback on_connect) {
-  test_channel_.RegisterSendResponse([](const std::string& response) {
-    LOG_INFO("No HCI Response channel: %s", response.c_str());
-  });
-
-  if (!remote_hci_transport_.SetUp(hci_socket_server_, on_connect)) {
-    LOG_ERROR("Remote HCI channel SetUp failed.");
-    return;
-  }
+  hci_socket_server_->SetOnConnectCallback(on_connect);
+  hci_socket_server_->StartListening();
 }
 
 void TestEnvironment::SetUpLinkBleLayerServer() {
-  remote_link_layer_transport_.SetUp(
-      link_ble_socket_server_, [this](std::shared_ptr<AsyncDataChannel> socket,
-                                      AsyncDataChannelServer* srv) {
+  link_ble_socket_server_->SetOnConnectCallback(
+      [this](std::shared_ptr<AsyncDataChannel> socket,
+             AsyncDataChannelServer* srv) {
         auto phy_type = Phy::Type::LOW_ENERGY;
         test_model_.AddLinkLayerConnection(
             LinkLayerSocketDevice::Create(socket, phy_type), phy_type);
         srv->StartListening();
       });
-
-  test_channel_.RegisterSendResponse([](const std::string& response) {
-    LOG_INFO("No LinkLayer Response channel: %s", response.c_str());
-  });
+  link_ble_socket_server_->StartListening();
 }
 
 void TestEnvironment::SetUpLinkLayerServer() {
-  remote_link_layer_transport_.SetUp(
-      link_socket_server_, [this](std::shared_ptr<AsyncDataChannel> socket,
-                                  AsyncDataChannelServer* srv) {
+  link_socket_server_->SetOnConnectCallback(
+      [this](std::shared_ptr<AsyncDataChannel> socket,
+             AsyncDataChannelServer* srv) {
         auto phy_type = Phy::Type::BR_EDR;
         test_model_.AddLinkLayerConnection(
             LinkLayerSocketDevice::Create(socket, phy_type), phy_type);
         srv->StartListening();
       });
-
-  test_channel_.RegisterSendResponse([](const std::string& response) {
-    LOG_INFO("No LinkLayer Response channel: %s", response.c_str());
-  });
+  link_socket_server_->StartListening();
 }
 
 std::shared_ptr<Device> TestEnvironment::ConnectToRemoteServer(
@@ -188,9 +176,7 @@ void TestEnvironment::SetUpTestChannel() {
         });
         return false;
       });
-  test_channel_.RegisterSendResponse([](const std::string& response) {
-    LOG_INFO("No test channel: %s", response.c_str());
-  });
+
   test_channel_.AddPhy({"BR_EDR"});
   test_channel_.AddPhy({"LOW_ENERGY"});
   test_channel_.SetTimerPeriod({"5"});

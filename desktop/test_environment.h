@@ -78,6 +78,7 @@ class TestEnvironment {
 
  private:
   rootcanal::AsyncManager async_manager_;
+  rootcanal::TestChannelTransport test_channel_transport_;
   std::shared_ptr<AsyncDataChannelServer> test_socket_server_;
   std::shared_ptr<AsyncDataChannelServer> hci_socket_server_;
   std::shared_ptr<AsyncDataChannelServer> link_socket_server_;
@@ -95,13 +96,9 @@ class TestEnvironment {
   void SetUpHciServer(ConnectCallback on_connect);
   void SetUpLinkLayerServer();
   void SetUpLinkBleLayerServer();
+
   std::shared_ptr<Device> ConnectToRemoteServer(const std::string& server,
                                                 int port, Phy::Type phy_type);
-
-  rootcanal::TestChannelTransport test_channel_transport_;
-  rootcanal::TestChannelTransport remote_hci_transport_;
-  rootcanal::TestChannelTransport remote_link_layer_transport_;
-  rootcanal::TestChannelTransport remote_link_ble_layer_transport_;
 
   rootcanal::TestModel test_model_{
       [this]() { return async_manager_.GetNextUserId(); },
