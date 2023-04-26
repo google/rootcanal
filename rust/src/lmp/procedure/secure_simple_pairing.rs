@@ -4,10 +4,10 @@ use std::convert::TryInto;
 
 use num_traits::{FromPrimitive, ToPrimitive};
 
-use crate::ec::{DhKey, PrivateKey, PublicKey};
 use crate::either::Either;
+use crate::lmp::ec::{DhKey, PrivateKey, PublicKey};
+use crate::lmp::procedure::{authentication, features, Context};
 use crate::packets::{hci, lmp};
-use crate::procedure::{authentication, features, Context};
 
 use crate::num_hci_command_packets;
 
@@ -756,14 +756,14 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReq) -> Resul
 mod tests {
     use num_traits::ToPrimitive;
 
-    use crate::ec::PrivateKey;
-    use crate::procedure::Context;
-    use crate::test::{sequence, TestContext};
+    use crate::lmp::ec::PrivateKey;
+    use crate::lmp::procedure::Context;
+    use crate::lmp::test::{sequence, TestContext};
     // simple pairing is part of authentication procedure
     use super::super::authentication::initiate;
     use super::super::authentication::respond;
 
-    fn local_p192_public_key(context: &crate::test::TestContext) -> [[u8; 16]; 3] {
+    fn local_p192_public_key(context: &crate::lmp::test::TestContext) -> [[u8; 16]; 3] {
         let mut buf = [[0; 16], [0; 16], [0; 16]];
         if let Some(key) = context.get_private_key() {
             for (dst, src) in buf.iter_mut().zip(key.derive().as_slice().chunks(16)) {
@@ -784,7 +784,7 @@ mod tests {
 
     #[test]
     fn initiate_size() {
-        let context = crate::test::TestContext::new();
+        let context = crate::lmp::test::TestContext::new();
         let procedure = super::initiate(&context);
 
         fn assert_max_size<T>(_value: T, limit: usize) {
@@ -802,7 +802,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-06-C.in");
+        include!("../../../test/SP/BV-06-C.in");
     }
 
     #[test]
@@ -810,7 +810,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-07-C.in");
+        include!("../../../test/SP/BV-07-C.in");
     }
 
     #[test]
@@ -818,7 +818,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-08-C.in");
+        include!("../../../test/SP/BV-08-C.in");
     }
 
     #[test]
@@ -826,7 +826,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-09-C.in");
+        include!("../../../test/SP/BV-09-C.in");
     }
 
     #[test]
@@ -834,7 +834,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-10-C.in");
+        include!("../../../test/SP/BV-10-C.in");
     }
 
     #[test]
@@ -842,7 +842,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-11-C.in");
+        include!("../../../test/SP/BV-11-C.in");
     }
 
     #[test]
@@ -850,7 +850,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-12-C.in");
+        include!("../../../test/SP/BV-12-C.in");
     }
 
     #[test]
@@ -858,7 +858,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-13-C.in");
+        include!("../../../test/SP/BV-13-C.in");
     }
 
     #[test]
@@ -867,7 +867,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-14-C.in");
+        include!("../../../test/SP/BV-14-C.in");
     }
 
     #[test]
@@ -876,7 +876,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-15-C.in");
+        include!("../../../test/SP/BV-15-C.in");
     }
 
     #[test]
@@ -885,7 +885,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-16-C.in");
+        include!("../../../test/SP/BV-16-C.in");
     }
 
     #[test]
@@ -894,7 +894,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-17-C.in");
+        include!("../../../test/SP/BV-17-C.in");
     }
 
     #[test]
@@ -903,7 +903,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-18-C.in");
+        include!("../../../test/SP/BV-18-C.in");
     }
 
     #[test]
@@ -912,7 +912,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-19-C.in");
+        include!("../../../test/SP/BV-19-C.in");
     }
 
     #[test]
@@ -921,7 +921,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-20-C.in");
+        include!("../../../test/SP/BV-20-C.in");
     }
 
     #[test]
@@ -930,7 +930,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-21-C.in");
+        include!("../../../test/SP/BV-21-C.in");
     }
 
     #[test]
@@ -939,7 +939,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-22-C.in");
+        include!("../../../test/SP/BV-22-C.in");
     }
 
     #[test]
@@ -948,7 +948,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-23-C.in");
+        include!("../../../test/SP/BV-23-C.in");
     }
 
     #[test]
@@ -957,7 +957,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-24-C.in");
+        include!("../../../test/SP/BV-24-C.in");
     }
 
     #[test]
@@ -966,7 +966,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-25-C.in");
+        include!("../../../test/SP/BV-25-C.in");
     }
 
     #[test]
@@ -975,7 +975,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-26-C.in");
+        include!("../../../test/SP/BV-26-C.in");
     }
 
     #[test]
@@ -984,7 +984,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-27-C.in");
+        include!("../../../test/SP/BV-27-C.in");
     }
 
     #[test]
@@ -992,7 +992,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-30-C.in");
+        include!("../../../test/SP/BV-30-C.in");
     }
 
     #[test]
@@ -1000,7 +1000,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-31-C.in");
+        include!("../../../test/SP/BV-31-C.in");
     }
 
     #[test]
@@ -1008,7 +1008,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-32-C.in");
+        include!("../../../test/SP/BV-32-C.in");
     }
 
     #[test]
@@ -1017,7 +1017,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-33-C.in");
+        include!("../../../test/SP/BV-33-C.in");
     }
 
     #[test]
@@ -1026,7 +1026,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-34-C.in");
+        include!("../../../test/SP/BV-34-C.in");
     }
 
     #[test]
@@ -1035,7 +1035,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/SP/BV-35-C.in");
+        include!("../../../test/SP/BV-35-C.in");
     }
 
     #[test]
@@ -1044,6 +1044,6 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/SP/BV-36-C.in");
+        include!("../../../test/SP/BV-36-C.in");
     }
 }

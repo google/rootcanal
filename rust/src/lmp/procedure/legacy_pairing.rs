@@ -1,7 +1,7 @@
 // Bluetooth Core, Vol 2, Part C, 4.2.2
 
+use crate::lmp::procedure::{authentication, Context};
 use crate::packets::{hci, lmp};
-use crate::procedure::{authentication, Context};
 
 use crate::num_hci_command_packets;
 

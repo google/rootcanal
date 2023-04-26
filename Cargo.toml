@@ -16,5 +16,5 @@
 [workspace]
 
 members = [
-  "lmp",
+  "rust",
 ]
