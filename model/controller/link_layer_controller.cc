@@ -1803,6 +1803,12 @@ LinkLayerController::LinkLayerController(const Address& address,
     : address_(address),
       properties_(properties),
       lm_(nullptr, link_manager_destroy) {
+
+  if (properties_.quirks.has_default_random_address) {
+    LOG_WARN("Configuring a default random address for this controller");
+    random_address_ = Address { 0xba, 0xdb, 0xad, 0xba, 0xdb, 0xad };
+  }
+
   ops_ = {
       .user_pointer = this,
       .get_handle =
