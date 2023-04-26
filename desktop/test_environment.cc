@@ -67,7 +67,7 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
     if (enable_hci_sniffer_) {
       transport = HciSniffer::Create(transport);
     }
-    auto device = HciDevice::Create(transport, controller_properties_file_);
+    auto device = HciDevice::Create(transport, controller_properties_);
     async_manager_.ExecAsync(user_id, std::chrono::milliseconds(0), [=]() {
       test_model_.AddHciConnection(device);
     });

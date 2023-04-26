@@ -64,7 +64,7 @@ class TestEnvironment {
         link_socket_server_(link_server_port),
         link_ble_socket_server_(link_ble_server_port),
         connector_(connector),
-        controller_properties_file_(controller_properties_file),
+        controller_properties_(controller_properties_file),
         default_commands_file_(default_commands_file),
         enable_hci_sniffer_(enable_hci_sniffer),
         enable_baseband_sniffer_(enable_baseband_sniffer),
@@ -84,7 +84,7 @@ class TestEnvironment {
   std::shared_ptr<AsyncDataChannelServer> link_socket_server_;
   std::shared_ptr<AsyncDataChannelServer> link_ble_socket_server_;
   std::shared_ptr<AsyncDataChannelConnector> connector_;
-  std::string controller_properties_file_;
+  rootcanal::ControllerProperties controller_properties_;
   std::string default_commands_file_;
   bool enable_hci_sniffer_;
   bool enable_baseband_sniffer_;

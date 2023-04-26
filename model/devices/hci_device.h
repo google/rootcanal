@@ -27,13 +27,13 @@ namespace rootcanal {
 class HciDevice : public DualModeController {
  public:
   HciDevice(std::shared_ptr<HciTransport> transport,
-            const std::string& properties_filename);
+            ControllerProperties const& properties);
   ~HciDevice() = default;
 
   static std::shared_ptr<HciDevice> Create(
       std::shared_ptr<HciTransport> transport,
-      const std::string& properties_filename) {
-    return std::make_shared<HciDevice>(transport, properties_filename);
+      ControllerProperties const& properties) {
+    return std::make_shared<HciDevice>(transport, properties);
   }
 
   std::string GetTypeString() const override { return "hci_device"; }

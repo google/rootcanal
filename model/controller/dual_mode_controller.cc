@@ -60,8 +60,8 @@ void DualModeController::SendCommandCompleteUnknownOpCodeEvent(
           static_cast<uint8_t>(ErrorCode::UNKNOWN_HCI_COMMAND)})));
 }
 
-DualModeController::DualModeController(const std::string& properties_filename)
-    : properties_(properties_filename) {
+DualModeController::DualModeController(ControllerProperties properties)
+    : properties_(std::move(properties)) {
   Address public_address{};
   ASSERT(Address::FromString("3C:5A:B4:04:05:06", public_address));
   SetAddress(public_address);
