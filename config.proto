@@ -1,0 +1,47 @@
+syntax = "proto2";
+
+package rootcanal.configuration;
+option optimize_for = CODE_SIZE;
+
+enum ControllerPreset {
+  // Version 5.3, all features enabled, all quirks disabled.
+  DEFAULT = 0;
+}
+
+message ControllerFeatures {
+  optional bool le_extended_advertising = 1;
+  optional bool le_periodic_advertising = 2;
+  optional bool ll_privacy = 3;
+  optional bool le_2m_phy = 4;
+  optional bool le_coded_phy = 5;
+}
+
+message ControllerQuirks {
+  // Randomly send ACL payloads before the Connection Complete event
+  // is sent to the Host stack.
+  optional bool send_acl_data_before_connection_complete = 1;
+  // Configure a default value for the LE random address.
+  optional bool has_default_random_address = 2;
+  // Send the Role Change event before the Connection Complete event
+  // in the case where a role switch is initiated at connection establishment.
+  optional bool send_role_change_before_connection_complete = 3;
+}
+
+message Controller {
+  // Configure the TCP port on which the controller with this defined
+  // configuration will be served.
+  required int32 tcp_port = 1;
+  // Configure the controller preset. Presets come with a pre-selection
+  // of features and quirks, but these can be overridden with the next fields.
+  optional ControllerPreset preset = 2;
+  // Configure support for controller features.
+  optional ControllerFeatures features = 3;
+  // Enable controller quirks.
+  // Quirks are behaviors observed in real controllers that are not valid
+  // according to the specification.
+  optional ControllerQuirks quirks = 4;
+}
+
+message Configuration {
+  repeated Controller controllers = 1;
+}

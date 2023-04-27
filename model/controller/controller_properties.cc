@@ -15,8 +15,8 @@
 
 #include "controller_properties.h"
 
+#include <google/protobuf/text_format.h>
 #include <inttypes.h>
-#include <json/json.h>
 
 #include <fstream>
 #include <limits>
@@ -415,243 +415,6 @@ static std::array<uint8_t, 64> SupportedCommands() {
   }
 
   return value;
-}
-
-template <typename T>
-static bool ParseUint(Json::Value root, std::string field_name,
-                      T& output_value) {
-  T max_value = std::numeric_limits<T>::max();
-  Json::Value value = root[field_name];
-
-  if (value.isString()) {
-    unsigned long long parsed_value = std::stoull(value.asString(), nullptr, 0);
-    if (parsed_value > max_value) {
-      LOG_INFO("invalid value for %s is discarded: %llu > %llu",
-               field_name.c_str(), parsed_value,
-               static_cast<unsigned long long>(max_value));
-      return false;
-    }
-    output_value = static_cast<T>(parsed_value);
-    return true;
-  }
-
-  return false;
-}
-
-template <typename T, std::size_t N>
-static bool ParseUintArray(Json::Value root, std::string field_name,
-                           std::array<T, N>& output_value) {
-  T max_value = std::numeric_limits<T>::max();
-  Json::Value value = root[field_name];
-
-  if (value.empty()) {
-    return false;
-  }
-
-  if (!value.isArray()) {
-    LOG_INFO("invalid value for %s is discarded: not an array",
-             field_name.c_str());
-    return false;
-  }
-
-  if (value.size() != N) {
-    LOG_INFO(
-        "invalid value for %s is discarded: incorrect size %u, expected %zu",
-        field_name.c_str(), value.size(), N);
-    return false;
-  }
-
-  for (size_t n = 0; n < N; n++) {
-    unsigned long long parsed_value =
-        std::stoull(value[static_cast<int>(n)].asString(), nullptr, 0);
-    if (parsed_value > max_value) {
-      LOG_INFO("invalid value for %s[%zu] is discarded: %llu > %llu",
-               field_name.c_str(), n, parsed_value,
-               static_cast<unsigned long long>(max_value));
-    } else {
-      output_value[n] = parsed_value;
-    }
-  }
-
-  return false;
-}
-
-template <typename T>
-static bool ParseUintVector(Json::Value root, std::string field_name,
-                            std::vector<T>& output_value) {
-  T max_value = std::numeric_limits<T>::max();
-  Json::Value value = root[field_name];
-
-  if (value.empty()) {
-    return false;
-  }
-
-  if (!value.isArray()) {
-    LOG_INFO("invalid value for %s is discarded: not an array",
-             field_name.c_str());
-    return false;
-  }
-
-  output_value.clear();
-  for (size_t n = 0; n < value.size(); n++) {
-    unsigned long long parsed_value =
-        std::stoull(value[static_cast<int>(n)].asString(), nullptr, 0);
-    if (parsed_value > max_value) {
-      LOG_INFO("invalid value for %s[%zu] is discarded: %llu > %llu",
-               field_name.c_str(), n, parsed_value,
-               static_cast<unsigned long long>(max_value));
-    } else {
-      output_value.push_back(parsed_value);
-    }
-  }
-
-  return false;
-}
-
-static void ParseHex64(Json::Value value, uint64_t* field) {
-  if (value.isString()) {
-    size_t end_char = 0;
-    uint64_t parsed = std::stoll(value.asString(), &end_char, 16);
-    if (end_char > 0) {
-      *field = parsed;
-    }
-  }
-}
-
-ControllerProperties::ControllerProperties(const std::string& file_name)
-    : supported_commands(std::move(SupportedCommands())),
-      lmp_features({Page0LmpFeatures(), 0, Page2LmpFeatures()}),
-      le_features(LlFeatures()) {
-  if (!CheckSupportedFeatures()) {
-    LOG_INFO(
-        "Warning: initial LMP and/or LE are not consistent. Please make sure"
-        " that the features are correct w.r.t. the rules described"
-        " in Vol 2, Part C 3.5 Feature requirements");
-  }
-
-  if (!CheckSupportedCommands()) {
-    LOG_INFO(
-        "Warning: initial supported commands are not consistent. Please make"
-        " sure that the supported commands are correct w.r.t. the rules"
-        " described in Vol 4, Part E § 3 Overview of commands and events");
-  }
-
-  if (file_name.empty()) {
-    return;
-  }
-
-  LOG_INFO("Reading controller properties from %s.", file_name.c_str());
-
-  std::ifstream file(file_name);
-
-  Json::Value root;
-  Json::CharReaderBuilder builder;
-
-  std::string errs;
-  if (!Json::parseFromStream(builder, file, &root, &errs)) {
-    LOG_ERROR("Error reading controller properties from file: %s error: %s",
-              file_name.c_str(), errs.c_str());
-    return;
-  }
-
-  // Legacy configuration options.
-
-  ParseUint(root, "AclDataPacketSize", acl_data_packet_length);
-  ParseUint(root, "ScoDataPacketSize", sco_data_packet_length);
-  ParseUint(root, "NumAclDataPackets", total_num_acl_data_packets);
-  ParseUint(root, "NumScoDataPackets", total_num_sco_data_packets);
-
-  uint8_t hci_version = static_cast<uint8_t>(this->hci_version);
-  uint8_t lmp_version = static_cast<uint8_t>(this->lmp_version);
-  ParseUint(root, "Version", hci_version);
-  ParseUint(root, "Revision", hci_subversion);
-  ParseUint(root, "LmpPalVersion", lmp_version);
-  ParseUint(root, "LmpPalSubversion", lmp_subversion);
-  ParseUint(root, "ManufacturerName", company_identifier);
-
-  ParseHex64(root["LeSupportedFeatures"], &le_features);
-
-  // Configuration options.
-
-  le_supported = root.get("le_supported", Json::Value(true)).asBool();
-  br_supported = root.get("br_supported", Json::Value(true)).asBool();
-
-  ParseUint(root, "hci_version", hci_version);
-  ParseUint(root, "lmp_version", lmp_version);
-  ParseUint(root, "hci_subversion", hci_subversion);
-  ParseUint(root, "lmp_subversion", lmp_subversion);
-  ParseUint(root, "company_identifier", company_identifier);
-
-  ParseUintArray(root, "supported_commands", supported_commands);
-  ParseUintArray(root, "lmp_features", lmp_features);
-  ParseUint(root, "le_features", le_features);
-
-  ParseUint(root, "acl_data_packet_length", acl_data_packet_length);
-  ParseUint(root, "sco_data_packet_length ", sco_data_packet_length);
-  ParseUint(root, "total_num_acl_data_packets ", total_num_acl_data_packets);
-  ParseUint(root, "total_num_sco_data_packets ", total_num_sco_data_packets);
-  ParseUint(root, "le_acl_data_packet_length ", le_acl_data_packet_length);
-  ParseUint(root, "iso_data_packet_length ", iso_data_packet_length);
-  ParseUint(root, "total_num_le_acl_data_packets ",
-            total_num_le_acl_data_packets);
-  ParseUint(root, "total_num_iso_data_packets ", total_num_iso_data_packets);
-  ParseUint(root, "num_supported_iac", num_supported_iac);
-  ParseUint(root, "le_advertising_physical_channel_tx_power",
-            le_advertising_physical_channel_tx_power);
-
-  ParseUintArray(root, "lmp_features", lmp_features);
-  ParseUintVector(root, "supported_standard_codecs", supported_standard_codecs);
-  ParseUintVector(root, "supported_vendor_specific_codecs",
-                  supported_vendor_specific_codecs);
-
-  ParseUint(root, "le_filter_accept_list_size", le_filter_accept_list_size);
-  ParseUint(root, "le_resolving_list_size", le_resolving_list_size);
-  ParseUint(root, "le_supported_states", le_supported_states);
-
-  ParseUint(root, "le_max_advertising_data_length",
-            le_max_advertising_data_length);
-  ParseUint(root, "le_num_supported_advertising_sets",
-            le_num_supported_advertising_sets);
-
-  ParseUintVector(root, "le_vendor_capabilities", le_vendor_capabilities);
-
-  this->hci_version = static_cast<HciVersion>(hci_version);
-  this->lmp_version = static_cast<LmpVersion>(lmp_version);
-
-  // Transport flag takes precedence over LMP features.
-  if (le_supported && br_supported) {
-    lmp_features[0] |= static_cast<int64_t>(
-        LMPFeaturesPage0Bits::SIMULTANEOUS_LE_AND_BR_CONTROLLER);
-    lmp_features[0] |=
-        static_cast<int64_t>(LMPFeaturesPage0Bits::LE_SUPPORTED_CONTROLLER);
-  } else if (le_supported) {
-    lmp_features[0] &= ~static_cast<int64_t>(
-        LMPFeaturesPage0Bits::SIMULTANEOUS_LE_AND_BR_CONTROLLER);
-    lmp_features[0] |=
-        static_cast<int64_t>(LMPFeaturesPage0Bits::LE_SUPPORTED_CONTROLLER);
-  } else if (br_supported) {
-    lmp_features[0] &= ~static_cast<int64_t>(
-        LMPFeaturesPage0Bits::SIMULTANEOUS_LE_AND_BR_CONTROLLER);
-    lmp_features[0] &=
-        ~static_cast<int64_t>(LMPFeaturesPage0Bits::LE_SUPPORTED_CONTROLLER);
-  } else {
-    LOG_ERROR("le_supported or br_supported must be set in the configuration");
-    br_supported = true;
-    le_supported = true;
-    lmp_features[0] |= static_cast<int64_t>(
-        LMPFeaturesPage0Bits::SIMULTANEOUS_LE_AND_BR_CONTROLLER);
-    lmp_features[0] |=
-        static_cast<int64_t>(LMPFeaturesPage0Bits::LE_SUPPORTED_CONTROLLER);
-  }
-
-  if (!CheckSupportedFeatures()) {
-    LOG_INFO(
-        "Warning: the LMP and/or LE are not consistent. Please make sure"
-        " that the features are correct w.r.t. the rules described"
-        " in Vol 2, Part C 3.5 Feature requirements");
-  } else {
-    LOG_INFO("LMP and LE features successfully validated");
-  }
 }
 
 bool ControllerProperties::CheckSupportedFeatures() const {
@@ -1965,6 +1728,170 @@ bool ControllerProperties::CheckSupportedCommands() const {
   check_command_(WRITE_SYNCHRONOUS_FLOW_CONTROL_ENABLE, c135, excluded);
   check_command_(WRITE_VOICE_SETTING, c134, excluded);
   return true;
+}
+
+ControllerProperties::ControllerProperties()
+    : supported_commands(std::move(SupportedCommands())),
+      lmp_features({Page0LmpFeatures(), 0, Page2LmpFeatures()}),
+      le_features(LlFeatures()) {
+  if (!CheckSupportedFeatures()) {
+    LOG_INFO(
+        "Warning: initial LMP and/or LE are not consistent. Please make sure"
+        " that the features are correct w.r.t. the rules described"
+        " in Vol 2, Part C 3.5 Feature requirements");
+  }
+
+  if (!CheckSupportedCommands()) {
+    LOG_INFO(
+        "Warning: initial supported commands are not consistent. Please make"
+        " sure that the supported commands are correct w.r.t. the rules"
+        " described in Vol 4, Part E § 3 Overview of commands and events");
+  }
+}
+
+// Commands enabled by the LE Extended Advertising feature bit.
+static std::vector<OpCodeIndex> le_extended_advertising_commands_ = {
+    OpCodeIndex::LE_CLEAR_ADVERTISING_SETS,
+    OpCodeIndex::LE_EXTENDED_CREATE_CONNECTION,
+    OpCodeIndex::LE_READ_MAXIMUM_ADVERTISING_DATA_LENGTH,
+    OpCodeIndex::LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS,
+    OpCodeIndex::LE_RECEIVER_TEST_V2,
+    OpCodeIndex::LE_REMOVE_ADVERTISING_SET,
+    OpCodeIndex::LE_SET_ADVERTISING_SET_RANDOM_ADDRESS,
+    OpCodeIndex::LE_SET_DATA_RELATED_ADDRESS_CHANGES,
+    OpCodeIndex::LE_SET_EXTENDED_ADVERTISING_DATA,
+    OpCodeIndex::LE_SET_EXTENDED_ADVERTISING_ENABLE,
+    OpCodeIndex::LE_SET_EXTENDED_ADVERTISING_PARAMETERS,
+    OpCodeIndex::LE_SET_EXTENDED_SCAN_ENABLE,
+    OpCodeIndex::LE_SET_EXTENDED_SCAN_PARAMETERS,
+    OpCodeIndex::LE_SET_EXTENDED_SCAN_RESPONSE_DATA,
+};
+
+// Commands enabled by the LE Periodic Advertising feature bit.
+static std::vector<OpCodeIndex> le_periodic_advertising_commands_ = {
+    OpCodeIndex::LE_ADD_DEVICE_TO_PERIODIC_ADVERTISER_LIST,
+    OpCodeIndex::LE_CLEAR_PERIODIC_ADVERTISER_LIST,
+    OpCodeIndex::LE_PERIODIC_ADVERTISING_CREATE_SYNC_CANCEL,
+    OpCodeIndex::LE_PERIODIC_ADVERTISING_CREATE_SYNC,
+    OpCodeIndex::LE_PERIODIC_ADVERTISING_TERMINATE_SYNC,
+    OpCodeIndex::LE_READ_PERIODIC_ADVERTISER_LIST_SIZE,
+    OpCodeIndex::LE_RECEIVER_TEST_V2,
+    OpCodeIndex::LE_REMOVE_DEVICE_FROM_PERIODIC_ADVERTISER_LIST,
+    OpCodeIndex::LE_SET_DATA_RELATED_ADDRESS_CHANGES,
+    OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_DATA,
+    OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_ENABLE,
+    OpCodeIndex::LE_SET_PERIODIC_ADVERTISING_PARAMETERS,
+};
+
+// Commands enabled by the LL Privacy feature bit.
+static std::vector<OpCodeIndex> ll_privacy_commands_ = {
+    OpCodeIndex::LE_ADD_DEVICE_TO_RESOLVING_LIST,
+    OpCodeIndex::LE_CLEAR_RESOLVING_LIST,
+    OpCodeIndex::LE_READ_LOCAL_RESOLVABLE_ADDRESS,
+    OpCodeIndex::LE_READ_PEER_RESOLVABLE_ADDRESS,
+    OpCodeIndex::LE_READ_RESOLVING_LIST_SIZE,
+    OpCodeIndex::LE_RECEIVER_TEST_V2,
+    OpCodeIndex::LE_REMOVE_DEVICE_FROM_RESOLVING_LIST,
+    OpCodeIndex::LE_SET_ADDRESS_RESOLUTION_ENABLE,
+    OpCodeIndex::LE_SET_PRIVACY_MODE,
+    OpCodeIndex::LE_SET_RESOLVABLE_PRIVATE_ADDRESS_TIMEOUT,
+};
+
+static void SetLLFeatureBit(uint64_t& le_features, LLFeaturesBits bit,
+                            bool set) {
+  if (set) {
+    le_features |= static_cast<uint64_t>(bit);
+  } else {
+    le_features &= ~static_cast<uint64_t>(bit);
+  }
+}
+
+static void SetSupportedCommandBits(std::array<uint8_t, 64>& supported_commands,
+                                    std::vector<OpCodeIndex> const& commands,
+                                    bool set) {
+  for (auto command : commands) {
+    int index = static_cast<int>(command);
+    if (set) {
+      supported_commands[index / 10] |= 1U << (index % 10);
+    } else {
+      supported_commands[index / 10] &= ~(1U << (index % 10));
+    }
+  }
+}
+
+ControllerProperties::ControllerProperties(
+    rootcanal::configuration::Controller const& config)
+    : supported_commands(std::move(SupportedCommands())),
+      lmp_features({Page0LmpFeatures(), 0, Page2LmpFeatures()}),
+      le_features(LlFeatures()) {
+  using namespace rootcanal::configuration;
+
+  // Set the base configuration.
+  if (config.has_preset()) {
+    switch (config.preset()) {
+      case ControllerPreset::DEFAULT:
+        break;
+      default:
+        break;
+    }
+  }
+
+  // Apply selected features.
+  if (config.has_features()) {
+    ControllerFeatures const& features = config.features();
+    if (features.has_le_extended_advertising()) {
+      SetLLFeatureBit(le_features, LLFeaturesBits::LE_EXTENDED_ADVERTISING,
+                      features.le_extended_advertising());
+      SetSupportedCommandBits(supported_commands,
+                              le_extended_advertising_commands_,
+                              features.le_extended_advertising());
+    }
+    if (features.has_le_periodic_advertising()) {
+      SetLLFeatureBit(le_features, LLFeaturesBits::LE_PERIODIC_ADVERTISING,
+                      features.le_periodic_advertising());
+      SetSupportedCommandBits(supported_commands,
+                              le_periodic_advertising_commands_,
+                              features.le_periodic_advertising());
+    }
+    if (features.has_ll_privacy()) {
+      SetLLFeatureBit(le_features, LLFeaturesBits::LL_PRIVACY,
+                      features.ll_privacy());
+      SetSupportedCommandBits(supported_commands, ll_privacy_commands_,
+                              features.ll_privacy());
+    }
+    if (features.has_le_2m_phy()) {
+      SetLLFeatureBit(le_features, LLFeaturesBits::LE_2M_PHY,
+                      features.le_2m_phy());
+    }
+    if (features.has_le_coded_phy()) {
+      SetLLFeatureBit(le_features, LLFeaturesBits::LE_CODED_PHY,
+                      features.le_coded_phy());
+    }
+  }
+
+  // Apply selected quirks.
+  if (config.has_quirks()) {
+    if (config.quirks().has_has_default_random_address()) {
+      quirks.has_default_random_address =
+          config.quirks().has_default_random_address();
+    }
+    // TODO(b/270606199): support send_acl_data_before_connection_complete
+    // TODO(b/274476773): support send_role_change_before_connection_complete
+  }
+
+  if (!CheckSupportedFeatures()) {
+    LOG_INFO(
+        "Warning: LMP and/or LE features are not consistent. Please make sure"
+        " that the features are correct w.r.t. the rules described"
+        " in Vol 2, Part C 3.5 Feature requirements");
+  }
+
+  if (!CheckSupportedCommands()) {
+    LOG_INFO(
+        "Warning: supported commands are not consistent. Please make"
+        " sure that the supported commands are correct w.r.t. the rules"
+        " described in Vol 4, Part E § 3 Overview of commands and events");
+  }
 }
 
 }  // namespace rootcanal

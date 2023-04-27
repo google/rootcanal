@@ -16,6 +16,8 @@
 
 #include "test_environment.h"
 
+#include <google/protobuf/text_format.h>
+
 #include <filesystem>  // for exists
 #include <type_traits>  // for remove_extent_t
 #include <utility>      // for move
@@ -41,36 +43,68 @@ using rootcanal::HciSocketTransport;
 using rootcanal::LinkLayerSocketDevice;
 using rootcanal::TaskCallback;
 
-void TestEnvironment::initialize(std::promise<void> barrier) {
-  LOG_INFO("Initialized barrier");
+TestEnvironment::TestEnvironment(
+    std::function<std::shared_ptr<AsyncDataChannelServer>(AsyncManager*, int)>
+        open_server,
+    std::function<std::shared_ptr<AsyncDataChannelConnector>(AsyncManager*)>
+        open_connector,
+    int test_port, int hci_port, int link_port, int link_ble_port,
+    const std::string& config_str, const std::string& default_commands_file,
+    bool enable_hci_sniffer, bool enable_baseband_sniffer,
+    bool enable_pcap_filter, bool disable_address_reuse)
+    : default_commands_file_(default_commands_file),
+      enable_hci_sniffer_(enable_hci_sniffer),
+      enable_baseband_sniffer_(enable_baseband_sniffer),
+      enable_pcap_filter_(enable_pcap_filter) {
+  test_socket_server_ = open_server(&async_manager_, test_port);
+  link_socket_server_ = open_server(&async_manager_, link_port);
+  link_ble_socket_server_ = open_server(&async_manager_, link_ble_port);
+  connector_ = open_connector(&async_manager_);
+  test_model_.SetReuseDeviceIds(!disable_address_reuse);
 
-  barrier_ = std::move(barrier);
+  // Get a user ID for tasks scheduled within the test environment.
+  socket_user_id_ = async_manager_.GetNextUserId();
 
-  auto user_id = async_manager_.GetNextUserId();
-  test_channel_transport_.RegisterCommandHandler(
-      [this, user_id](const std::string& name,
-                      const std::vector<std::string>& args) {
-        async_manager_.ExecAsync(user_id, std::chrono::milliseconds(0),
-                                 [this, name, args]() {
-                                   if (name == "END_SIMULATION") {
-                                     barrier_.set_value();
-                                   } else {
-                                     test_channel_.HandleCommand(name, args);
-                                   }
-                                 });
-      });
+  rootcanal::configuration::Configuration* config =
+      new rootcanal::configuration::Configuration();
+  if (!google::protobuf::TextFormat::ParseFromString(config_str, config) ||
+      config->controllers_size() == 0) {
+    // Default configuration with default hci port if the input
+    // configuration cannot be used.
+    SetUpHciServer(open_server, hci_port, rootcanal::ControllerProperties());
+  } else {
+    // Open an HCI server for all configurations requested by
+    // the caller.
+    int num_controllers = config->controllers_size();
+    for (int index = 0; index < num_controllers; index++) {
+      rootcanal::configuration::Controller const& controller =
+          config->controllers(index);
+      SetUpHciServer(open_server, controller.tcp_port(),
+                     rootcanal::ControllerProperties(controller));
+    }
+  }
+}
 
-  SetUpTestChannel();
-  SetUpHciServer([this, user_id](std::shared_ptr<AsyncDataChannel> socket,
-                        AsyncDataChannelServer* srv) {
+// Open an HCI server listening on the port `tcp_port`. Established connections
+// are bound to a controller with the specified `properties`.
+void TestEnvironment::SetUpHciServer(
+    std::function<std::shared_ptr<AsyncDataChannelServer>(AsyncManager*, int)>
+        open_server,
+    int tcp_port, rootcanal::ControllerProperties properties) {
+  LOG_INFO("Opening an HCI with port %d", tcp_port);
+
+  std::shared_ptr<AsyncDataChannelServer> server =
+      open_server(&async_manager_, tcp_port);
+  server->SetOnConnectCallback([this, properties = std::move(properties)](
+                                   std::shared_ptr<AsyncDataChannel> socket,
+                                   AsyncDataChannelServer* server) {
     auto transport = HciSocketTransport::Create(socket);
     if (enable_hci_sniffer_) {
       transport = HciSniffer::Create(transport);
     }
-    auto device = HciDevice::Create(transport, controller_properties_);
-    async_manager_.ExecAsync(user_id, std::chrono::milliseconds(0), [=]() {
-      test_model_.AddHciConnection(device);
-    });
+    auto device = HciDevice::Create(transport, properties);
+    async_manager_.ExecAsync(socket_user_id_, std::chrono::milliseconds(0),
+                             [=]() { test_model_.AddHciConnection(device); });
     if (enable_hci_sniffer_) {
       auto filename = device->GetAddress().ToString() + ".pcap";
       for (auto i = 0; std::filesystem::exists(filename); i++) {
@@ -90,11 +124,35 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
         sniffer->SetPcapFilter(std::make_shared<rootcanal::PcapFilter>());
       }
     }
-    srv->StartListening();
+    server->StartListening();
   });
+  hci_socket_servers_.emplace_back(std::move(server));
+}
 
+void TestEnvironment::initialize(std::promise<void> barrier) {
+  LOG_INFO("Initialized barrier");
+
+  barrier_ = std::move(barrier);
+
+  test_channel_transport_.RegisterCommandHandler(
+      [this](const std::string& name, const std::vector<std::string>& args) {
+        async_manager_.ExecAsync(socket_user_id_, std::chrono::milliseconds(0),
+                                 [this, name, args]() {
+                                   if (name == "END_SIMULATION") {
+                                     barrier_.set_value();
+                                   } else {
+                                     test_channel_.HandleCommand(name, args);
+                                   }
+                                 });
+      });
+
+  SetUpTestChannel();
   SetUpLinkLayerServer();
   SetUpLinkBleLayerServer();
+
+  for (auto& server : hci_socket_servers_) {
+    server->StartListening();
+  }
 
   if (enable_baseband_sniffer_) {
     std::string filename = "baseband.pcap";
@@ -112,11 +170,6 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
 void TestEnvironment::close() {
   LOG_INFO("%s", __func__);
   test_model_.Reset();
-}
-
-void TestEnvironment::SetUpHciServer(ConnectCallback on_connect) {
-  hci_socket_server_->SetOnConnectCallback(on_connect);
-  hci_socket_server_->StartListening();
 }
 
 void TestEnvironment::SetUpLinkBleLayerServer() {
