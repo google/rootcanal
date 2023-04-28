@@ -29,6 +29,18 @@ namespace rootcanal {
 using bluetooth::hci::HciVersion;
 using bluetooth::hci::LmpVersion;
 
+// Local controller quirks.
+struct ControllerQuirks {
+  // The specification states that the Random Address is invalid until
+  // explicitly set by the command LE Set Random Address. Certain HCI commands
+  // check for this condition.
+  //
+  // This quirk configures a default value for the LE random address in order
+  // to bypass this validation. The default random address will
+  // be ba:db:ad:ba:db:ad.
+  bool has_default_random_address{false};
+};
+
 // Local controller information.
 //
 // Provide the Informational Parameters returned by HCI commands
@@ -53,6 +65,9 @@ struct ControllerProperties {
   // Check if the supported command mask is valid according to the
   // specification.
   bool CheckSupportedCommands() const;
+
+  // Enabled quirks.
+  ControllerQuirks quirks{};
 
   // Local Version Information (Vol 4, Part E § 7.4.1).
   HciVersion hci_version{HciVersion::V_5_3};
