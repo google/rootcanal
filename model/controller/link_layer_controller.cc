@@ -2182,9 +2182,6 @@ void LinkLayerController::IncomingPacket(
     case (model::packets::PacketType::READ_CLOCK_OFFSET_RESPONSE):
       IncomingReadClockOffsetResponse(incoming);
       break;
-    case (model::packets::PacketType::RSSI_WRAPPER):
-      LOG_ERROR("Dropping double-wrapped RSSI packet");
-      break;
     case model::packets::PacketType::SCO_CONNECTION_REQUEST:
       IncomingScoConnectionRequest(incoming);
       break;

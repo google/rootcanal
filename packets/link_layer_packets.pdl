@@ -7,14 +7,8 @@ enum PacketType : 8 {
     UNKNOWN = 0x00,
     ACL = 0x01,
     DISCONNECT = 0x02,
-    ENCRYPT_CONNECTION = 0x03,
-    ENCRYPT_CONNECTION_RESPONSE = 0x04,
-    EVENT = 0x05,
     INQUIRY = 0x06,
     INQUIRY_RESPONSE = 0x07,
-    IO_CAPABILITY_REQUEST = 0x08,
-    IO_CAPABILITY_RESPONSE = 0x09,
-    IO_CAPABILITY_NEGATIVE_RESPONSE = 0x0A,
     LE_LEGACY_ADVERTISING_PDU = 0x0B,
     LE_EXTENDED_ADVERTISING_PDU = 0x37,
     LE_PERIODIC_ADVERTISING_PDU = 0x40,
@@ -43,13 +37,6 @@ enum PacketType : 8 {
     ISO = 0x22,
     ISO_CONNECTION_REQUEST = 0x23,
     ISO_CONNECTION_RESPONSE = 0x24,
-    OOB_DATA = 0x25,
-    OOB_DATA_RESPONSE = 0x26,
-    PASSKEY = 0x27,
-    PASSKEY_FAILED = 0x28,
-    KEYPRESS_NOTIFICATION = 0x29,
-    PIN_REQUEST = 0x2A,
-    PIN_RESPONSE = 0x2B,
     LE_READ_REMOTE_FEATURES = 0x2C,
     LE_READ_REMOTE_FEATURES_RESPONSE = 0x2D,
     LE_CONNECTION_PARAMETER_REQUEST = 0x2E,
@@ -58,7 +45,6 @@ enum PacketType : 8 {
     SCO_CONNECTION_REQUEST = 0x30,
     SCO_CONNECTION_RESPONSE = 0x31,
     SCO_DISCONNECT = 0x32,
-    RSSI_WRAPPER = 0x33,
 
     LMP = 0x34,
 
@@ -83,14 +69,6 @@ packet Acl : LinkLayerPacket (type = ACL) {
 
 packet Disconnect : LinkLayerPacket (type = DISCONNECT) {
   reason : 8,
-}
-
-packet EncryptConnection : LinkLayerPacket (type = ENCRYPT_CONNECTION) {
-  key : 8[],
-}
-
-packet EncryptConnectionResponse : LinkLayerPacket (type = ENCRYPT_CONNECTION_RESPONSE) {
-  key : 8[],
 }
 
 enum InquiryState : 8 {
@@ -128,22 +106,6 @@ packet InquiryResponseWithRssi : BasicInquiryResponse (inquiry_type = RSSI)  {
 packet ExtendedInquiryResponse : BasicInquiryResponse (inquiry_type = EXTENDED)  {
   rssi: 8,
   extended_inquiry_response : 8[240],
-}
-
-packet IoCapabilityRequest : LinkLayerPacket (type = IO_CAPABILITY_REQUEST) {
-  io_capability : 8,
-  oob_data_present : 8,
-  authentication_requirements : 8,
-}
-
-packet IoCapabilityResponse : LinkLayerPacket (type = IO_CAPABILITY_RESPONSE) {
-  io_capability : 8,
-  oob_data_present : 8,
-  authentication_requirements : 8,
-}
-
-packet IoCapabilityNegativeResponse : LinkLayerPacket (type = IO_CAPABILITY_NEGATIVE_RESPONSE) {
-  reason : 8,
 }
 
 enum AddressType : 8 {
@@ -368,48 +330,12 @@ packet IsoConnectionResponse  : LinkLayerPacket (type = ISO_CONNECTION_RESPONSE)
   _reserved_ : 4,
 }
 
-packet OobData : LinkLayerPacket (type = OOB_DATA){
-  c_p_194 : 8[16],
-  r_p_194 : 8[16],
-  c_p_256 : 8[16],
-  r_p_256 : 8[16],
-}
-
-packet OobDataResponse : LinkLayerPacket (type = OOB_DATA_RESPONSE){
-  matched : 1,
-  _reserved_ : 7,
-}
-
 enum PasskeyNotificationType : 8 {
   ENTRY_STARTED = 0x00,
   DIGIT_ENTERED = 0x01,
   DIGIT_ERASED = 0x02,
   CLEARED = 0x03,
   ENTRY_COMPLETED = 0x04,
-}
-
-packet Passkey : LinkLayerPacket (type = PASSKEY){
-  passkey : 20,
-  _reserved_ : 4,
-}
-
-packet PasskeyFailed : LinkLayerPacket (type = PASSKEY_FAILED){
-}
-
-packet KeypressNotification : LinkLayerPacket (type = KEYPRESS_NOTIFICATION){
-  notification_type : PasskeyNotificationType,
-}
-
-packet PinRequest : LinkLayerPacket (type = PIN_REQUEST) {
-  _size_(pin_code) : 5, // 0x01 - 0x10
-  _reserved_ : 3,
-  pin_code : 8[], // string parameter, first octet first
-}
-
-packet PinResponse : LinkLayerPacket (type = PIN_RESPONSE) {
-  _size_(pin_code) : 5, // 0x01 - 0x10
-  _reserved_ : 3,
-  pin_code : 8[], // string parameter, first octet first
 }
 
 packet LeReadRemoteFeatures : LinkLayerPacket (type = LE_READ_REMOTE_FEATURES) {
