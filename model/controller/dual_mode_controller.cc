@@ -2332,16 +2332,22 @@ void DualModeController::LeGetVendorCapabilities(CommandView command) {
   auto command_view = bluetooth::hci::LeGetVendorCapabilitiesView::Create(
       bluetooth::hci::VendorCommandView::Create(command));
   ASSERT(command_view.IsValid());
-  vector<uint8_t> caps = properties_.le_vendor_capabilities;
-  if (caps.empty()) {
+
+  if (!properties_.supports_le_get_vendor_capabilities_command) {
     SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_GET_VENDOR_CAPABILITIES);
     return;
+  }
+
+  // Ensure a minimal size for vendor capabilities.
+  vector<uint8_t> vendor_capabilities = properties_.le_vendor_capabilities;
+  if (vendor_capabilities.size() < 8) {
+    vendor_capabilities.resize(8);
   }
 
   std::unique_ptr<bluetooth::packet::RawBuilder> raw_builder_ptr =
       std::make_unique<bluetooth::packet::RawBuilder>();
   raw_builder_ptr->AddOctets1(static_cast<uint8_t>(ErrorCode::SUCCESS));
-  raw_builder_ptr->AddOctets(properties_.le_vendor_capabilities);
+  raw_builder_ptr->AddOctets(vendor_capabilities);
 
   send_event_(bluetooth::hci::CommandCompleteBuilder::Create(
       kNumCommandPackets, OpCode::LE_GET_VENDOR_CAPABILITIES,

@@ -68,6 +68,9 @@ struct ControllerProperties {
   // Local Supported Commands (Vol 4, Part E § 7.4.2).
   std::array<uint8_t, 64> supported_commands;
 
+  // Vendor Supported Commands.
+  bool supports_le_get_vendor_capabilities_command{true};
+
   // Local Supported Features (Vol 4, Part E § 7.4.3) and
   // Local Extended Features (Vol 4, Part E § 7.4.3).
   std::array<uint64_t, 3> lmp_features;
@@ -114,7 +117,7 @@ struct ControllerProperties {
   // LE Number of Supported Advertising Sets (Vol 4, Part E § 7.8.58)
   // Note: the controller can change the number of advertising sets
   // at any time. This behaviour is not emulated here.
-  uint8_t le_num_supported_advertising_sets{8};
+  uint8_t le_num_supported_advertising_sets{16};
 
   // LE Periodic Advertiser List Size (Vol 4, Part E § 7.8.73).
   uint8_t le_periodic_advertiser_list_size{8};
