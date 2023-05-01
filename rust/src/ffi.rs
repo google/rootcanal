@@ -2,7 +2,7 @@ use std::mem::ManuallyDrop;
 use std::rc::Rc;
 use std::slice;
 
-use crate::manager::LinkManager;
+use crate::lmp::manager::LinkManager;
 use crate::packets::{hci, lmp};
 
 /// Link Manager callbacks

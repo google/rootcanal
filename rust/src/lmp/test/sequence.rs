@@ -12,7 +12,7 @@ macro_rules! sequence_body {
             };
             $ctx.0.in_lmp_packets.borrow_mut().push_back(builder.build().into());
 
-            let poll = crate::test::poll($ctx.1.as_mut());
+            let poll = crate::lmp::test::poll($ctx.1.as_mut());
 
             assert!($ctx.0.in_lmp_packets.borrow().is_empty(), "{} was not consumed by procedure", stringify!($packet));
 
@@ -32,7 +32,7 @@ macro_rules! sequence_body {
             };
             $ctx.0.hci_commands.borrow_mut().push_back(builder.build().into());
 
-            let poll = crate::test::poll($ctx.1.as_mut());
+            let poll = crate::lmp::test::poll($ctx.1.as_mut());
 
             assert!($ctx.0.hci_commands.borrow().is_empty(), "{} was not consumed by procedure", stringify!($packet));
 
@@ -111,7 +111,7 @@ macro_rules! sequence {
             pin!(procedure);
 
             let mut ctx = (&$context, procedure);
-            use crate::test::sequence_body;
+            use crate::lmp::test::sequence_body;
             let last_poll = sequence_body!(ctx, $($tail)*).unwrap();
 
             assert!(last_poll.is_ready());

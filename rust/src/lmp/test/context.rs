@@ -7,10 +7,10 @@ use std::task::{self, Poll};
 
 use num_traits::ToPrimitive;
 
-use crate::ec::PrivateKey;
+use crate::lmp::ec::PrivateKey;
 use crate::packets::{hci, lmp};
 
-use crate::procedure::Context;
+use crate::lmp::procedure::Context;
 
 #[derive(Default)]
 pub struct TestContext {

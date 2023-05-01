@@ -10,16 +10,12 @@ use thiserror::Error;
 
 use crate::ffi::LinkManagerOps;
 use crate::future::noop_waker;
+use crate::lmp::procedure;
+use crate::num_hci_command_packets;
 use crate::packets::{hci, lmp};
-use crate::procedure;
 
 use hci::Packet as _;
 use lmp::Packet as _;
-
-/// Number of hci command packets used
-/// in Command Complete and Command Status
-#[allow(non_upper_case_globals)]
-pub const num_hci_command_packets: u8 = 1;
 
 struct Link {
     peer: Cell<hci::Address>,

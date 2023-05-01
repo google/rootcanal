@@ -2,8 +2,8 @@
 
 use num_traits::ToPrimitive;
 
+use crate::lmp::procedure::Context;
 use crate::packets::lmp;
-use crate::procedure::Context;
 
 pub async fn initiate(ctx: &impl Context, features_page: u8) -> u64 {
     ctx.send_lmp_packet(
@@ -43,7 +43,7 @@ async fn supported_on_both_page(ctx: &impl Context, page_number: u8, feature_mas
         let page = if let Some(page) = ctx.peer_extended_features(page_number) {
             page
         } else {
-            crate::procedure::features::initiate(ctx, page_number).await
+            crate::lmp::procedure::features::initiate(ctx, page_number).await
         };
         page & feature_mask != 0
     };

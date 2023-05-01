@@ -387,7 +387,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::ec::*;
+    use crate::lmp::ec::*;
     use num_bigint::BigInt;
 
     struct EcTestCase<const N: usize> {

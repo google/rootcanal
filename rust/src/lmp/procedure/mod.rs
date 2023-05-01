@@ -3,7 +3,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{self, Poll};
 
-use crate::ec::PrivateKey;
+use crate::lmp::ec::PrivateKey;
 use crate::packets::{hci, lmp};
 
 pub trait Context {

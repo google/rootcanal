@@ -1,9 +1,9 @@
 // Bluetooth Core, Vol 2, Part C, 4.2.5
 
 use super::features;
+use crate::lmp::procedure::Context;
 use crate::num_hci_command_packets;
 use crate::packets::{hci, lmp};
-use crate::procedure::Context;
 
 use hci::LMPFeaturesPage1Bits::SecureConnectionsHostSupport;
 use hci::LMPFeaturesPage2Bits::SecureConnectionsControllerSupport;
@@ -104,8 +104,8 @@ pub async fn respond(ctx: &impl Context) {
 mod tests {
     use super::initiate;
     use super::respond;
-    use crate::procedure::Context;
-    use crate::test::{sequence, TestContext};
+    use crate::lmp::procedure::Context;
+    use crate::lmp::test::{sequence, TestContext};
 
     use crate::packets::hci::LMPFeaturesPage1Bits::SecureConnectionsHostSupport;
     use crate::packets::hci::LMPFeaturesPage2Bits::SecureConnectionsControllerSupport;
@@ -115,7 +115,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = respond;
 
-        include!("../../test/ENC/BV-01-C.in");
+        include!("../../../test/ENC/BV-01-C.in");
     }
 
     #[test]
@@ -123,7 +123,7 @@ mod tests {
         let context = TestContext::new();
         let procedure = initiate;
 
-        include!("../../test/ENC/BV-05-C.in");
+        include!("../../../test/ENC/BV-05-C.in");
     }
 
     #[test]
@@ -135,7 +135,7 @@ mod tests {
             .with_peer_page_2_feature(SecureConnectionsControllerSupport);
         let procedure = respond;
 
-        include!("../../test/ENC/BV-26-C.in");
+        include!("../../../test/ENC/BV-26-C.in");
     }
 
     #[test]
@@ -147,6 +147,6 @@ mod tests {
             .with_peer_page_2_feature(SecureConnectionsControllerSupport);
         let procedure = initiate;
 
-        include!("../../test/ENC/BV-34-C.in");
+        include!("../../../test/ENC/BV-34-C.in");
     }
 }

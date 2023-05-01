@@ -1,12 +1,12 @@
 // Bluetooth Core, Vol 2, Part C, 4.2.1
 
 use crate::either::Either;
+use crate::lmp::procedure::features;
+use crate::lmp::procedure::legacy_pairing;
+use crate::lmp::procedure::secure_simple_pairing;
+use crate::lmp::procedure::Context;
 use crate::num_hci_command_packets;
 use crate::packets::{hci, lmp};
-use crate::procedure::features;
-use crate::procedure::legacy_pairing;
-use crate::procedure::secure_simple_pairing;
-use crate::procedure::Context;
 
 pub async fn send_challenge(
     ctx: &impl Context,
