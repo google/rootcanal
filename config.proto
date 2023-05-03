@@ -25,6 +25,8 @@ message ControllerQuirks {
   // Send the Role Change event before the Connection Complete event
   // in the case where a role switch is initiated at connection establishment.
   optional bool send_role_change_before_connection_complete = 3;
+  // Send an Hardware Error event if any command is called before HCI Reset.
+  optional bool hardware_error_before_reset = 4;
 }
 
 message Controller {

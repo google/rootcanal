@@ -40,6 +40,15 @@ struct ControllerQuirks {
   // to bypass this validation. The default random address will
   // be ba:db:ad:ba:db:ad.
   bool has_default_random_address{false};
+
+  // This quirks configures the controller to send an Hardware Error event
+  // in case a command is received before the HCI Reset command.
+  //
+  // Receiving a different command is indicative of the emulator being
+  // started from a snapshot. In this case the controller state is lost
+  // but the Host stack is loaded post-initialization. This quirk
+  // ensures that the stack will reset itself after reloading.
+  bool hardware_error_before_reset{false};
 };
 
 // Local controller information.

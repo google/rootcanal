@@ -189,6 +189,15 @@ void DualModeController::HandleCommand(
     send_event_(bluetooth::hci::LoopbackCommandBuilder::Create(
         std::move(raw_builder_ptr)));
   }
+  // Quirk to reset the host stack when a command is received before the Hci
+  // Reset command.
+  else if (properties_.quirks.hardware_error_before_reset &&
+           !controller_reset_ &&
+           op_code != OpCode::RESET) {
+    LOG_WARN("Received command %s before HCI Reset; sending the Hardware"
+             " Error event", OpCodeText(op_code).c_str());
+    send_event_(bluetooth::hci::HardwareErrorBuilder::Create(0x42));
+  }
   // Command is both supported and implemented.
   // Invoke the registered handler.
   else if (is_supported_command && is_implemented_command) {
@@ -276,6 +285,7 @@ void DualModeController::Reset(CommandView command) {
     loopback_mode_ = LoopbackMode::NO_LOOPBACK;
   }
 
+  controller_reset_ = true;
   send_event_(bluetooth::hci::ResetCompleteBuilder::Create(kNumCommandPackets,
                                                            ErrorCode::SUCCESS));
 }

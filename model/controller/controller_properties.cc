@@ -1875,6 +1875,10 @@ ControllerProperties::ControllerProperties(
       quirks.has_default_random_address =
           config.quirks().has_default_random_address();
     }
+    if (config.quirks().has_hardware_error_before_reset()) {
+      quirks.hardware_error_before_reset =
+          config.quirks().hardware_error_before_reset();
+    }
     // TODO(b/270606199): support send_acl_data_before_connection_complete
     // TODO(b/274476773): support send_role_change_before_connection_complete
   }

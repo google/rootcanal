@@ -602,6 +602,10 @@ class DualModeController : public Device {
   // with RootCanal.
   bluetooth::hci::LoopbackMode loopback_mode_{LoopbackMode::NO_LOOPBACK};
 
+  // Flag set to true after the HCI Reset command has been received
+  // the first time.
+  bool controller_reset_{false};
+
   // Map command opcodes to the corresponding bit index in the
   // supported command mask.
   static const std::unordered_map<OpCode, OpCodeIndex>
