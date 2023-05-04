@@ -7,7 +7,7 @@ import py.bluetooth
 import sys
 import typing
 import unittest
-from typing import Optional
+from typing import Optional, Tuple, Union
 from hci_packets import ErrorCode
 
 from ctypes import *
@@ -45,6 +45,7 @@ def generate_rpa(irk: bytes) -> hci.Address:
     rpa = bytearray(6)
     rpa_type = c_char * 6
     rootcanal.ffi_generate_rpa(c_char_p(irk), rpa_type.from_buffer(rpa))
+    rpa.reverse()
     return hci.Address(bytes(rpa))
 
 
@@ -167,11 +168,25 @@ class Controller:
         return self.ll_queue.popleft()
 
 
+class Any:
+    """Helper class that will match all other values.
+       Use an element of this class in expected packets to match any value
+      returned by the Controller stack."""
+
+    def __eq__(self, other) -> bool:
+        return True
+
+    def __format__(self, format_spec: str) -> str:
+        return "_"
+
+
 class ControllerTest(unittest.IsolatedAsyncioTestCase):
     """Helper class for writing controller tests using the python bindings.
     The test setups the controller sending the Reset command and configuring
     the event masks to allow all events. The local device address is
     always configured as 11:11:11:11:11:11."""
+
+    Any = Any()
 
     def setUp(self):
         self.controller = Controller(hci.Address('11:11:11:11:11:11'))
@@ -196,49 +211,47 @@ class ControllerTest(unittest.IsolatedAsyncioTestCase):
         evt = await self.expect_cmd_complete(hci.LeReadLocalSupportedFeaturesComplete)
         controller.le_features = LeFeatures(evt.le_features)
 
-    async def expect_evt(self, expected_evt: hci.Event, timeout: int = 3):
+    async def expect_evt(self, expected_evt: typing.Union[hci.Event, type], timeout: int = 3) -> hci.Event:
         packet = await asyncio.wait_for(self.controller.receive_evt(), timeout=timeout)
         evt = hci.Event.parse_all(packet)
 
-        if evt != expected_evt:
+        if isinstance(expected_evt, type) and not isinstance(evt, expected_evt):
             print("received unexpected event")
-            print("expected event:")
+            print(f"expected event: {expected_evt.__class__.__name__}")
+            print("received event:")
+            evt.show()
+            self.assertTrue(False)
+
+        if isinstance(expected_evt, hci.Event) and evt != expected_evt:
+            print("received unexpected event")
+            print(f"expected event:")
             expected_evt.show()
             print("received event:")
             evt.show()
             self.assertTrue(False)
 
+        return evt
+
     async def expect_cmd_complete(self, expected_evt: type, timeout: int = 3) -> hci.Event:
-        packet = await asyncio.wait_for(self.controller.receive_evt(), timeout=timeout)
-        evt = hci.Event.parse_all(packet)
-
-        if not isinstance(evt, expected_evt):
-            print("received unexpected event")
-            print("expected event:")
-            print(expected_evt)
-            print("received event:")
-            evt.show()
-            self.assertTrue(False)
-
+        evt = await self.expect_evt(expected_evt, timeout=timeout)
         assert evt.status == ErrorCode.SUCCESS
         assert evt.num_hci_command_packets == 1
         return evt
 
     async def expect_ll(self,
                         expected_pdus: typing.Union[list, typing.Union[ll.LinkLayerPacket, type]],
-                        timeout: int = 3) -> int:
+                        timeout: int = 3) -> ll.LinkLayerPacket:
         if not isinstance(expected_pdus, list):
             expected_pdus = [expected_pdus]
 
         packet = await asyncio.wait_for(self.controller.receive_ll(), timeout=timeout)
         pdu = ll.LinkLayerPacket.parse_all(packet)
 
-        matched_index = -1
-        for (index, expected_pdu) in enumerate(expected_pdus):
+        for expected_pdu in expected_pdus:
             if isinstance(expected_pdu, type) and isinstance(pdu, expected_pdu):
-                return index
+                return pdu
             if isinstance(expected_pdu, ll.LinkLayerPacket) and pdu == expected_pdu:
-                return index
+                return pdu
 
         print("received unexpected pdu:")
         pdu.show()

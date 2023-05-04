@@ -88,17 +88,13 @@ class Test(ControllerTest):
         # 6. Lower Tester receives a SCAN_REQ packet T_IFS after any of the
         # ADV_SCAN_IND packets. The ScanA field in the SCAN_REQ packet shall
         # use the same resolvable private address.
-        scan_req = await asyncio.wait_for(controller.receive_ll(), timeout=3)
-        scan_req = ll.LinkLayerPacket.parse_all(scan_req)
-        self.assertTrue(isinstance(scan_req, ll.LeScan))
-        # TODO check that source_address is resolvable by lower tester.
-        self.assertTrue(scan_req.source_address.is_resolvable())
-        self.assertEqual(
-            scan_req,
-            ll.LeScan(source_address=scan_req.source_address,
+        scan_req = await self.expect_ll(
+            ll.LeScan(source_address=self.Any,
                       destination_address=peer_resolvable_address,
                       advertising_address_type=ll.AddressType.RANDOM,
                       scanning_address_type=ll.AddressType.RANDOM))
+        # TODO check that source_address is resolvable by lower tester.
+        self.assertTrue(scan_req.source_address.is_resolvable())
 
         # 8. Interleave with step 6: Upper Tester receives an
         # HCI_LE_Advertising_Report containing the information used in the
