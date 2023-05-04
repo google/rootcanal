@@ -91,6 +91,10 @@ class AclConnectionHandler {
   bluetooth::hci::AddressWithType GetOwnAddress(uint16_t handle) const;
   bluetooth::hci::AddressWithType GetResolvedAddress(uint16_t handle) const;
 
+  // Return the AclConnection for the selected connection handle, asserts
+  // if the handle is not currently used.
+  AclConnection& GetAclConnection(uint16_t handle);
+
   void Encrypt(uint16_t handle);
   bool IsEncrypted(uint16_t handle) const;
 

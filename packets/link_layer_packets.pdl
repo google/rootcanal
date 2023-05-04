@@ -52,6 +52,10 @@ enum PacketType : 8 {
     PING_RESPONSE = 0x36,
     ROLE_SWITCH_REQUEST = 0x38,
     ROLE_SWITCH_RESPONSE = 0x39,
+
+    LL_PHY_REQ = 0x50,
+    LL_PHY_RSP = 0x51,
+    LL_PHY_UPDATE_IND = 0x52,
 }
 
 packet LinkLayerPacket {
@@ -403,4 +407,20 @@ packet RoleSwitchRequest : LinkLayerPacket (type = ROLE_SWITCH_REQUEST) {
 packet RoleSwitchResponse : LinkLayerPacket (type = ROLE_SWITCH_RESPONSE) {
   status: 8,
   initiator_new_role: 8,
+}
+
+packet LlPhyReq : LinkLayerPacket (type = LL_PHY_REQ) {
+  tx_phys: 8,
+  rx_phys: 8,
+}
+
+packet LlPhyRsp : LinkLayerPacket (type = LL_PHY_RSP) {
+  tx_phys: 8,
+  rx_phys: 8,
+}
+
+packet LlPhyUpdateInd : LinkLayerPacket (type = LL_PHY_UPDATE_IND) {
+  phy_c_to_p: 8,
+  phy_p_to_c: 8,
+  instant: 16,
 }

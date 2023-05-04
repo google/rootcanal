@@ -197,6 +197,11 @@ uint16_t AclConnectionHandler::GetHandleOnlyAddress(
   return kReservedHandle;
 }
 
+AclConnection& AclConnectionHandler::GetAclConnection(uint16_t handle) {
+  ASSERT_LOG(HasHandle(handle), "Unknown handle %d", handle);
+  return acl_connections_.at(handle);
+}
+
 AddressWithType AclConnectionHandler::GetAddress(uint16_t handle) const {
   ASSERT_LOG(HasHandle(handle), "Unknown handle %hd", handle);
   return acl_connections_.at(handle).GetAddress();

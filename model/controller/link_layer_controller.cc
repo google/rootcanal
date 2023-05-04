@@ -319,9 +319,10 @@ ErrorCode LinkLayerController::LeReadPhy(uint16_t connection_handle,
     return ErrorCode::UNKNOWN_CONNECTION;
   }
 
-  // TODO(b/275970864) save the phy in the connection state.
-  *tx_phy = bluetooth::hci::PhyType::LE_1M;
-  *rx_phy = bluetooth::hci::PhyType::LE_1M;
+  AclConnection const& connection =
+      connections_.GetAclConnection(connection_handle);
+  *tx_phy = connection.GetTxPhy();
+  *rx_phy = connection.GetRxPhy();
   return ErrorCode::SUCCESS;
 }
 
@@ -335,7 +336,7 @@ ErrorCode LinkLayerController::LeSetDefaultPhy(
   // the TX_PHYs parameter shall be ignored; otherwise at least one bit shall
   // be set to 1.
   if (all_phys_no_transmit_preference) {
-    tx_phys = 0x1;  // LE_1M_PHY by default.
+    tx_phys = supported_phys;
   }
   if (tx_phys == 0) {
     LOG_INFO("TX_Phys does not configure any bit");
@@ -346,7 +347,7 @@ ErrorCode LinkLayerController::LeSetDefaultPhy(
   // the RX_PHYs parameter shall be ignored; otherwise at least one bit shall
   // be set to 1.
   if (all_phys_no_receive_preference) {
-    rx_phys = 0x1;  // LE_1M_PHY by default.
+    rx_phys = supported_phys;
   }
   if (rx_phys == 0) {
     LOG_INFO("RX_Phys does not configure any bit");
@@ -366,7 +367,8 @@ ErrorCode LinkLayerController::LeSetDefaultPhy(
     return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
   }
 
-  // TODO(b/275970864) save the phy default preference.
+  default_tx_phys_ = tx_phys;
+  default_rx_phys_ = rx_phys;
   return ErrorCode::SUCCESS;
 }
 
@@ -374,7 +376,7 @@ ErrorCode LinkLayerController::LeSetDefaultPhy(
 ErrorCode LinkLayerController::LeSetPhy(
     uint16_t connection_handle, bool all_phys_no_transmit_preference,
     bool all_phys_no_receive_preference, uint8_t tx_phys, uint8_t rx_phys,
-    bluetooth::hci::PhyOptions phy_options) {
+    bluetooth::hci::PhyOptions /*phy_options*/) {
   uint8_t supported_phys = properties_.LeSupportedPhys();
 
   // Note: no documented status code for this case.
@@ -388,7 +390,7 @@ ErrorCode LinkLayerController::LeSetPhy(
   // the TX_PHYs parameter shall be ignored; otherwise at least one bit shall
   // be set to 1.
   if (all_phys_no_transmit_preference) {
-    tx_phys = 0x1;  // LE_1M_PHY by default.
+    tx_phys = supported_phys;
   }
   if (tx_phys == 0) {
     LOG_INFO("TX_Phys does not configure any bit");
@@ -399,7 +401,7 @@ ErrorCode LinkLayerController::LeSetPhy(
   // the RX_PHYs parameter shall be ignored; otherwise at least one bit shall
   // be set to 1.
   if (all_phys_no_receive_preference) {
-    rx_phys = 0x1;  // LE_1M_PHY by default.
+    rx_phys = supported_phys;
   }
   if (rx_phys == 0) {
     LOG_INFO("RX_Phys does not configure any bit");
@@ -422,16 +424,162 @@ ErrorCode LinkLayerController::LeSetPhy(
   // The HCI_LE_PHY_Update_Complete event shall be generated either when one
   // or both PHY changes or when the Controller determines that neither PHY
   // will change immediately.
-  // TODO(b/275970864) send LL_PHY_REQ to the peer.
-  ScheduleTask(0ms, [this, connection_handle] {
-    send_event_(bluetooth::hci::LePhyUpdateCompleteBuilder::Create(
-        ErrorCode::SUCCESS, connection_handle,
-        static_cast<uint8_t>(bluetooth::hci::PhyType::LE_1M),
-        static_cast<uint8_t>(bluetooth::hci::PhyType::LE_1M)));
-  });
+  SendLeLinkLayerPacket(model::packets::LlPhyReqBuilder::Create(
+      connections_.GetOwnAddress(connection_handle).GetAddress(),
+      connections_.GetAddress(connection_handle).GetAddress(), tx_phys,
+      rx_phys));
 
-  // TODO(b/275970864) save the phy preference.
+  connections_.GetAclConnection(connection_handle).InitiatePhyUpdate();
+  requested_tx_phys_ = tx_phys;
+  requested_rx_phys_ = rx_phys;
   return ErrorCode::SUCCESS;
+}
+
+// Helper to pick one phy in enabled phys.
+static bluetooth::hci::PhyType select_phy(uint8_t phys,
+                                          bluetooth::hci::PhyType current) {
+  return (phys & 0x4)   ? bluetooth::hci::PhyType::LE_CODED
+         : (phys & 0x2) ? bluetooth::hci::PhyType::LE_2M
+         : (phys & 0x1) ? bluetooth::hci::PhyType::LE_1M
+                        : current;
+}
+
+// Helper to generate the LL_PHY_UPDATE_IND mask for the selected phy.
+// The mask is non zero only if the phy has changed.
+static uint8_t indicate_phy(bluetooth::hci::PhyType selected,
+                            bluetooth::hci::PhyType current) {
+  return selected == current                             ? 0x0
+         : selected == bluetooth::hci::PhyType::LE_CODED ? 0x4
+         : selected == bluetooth::hci::PhyType::LE_2M    ? 0x2
+                                                         : 0x1;
+}
+
+void LinkLayerController::IncomingLlPhyReq(
+    model::packets::LinkLayerPacketView incoming) {
+  auto phy_req = model::packets::LlPhyReqView::Create(incoming);
+  ASSERT(phy_req.IsValid());
+  uint16_t connection_handle =
+      connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
+  AclConnection& connection = connections_.GetAclConnection(connection_handle);
+
+  if (connection.GetRole() == bluetooth::hci::Role::PERIPHERAL) {
+    // Peripheral receives the request: respond with local phy preferences
+    // in LL_PHY_RSP pdu.
+    SendLeLinkLayerPacket(model::packets::LlPhyRspBuilder::Create(
+        incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
+        default_tx_phys_, default_rx_phys_));
+  } else {
+    // Central receives the request: respond with LL_PHY_UPDATE_IND and
+    // the selected phys.
+
+    // Intersect phy preferences with local preferences.
+    uint8_t tx_phys = phy_req.GetRxPhys() & default_tx_phys_;
+    uint8_t rx_phys = phy_req.GetTxPhys() & default_rx_phys_;
+
+    // Select valid TX and RX phys from preferences.
+    bluetooth::hci::PhyType phy_c_to_p =
+        select_phy(tx_phys, connection.GetTxPhy());
+    bluetooth::hci::PhyType phy_p_to_c =
+        select_phy(rx_phys, connection.GetRxPhy());
+
+    // Send LL_PHY_UPDATE_IND to notify selected phys.
+    //
+    // PHY_C_TO_P shall be set to indicate the PHY that shall be used for
+    // packets sent from the Central to the Peripheral. These fields each
+    // consist of 8 bits. If a PHY is changing, the bit corresponding to the new
+    // PHY shall be set to 1 and the remaining bits to 0; if a PHY is remaining
+    // unchanged, then the corresponding field shall be set to the value 0.
+    SendLeLinkLayerPacket(model::packets::LlPhyUpdateIndBuilder::Create(
+        incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
+        indicate_phy(phy_c_to_p, connection.GetTxPhy()),
+        indicate_phy(phy_p_to_c, connection.GetRxPhy()), 0));
+
+    // Notify the host when the phy selection has changed
+    // (responder in this case).
+    if ((phy_c_to_p != connection.GetTxPhy() ||
+         phy_p_to_c != connection.GetRxPhy()) &&
+        IsLeEventUnmasked(SubeventCode::PHY_UPDATE_COMPLETE)) {
+      send_event_(bluetooth::hci::LePhyUpdateCompleteBuilder::Create(
+          ErrorCode::SUCCESS, connection_handle, phy_c_to_p, phy_p_to_c));
+    }
+
+    // Update local state.
+    connection.SetTxPhy(phy_c_to_p);
+    connection.SetRxPhy(phy_p_to_c);
+  }
+}
+
+void LinkLayerController::IncomingLlPhyRsp(
+    model::packets::LinkLayerPacketView incoming) {
+  auto phy_rsp = model::packets::LlPhyRspView::Create(incoming);
+  ASSERT(phy_rsp.IsValid());
+  uint16_t connection_handle =
+      connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
+  AclConnection& connection = connections_.GetAclConnection(connection_handle);
+  ASSERT(connection.GetRole() == bluetooth::hci::Role::CENTRAL);
+
+  // Intersect phy preferences with local preferences.
+  uint8_t tx_phys = phy_rsp.GetRxPhys() & requested_tx_phys_;
+  uint8_t rx_phys = phy_rsp.GetTxPhys() & requested_rx_phys_;
+
+  // Select valid TX and RX phys from preferences.
+  bluetooth::hci::PhyType phy_c_to_p =
+      select_phy(tx_phys, connection.GetTxPhy());
+  bluetooth::hci::PhyType phy_p_to_c =
+      select_phy(rx_phys, connection.GetRxPhy());
+
+  // Send LL_PHY_UPDATE_IND to notify selected phys.
+  //
+  // PHY_C_TO_P shall be set to indicate the PHY that shall be used for
+  // packets sent from the Central to the Peripheral. These fields each
+  // consist of 8 bits. If a PHY is changing, the bit corresponding to the new
+  // PHY shall be set to 1 and the remaining bits to 0; if a PHY is remaining
+  // unchanged, then the corresponding field shall be set to the value 0.
+  SendLeLinkLayerPacket(model::packets::LlPhyUpdateIndBuilder::Create(
+      incoming.GetDestinationAddress(), incoming.GetSourceAddress(),
+      indicate_phy(phy_c_to_p, connection.GetTxPhy()),
+      indicate_phy(phy_p_to_c, connection.GetRxPhy()), 0));
+
+  // Always notify the host, even if the phy selection has not changed
+  // (initiator in this case).
+  if (IsLeEventUnmasked(SubeventCode::PHY_UPDATE_COMPLETE)) {
+    send_event_(bluetooth::hci::LePhyUpdateCompleteBuilder::Create(
+        ErrorCode::SUCCESS, connection_handle, phy_c_to_p, phy_p_to_c));
+  }
+
+  // Update local state.
+  connection.PhyUpdateComplete();
+  connection.SetTxPhy(phy_c_to_p);
+  connection.SetRxPhy(phy_p_to_c);
+}
+
+void LinkLayerController::IncomingLlPhyUpdateInd(
+    model::packets::LinkLayerPacketView incoming) {
+  auto phy_update_ind = model::packets::LlPhyUpdateIndView::Create(incoming);
+  ASSERT(phy_update_ind.IsValid());
+  uint16_t connection_handle =
+      connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
+  AclConnection& connection = connections_.GetAclConnection(connection_handle);
+  ASSERT(connection.GetRole() == bluetooth::hci::Role::PERIPHERAL);
+
+  bluetooth::hci::PhyType tx_phy =
+      select_phy(phy_update_ind.GetPhyPToC(), connection.GetTxPhy());
+  bluetooth::hci::PhyType rx_phy =
+      select_phy(phy_update_ind.GetPhyCToP(), connection.GetRxPhy());
+
+  // Update local state, and notify the host.
+  // The notification is sent only when the local host is initiator
+  // of the Phy update procedure or the phy selection has changed.
+  if (IsLeEventUnmasked(SubeventCode::PHY_UPDATE_COMPLETE) &&
+      (tx_phy != connection.GetTxPhy() || rx_phy != connection.GetRxPhy() ||
+       connection.InitiatedPhyUpdate())) {
+    send_event_(bluetooth::hci::LePhyUpdateCompleteBuilder::Create(
+        ErrorCode::SUCCESS, connection_handle, tx_phy, rx_phy));
+  }
+
+  connection.PhyUpdateComplete();
+  connection.SetTxPhy(tx_phy);
+  connection.SetRxPhy(rx_phy);
 }
 
 // HCI LE Set Host Feature command (Vol 4, Part E § 7.8.115).
@@ -2208,6 +2356,15 @@ void LinkLayerController::IncomingPacket(
       break;
     case model::packets::PacketType::ROLE_SWITCH_RESPONSE:
       IncomingRoleSwitchResponse(incoming);
+      break;
+    case model::packets::PacketType::LL_PHY_REQ:
+      IncomingLlPhyReq(incoming);
+      break;
+    case model::packets::PacketType::LL_PHY_RSP:
+      IncomingLlPhyRsp(incoming);
+      break;
+    case model::packets::PacketType::LL_PHY_UPDATE_IND:
+      IncomingLlPhyUpdateInd(incoming);
       break;
     default:
       LOG_WARN("Dropping unhandled packet of type %s",
@@ -5975,6 +6132,8 @@ void LinkLayerController::Reset() {
   inquiry_mode_ = InquiryType::STANDARD;
   inquiry_lap_ = 0;
   inquiry_max_responses_ = 0;
+  default_tx_phys_ = properties_.LeSupportedPhys();
+  default_rx_phys_ = properties_.LeSupportedPhys();
 
   bluetooth::hci::Lap general_iac;
   general_iac.lap_ = 0x33;  // 0x9E8B33

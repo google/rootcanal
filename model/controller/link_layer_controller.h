@@ -709,6 +709,10 @@ class LinkLayerController {
   void IncomingRoleSwitchRequest(model::packets::LinkLayerPacketView incoming);
   void IncomingRoleSwitchResponse(model::packets::LinkLayerPacketView incoming);
 
+  void IncomingLlPhyReq(model::packets::LinkLayerPacketView incoming);
+  void IncomingLlPhyRsp(model::packets::LinkLayerPacketView incoming);
+  void IncomingLlPhyUpdateInd(model::packets::LinkLayerPacketView incoming);
+
  public:
   bool IsEventUnmasked(bluetooth::hci::EventCode event) const;
   bool IsLeEventUnmasked(bluetooth::hci::SubeventCode subevent) const;
@@ -990,6 +994,12 @@ class LinkLayerController {
 
   // Extended advertising sets.
   std::unordered_map<uint8_t, ExtendedAdvertiser> extended_advertisers_{};
+
+  // Local phy preferences, defaults to LE 1M Phy.
+  uint8_t default_tx_phys_{0x1};
+  uint8_t default_rx_phys_{0x1};
+  uint8_t requested_tx_phys_{0x1};
+  uint8_t requested_rx_phys_{0x1};
 
   struct PeriodicAdvertiserListEntry {
     bluetooth::hci::AdvertiserAddressType advertiser_address_type;
