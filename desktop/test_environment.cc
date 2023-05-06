@@ -49,11 +49,10 @@ TestEnvironment::TestEnvironment(
     std::function<std::shared_ptr<AsyncDataChannelConnector>(AsyncManager*)>
         open_connector,
     int test_port, int hci_port, int link_port, int link_ble_port,
-    const std::string& config_str, const std::string& default_commands_file,
+    const std::string& config_str,
     bool enable_hci_sniffer, bool enable_baseband_sniffer,
     bool enable_pcap_filter, bool disable_address_reuse)
-    : default_commands_file_(default_commands_file),
-      enable_hci_sniffer_(enable_hci_sniffer),
+    : enable_hci_sniffer_(enable_hci_sniffer),
       enable_baseband_sniffer_(enable_baseband_sniffer),
       enable_pcap_filter_(enable_pcap_filter) {
   test_socket_server_ = open_server(&async_manager_, test_port);
@@ -232,10 +231,12 @@ void TestEnvironment::SetUpTestChannel() {
 
   test_channel_.AddPhy({"BR_EDR"});
   test_channel_.AddPhy({"LOW_ENERGY"});
+  test_channel_.AddDevice({"beacon", "be:ac:01:55:00:01", "1000"});
+  test_channel_.AddDeviceToPhy({"0", "1"});
+  test_channel_.AddDevice({"beacon", "be:ac:01:55:00:02", "1000"});
+  test_channel_.AddDeviceToPhy({"1", "1"});
   test_channel_.SetTimerPeriod({"5"});
   test_channel_.StartTimer({});
-
-  test_channel_.FromFile(default_commands_file_);
 
   if (!transport_configured) {
     LOG_ERROR("Test channel SetUp failed.");

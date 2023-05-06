@@ -89,30 +89,6 @@ void TestCommandHandler::HandleCommand(const std::string& name,
   active_commands_[name](args);
 }
 
-void TestCommandHandler::FromFile(const std::string& file_name) {
-  if (file_name.empty()) {
-    return;
-  }
-
-  std::ifstream file(file_name.c_str());
-
-  const std::regex re("\\s+");
-
-  std::string line;
-  while (std::getline(file, line)) {
-    auto begin = std::sregex_token_iterator(line.begin(), line.end(), re, -1);
-    auto end = std::sregex_token_iterator();
-    auto params = std::vector<std::string>(std::next(begin), end);
-
-    HandleCommand(*begin, params);
-  }
-
-  if (file.fail()) {
-    LOG_ERROR("Error reading commands from file.");
-    return;
-  }
-}
-
 void TestCommandHandler::RegisterSendResponse(
     const std::function<void(const std::string&)> callback) {
   send_response_ = callback;

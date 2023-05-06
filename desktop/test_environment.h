@@ -55,7 +55,6 @@ class TestEnvironment {
           open_connector,
       int test_port, int hci_port, int link_port, int link_ble_port,
       std::string const& config_str,
-      std::string const& default_commands_file = "",
       bool enable_hci_sniffer = false, bool enable_baseband_sniffer = false,
       bool enable_pcap_filter = false, bool disable_address_reuse = false);
 
@@ -70,7 +69,6 @@ class TestEnvironment {
   std::shared_ptr<AsyncDataChannelServer> link_socket_server_;
   std::shared_ptr<AsyncDataChannelServer> link_ble_socket_server_;
   std::shared_ptr<AsyncDataChannelConnector> connector_;
-  std::string default_commands_file_;
   bool enable_hci_sniffer_;
   bool enable_baseband_sniffer_;
   bool enable_pcap_filter_;
