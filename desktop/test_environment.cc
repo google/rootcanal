@@ -67,19 +67,19 @@ TestEnvironment::TestEnvironment(
   rootcanal::configuration::Configuration* config =
       new rootcanal::configuration::Configuration();
   if (!google::protobuf::TextFormat::ParseFromString(config_str, config) ||
-      config->controllers_size() == 0) {
+      config->tcp_server_size() == 0) {
     // Default configuration with default hci port if the input
     // configuration cannot be used.
     SetUpHciServer(open_server, hci_port, rootcanal::ControllerProperties());
   } else {
     // Open an HCI server for all configurations requested by
     // the caller.
-    int num_controllers = config->controllers_size();
+    int num_controllers = config->tcp_server_size();
     for (int index = 0; index < num_controllers; index++) {
-      rootcanal::configuration::Controller const& controller =
-          config->controllers(index);
-      SetUpHciServer(open_server, controller.tcp_port(),
-                     rootcanal::ControllerProperties(controller));
+      rootcanal::configuration::TcpServer const& tcp_server =
+          config->tcp_server(index);
+      SetUpHciServer(open_server, tcp_server.tcp_port(),
+                     rootcanal::ControllerProperties(tcp_server.configuration()));
     }
   }
 }

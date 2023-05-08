@@ -30,20 +30,25 @@ message ControllerQuirks {
 }
 
 message Controller {
-  // Configure the TCP port on which the controller with this defined
-  // configuration will be served.
-  required int32 tcp_port = 1;
   // Configure the controller preset. Presets come with a pre-selection
   // of features and quirks, but these can be overridden with the next fields.
-  optional ControllerPreset preset = 2;
+  optional ControllerPreset preset = 1;
   // Configure support for controller features.
-  optional ControllerFeatures features = 3;
+  optional ControllerFeatures features = 2;
   // Enable controller quirks.
   // Quirks are behaviors observed in real controllers that are not valid
   // according to the specification.
-  optional ControllerQuirks quirks = 4;
+  optional ControllerQuirks quirks = 3;
+}
+
+message TcpServer {
+  // Configure the TCP port on which the controller with this defined
+  // configuration will be served.
+  required int32 tcp_port = 1;
+  // Controller configuration for this port.
+  optional Controller configuration = 2;
 }
 
 message Configuration {
-  repeated Controller controllers = 1;
+  repeated TcpServer tcp_server = 1;
 }
