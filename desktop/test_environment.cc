@@ -97,32 +97,38 @@ void TestEnvironment::SetUpHciServer(
   server->SetOnConnectCallback([this, properties = std::move(properties)](
                                    std::shared_ptr<AsyncDataChannel> socket,
                                    AsyncDataChannelServer* server) {
-    auto transport = HciSocketTransport::Create(socket);
-    if (enable_hci_sniffer_) {
-      transport = HciSniffer::Create(transport);
-    }
-    auto device = HciDevice::Create(transport, properties);
+    // AddHciConnection needs to be executed in task thread to
+    // prevent data races on test model.
     async_manager_.ExecAsync(socket_user_id_, std::chrono::milliseconds(0),
-                             [=]() { test_model_.AddHciConnection(device); });
-    if (enable_hci_sniffer_) {
-      auto filename = device->GetAddress().ToString() + ".pcap";
-      for (auto i = 0; std::filesystem::exists(filename); i++) {
-        filename =
-            device->GetAddress().ToString() + "_" + std::to_string(i) + ".pcap";
+                             [=]() {
+      auto transport = HciSocketTransport::Create(socket);
+      if (enable_hci_sniffer_) {
+        transport = HciSniffer::Create(transport);
       }
-      auto file = std::make_shared<std::ofstream>(filename, std::ios::binary);
-      auto sniffer = std::static_pointer_cast<HciSniffer>(transport);
+      auto device = HciDevice::Create(transport, properties);
+      test_model_.AddHciConnection(device);
 
-      // Add PCAP output stream.
-      sniffer->SetOutputStream(file);
+      if (enable_hci_sniffer_) {
+        auto filename = device->GetAddress().ToString() + ".pcap";
+        for (auto i = 0; std::filesystem::exists(filename); i++) {
+          filename =
+              device->GetAddress().ToString() + "_" + std::to_string(i) + ".pcap";
+        }
+        auto file = std::make_shared<std::ofstream>(filename, std::ios::binary);
+        auto sniffer = std::static_pointer_cast<HciSniffer>(transport);
 
-      // Add a PCAP filter if the option is enabled.
-      // TODO: ideally the filter should be shared between all transport
-      // instances to use the same user information remapping between traces.
-      if (enable_pcap_filter_) {
-        sniffer->SetPcapFilter(std::make_shared<rootcanal::PcapFilter>());
+        // Add PCAP output stream.
+        sniffer->SetOutputStream(file);
+
+        // Add a PCAP filter if the option is enabled.
+        // TODO: ideally the filter should be shared between all transport
+        // instances to use the same user information remapping between traces.
+        if (enable_pcap_filter_) {
+          sniffer->SetPcapFilter(std::make_shared<rootcanal::PcapFilter>());
+        }
       }
-    }
+    });
+
     server->StartListening();
   });
   hci_socket_servers_.emplace_back(std::move(server));
