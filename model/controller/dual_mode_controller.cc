@@ -1824,8 +1824,8 @@ void DualModeController::LeSetDefaultPhy(CommandView command) {
   ASSERT(command_view.IsValid());
   ErrorCode status = link_layer_controller_.LeSetDefaultPhy(
       command_view.GetAllPhysNoTransmitPreference(),
-      command_view.GetAllPhysNoReceivePreference(),
-      command_view.GetTxPhysBitmask(), command_view.GetRxPhysBitmask());
+      command_view.GetAllPhysNoReceivePreference(), command_view.GetTxPhys(),
+      command_view.GetRxPhys());
   send_event_(bluetooth::hci::LeSetDefaultPhyCompleteBuilder::Create(
       kNumCommandPackets, status));
 }
@@ -1836,9 +1836,8 @@ void DualModeController::LeSetPhy(CommandView command) {
   ErrorCode status = link_layer_controller_.LeSetPhy(
       command_view.GetConnectionHandle(),
       command_view.GetAllPhysNoTransmitPreference(),
-      command_view.GetAllPhysNoReceivePreference(),
-      command_view.GetTxPhysBitmask(), command_view.GetRxPhysBitmask(),
-      command_view.GetPhyOptions());
+      command_view.GetAllPhysNoReceivePreference(), command_view.GetTxPhys(),
+      command_view.GetRxPhys(), command_view.GetPhyOptions());
   send_event_(bluetooth::hci::LeSetPhyStatusBuilder::Create(
       status, kNumCommandPackets));
 }

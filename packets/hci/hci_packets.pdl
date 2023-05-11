@@ -3718,9 +3718,9 @@ packet LeSetDefaultPhy : Command (op_code = LE_SET_DEFAULT_PHY) {
   all_phys_no_transmit_preference : 1,
   all_phys_no_receive_preference : 1,
   _reserved_ : 6,
-  tx_phys_bitmask : 3,
+  tx_phys : 3,
   _reserved_ : 5,
-  rx_phys_bitmask : 3,
+  rx_phys : 3,
   _reserved_ : 5,
 }
 
@@ -3740,9 +3740,9 @@ packet LeSetPhy : Command (op_code = LE_SET_PHY) {
   all_phys_no_transmit_preference : 1,
   all_phys_no_receive_preference : 1,
   _reserved_ : 6,
-  tx_phys_bitmask : 3,
+  tx_phys : 3,
   _reserved_ : 5,
-  rx_phys_bitmask : 3,
+  rx_phys : 3,
   _reserved_ : 5,
   phy_options : PhyOptions,
 }
@@ -5871,8 +5871,8 @@ packet LePhyUpdateComplete : LeMetaEvent (subevent_code = PHY_UPDATE_COMPLETE) {
     status : ErrorCode,
     connection_handle : 12,
     _reserved_ : 4,
-    tx_phy : 8,
-    rx_phy : 8,
+    tx_phy : PhyType,
+    rx_phy : PhyType,
 }
 
 enum DataStatus : 2 {

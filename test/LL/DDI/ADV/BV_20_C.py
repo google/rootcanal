@@ -28,8 +28,8 @@ class Test(ControllerTest):
         controller.send_cmd(
             hci.LeSetDefaultPhy(all_phys_no_transmit_preference=False,
                                 all_phys_no_receive_preference=False,
-                                tx_phys_bitmask=0x2,
-                                rx_phys_bitmask=0x2))
+                                tx_phys=0x2,
+                                rx_phys=0x2))
 
         await self.expect_evt(hci.LeSetDefaultPhyComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 

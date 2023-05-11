@@ -162,9 +162,10 @@ class Test(ControllerTest):
         # until an AUX_CHAIN_IND PDU is received with no AuxPtr field and all data has been received.
 
         # 12. Repeat steps 8–11 100 times.
-        received = [0, 0]
+        received_extended_advertising_pdus = 0
+        received_periodic_advertising_pdus = 0
         for n in range(15):
-            index = await self.expect_ll([
+            pdu = await self.expect_ll([
                 ll.LeExtendedAdvertisingPdu(source_address=controller.address,
                                             advertising_address_type=ll.AddressType.PUBLIC,
                                             target_address_type=ll.AddressType.PUBLIC,
@@ -184,13 +185,16 @@ class Test(ControllerTest):
                                             advertising_interval=0x100,
                                             advertising_data=advertising_data)
             ])
-            received[index] = received[index] + 1
+            if isinstance(pdu, ll.LeExtendedAdvertisingPdu):
+                received_extended_advertising_pdus += 1
+            if isinstance(pdu, ll.LePeriodicAdvertisingPdu):
+                received_periodic_advertising_pdus += 1
 
         # Note: the extended advertising interval is twice the periodic
         # advertising interval; the number of events received of each kind is
         # deterministic.
-        self.assertTrue(received[0] == 5)
-        self.assertTrue(received[1] == 10)
+        self.assertTrue(received_extended_advertising_pdus == 5)
+        self.assertTrue(received_periodic_advertising_pdus == 10)
 
         # 13. The Upper Tester disables extended advertising using the
         # HCI_LE_Set_Extended_Advertising_Enable command but maintains periodic advertising.
