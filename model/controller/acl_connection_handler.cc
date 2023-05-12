@@ -46,7 +46,11 @@ bool AclConnectionHandler::HasScoHandle(uint16_t handle) const {
 }
 
 uint16_t AclConnectionHandler::GetUnusedHandle() {
-  while (HasHandle(last_handle_) || HasScoHandle(last_handle_)) {
+  // Keep a reserved range of handles for CIS connections implemented
+  // in the rust module.
+  while (HasHandle(last_handle_) || HasScoHandle(last_handle_) ||
+         (last_handle_ >= kCisHandleRangeStart &&
+          last_handle_ < kCisHandleRangeEnd)) {
     last_handle_ = (last_handle_ + 1) % kReservedHandle;
   }
   uint16_t unused_handle = last_handle_;

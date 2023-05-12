@@ -29,6 +29,8 @@
 
 namespace rootcanal {
 static constexpr uint16_t kReservedHandle = 0xF00;
+static constexpr uint16_t kCisHandleRangeStart = 0xE00;
+static constexpr uint16_t kCisHandleRangeEnd = 0xEFE;
 
 class AclConnectionHandler {
  public:
