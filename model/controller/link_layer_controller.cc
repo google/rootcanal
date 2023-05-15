@@ -460,6 +460,14 @@ void LinkLayerController::IncomingLlPhyReq(
   ASSERT(phy_req.IsValid());
   uint16_t connection_handle =
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
+
+  if (connection_handle == kReservedHandle) {
+    LOG_INFO("@%s: Unknown connection @%s",
+             incoming.GetDestinationAddress().ToString().c_str(),
+             incoming.GetSourceAddress().ToString().c_str());
+    return;
+  }
+
   AclConnection& connection = connections_.GetAclConnection(connection_handle);
 
   if (connection.GetRole() == bluetooth::hci::Role::PERIPHERAL) {
@@ -515,6 +523,14 @@ void LinkLayerController::IncomingLlPhyRsp(
   ASSERT(phy_rsp.IsValid());
   uint16_t connection_handle =
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
+
+  if (connection_handle == kReservedHandle) {
+    LOG_INFO("@%s: Unknown connection @%s",
+             incoming.GetDestinationAddress().ToString().c_str(),
+             incoming.GetSourceAddress().ToString().c_str());
+    return;
+  }
+
   AclConnection& connection = connections_.GetAclConnection(connection_handle);
   ASSERT(connection.GetRole() == bluetooth::hci::Role::CENTRAL);
 
@@ -559,6 +575,14 @@ void LinkLayerController::IncomingLlPhyUpdateInd(
   ASSERT(phy_update_ind.IsValid());
   uint16_t connection_handle =
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
+
+  if (connection_handle == kReservedHandle) {
+    LOG_INFO("@%s: Unknown connection @%s",
+             incoming.GetDestinationAddress().ToString().c_str(),
+             incoming.GetSourceAddress().ToString().c_str());
+    return;
+  }
+
   AclConnection& connection = connections_.GetAclConnection(connection_handle);
   ASSERT(connection.GetRole() == bluetooth::hci::Role::PERIPHERAL);
 
