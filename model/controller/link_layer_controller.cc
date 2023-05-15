@@ -5875,6 +5875,10 @@ bool LinkLayerController::HasAclConnection() {
   return !connections_.GetAclHandles().empty();
 }
 
+bool LinkLayerController::HasAclConnection(uint16_t connection_handle) {
+  return connections_.HasHandle(connection_handle);
+}
+
 void LinkLayerController::LeReadIsoTxSync(uint16_t /* handle */) {}
 
 void LinkLayerController::LeSetCigParameters(

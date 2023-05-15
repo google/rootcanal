@@ -301,6 +301,35 @@ void DualModeController::ReadBufferSize(CommandView command) {
       properties_.total_num_sco_data_packets));
 }
 
+void DualModeController::ReadFailedContactCounter(CommandView command) {
+  auto command_view =
+      bluetooth::hci::ReadFailedContactCounterView::Create(command);
+  ASSERT(command_view.IsValid());
+
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+  uint16_t failed_contact_counter = 0;
+  ErrorCode status = link_layer_controller_.HasAclConnection(connection_handle)
+                         ? ErrorCode::SUCCESS
+                         : ErrorCode::UNKNOWN_CONNECTION;
+
+  send_event_(bluetooth::hci::ReadFailedContactCounterCompleteBuilder::Create(
+      kNumCommandPackets, status, connection_handle, failed_contact_counter));
+}
+
+void DualModeController::ResetFailedContactCounter(CommandView command) {
+  auto command_view =
+      bluetooth::hci::ReadFailedContactCounterView::Create(command);
+  ASSERT(command_view.IsValid());
+
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+  ErrorCode status = link_layer_controller_.HasAclConnection(connection_handle)
+                         ? ErrorCode::SUCCESS
+                         : ErrorCode::UNKNOWN_CONNECTION;
+
+  send_event_(bluetooth::hci::ResetFailedContactCounterCompleteBuilder::Create(
+      kNumCommandPackets, status, connection_handle));
+}
+
 void DualModeController::ReadRssi(CommandView command) {
   auto command_view = bluetooth::hci::ReadRssiView::Create(command);
   ASSERT(command_view.IsValid());
@@ -3510,10 +3539,10 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
         //&DualModeController::ReadLocalSupportedControllerDelay},
 
         // STATUS_PARAMETERS
-        //{OpCode::READ_FAILED_CONTACT_COUNTER,
-        //&DualModeController::ReadFailedContactCounter},
-        //{OpCode::RESET_FAILED_CONTACT_COUNTER,
-        //&DualModeController::ResetFailedContactCounter},
+        {OpCode::READ_FAILED_CONTACT_COUNTER,
+         &DualModeController::ReadFailedContactCounter},
+        {OpCode::RESET_FAILED_CONTACT_COUNTER,
+         &DualModeController::ResetFailedContactCounter},
         //{OpCode::READ_LINK_QUALITY, &DualModeController::ReadLinkQuality},
         {OpCode::READ_RSSI, &DualModeController::ReadRssi},
         //{OpCode::READ_AFH_CHANNEL_MAP,

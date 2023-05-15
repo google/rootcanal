@@ -345,7 +345,10 @@ class LinkLayerController {
       uint8_t retransmission_effort, uint16_t packet_types);
   ErrorCode RejectSynchronousConnection(Address bd_addr, uint16_t reason);
 
+  // Returns true if any ACL connection exists.
   bool HasAclConnection();
+  // Returns true if the specified ACL connection handle is valid.
+  bool HasAclConnection(uint16_t connection_handle);
 
   void HandleIso(bluetooth::hci::IsoView iso);
 
