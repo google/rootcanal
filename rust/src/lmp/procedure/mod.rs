@@ -7,10 +7,10 @@ use crate::lmp::ec::PrivateKey;
 use crate::packets::{hci, lmp};
 
 pub trait Context {
-    fn poll_hci_command<C: TryFrom<hci::CommandPacket>>(&self) -> Poll<C>;
+    fn poll_hci_command<C: TryFrom<hci::Command>>(&self) -> Poll<C>;
     fn poll_lmp_packet<P: TryFrom<lmp::LmpPacket>>(&self) -> Poll<P>;
 
-    fn send_hci_event<E: Into<hci::EventPacket>>(&self, event: E);
+    fn send_hci_event<E: Into<hci::Event>>(&self, event: E);
     fn send_lmp_packet<P: Into<lmp::LmpPacket>>(&self, packet: P);
 
     fn peer_address(&self) -> hci::Address;
@@ -22,7 +22,7 @@ pub trait Context {
 
     fn extended_features(&self, features_page: u8) -> u64;
 
-    fn receive_hci_command<C: TryFrom<hci::CommandPacket>>(&self) -> ReceiveFuture<'_, Self, C> {
+    fn receive_hci_command<C: TryFrom<hci::Command>>(&self) -> ReceiveFuture<'_, Self, C> {
         ReceiveFuture(Self::poll_hci_command, self)
     }
 

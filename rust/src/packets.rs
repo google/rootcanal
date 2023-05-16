@@ -3,13 +3,35 @@ pub mod hci {
     #![allow(unused)]
     #![allow(missing_docs)]
 
-    pub const EMPTY_ADDRESS: Address = Address { bytes: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00] };
-    pub const ANY_ADDRESS: Address = Address { bytes: [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF] };
+    include!(concat!(env!("OUT_DIR"), "/hci_packets.rs"));
 
-    /// A Bluetooth address
-    #[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, Debug)]
-    pub struct Address {
-        pub bytes: [u8; 6],
+    pub const EMPTY_ADDRESS: Address = Address(0x000000000000);
+    pub const ANY_ADDRESS: Address = Address(0xffffffffffff);
+
+    impl fmt::Display for Address {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let bytes = u64::to_le_bytes(self.0);
+            write!(
+                f,
+                "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                bytes[5], bytes[4], bytes[3], bytes[2], bytes[1], bytes[0],
+            )
+        }
+    }
+
+    impl From<&[u8; 6]> for Address {
+        fn from(bytes: &[u8; 6]) -> Self {
+            Self(u64::from_le_bytes([
+                bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], 0, 0,
+            ]))
+        }
+    }
+
+    impl From<Address> for [u8; 6] {
+        fn from(Address(addr): Address) -> Self {
+            let bytes = u64::to_le_bytes(addr);
+            bytes[0..6].try_into().unwrap()
+        }
     }
 
     impl Address {
@@ -18,81 +40,19 @@ pub mod hci {
         }
     }
 
-    impl fmt::Display for Address {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-                self.bytes[5],
-                self.bytes[4],
-                self.bytes[3],
-                self.bytes[2],
-                self.bytes[1],
-                self.bytes[0]
-            )
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    pub struct InvalidAddressError;
-
-    impl TryFrom<&[u8]> for Address {
-        type Error = InvalidAddressError;
-
-        fn try_from(slice: &[u8]) -> std::result::Result<Self, Self::Error> {
-            match <[u8; 6]>::try_from(slice) {
-                Ok(bytes) => Ok(Self { bytes }),
-                Err(_) => Err(InvalidAddressError),
-            }
-        }
-    }
-
-    impl From<Address> for [u8; 6] {
-        fn from(addr: Address) -> [u8; 6] {
-            addr.bytes
-        }
-    }
-
-    #[derive(Clone, Eq, Copy, PartialEq, Hash, Ord, PartialOrd, Debug)]
-    pub struct ClassOfDevice {
-        pub bytes: [u8; 3],
-    }
-
     impl fmt::Display for ClassOfDevice {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(
                 f,
                 "{:03X}-{:01X}-{:02X}",
-                ((self.bytes[2] as u16) << 4) | ((self.bytes[1] as u16) >> 4),
-                self.bytes[1] & 0x0F,
-                self.bytes[0]
+                (self.0 >> 12) & 0xfff,
+                (self.0 >> 8) & 0xf,
+                self.0 & 0xff,
             )
         }
     }
 
-    #[derive(Debug, Clone)]
-    pub struct InvalidClassOfDeviceError;
-
-    impl TryFrom<&[u8]> for ClassOfDevice {
-        type Error = InvalidClassOfDeviceError;
-
-        fn try_from(slice: &[u8]) -> std::result::Result<Self, Self::Error> {
-            match <[u8; 3]>::try_from(slice) {
-                Ok(bytes) => Ok(Self { bytes }),
-                Err(_) => Err(InvalidClassOfDeviceError),
-            }
-        }
-    }
-
-    impl From<ClassOfDevice> for [u8; 3] {
-        fn from(cod: ClassOfDevice) -> [u8; 3] {
-            cod.bytes
-        }
-    }
-
-    include!(concat!(env!("OUT_DIR"), "/hci_packets.rs"));
-
-    pub fn command_remote_device_address(command: &CommandPacket) -> Option<Address> {
+    pub fn command_remote_device_address(command: &Command) -> Option<Address> {
         use CommandChild::*;
         #[allow(unused_imports)]
         use Option::None; // Overwrite `None` variant of `Child` enum
@@ -115,7 +75,7 @@ pub mod hci {
         }
     }
 
-    pub fn command_connection_handle(command: &CommandPacket) -> Option<u16> {
+    pub fn command_connection_handle(command: &Command) -> Option<u16> {
         use CommandChild::*;
         #[allow(unused_imports)]
         use Option::None; // Overwrite `None` variant of `Child` enum

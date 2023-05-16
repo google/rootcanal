@@ -27,7 +27,7 @@ sequence! { procedure, context,
     IUT -> Lower Tester: NotAcceptedExt {
         transaction_id: 0,
         not_accepted_opcode: ExtendedOpcode::IoCapabilityReq,
-        error_code: ErrorCode::PairingNotAllowed.to_u8().unwrap(),
+        error_code: ErrorCode::PairingNotAllowed.into(),
     }
     IUT -> Upper Tester: SimplePairingComplete {
         status: ErrorCode::AuthenticationFailure,
