@@ -2043,20 +2043,20 @@ LinkLayerController::~LinkLayerController() {}
 
 void LinkLayerController::SendLeLinkLayerPacket(
     std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
-    int8_t tx_power) {
+    int8_t tx_power, std::chrono::milliseconds delay) {
   std::shared_ptr<model::packets::LinkLayerPacketBuilder> shared_packet =
       std::move(packet);
-  ScheduleTask(kNoDelayMs, [this, shared_packet, tx_power]() {
+  ScheduleTask(delay, [this, shared_packet, tx_power]() {
     send_to_remote_(shared_packet, Phy::Type::LOW_ENERGY, tx_power);
   });
 }
 
 void LinkLayerController::SendLinkLayerPacket(
     std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
-    int8_t tx_power) {
+    int8_t tx_power, std::chrono::milliseconds delay) {
   std::shared_ptr<model::packets::LinkLayerPacketBuilder> shared_packet =
       std::move(packet);
-  ScheduleTask(kNoDelayMs, [this, shared_packet, tx_power]() {
+  ScheduleTask(delay, [this, shared_packet, tx_power]() {
     send_to_remote_(shared_packet, Phy::Type::BR_EDR, tx_power);
   });
 }
@@ -2143,9 +2143,20 @@ ErrorCode LinkLayerController::SendAclToRemote(
     return ErrorCode::UNKNOWN_CONNECTION;
   }
 
-  AddressWithType my_address = connections_.GetOwnAddress(handle);
-  AddressWithType destination = connections_.GetAddress(handle);
+  AclConnection& connection = connections_.GetAclConnection(handle);
+  AddressWithType my_address = connection.GetOwnAddress();
+  AddressWithType destination = connection.GetAddress();
   Phy::Type phy = connections_.GetPhyType(handle);
+
+  // The PTS test L2CAP/CMC/BV-13-C flakes if the first ACL packet is
+  // sent too early after the connection establishment; the PTS in
+  // this case is handling the packet before the Connection Complete
+  // event and this causes the test to fail.
+  std::chrono::milliseconds connection_uptime =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          connection.GetUptime());
+  std::chrono::milliseconds delay =
+      connection_uptime > 100ms ? 0ms : 100ms - connection_uptime;
 
   auto acl_packet_payload = acl_packet.GetPayload();
   auto acl = model::packets::AclBuilder::Create(
@@ -2156,14 +2167,14 @@ ErrorCode LinkLayerController::SendAclToRemote(
 
   switch (phy) {
     case Phy::Type::BR_EDR:
-      SendLinkLayerPacket(std::move(acl));
+      SendLinkLayerPacket(std::move(acl), 0, delay);
       break;
     case Phy::Type::LOW_ENERGY:
-      SendLeLinkLayerPacket(std::move(acl));
+      SendLeLinkLayerPacket(std::move(acl), 0, delay);
       break;
   }
 
-  ScheduleTask(kNoDelayMs, [this, handle]() {
+  ScheduleTask(delay, [this, handle]() {
     send_event_(bluetooth::hci::NumberOfCompletedPacketsBuilder::Create(
         {bluetooth::hci::CompletedPackets(handle, 1)}));
   });
