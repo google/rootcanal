@@ -14,6 +14,9 @@ message ControllerFeatures {
   optional bool ll_privacy = 3;
   optional bool le_2m_phy = 4;
   optional bool le_coded_phy = 5;
+  // Enable the support for both LL Connected Isochronous Stream Central
+  // and LL Connected Isochronous Stream Peripheral.
+  optional bool le_connected_isochronous_stream = 6;
 }
 
 message ControllerQuirks {
