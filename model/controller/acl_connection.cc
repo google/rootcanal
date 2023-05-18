@@ -26,7 +26,6 @@ AclConnection::AclConnection(AddressWithType address,
       resolved_address_(resolved_address),
       type_(phy_type),
       role_(role),
-      established_timestamp_(std::chrono::steady_clock::now()),
       last_packet_timestamp_(std::chrono::steady_clock::now()),
       timeout_(std::chrono::seconds(1)) {}
 

@@ -59,10 +59,6 @@ class AclConnection {
   bool IsNearExpiring() const;
   bool HasExpired() const;
 
-  std::chrono::steady_clock::duration GetUptime() const {
-    return std::chrono::steady_clock::now() - established_timestamp_;
-  }
-
   // LE-ACL state.
   void InitiatePhyUpdate() { initiated_phy_update_ = true; }
   void PhyUpdateComplete() { initiated_phy_update_ = false; }
@@ -86,7 +82,6 @@ class AclConnection {
   bool encrypted_{false};
   uint16_t link_policy_settings_{0};
   bluetooth::hci::Role role_{bluetooth::hci::Role::CENTRAL};
-  std::chrono::steady_clock::time_point established_timestamp_;
   std::chrono::steady_clock::time_point last_packet_timestamp_;
   std::chrono::steady_clock::duration timeout_;
 
