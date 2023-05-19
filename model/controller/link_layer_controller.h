@@ -603,12 +603,10 @@ class LinkLayerController {
  protected:
   void SendLinkLayerPacket(
       std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
-      int8_t tx_power = 0,
-      std::chrono::milliseconds delay = std::chrono::milliseconds(0));
+      int8_t tx_power = 0);
   void SendLeLinkLayerPacket(
       std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
-      int8_t tx_power = 0,
-      std::chrono::milliseconds delay = std::chrono::milliseconds(0));
+      int8_t tx_power = 0);
 
   void IncomingAclPacket(model::packets::LinkLayerPacketView incoming,
                          int8_t rssi);
