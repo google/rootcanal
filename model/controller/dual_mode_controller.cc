@@ -1592,8 +1592,7 @@ void DualModeController::LeReadAdvertisingPhysicalChannelTxPower(
 }
 
 void DualModeController::LeSetAdvertisingData(CommandView command) {
-  auto command_view =
-      bluetooth::hci::LeSetAdvertisingDataRawView::Create(command);
+  auto command_view = bluetooth::hci::LeSetAdvertisingDataView::Create(command);
   ASSERT(command_view.IsValid());
   ErrorCode status = link_layer_controller_.LeSetAdvertisingData(
       command_view.GetAdvertisingData());
@@ -1603,7 +1602,7 @@ void DualModeController::LeSetAdvertisingData(CommandView command) {
 
 void DualModeController::LeSetScanResponseData(CommandView command) {
   auto command_view =
-      bluetooth::hci::LeSetScanResponseDataRawView::Create(command);
+      bluetooth::hci::LeSetScanResponseDataView::Create(command);
   ASSERT(command_view.IsValid());
   ErrorCode status = link_layer_controller_.LeSetScanResponseData(
       command_view.GetAdvertisingData());
@@ -1945,7 +1944,7 @@ void DualModeController::LeSetPeriodicAdvertisingParameters(
 
 void DualModeController::LeSetPeriodicAdvertisingData(CommandView command) {
   auto command_view =
-      bluetooth::hci::LeSetPeriodicAdvertisingDataRawView::Create(command);
+      bluetooth::hci::LeSetPeriodicAdvertisingDataView::Create(command);
   ASSERT(command_view.IsValid());
   ErrorCode status = link_layer_controller_.LeSetPeriodicAdvertisingData(
       command_view.GetAdvertisingHandle(), command_view.GetOperation(),
@@ -2558,7 +2557,7 @@ void DualModeController::LeSetExtendedAdvertisingData(CommandView command) {
       bluetooth::hci::LeSetExtendedAdvertisingDataView::Create(command);
   ASSERT(command_view.IsValid());
   auto raw_command_view =
-      bluetooth::hci::LeSetExtendedAdvertisingDataRawView::Create(command);
+      bluetooth::hci::LeSetExtendedAdvertisingDataView::Create(command);
   ASSERT(raw_command_view.IsValid());
   ErrorCode status = link_layer_controller_.LeSetExtendedAdvertisingData(
       command_view.GetAdvertisingHandle(), command_view.GetOperation(),
@@ -2574,7 +2573,7 @@ void DualModeController::LeSetExtendedScanResponseData(CommandView command) {
       bluetooth::hci::LeSetExtendedScanResponseDataView::Create(command);
   ASSERT(command_view.IsValid());
   auto raw_command_view =
-      bluetooth::hci::LeSetExtendedScanResponseDataRawView::Create(command);
+      bluetooth::hci::LeSetExtendedScanResponseDataView::Create(command);
   ASSERT(raw_command_view.IsValid());
   ErrorCode status = link_layer_controller_.LeSetExtendedScanResponseData(
       command_view.GetAdvertisingHandle(), command_view.GetOperation(),

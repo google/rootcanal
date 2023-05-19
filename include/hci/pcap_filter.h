@@ -50,7 +50,6 @@ class PcapFilter final {
   std::vector<uint8_t> FilterHciCommand(std::vector<uint8_t> const& packet);
   std::vector<uint8_t> FilterHciEvent(std::vector<uint8_t> const& packet);
 
- private:
   // Specific filters for HCI commands.
   std::vector<uint8_t> FilterWriteLocalName(
       bluetooth::hci::CommandView& command);
@@ -87,9 +86,8 @@ class PcapFilter final {
 
   // Specific filter for any Gap data array.
   // The Gap data entries are modified in place.
-  void FilterGapData(std::vector<bluetooth::hci::GapData>& gap_data);
-  void FilterLengthAndData(
-      std::vector<bluetooth::hci::LengthAndData>& gap_data);
+  void FilterGapData(uint8_t* gap_data, size_t gap_data_len);
+  void FilterGapData(std::vector<uint8_t>& gap_data);
 
   // Helpers to replace local names.
   std::array<uint8_t, 248> ChangeDeviceName(
@@ -97,6 +95,7 @@ class PcapFilter final {
   std::vector<uint8_t> ChangeDeviceName(
       std::vector<uint8_t> const& device_name);
 
+ private:
   // Map device names to anonymous replacements.
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
       device_name_map{};

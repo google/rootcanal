@@ -8,66 +8,6 @@ enum Enable : 8 {
   ENABLED = 0x01,
 }
 
-// https://www.bluetooth.com/specifications/assigned-numbers/generic-access-profile
-enum GapDataType : 8 {
-  INVALID = 0x00,
-  FLAGS = 0x01,
-  INCOMPLETE_LIST_16_BIT_UUIDS = 0x02,
-  COMPLETE_LIST_16_BIT_UUIDS = 0x03,
-  INCOMPLETE_LIST_32_BIT_UUIDS = 0x04,
-  COMPLETE_LIST_32_BIT_UUIDS = 0x05,
-  INCOMPLETE_LIST_128_BIT_UUIDS = 0x06,
-  COMPLETE_LIST_128_BIT_UUIDS = 0x07,
-  SHORTENED_LOCAL_NAME = 0x08,
-  COMPLETE_LOCAL_NAME = 0x09,
-  TX_POWER_LEVEL = 0x0A,
-  CLASS_OF_DEVICE = 0x0D,
-  SIMPLE_PAIRING_HASH_C = 0x0E,
-  SIMPLE_PAIRING_RANDOMIZER_R = 0x0F,
-  DEVICE_ID = 0x10,
-  SECURITY_MANAGER_OOB_FLAGS = 0x11,
-  SLAVE_CONNECTION_INTERVAL_RANGE = 0x12,
-  LIST_16BIT_SERVICE_SOLICITATION_UUIDS = 0x14,
-  LIST_128BIT_SERVICE_SOLICITATION_UUIDS = 0x15,
-  SERVICE_DATA_16_BIT_UUIDS = 0x16,
-  PUBLIC_TARGET_ADDRESS = 0x17,
-  RANDOM_TARGET_ADDRESS = 0x18,
-  APPEARANCE = 0x19,
-  ADVERTISING_INTERVAL = 0x1A,
-  LE_BLUETOOTH_DEVICE_ADDRESS = 0x1B,
-  LE_ROLE = 0x1C,
-  SIMPLE_PAIRING_HASH_C_256 = 0x1D,
-  SIMPLE_PAIRING_RANDOMIZER_R_256 = 0x1E,
-  LIST_32BIT_SERVICE_SOLICITATION_UUIDS = 0x1F,
-  SERVICE_DATA_32_BIT_UUIDS = 0x20,
-  SERVICE_DATA_128_BIT_UUIDS = 0x21,
-  LE_SECURE_CONNECTIONS_CONFIRMATION_VALUE = 0x22,
-  LE_SECURE_CONNECTIONS_RANDOM_VALUE = 0x23,
-  URI = 0x24,
-  INDOOR_POSITIONING = 0x25,
-  TRANSPORT_DISCOVERY_DATA = 0x26,
-  LE_SUPPORTED_FEATURES = 0x27,
-  CHANNEL_MAP_UPDATE_INDICATION = 0x28,
-  MESH_PB_ADV = 0x29,
-  MESH_MESSAGE = 0x2A,
-  MESH_BEACON = 0x2B,
-  BIG_INFO = 0x2C,
-  BROADCAST_CODE = 0x2D,
-  THREE_D_INFORMATION_DATA = 0x3D,
-  MANUFACTURER_SPECIFIC_DATA = 0xFF,
-}
-
-struct LengthAndData {
-  _size_(data) : 8,
-  data: 8[],
-}
-
-struct GapData {
-  _size_(data) : 8, // Including one byte for data_type
-  data_type : GapDataType,
-  data : 8[+1],
-}
-
 // HCI ACL Packets
 
 enum PacketBoundaryFlag : 2 {
@@ -2426,13 +2366,12 @@ packet ReadExtendedInquiryResponse : Command (op_code = READ_EXTENDED_INQUIRY_RE
 packet ReadExtendedInquiryResponseComplete : CommandComplete (command_op_code = READ_EXTENDED_INQUIRY_RESPONSE) {
   status : ErrorCode,
   fec_required : FecRequired,
-  extended_inquiry_response : GapData[],
+  extended_inquiry_response : 8[240],
 }
 
 packet WriteExtendedInquiryResponse : Command (op_code = WRITE_EXTENDED_INQUIRY_RESPONSE) {
   fec_required : FecRequired,
-  extended_inquiry_response : GapData[],
-  _padding_[240], // Zero padding GapData[] to be 240 octets
+  extended_inquiry_response : 8[240],
 }
 
 packet WriteExtendedInquiryResponseComplete : CommandComplete (command_op_code = WRITE_EXTENDED_INQUIRY_RESPONSE) {
@@ -3246,12 +3185,6 @@ packet LeReadAdvertisingPhysicalChannelTxPowerComplete : CommandComplete (comman
 
 packet LeSetAdvertisingData : Command (op_code = LE_SET_ADVERTISING_DATA) {
   _size_(advertising_data) : 8,
-  advertising_data : GapData[],
-  _padding_[31], // Zero padding to 31 bytes of advertising_data
-}
-
-packet LeSetAdvertisingDataRaw : Command (op_code = LE_SET_ADVERTISING_DATA) {
-  _size_(advertising_data) : 8,
   advertising_data : 8[],
   _padding_[31], // Zero padding to 31 bytes of advertising_data
 }
@@ -3261,12 +3194,6 @@ packet LeSetAdvertisingDataComplete : CommandComplete (command_op_code = LE_SET_
 }
 
 packet LeSetScanResponseData : Command (op_code = LE_SET_SCAN_RESPONSE_DATA) {
-  _size_(advertising_data) : 8,
-  advertising_data : GapData[],
-  _padding_[31], // Zero padding to 31 bytes of advertising_data
-}
-
-packet LeSetScanResponseDataRaw : Command (op_code = LE_SET_SCAN_RESPONSE_DATA) {
   _size_(advertising_data) : 8,
   advertising_data : 8[],
   _padding_[31], // Zero padding to 31 bytes of advertising_data
@@ -3897,21 +3824,11 @@ packet LeSetExtendedAdvertisingData : Command (op_code = LE_SET_EXTENDED_ADVERTI
   fragment_preference : FragmentPreference,
   _reserved_ : 7,
   _size_(advertising_data) : 8,
-  advertising_data : GapData[],
+  advertising_data : 8[],
 }
 
 test LeSetExtendedAdvertisingData {
   "\x37\x20\x12\x00\x03\x01\x0e\x02\x01\x02\x0a\x09\x50\x69\x78\x65\x6c\x20\x33\x20\x58",
-}
-
-packet LeSetExtendedAdvertisingDataRaw : Command (op_code = LE_SET_EXTENDED_ADVERTISING_DATA) {
-  advertising_handle : 8,
-  operation : Operation,
-  _reserved_ : 5,
-  fragment_preference : FragmentPreference,
-  _reserved_ : 7,
-  _size_(advertising_data) : 8,
-  advertising_data : 8[],
 }
 
 packet LeSetExtendedAdvertisingDataComplete : CommandComplete (command_op_code = LE_SET_EXTENDED_ADVERTISING_DATA) {
@@ -3923,16 +3840,6 @@ test LeSetExtendedAdvertisingDataComplete {
 }
 
 packet LeSetExtendedScanResponseData : Command (op_code = LE_SET_EXTENDED_SCAN_RESPONSE_DATA) {
-  advertising_handle : 8,
-  operation : Operation,
-  _reserved_ : 5,
-  fragment_preference : FragmentPreference,
-  _reserved_ : 7,
-  _size_(scan_response_data) : 8,
-  scan_response_data : GapData[],
-}
-
-packet LeSetExtendedScanResponseDataRaw : Command (op_code = LE_SET_EXTENDED_SCAN_RESPONSE_DATA) {
   advertising_handle : 8,
   operation : Operation,
   _reserved_ : 5,
@@ -4044,14 +3951,6 @@ packet LeSetPeriodicAdvertisingParametersComplete : CommandComplete (command_op_
 }
 
 packet LeSetPeriodicAdvertisingData : Command (op_code = LE_SET_PERIODIC_ADVERTISING_DATA) {
-  advertising_handle : 8,
-  operation : Operation,
-  _reserved_ : 5,
-  _size_(advertising_data) : 8,
-  advertising_data : GapData[],
-}
-
-packet LeSetPeriodicAdvertisingDataRaw : Command (op_code = LE_SET_PERIODIC_ADVERTISING_DATA) {
   advertising_handle : 8,
   operation : Operation,
   _reserved_ : 5,
@@ -4856,7 +4755,7 @@ packet LeMultiAdvtParamComplete : LeMultiAdvtComplete (sub_cmd = SET_PARAM) {
 
 packet LeMultiAdvtSetData : LeMultiAdvt (sub_cmd = SET_DATA) {
   _size_(advertising_data) : 8,
-  advertising_data : GapData[],
+  advertising_data : 8[],
   _padding_[31], // Zero padding to 31 bytes of advertising_data
   advertising_instance : 8,
 }
@@ -4866,7 +4765,7 @@ packet LeMultiAdvtSetDataComplete : LeMultiAdvtComplete (sub_cmd = SET_DATA) {
 
 packet LeMultiAdvtSetScanResp : LeMultiAdvt (sub_cmd = SET_SCAN_RESP) {
   _size_(advertising_data) : 8,
-  advertising_data : GapData[],
+  advertising_data : 8[],
   _padding_[31], // Zero padding to 31 bytes of advertising_data
   advertising_instance : 8,
 }
@@ -5603,28 +5502,11 @@ packet ExtendedInquiryResult : Event (event_code = EXTENDED_INQUIRY_RESULT) {
   clock_offset : 15,
   _reserved_ : 1,
   rssi : 8,
-  extended_inquiry_response : GapData[],
-  // Extended inquiry Result is always 255 bytes long
-  // padded GapData with zeroes as necessary
-  // Refer to BLUETOOTH CORE SPECIFICATION Version 5.2 | Vol 3, Part C Section 8 on page 1340
-  _padding_[240],
-}
-
-packet ExtendedInquiryResultRaw : Event (event_code = EXTENDED_INQUIRY_RESULT) {
-  _fixed_ = 0x01 : 8,
-  address : Address,
-  page_scan_repetition_mode : PageScanRepetitionMode,
-  _reserved_ : 8,
-  class_of_device : ClassOfDevice,
-  clock_offset : 15,
-  _reserved_ : 1,
-  rssi : 8,
-  // Extended inquiry Result is always 255 bytes long
-  // padded GapData with zeroes as necessary
+  // Extended inquiry Result is always 255 bytes long;
+  // the gap data is padded with zeros as necessary.
   // Refer to BLUETOOTH CORE SPECIFICATION Version 5.2 | Vol 3, Part C Section 8 on page 1340
   extended_inquiry_response : 8[240],
 }
-
 
 packet EncryptionKeyRefreshComplete : Event (event_code = ENCRYPTION_KEY_REFRESH_COMPLETE) {
   status : ErrorCode,
@@ -5747,27 +5629,13 @@ struct LeAdvertisingResponse {
   address_type : AddressType,
   address : Address,
   _size_(advertising_data) : 8,
-  advertising_data : LengthAndData[],
+  advertising_data : 8[],
   rssi : 8,
 }
 
 packet LeAdvertisingReport : LeMetaEvent (subevent_code = ADVERTISING_REPORT) {
   _count_(responses) : 8,
   responses : LeAdvertisingResponse[],
-}
-
-struct LeAdvertisingResponseRaw {
-  event_type : AdvertisingEventType,
-  address_type : AddressType,
-  address : Address,
-  _size_(advertising_data) : 8,
-  advertising_data : 8[],
-  rssi : 8,
-}
-
-packet LeAdvertisingReportRaw : LeMetaEvent (subevent_code = ADVERTISING_REPORT) {
-  _count_(responses) : 8,
-  responses : LeAdvertisingResponseRaw[],
 }
 
 packet LeConnectionUpdateComplete : LeMetaEvent (subevent_code = CONNECTION_UPDATE_COMPLETE) {
@@ -5901,34 +5769,7 @@ struct LeExtendedAdvertisingResponse {
   direct_address_type : DirectAdvertisingAddressType,
   direct_address : Address,
   _size_(advertising_data) : 8,
-  advertising_data: LengthAndData[],
-}
-
-struct LeExtendedAdvertisingResponseRaw {
-  connectable : 1,
-  scannable : 1,
-  directed : 1,
-  scan_response : 1,
-  legacy : 1,
-  data_status : DataStatus,
-  _reserved_ : 9,
-  address_type : DirectAdvertisingAddressType,
-  address : Address,
-  primary_phy : PrimaryPhyType,
-  secondary_phy : SecondaryPhyType,
-  advertising_sid : 8, // SID subfield in the ADI field
-  tx_power : 8,
-  rssi : 8, // -127 to +20 (0x7F means not available)
-  periodic_advertising_interval : 16, // 0x006 to 0xFFFF (7.5 ms to 82s)
-  direct_address_type : DirectAdvertisingAddressType,
-  direct_address : Address,
-  _size_(advertising_data) : 8,
   advertising_data: 8[],
-}
-
-packet LeExtendedAdvertisingReportRaw : LeMetaEvent (subevent_code = EXTENDED_ADVERTISING_REPORT) {
-  _count_(responses) : 8,
-  responses : LeExtendedAdvertisingResponseRaw[],
 }
 
 packet LeExtendedAdvertisingReport : LeMetaEvent (subevent_code = EXTENDED_ADVERTISING_REPORT) {
@@ -6543,4 +6384,53 @@ packet MsftLeMonitorDeviceEventPayload : MsftEventPayload (msft_event_code = MSF
 test MsftLeMonitorDeviceEventPayload {
   "\x02\x01\x00\x01\x02\x03\x04\x05\x10\x00",
   "\x02\x02\xf0\xf1\xf2\xf3\xf4\xf5\xaa\x02",
+}
+
+// https://www.bluetooth.com/specifications/assigned-numbers/generic-access-profile
+enum GapDataType : 8 {
+  INVALID = 0x00,
+  FLAGS = 0x01,
+  INCOMPLETE_LIST_16_BIT_UUIDS = 0x02,
+  COMPLETE_LIST_16_BIT_UUIDS = 0x03,
+  INCOMPLETE_LIST_32_BIT_UUIDS = 0x04,
+  COMPLETE_LIST_32_BIT_UUIDS = 0x05,
+  INCOMPLETE_LIST_128_BIT_UUIDS = 0x06,
+  COMPLETE_LIST_128_BIT_UUIDS = 0x07,
+  SHORTENED_LOCAL_NAME = 0x08,
+  COMPLETE_LOCAL_NAME = 0x09,
+  TX_POWER_LEVEL = 0x0A,
+  CLASS_OF_DEVICE = 0x0D,
+  SIMPLE_PAIRING_HASH_C = 0x0E,
+  SIMPLE_PAIRING_RANDOMIZER_R = 0x0F,
+  DEVICE_ID = 0x10,
+  SECURITY_MANAGER_OOB_FLAGS = 0x11,
+  SLAVE_CONNECTION_INTERVAL_RANGE = 0x12,
+  LIST_16BIT_SERVICE_SOLICITATION_UUIDS = 0x14,
+  LIST_128BIT_SERVICE_SOLICITATION_UUIDS = 0x15,
+  SERVICE_DATA_16_BIT_UUIDS = 0x16,
+  PUBLIC_TARGET_ADDRESS = 0x17,
+  RANDOM_TARGET_ADDRESS = 0x18,
+  APPEARANCE = 0x19,
+  ADVERTISING_INTERVAL = 0x1A,
+  LE_BLUETOOTH_DEVICE_ADDRESS = 0x1B,
+  LE_ROLE = 0x1C,
+  SIMPLE_PAIRING_HASH_C_256 = 0x1D,
+  SIMPLE_PAIRING_RANDOMIZER_R_256 = 0x1E,
+  LIST_32BIT_SERVICE_SOLICITATION_UUIDS = 0x1F,
+  SERVICE_DATA_32_BIT_UUIDS = 0x20,
+  SERVICE_DATA_128_BIT_UUIDS = 0x21,
+  LE_SECURE_CONNECTIONS_CONFIRMATION_VALUE = 0x22,
+  LE_SECURE_CONNECTIONS_RANDOM_VALUE = 0x23,
+  URI = 0x24,
+  INDOOR_POSITIONING = 0x25,
+  TRANSPORT_DISCOVERY_DATA = 0x26,
+  LE_SUPPORTED_FEATURES = 0x27,
+  CHANNEL_MAP_UPDATE_INDICATION = 0x28,
+  MESH_PB_ADV = 0x29,
+  MESH_MESSAGE = 0x2A,
+  MESH_BEACON = 0x2B,
+  BIG_INFO = 0x2C,
+  BROADCAST_CODE = 0x2D,
+  THREE_D_INFORMATION_DATA = 0x3D,
+  MANUFACTURER_SPECIFIC_DATA = 0xFF,
 }
