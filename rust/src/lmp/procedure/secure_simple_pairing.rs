@@ -1,8 +1,6 @@
 // Bluetooth Core, Vol 2, Part C, 4.2.7
 
-use std::convert::TryInto;
-
-use num_traits::{FromPrimitive, ToPrimitive};
+use std::convert::{TryFrom, TryInto};
 
 use crate::either::Either;
 use crate::lmp::ec::{DhKey, PrivateKey, PublicKey};
@@ -207,8 +205,8 @@ async fn user_confirmation_request(ctx: &impl Context) -> Result<(), ()> {
 
     match ctx
         .receive_hci_command::<Either<
-            hci::UserConfirmationRequestReplyPacket,
-            hci::UserConfirmationRequestNegativeReplyPacket,
+            hci::UserConfirmationRequestReply,
+            hci::UserConfirmationRequestNegativeReply,
         >>()
         .await
     {
@@ -243,11 +241,8 @@ async fn user_passkey_request(ctx: &impl Context) -> Result<(), ()> {
     loop {
         match ctx
             .receive_hci_command::<Either<
-                Either<
-                    hci::UserPasskeyRequestReplyPacket,
-                    hci::UserPasskeyRequestNegativeReplyPacket,
-                >,
-                hci::SendKeypressNotificationPacket,
+                Either<hci::UserPasskeyRequestReply, hci::UserPasskeyRequestNegativeReply>,
+                hci::SendKeypressNotification,
             >>()
             .await
         {
@@ -293,8 +288,8 @@ async fn remote_oob_data_request(ctx: &impl Context) -> Result<(), ()> {
 
     match ctx
         .receive_hci_command::<Either<
-            hci::RemoteOobDataRequestReplyPacket,
-            hci::RemoteOobDataRequestNegativeReplyPacket,
+            hci::RemoteOobDataRequestReply,
+            hci::RemoteOobDataRequestNegativeReply,
         >>()
         .await
     {
@@ -331,8 +326,8 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
         ctx.send_hci_event(hci::IoCapabilityRequestBuilder { bd_addr: ctx.peer_address() }.build());
         match ctx
                 .receive_hci_command::<Either<
-                    hci::IoCapabilityRequestReplyPacket,
-                    hci::IoCapabilityRequestNegativeReplyPacket,
+                    hci::IoCapabilityRequestReply,
+                    hci::IoCapabilityRequestNegativeReply,
                 >>()
                 .await
             {
@@ -348,12 +343,11 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
                     ctx.send_lmp_packet(
                         lmp::IoCapabilityReqBuilder {
                             transaction_id: 0,
-                            io_capabilities: reply.get_io_capability().to_u8().unwrap(),
-                            oob_authentication_data: reply.get_oob_present().to_u8().unwrap(),
+                            io_capabilities: reply.get_io_capability().into(),
+                            oob_authentication_data: reply.get_oob_present().into(),
                             authentication_requirement: reply
                                 .get_authentication_requirements()
-                                .to_u8()
-                                .unwrap(),
+                                .into(),
                         }
                         .build(),
                     );
@@ -386,11 +380,11 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     let responder = {
         let response = ctx.receive_lmp_packet::<lmp::IoCapabilityRes>().await;
 
-        let io_capability = hci::IoCapability::from_u8(response.get_io_capabilities()).unwrap();
+        let io_capability = hci::IoCapability::try_from(response.get_io_capabilities()).unwrap();
         let oob_data_present =
-            hci::OobDataPresent::from_u8(response.get_oob_authentication_data()).unwrap();
+            hci::OobDataPresent::try_from(response.get_oob_authentication_data()).unwrap();
         let authentication_requirements =
-            hci::AuthenticationRequirements::from_u8(response.get_authentication_requirement())
+            hci::AuthenticationRequirements::try_from(response.get_authentication_requirement())
                 .unwrap();
 
         ctx.send_hci_event(
@@ -537,11 +531,11 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
 
 pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReq) -> Result<(), ()> {
     let initiator = {
-        let io_capability = hci::IoCapability::from_u8(request.get_io_capabilities()).unwrap();
+        let io_capability = hci::IoCapability::try_from(request.get_io_capabilities()).unwrap();
         let oob_data_present =
-            hci::OobDataPresent::from_u8(request.get_oob_authentication_data()).unwrap();
+            hci::OobDataPresent::try_from(request.get_oob_authentication_data()).unwrap();
         let authentication_requirements =
-            hci::AuthenticationRequirements::from_u8(request.get_authentication_requirement())
+            hci::AuthenticationRequirements::try_from(request.get_authentication_requirement())
                 .unwrap();
 
         ctx.send_hci_event(
@@ -561,8 +555,8 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReq) -> Resul
         ctx.send_hci_event(hci::IoCapabilityRequestBuilder { bd_addr: ctx.peer_address() }.build());
         match ctx
                 .receive_hci_command::<Either<
-                    hci::IoCapabilityRequestReplyPacket,
-                    hci::IoCapabilityRequestNegativeReplyPacket,
+                    hci::IoCapabilityRequestReply,
+                    hci::IoCapabilityRequestNegativeReply,
                 >>()
                 .await
             {
@@ -578,12 +572,11 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReq) -> Resul
                     ctx.send_lmp_packet(
                         lmp::IoCapabilityResBuilder {
                             transaction_id: 0,
-                            io_capabilities: reply.get_io_capability().to_u8().unwrap(),
-                            oob_authentication_data: reply.get_oob_present().to_u8().unwrap(),
+                            io_capabilities: reply.get_io_capability().into(),
+                            oob_authentication_data: reply.get_oob_present().into(),
                             authentication_requirement: reply
                                 .get_authentication_requirements()
-                                .to_u8()
-                                .unwrap(),
+                                .into(),
                         }
                         .build(),
                     );
@@ -605,7 +598,7 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReq) -> Resul
                     ctx.send_lmp_packet(
                         lmp::NotAcceptedExtBuilder {
                             transaction_id: 0,
-                            error_code: reply.get_reason().to_u8().unwrap(),
+                            error_code: reply.get_reason().into(),
                             not_accepted_opcode: lmp::ExtendedOpcode::IoCapabilityReq,
                         }
                         .build(),
@@ -694,7 +687,7 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReq) -> Resul
             lmp::NotAcceptedBuilder {
                 transaction_id: 0,
                 not_accepted_opcode: lmp::Opcode::DhkeyCheck,
-                error_code: hci::ErrorCode::AuthenticationFailure.to_u8().unwrap(),
+                error_code: hci::ErrorCode::AuthenticationFailure.into(),
             }
             .build(),
         );
@@ -754,8 +747,6 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReq) -> Resul
 
 #[cfg(test)]
 mod tests {
-    use num_traits::ToPrimitive;
-
     use crate::lmp::ec::PrivateKey;
     use crate::lmp::procedure::Context;
     use crate::lmp::test::{sequence, TestContext};

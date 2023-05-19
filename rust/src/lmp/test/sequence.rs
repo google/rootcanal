@@ -46,7 +46,7 @@ macro_rules! sequence_body {
             use crate::packets::hci::*;
 
             paste! {
-                let packet: [<$packet Packet>] = $ctx.0.hci_events.borrow_mut().pop_front().expect("No hci packet").try_into().unwrap();
+                let packet: $packet = $ctx.0.hci_events.borrow_mut().pop_front().expect("No hci packet").try_into().unwrap();
             }
 
             $(

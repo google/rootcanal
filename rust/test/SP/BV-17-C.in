@@ -90,7 +90,7 @@ sequence! { procedure, context,
     IUT -> Lower Tester: NotAccepted {
         transaction_id: 0,
         not_accepted_opcode: Opcode::SimplePairingNumber,
-        error_code: ErrorCode::AuthenticationFailure.to_u8().unwrap(),
+        error_code: ErrorCode::AuthenticationFailure.into(),
     }
     IUT -> Upper Tester: SimplePairingComplete {
         status: ErrorCode::AuthenticationFailure,

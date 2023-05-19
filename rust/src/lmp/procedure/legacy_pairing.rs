@@ -8,7 +8,7 @@ use crate::num_hci_command_packets;
 pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     ctx.send_hci_event(hci::PinCodeRequestBuilder { bd_addr: ctx.peer_address() }.build());
 
-    let _pin_code = ctx.receive_hci_command::<hci::PinCodeRequestReplyPacket>().await;
+    let _pin_code = ctx.receive_hci_command::<hci::PinCodeRequestReply>().await;
 
     ctx.send_hci_event(
         hci::PinCodeRequestReplyCompleteBuilder {
@@ -53,7 +53,7 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
 pub async fn respond(ctx: &impl Context, _request: lmp::InRand) -> Result<(), ()> {
     ctx.send_hci_event(hci::PinCodeRequestBuilder { bd_addr: ctx.peer_address() }.build());
 
-    let _pin_code = ctx.receive_hci_command::<hci::PinCodeRequestReplyPacket>().await;
+    let _pin_code = ctx.receive_hci_command::<hci::PinCodeRequestReply>().await;
 
     ctx.send_hci_event(
         hci::PinCodeRequestReplyCompleteBuilder {

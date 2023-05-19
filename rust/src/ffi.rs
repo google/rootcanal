@@ -20,17 +20,15 @@ pub struct LinkManagerOps {
 
 impl LinkManagerOps {
     pub(crate) fn get_address(&self, handle: u16) -> Option<hci::Address> {
-        let mut result = hci::EMPTY_ADDRESS;
-        unsafe { (self.get_address)(self.user_pointer, handle, &mut result.bytes as *mut _) };
-        if result == hci::EMPTY_ADDRESS {
-            None
-        } else {
-            Some(result)
-        }
+        let mut result = [0; 6];
+        unsafe { (self.get_address)(self.user_pointer, handle, &mut result as *mut _) };
+        let addr = hci::Address::from(&result);
+        (addr != hci::EMPTY_ADDRESS).then_some(addr)
     }
 
     pub(crate) fn get_handle(&self, addr: hci::Address) -> u16 {
-        unsafe { (self.get_handle)(self.user_pointer, &addr.bytes as *const _) }
+        let addr_bytes: [u8; 6] = addr.into();
+        unsafe { (self.get_handle)(self.user_pointer, &addr_bytes as *const _) }
     }
 
     pub(crate) fn extended_features(&self, features_page: u8) -> u64 {
@@ -42,10 +40,11 @@ impl LinkManagerOps {
     }
 
     pub(crate) fn send_lmp_packet(&self, to: hci::Address, packet: &[u8]) {
+        let to_bytes: [u8; 6] = to.into();
         unsafe {
             (self.send_lmp_packet)(
                 self.user_pointer,
-                &to.bytes as *const _,
+                &to_bytes as *const _,
                 packet.as_ptr(),
                 packet.len(),
             )
@@ -75,7 +74,7 @@ pub unsafe extern "C" fn link_manager_add_link(
     peer: *const [u8; 6],
 ) -> bool {
     let lm = ManuallyDrop::new(Rc::from_raw(lm));
-    lm.add_link(hci::Address { bytes: *peer }).is_ok()
+    lm.add_link(hci::Address::from(&*peer)).is_ok()
 }
 
 /// Unregister a link with a peer inside the link manager
@@ -93,7 +92,7 @@ pub unsafe extern "C" fn link_manager_remove_link(
     peer: *const [u8; 6],
 ) -> bool {
     let lm = ManuallyDrop::new(Rc::from_raw(lm));
-    lm.remove_link(hci::Address { bytes: *peer }).is_ok()
+    lm.remove_link(hci::Address::from(&*peer)).is_ok()
 }
 
 /// Run the Link Manager procedures
@@ -127,7 +126,7 @@ pub unsafe extern "C" fn link_manager_ingest_hci(
     let lm = ManuallyDrop::new(Rc::from_raw(lm));
     let data = slice::from_raw_parts(data, len);
 
-    if let Ok(packet) = hci::CommandPacket::parse(data) {
+    if let Ok(packet) = hci::Command::parse(data) {
         lm.ingest_hci(packet).is_ok()
     } else {
         false
@@ -157,7 +156,7 @@ pub unsafe extern "C" fn link_manager_ingest_lmp(
     let data = slice::from_raw_parts(data, len);
 
     if let Ok(packet) = lmp::LmpPacket::parse(data) {
-        lm.ingest_lmp(hci::Address { bytes: *from }, packet).is_ok()
+        lm.ingest_lmp(hci::Address::from(&*from), packet).is_ok()
     } else {
         false
     }

@@ -1,7 +1,5 @@
 // Bluetooth Core, Vol 2, Part C, 4.3.4
 
-use num_traits::ToPrimitive;
-
 use crate::lmp::procedure::Context;
 use crate::packets::lmp;
 
@@ -54,12 +52,12 @@ pub async fn supported_on_both_page1(
     ctx: &impl Context,
     feature: crate::packets::hci::LMPFeaturesPage1Bits,
 ) -> bool {
-    supported_on_both_page(ctx, 1, feature.to_u64().unwrap()).await
+    supported_on_both_page(ctx, 1, feature.into()).await
 }
 
 pub async fn supported_on_both_page2(
     ctx: &impl Context,
     feature: crate::packets::hci::LMPFeaturesPage2Bits,
 ) -> bool {
-    supported_on_both_page(ctx, 2, feature.to_u64().unwrap()).await
+    supported_on_both_page(ctx, 2, feature.into()).await
 }

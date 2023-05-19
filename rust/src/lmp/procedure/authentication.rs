@@ -28,7 +28,7 @@ pub async fn receive_challenge(ctx: &impl Context, _link_key: [u8; 16]) {
 }
 
 pub async fn initiate(ctx: &impl Context) {
-    let _ = ctx.receive_hci_command::<hci::AuthenticationRequestedPacket>().await;
+    let _ = ctx.receive_hci_command::<hci::AuthenticationRequested>().await;
     ctx.send_hci_event(
         hci::AuthenticationRequestedStatusBuilder {
             num_hci_command_packets,
@@ -39,10 +39,10 @@ pub async fn initiate(ctx: &impl Context) {
 
     ctx.send_hci_event(hci::LinkKeyRequestBuilder { bd_addr: ctx.peer_address() }.build());
 
-    let status = match ctx.receive_hci_command::<Either<
-        hci::LinkKeyRequestReplyPacket,
-        hci::LinkKeyRequestNegativeReplyPacket,
-    >>().await {
+    let status = match ctx
+        .receive_hci_command::<Either<hci::LinkKeyRequestReply, hci::LinkKeyRequestNegativeReply>>()
+        .await
+    {
         Either::Left(_reply) => {
             ctx.send_hci_event(
                 hci::LinkKeyRequestReplyCompleteBuilder {
@@ -53,7 +53,7 @@ pub async fn initiate(ctx: &impl Context) {
                 .build(),
             );
             hci::ErrorCode::Success
-        },
+        }
         Either::Right(_) => {
             ctx.send_hci_event(
                 hci::LinkKeyRequestNegativeReplyCompleteBuilder {
@@ -64,7 +64,12 @@ pub async fn initiate(ctx: &impl Context) {
                 .build(),
             );
 
-            let result = if features::supported_on_both_page1(ctx, hci::LMPFeaturesPage1Bits::SecureSimplePairingHostSupport).await {
+            let result = if features::supported_on_both_page1(
+                ctx,
+                hci::LMPFeaturesPage1Bits::SecureSimplePairingHostSupport,
+            )
+            .await
+            {
                 secure_simple_pairing::initiate(ctx).await
             } else {
                 legacy_pairing::initiate(ctx).await
@@ -72,7 +77,7 @@ pub async fn initiate(ctx: &impl Context) {
 
             match result {
                 Ok(_) => hci::ErrorCode::Success,
-                Err(_) => hci::ErrorCode::AuthenticationFailure
+                Err(_) => hci::ErrorCode::AuthenticationFailure,
             }
         }
     };
