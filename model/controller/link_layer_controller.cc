@@ -2765,7 +2765,7 @@ void LinkLayerController::IncomingInquiryResponsePacket(
               inquiry_response.GetPageScanRepetitionMode()),
           inquiry_response.GetClassOfDevice(),
           inquiry_response.GetClockOffset(), inquiry_response.GetRssi(),
-          extended_inquiry_response_));
+          inquiry_response.GetExtendedInquiryResponse()));
     } break;
     default:
       LOG_WARN("Unhandled Incoming Inquiry Response of type %d",
