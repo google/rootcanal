@@ -16,8 +16,8 @@
 
 #include "sco_connection.h"
 
-#include <hci/hci_packets.h>
 #include <log.h>
+#include <packets/hci_packets.h>
 
 #include <vector>
 

@@ -24,7 +24,7 @@
 
 #include "config.pb.h"
 #include "hci/address.h"
-#include "hci/hci_packets.h"
+#include "packets/hci_packets.h"
 
 namespace rootcanal {
 using bluetooth::hci::HciVersion;

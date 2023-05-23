@@ -27,10 +27,10 @@
 
 #include "controller_properties.h"
 #include "hci/address.h"
-#include "hci/hci_packets.h"
 #include "link_layer_controller.h"
 #include "model/controller/vendor_commands/csr.h"
 #include "model/devices/device.h"
+#include "packets/hci_packets.h"
 
 namespace rootcanal {
 

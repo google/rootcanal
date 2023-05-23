@@ -23,10 +23,10 @@
 #include <vector>
 
 #include "hci/address.h"
-#include "hci/hci_packets.h"
 #include "model/controller/link_layer_controller.h"
 #include "packet/bit_inserter.h"
 #include "packet/packet_view.h"
+#include "packets/hci_packets.h"
 #include "packets/link_layer_packets.h"
 
 namespace rootcanal {

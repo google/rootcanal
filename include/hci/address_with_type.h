@@ -24,7 +24,7 @@
 
 #include "crypto/crypto.h"
 #include "hci/address.h"
-#include "hci/hci_packets.h"
+#include "packets/hci_packets.h"
 
 namespace bluetooth {
 namespace hci {

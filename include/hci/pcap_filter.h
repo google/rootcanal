@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <hci/hci_packets.h>
+#include <packets/hci_packets.h>
 
 #include <unordered_map>
 

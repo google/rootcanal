@@ -23,11 +23,11 @@
 #include <vector>
 
 #include "hci/address.h"
-#include "hci/hci_packets.h"
 #include "include/phy.h"
 #include "model/controller/acl_connection_handler.h"
 #include "model/controller/controller_properties.h"
 #include "model/controller/le_advertiser.h"
+#include "packets/hci_packets.h"
 #include "packets/link_layer_packets.h"
 #include "rootcanal_rs.h"
 
@@ -67,14 +67,14 @@ class LinkLayerController {
                       const ControllerProperties& properties, int id = 0);
   ~LinkLayerController();
 
-  ErrorCode SendCommandToRemoteByAddress(
-      OpCode opcode, bluetooth::packet::PacketView<true> args,
-      const Address& own_address, const Address& peer_address);
+  ErrorCode SendCommandToRemoteByAddress(OpCode opcode, pdl::packet::slice args,
+                                         const Address& own_address,
+                                         const Address& peer_address);
   ErrorCode SendLeCommandToRemoteByAddress(OpCode opcode,
                                            const Address& own_address,
                                            const Address& peer_address);
-  ErrorCode SendCommandToRemoteByHandle(
-      OpCode opcode, bluetooth::packet::PacketView<true> args, uint16_t handle);
+  ErrorCode SendCommandToRemoteByHandle(OpCode opcode, pdl::packet::slice args,
+                                        uint16_t handle);
   ErrorCode SendScoToRemote(bluetooth::hci::ScoView sco_packet);
   ErrorCode SendAclToRemote(bluetooth::hci::AclView acl_packet);
 
@@ -993,20 +993,17 @@ class LinkLayerController {
     std::optional<std::chrono::steady_clock::time_point> periodical_timeout;
 
     // Packet History
-    std::vector<model::packets::LinkLayerPacketView> history;
+    std::vector<pdl::packet::slice> history;
 
     bool IsEnabled() const { return scan_enable; }
 
-    bool IsPacketInHistory(model::packets::LinkLayerPacketView packet) const {
+    bool IsPacketInHistory(pdl::packet::slice const& packet) const {
       return std::any_of(
           history.begin(), history.end(),
-          [packet](model::packets::LinkLayerPacketView const& a) {
-            return a.size() == packet.size() &&
-                   std::equal(a.begin(), a.end(), packet.begin());
-          });
+          [packet](pdl::packet::slice const& a) { return a == packet; });
     }
 
-    void AddPacketToHistory(model::packets::LinkLayerPacketView packet) {
+    void AddPacketToHistory(pdl::packet::slice packet) {
       history.push_back(packet);
     }
   };

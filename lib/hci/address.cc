@@ -47,6 +47,20 @@ Address::Address(std::initializer_list<uint8_t> l) {
   std::copy(l.begin(), std::min(l.begin() + kLength, l.end()), data());
 }
 
+bool Address::Parse(pdl::packet::slice& input, Address* output) {
+  if (input.size() < kLength) {
+    return false;
+  }
+
+  std::array<uint8_t, kLength> address{
+      input.read_le<uint8_t>(), input.read_le<uint8_t>(),
+      input.read_le<uint8_t>(), input.read_le<uint8_t>(),
+      input.read_le<uint8_t>(), input.read_le<uint8_t>(),
+  };
+  *output = Address(address);
+  return true;
+}
+
 std::string Address::ToString() const {
   std::stringstream ss;
   for (auto it = address.rbegin(); it != address.rend(); it++) {

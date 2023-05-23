@@ -33,7 +33,8 @@ void Device::Close() {
 void Device::SendLinkLayerPacket(
     std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
     Phy::Type type, int8_t tx_power) {
-  SendLinkLayerPacket(packet->SerializeToBytes(), type, tx_power);
+  SendLinkLayerPacket(packet->SerializeToBytes(), type,
+                      tx_power);
 }
 
 void Device::SendLinkLayerPacket(std::vector<uint8_t> const& packet,

@@ -18,7 +18,7 @@
 
 #include <gtest/gtest.h>
 
-#include "hci/hci_packets.h"
+#include "packets/hci_packets.h"
 
 namespace rootcanal {
 

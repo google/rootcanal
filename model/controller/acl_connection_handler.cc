@@ -16,7 +16,7 @@
 
 #include "acl_connection_handler.h"
 
-#include <hci/hci_packets.h>
+#include <packets/hci_packets.h>
 
 #include "hci/address.h"
 #include "log.h"

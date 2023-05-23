@@ -24,9 +24,7 @@
 namespace rootcanal {
 
 namespace bredr_bb {
-namespace {
 class BaseBandPacketBuilder;
-}
 }  // namespace bredr_bb
 
 using ::bluetooth::hci::Address;

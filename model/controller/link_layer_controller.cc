@@ -16,13 +16,11 @@
 
 #include "link_layer_controller.h"
 
-#include <hci/hci_packets.h>
-
 #include <algorithm>
 
 #include "crypto/crypto.h"
 #include "log.h"
-#include "packet/raw_builder.h"
+#include "packets/hci_packets.h"
 #include "rootcanal_rs.h"
 
 using namespace std::chrono;
@@ -2029,11 +2027,8 @@ LinkLayerController::LinkLayerController(const Address& address,
             auto controller = static_cast<LinkLayerController*>(user);
 
             auto event_code = static_cast<EventCode>(data[0]);
-            auto payload = std::make_unique<bluetooth::packet::RawBuilder>(
-                std::vector(data + 2, data + len));
-
             controller->send_event_(bluetooth::hci::EventBuilder::Create(
-                event_code, std::move(payload)));
+                event_code, std::vector(data + 2, data + len)));
           },
 
       .send_lmp_packet =
@@ -2041,22 +2036,17 @@ LinkLayerController::LinkLayerController(const Address& address,
              uintptr_t len) {
             auto controller = static_cast<LinkLayerController*>(user);
 
-            auto payload = std::make_unique<bluetooth::packet::RawBuilder>(
-                std::vector(data, data + len));
-
             Address source = controller->GetAddress();
             Address dest(*to);
 
             controller->SendLinkLayerPacket(model::packets::LmpBuilder::Create(
-                source, dest, std::move(payload)));
+                source, dest, std::vector(data, data + len)));
           },
 
       .send_llcp_packet =
           [](void* user, uint16_t acl_connection_handle, const uint8_t* data,
              uintptr_t len) {
             auto controller = static_cast<LinkLayerController*>(user);
-            auto payload = std::make_unique<bluetooth::packet::RawBuilder>(
-                std::vector(data, data + len));
 
             if (!controller->connections_.HasHandle(acl_connection_handle)) {
               ERROR(
@@ -2073,7 +2063,7 @@ LinkLayerController::LinkLayerController(const Address& address,
             Address destination = connection.GetAddress().GetAddress();
 
             controller->SendLinkLayerPacket(model::packets::LlcpBuilder::Create(
-                source, destination, std::move(payload)));
+                source, destination, std::vector(data, data + len)));
           }};
 
   lm_.reset(link_manager_create(controller_ops_));
@@ -2119,8 +2109,8 @@ ErrorCode LinkLayerController::SendLeCommandToRemoteByAddress(
 }
 
 ErrorCode LinkLayerController::SendCommandToRemoteByAddress(
-    OpCode opcode, bluetooth::packet::PacketView<true> args,
-    const Address& own_address, const Address& peer_address) {
+    OpCode opcode, pdl::packet::slice args, const Address& own_address,
+    const Address& peer_address) {
   switch (opcode) {
     case (OpCode::REMOTE_NAME_REQUEST):
       // LMP features get requested with remote name requests.
@@ -2135,8 +2125,8 @@ ErrorCode LinkLayerController::SendCommandToRemoteByAddress(
               own_address, peer_address));
       break;
     case (OpCode::READ_REMOTE_EXTENDED_FEATURES): {
-      uint8_t page_number =
-          (args.begin() + 2).extract<uint8_t>();  // skip the handle
+      pdl::packet::slice page_number_slice = args.subrange(5, 2);
+      uint8_t page_number = page_number_slice.read_le<uint8_t>();
       SendLinkLayerPacket(
           model::packets::ReadRemoteExtendedFeaturesBuilder::Create(
               own_address, peer_address, page_number));
@@ -2160,7 +2150,7 @@ ErrorCode LinkLayerController::SendCommandToRemoteByAddress(
 }
 
 ErrorCode LinkLayerController::SendCommandToRemoteByHandle(
-    OpCode opcode, bluetooth::packet::PacketView<true> args, uint16_t handle) {
+    OpCode opcode, pdl::packet::slice args, uint16_t handle) {
   if (!connections_.HasHandle(handle)) {
     return ErrorCode::UNKNOWN_CONNECTION;
   }
@@ -2226,8 +2216,7 @@ ErrorCode LinkLayerController::SendScoToRemote(
   std::vector<uint8_t> sco_data_bytes(sco_data.begin(), sco_data.end());
 
   SendLinkLayerPacket(model::packets::ScoBuilder::Create(
-      source, destination,
-      std::make_unique<bluetooth::packet::RawBuilder>(sco_data_bytes)));
+      source, destination, std::move(sco_data_bytes)));
   return ErrorCode::SUCCESS;
 }
 
@@ -2474,7 +2463,7 @@ void LinkLayerController::IncomingAclPacket(
 
     auto acl_packet = bluetooth::hci::AclBuilder::Create(
         connection_handle, packet_boundary_flag, broadcast_flag,
-        std::make_unique<bluetooth::packet::RawBuilder>(std::move(fragment)));
+        std::move(fragment));
 
     send_acl_(std::move(acl_packet));
 
@@ -2798,6 +2787,7 @@ void LinkLayerController::IncomingInquiryResponsePacket(
           inquiry_response.GetClockOffset(), inquiry_response.GetRssi(),
           inquiry_response.GetExtendedInquiryResponse()));
     } break;
+
     default:
       WARNING(id_, "Unhandled Incoming Inquiry Response of type {}",
               static_cast<int>(basic_inquiry_response.GetInquiryType()));
@@ -2958,10 +2948,10 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
   bool should_send_advertising_report = true;
   if (scanner_.filter_duplicates !=
       bluetooth::hci::FilterDuplicates::DISABLED) {
-    if (scanner_.IsPacketInHistory(pdu)) {
+    if (scanner_.IsPacketInHistory(pdu.bytes())) {
       should_send_advertising_report = false;
     } else {
-      scanner_.AddPacketToHistory(pdu);
+      scanner_.AddPacketToHistory(pdu.bytes());
     }
   }
 
@@ -3420,10 +3410,10 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
   bool should_send_advertising_report = true;
   if (scanner_.filter_duplicates !=
       bluetooth::hci::FilterDuplicates::DISABLED) {
-    if (scanner_.IsPacketInHistory(pdu)) {
+    if (scanner_.IsPacketInHistory(pdu.bytes())) {
       should_send_advertising_report = false;
     } else {
-      scanner_.AddPacketToHistory(pdu);
+      scanner_.AddPacketToHistory(pdu.bytes());
     }
   }
 
@@ -4086,7 +4076,7 @@ void LinkLayerController::IncomingLeConnectedIsochronousPdu(
     send_iso_(bluetooth::hci::IsoWithoutTimestampBuilder::Create(
         cis_connection_handle, packet_boundary_flag, pdu.GetSequenceNumber(),
         iso_sdu_length, bluetooth::hci::IsoPacketStatusFlag::VALID,
-        std::make_unique<bluetooth::packet::RawBuilder>(std::move(fragment))));
+        std::move(fragment)));
 
     remaining_size -= fragment_size;
     offset += fragment_size;
@@ -4912,10 +4902,10 @@ void LinkLayerController::IncomingLeScanResponsePacket(
   bool should_send_advertising_report = true;
   if (scanner_.filter_duplicates !=
       bluetooth::hci::FilterDuplicates::DISABLED) {
-    if (scanner_.IsPacketInHistory(incoming)) {
+    if (scanner_.IsPacketInHistory(incoming.bytes())) {
       should_send_advertising_report = false;
     } else {
-      scanner_.AddPacketToHistory(incoming);
+      scanner_.AddPacketToHistory(incoming.bytes());
     }
   }
 
@@ -5151,12 +5141,12 @@ void LinkLayerController::RegisterRemoteChannel(
 }
 
 void LinkLayerController::ForwardToLm(bluetooth::hci::CommandView command) {
-  auto packet = std::vector(command.begin(), command.end());
+  auto packet = command.bytes().bytes();
   ASSERT(link_manager_ingest_hci(lm_.get(), packet.data(), packet.size()));
 }
 
 void LinkLayerController::ForwardToLl(bluetooth::hci::CommandView command) {
-  auto packet = std::vector(command.begin(), command.end());
+  auto packet = command.bytes().bytes();
   ASSERT(link_layer_ingest_hci(ll_.get(), packet.data(), packet.size()));
 }
 
@@ -6235,12 +6225,9 @@ TaskId LinkLayerController::StartScoStream(Address address) {
       connections_.GetScoHandle(address), PacketStatusFlag::CORRECTLY_RECEIVED,
       {0, 0, 0, 0, 0});
 
-  auto bytes = std::make_shared<std::vector<uint8_t>>();
-  bluetooth::packet::BitInserter bit_inserter(*bytes);
-  sco_builder->Serialize(bit_inserter);
-  auto raw_view =
-      bluetooth::hci::PacketView<bluetooth::hci::kLittleEndian>(bytes);
-  auto sco_view = bluetooth::hci::ScoView::Create(raw_view);
+  auto sco_bytes = sco_builder->SerializeToBytes();
+  auto sco_view = bluetooth::hci::ScoView::Create(pdl::packet::slice(
+      std::make_shared<std::vector<uint8_t>>(std::move(sco_bytes))));
   ASSERT(sco_view.IsValid());
 
   return SchedulePeriodicTask(0ms, 20ms, [this, address, sco_view]() {

@@ -23,7 +23,7 @@
 #include <ratio>
 
 #include "hci/address_with_type.h"
-#include "hci/hci_packets.h"
+#include "packets/hci_packets.h"
 #include "packets/link_layer_packets.h"
 
 namespace rootcanal {

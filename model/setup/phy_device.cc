@@ -16,6 +16,8 @@
 
 #include "phy_device.h"
 
+#include <log.h>
+
 #include "phy_layer.h"
 
 namespace rootcanal {
@@ -45,8 +47,7 @@ void PhyDevice::Receive(std::vector<uint8_t> const& packet, Phy::Type type,
       std::make_shared<std::vector<uint8_t>>(packet);
   model::packets::LinkLayerPacketView packet_view =
       model::packets::LinkLayerPacketView::Create(
-          bluetooth::packet::PacketView<bluetooth::packet::kLittleEndian>(
-              packet_copy));
+          pdl::packet::slice(packet_copy));
   if (packet_view.IsValid()) {
     device_->ReceiveLinkLayerPacket(std::move(packet_view), type, rssi);
   } else {

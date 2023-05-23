@@ -38,11 +38,7 @@ BaseBandSniffer::BaseBandSniffer(const std::string& filename) {
 
 void BaseBandSniffer::AppendRecord(
     std::unique_ptr<bredr_bb::BaseBandPacketBuilder> packet) {
-  auto bytes = std::vector<uint8_t>();
-  bytes.reserve(packet->size());
-  bluetooth::packet::BitInserter i(bytes);
-  packet->Serialize(i);
-
+  std::vector<uint8_t> bytes = packet->SerializeToBytes();
   pcap::WriteRecordHeader(output_, bytes.size());
   output_.write((char*)bytes.data(), bytes.size());
   output_.flush();
@@ -165,7 +161,7 @@ void BaseBandSniffer::ReceiveLinkLayerPacket(
         flags,
         0x3,  // llid
         1,    // flow
-        std::make_unique<bluetooth::packet::RawBuilder>(lmp_bytes),
+        std::move(lmp_bytes),
         0  // crc
         ));
   }
