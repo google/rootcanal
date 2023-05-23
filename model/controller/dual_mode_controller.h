@@ -20,6 +20,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <random>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -562,7 +563,6 @@ class DualModeController : public Device {
   void WriteConnectionAcceptTimeout(CommandView command);
 
   // Vendor-specific Commands
-
   void LeGetVendorCapabilities(CommandView command);
   void LeEnergyInfo(CommandView command);
   void LeMultiAdv(CommandView command);
@@ -605,6 +605,9 @@ class DualModeController : public Device {
   // The local loopback mode is used to pass the android Vendor Test Suite
   // with RootCanal.
   bluetooth::hci::LoopbackMode loopback_mode_{LoopbackMode::NO_LOOPBACK};
+
+  // Random value generator, always seeded with 0 to be deterministic.
+  std::mt19937_64 random_generator_{0};
 
   // Flag set to true after the HCI Reset command has been received
   // the first time.
