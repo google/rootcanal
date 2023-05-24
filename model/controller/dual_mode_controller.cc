@@ -1546,13 +1546,14 @@ void DualModeController::LeReadLocalSupportedFeatures(CommandView command) {
   auto command_view =
       bluetooth::hci::LeReadLocalSupportedFeaturesView::Create(command);
   ASSERT(command_view.IsValid());
+  uint64_t le_features = link_layer_controller_.GetLeSupportedFeatures();
   LOG_INFO("%s | LeReadLocalSupportedFeatures (%016llx)",
            GetAddress().ToString().c_str(),
-           static_cast<unsigned long long>(properties_.le_features));
+           static_cast<unsigned long long>(le_features));
 
   send_event_(
       bluetooth::hci::LeReadLocalSupportedFeaturesCompleteBuilder::Create(
-          kNumCommandPackets, ErrorCode::SUCCESS, properties_.le_features));
+          kNumCommandPackets, ErrorCode::SUCCESS, le_features));
 }
 
 void DualModeController::LeSetRandomAddress(CommandView command) {
