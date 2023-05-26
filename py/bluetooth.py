@@ -51,19 +51,16 @@ class Address:
 
 @dataclass
 class ClassOfDevice:
-    class_of_device: int = 0
 
     def parse(span: bytes) -> Tuple['Address', bytes]:
-        assert len(span) >= 3
-        return (ClassOfDevice(int.from_bytes(span[:3], byteorder='little')), span[3:])
+        assert False
 
     def parse_all(span: bytes) -> 'Address':
-        assert len(span) == 3
-        return ClassOfDevice(int.from_bytes(span, byteorder='little'))
+        assert False
 
     def serialize(self) -> bytes:
-        return int.to_bytes(self.class_of_device, length=3, byteorder='little')
+        assert False
 
     @property
     def size(self) -> int:
-        return 3
+        assert False
