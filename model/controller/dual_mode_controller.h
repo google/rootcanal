@@ -49,6 +49,9 @@ using ::bluetooth::hci::CommandView;
 // "Hci" to distinguish it as a controller command.
 class DualModeController : public Device {
  public:
+  // Unique instance identifier.
+  const int id_;
+
   DualModeController(ControllerProperties properties = ControllerProperties());
   DualModeController(DualModeController&&) = delete;
   DualModeController(const DualModeController&) = delete;
@@ -557,9 +560,9 @@ class DualModeController : public Device {
   // Implement the command specific to the CSR controller
   // used specifically by the PTS tool to pass certification tests.
   void CsrVendorCommand(CommandView command);
-  void CsrReadVarid(CsrVarid varid, std::vector<uint8_t>& value);
-  void CsrWriteVarid(CsrVarid varid, std::vector<uint8_t> const& value);
-  void CsrReadPskey(CsrPskey pskey, std::vector<uint8_t>& value);
+  void CsrReadVarid(CsrVarid varid, std::vector<uint8_t>& value) const;
+  void CsrWriteVarid(CsrVarid varid, std::vector<uint8_t> const& value) const;
+  void CsrReadPskey(CsrPskey pskey, std::vector<uint8_t>& value) const;
   void CsrWritePskey(CsrPskey pskey, std::vector<uint8_t> const& value);
 
   // Command pass-through.
@@ -571,7 +574,7 @@ class DualModeController : public Device {
   ControllerProperties properties_;
 
   // Link Layer state.
-  LinkLayerController link_layer_controller_{address_, properties_};
+  LinkLayerController link_layer_controller_{address_, properties_, id_};
 
  private:
   // Send a HCI_Command_Complete event for the specified op_code with

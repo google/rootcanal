@@ -28,14 +28,12 @@
 #include "model/setup/test_model.h"                 // for TestModel
 #include "net/async_data_channel_server.h"          // for AsyncDataChannelS...
 
-namespace android {
-namespace net {
+namespace android::net {
 class AsyncDataChannel;
 class AsyncDataChannelConnector;
-}  // namespace net
+}  // namespace android::net
 
-namespace bluetooth {
-namespace root_canal {
+namespace rootcanal {
 
 using android::net::AsyncDataChannel;
 using android::net::AsyncDataChannelConnector;
@@ -115,6 +113,5 @@ class TestEnvironment {
 
   rootcanal::TestCommandHandler test_channel_{test_model_};
 };
-}  // namespace root_canal
-}  // namespace bluetooth
-}  // namespace android
+
+}  // namespace rootcanal

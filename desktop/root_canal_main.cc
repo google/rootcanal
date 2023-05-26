@@ -33,16 +33,18 @@
 #include "net/posix/posix_async_socket_server.h"
 #include "test_environment.h"
 
-using ::android::bluetooth::root_canal::TestEnvironment;
 using ::android::net::PosixAsyncSocketConnector;
 using ::android::net::PosixAsyncSocketServer;
 using rootcanal::AsyncManager;
+using rootcanal::TestEnvironment;
+using namespace rootcanal;
 
 DEFINE_string(controller_properties_file, "", "deprecated");
 DEFINE_string(configuration, "", "controller configuration (see config.proto)");
 DEFINE_string(configuration_file, "",
               "controller configuration file path (see config.proto)");
 DEFINE_string(default_commands_file, "", "deprecated");
+DEFINE_bool(enable_log_color, false, "enable log colors");
 DEFINE_bool(enable_hci_sniffer, false, "enable hci sniffer");
 DEFINE_bool(enable_baseband_sniffer, false, "enable baseband sniffer");
 DEFINE_bool(enable_pcap_filter, false, "enable PCAP filter");
@@ -67,20 +69,20 @@ bool crash_callback(const void* crash_context, size_t crash_context_size,
             crash_context);
     tid = ctx->tid;
     int signal_number = ctx->siginfo.si_signo;
-    LOG_ERROR("Process crashed, signal: %s[%d], tid: %d",
-              strsignal(signal_number), signal_number, ctx->tid);
+    ERROR("Process crashed, signal: {}[{}], tid: {}", strsignal(signal_number),
+          signal_number, ctx->tid);
   } else {
-    LOG_ERROR("Process crashed, signal: unknown, tid: unknown");
+    ERROR("Process crashed, signal: unknown, tid: unknown");
   }
   unwindstack::AndroidLocalUnwinder unwinder;
   unwindstack::AndroidUnwinderData data;
   if (!unwinder.Unwind(tid, data)) {
-    LOG_ERROR("Unwind failed");
+    ERROR("Unwind failed");
     return false;
   }
-  LOG_ERROR("Backtrace:");
+  ERROR("Backtrace:");
   for (const auto& frame : data.frames) {
-    LOG_ERROR("%s", unwinder.FormatFrame(frame).c_str());
+    ERROR("{}", unwinder.FormatFrame(frame).c_str());
   }
   return true;
 }
@@ -93,27 +95,27 @@ int main(int argc, char** argv) {
   eh.set_crash_handler(crash_callback);
 
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  android::base::InitLogging(argv);
+  rootcanal::log::SetLogColorEnable(FLAGS_enable_log_color);
 
-  LOG_INFO("main");
+  INFO("starting rootcanal");
 
   if (FLAGS_test_port > UINT16_MAX) {
-    LOG_ERROR("test_port out of range: %" PRIu32, FLAGS_test_port);
+    ERROR("test_port out of range: {}", FLAGS_test_port);
     return -1;
   }
 
   if (FLAGS_hci_port > UINT16_MAX) {
-    LOG_ERROR("hci_port out of range: %" PRIu32, FLAGS_hci_port);
+    ERROR("hci_port out of range: {}", FLAGS_hci_port);
     return -1;
   }
 
   if (FLAGS_link_port > UINT16_MAX) {
-    LOG_ERROR("link_port out of range: %" PRIu32, FLAGS_link_port);
+    ERROR("link_port out of range: {}", FLAGS_link_port);
     return -1;
   }
 
   if (FLAGS_link_ble_port > UINT16_MAX) {
-    LOG_ERROR("link_ble_port out of range: %" PRIu32, FLAGS_link_ble_port);
+    ERROR("link_ble_port out of range: {}", FLAGS_link_ble_port);
     return -1;
   }
 

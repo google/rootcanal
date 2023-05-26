@@ -482,18 +482,20 @@ bool ControllerProperties::CheckSupportedFeatures() const {
   };
 
   if ((lmp_page_0_reserved_bits & lmp_features[0]) != 0) {
-    LOG_INFO("The page 0 feature bits 0x%016" PRIx64
-             " are reserved in the specification %s",
-             lmp_page_0_reserved_bits & lmp_features[0],
-             LmpVersionText(lmp_version).c_str());
+    INFO(
+        "The page 0 feature bits 0x{:016x}"
+        " are reserved in the specification {}",
+        lmp_page_0_reserved_bits & lmp_features[0],
+        LmpVersionText(lmp_version));
     return false;
   }
 
   if ((lmp_page_2_reserved_bits & lmp_features[2]) != 0) {
-    LOG_INFO("The page 2 feature bits 0x%016" PRIx64
-             " are reserved in the specification %s",
-             lmp_page_2_reserved_bits & lmp_features[2],
-             LmpVersionText(lmp_version).c_str());
+    INFO(
+        "The page 2 feature bits 0x{:016x}"
+        " are reserved in the specification {}",
+        lmp_page_2_reserved_bits & lmp_features[2],
+        LmpVersionText(lmp_version));
     return false;
   }
 
@@ -511,14 +513,14 @@ bool ControllerProperties::CheckSupportedFeatures() const {
       !SupportsLMPFeature(
           LMPFeaturesPage0Bits::SECURE_SIMPLE_PAIRING_CONTROLLER) ||
       !SupportsLMPFeature(LMPFeaturesPage0Bits::ENCAPSULATED_PDU)) {
-    LOG_INFO("Table 3.5 validation failed");
+    INFO("Table 3.5 validation failed");
     return false;
   }
 
   // The features listed in Table 3.6 are forbidden in this version of the
   // specification and these feature bits shall not be set.
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::BR_EDR_NOT_SUPPORTED)) {
-    LOG_INFO("Table 3.6 validation failed");
+    INFO("Table 3.6 validation failed");
     return false;
   }
 
@@ -526,7 +528,7 @@ bool ControllerProperties::CheckSupportedFeatures() const {
   // supported or none of the features named in that row shall be supported.
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::SNIFF_MODE) !=
       SupportsLMPFeature(LMPFeaturesPage0Bits::SNIFF_SUBRATING)) {
-    LOG_INFO("Table 3.7 validation failed");
+    INFO("Table 3.7 validation failed");
     return false;
   }
 
@@ -534,7 +536,7 @@ bool ControllerProperties::CheckSupportedFeatures() const {
   // supported.
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::BROADCAST_ENCRYPTION) &&
       SupportsLMPFeature(LMPFeaturesPage2Bits::COARSE_CLOCK_ADJUSTMENT)) {
-    LOG_INFO("Table 3.8 validation failed");
+    INFO("Table 3.8 validation failed");
     return false;
   }
 
@@ -542,76 +544,72 @@ bool ControllerProperties::CheckSupportedFeatures() const {
   // supported then the feature named in the second column shall be supported.
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::ROLE_SWITCH) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::SLOT_OFFSET)) {
-    LOG_INFO("Table 3.9 validation failed; expected Slot Offset");
+    INFO("Table 3.9 validation failed; expected Slot Offset");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::HV2_PACKETS) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::SCO_LINK)) {
-    LOG_INFO("Table 3.9 validation failed; expected Sco Link");
+    INFO("Table 3.9 validation failed; expected Sco Link");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::HV3_PACKETS) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::SCO_LINK)) {
-    LOG_INFO("Table 3.9 validation failed; expected Sco Link");
+    INFO("Table 3.9 validation failed; expected Sco Link");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::M_LAW_LOG_SYNCHRONOUS_DATA) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::SCO_LINK) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::EXTENDED_SCO_LINK)) {
-    LOG_INFO(
-        "Table 3.9 validation failed; expected Sco Link or Extended Sco Link");
+    INFO("Table 3.9 validation failed; expected Sco Link or Extended Sco Link");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::A_LAW_LOG_SYNCHRONOUS_DATA) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::SCO_LINK) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::EXTENDED_SCO_LINK)) {
-    LOG_INFO(
-        "Table 3.9 validation failed; expected Sco Link or Extended Sco Link");
+    INFO("Table 3.9 validation failed; expected Sco Link or Extended Sco Link");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::CVSD_SYNCHRONOUS_DATA) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::SCO_LINK) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::EXTENDED_SCO_LINK)) {
-    LOG_INFO(
-        "Table 3.9 validation failed; expected Sco Link or Extended Sco Link");
+    INFO("Table 3.9 validation failed; expected Sco Link or Extended Sco Link");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::TRANSPARENT_SYNCHRONOUS_DATA) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::SCO_LINK) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::EXTENDED_SCO_LINK)) {
-    LOG_INFO(
-        "Table 3.9 validation failed; expected Sco Link or Extended Sco Link");
+    INFO("Table 3.9 validation failed; expected Sco Link or Extended Sco Link");
     return false;
   }
   if (SupportsLMPFeature(
           LMPFeaturesPage0Bits::ENHANCED_DATA_RATE_ACL_3_MB_S_MODE) &&
       !SupportsLMPFeature(
           LMPFeaturesPage0Bits::ENHANCED_DATA_RATE_ACL_2_MB_S_MODE)) {
-    LOG_INFO(
+    INFO(
         "Table 3.9 validation failed; expected Enhanced Data Rate ACL 2Mb/s "
         "mode");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::EV4_PACKETS) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::EXTENDED_SCO_LINK)) {
-    LOG_INFO("Table 3.9 validation failed; expected Extended Sco Link");
+    INFO("Table 3.9 validation failed; expected Extended Sco Link");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::EV5_PACKETS) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::EXTENDED_SCO_LINK)) {
-    LOG_INFO("Table 3.9 validation failed; expected Extended Sco Link");
+    INFO("Table 3.9 validation failed; expected Extended Sco Link");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::AFH_CLASSIFICATION_PERIPHERAL) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::AFH_CAPABLE_PERIPHERAL)) {
-    LOG_INFO("Table 3.9 validation failed; expected AFH Capable Peripheral");
+    INFO("Table 3.9 validation failed; expected AFH Capable Peripheral");
     return false;
   }
   if (SupportsLMPFeature(
           LMPFeaturesPage0Bits::LMP_3_SLOT_ENHANCED_DATA_RATE_ACL_PACKETS) &&
       !SupportsLMPFeature(
           LMPFeaturesPage0Bits::ENHANCED_DATA_RATE_ACL_2_MB_S_MODE)) {
-    LOG_INFO(
+    INFO(
         "Table 3.9 validation failed; expected Enhanced Data Rate ACL 2Mb/s "
         "mode");
     return false;
@@ -620,27 +618,27 @@ bool ControllerProperties::CheckSupportedFeatures() const {
           LMPFeaturesPage0Bits::LMP_5_SLOT_ENHANCED_DATA_RATE_ACL_PACKETS) &&
       !SupportsLMPFeature(
           LMPFeaturesPage0Bits::ENHANCED_DATA_RATE_ACL_2_MB_S_MODE)) {
-    LOG_INFO(
+    INFO(
         "Table 3.9 validation failed; expected Enhanced Data Rate ACL 2Mb/s "
         "mode");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::AFH_CLASSIFICATION_CENTRAL) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::AFH_CAPABLE_CENTRAL)) {
-    LOG_INFO("Table 3.9 validation failed; expected AFH Capable Central");
+    INFO("Table 3.9 validation failed; expected AFH Capable Central");
     return false;
   }
   if (SupportsLMPFeature(
           LMPFeaturesPage0Bits::ENHANCED_DATA_RATE_ESCO_2_MB_S_MODE) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::EXTENDED_SCO_LINK)) {
-    LOG_INFO("Table 3.9 validation failed; expected Extended Sco Link");
+    INFO("Table 3.9 validation failed; expected Extended Sco Link");
     return false;
   }
   if (SupportsLMPFeature(
           LMPFeaturesPage0Bits::ENHANCED_DATA_RATE_ESCO_3_MB_S_MODE) &&
       !SupportsLMPFeature(
           LMPFeaturesPage0Bits::ENHANCED_DATA_RATE_ESCO_2_MB_S_MODE)) {
-    LOG_INFO(
+    INFO(
         "Table 3.9 validation failed; expected Enhanced Data Rate eSCO 2Mb/s "
         "mode");
     return false;
@@ -649,33 +647,32 @@ bool ControllerProperties::CheckSupportedFeatures() const {
           LMPFeaturesPage0Bits::LMP_3_SLOT_ENHANCED_DATA_RATE_ESCO_PACKETS) &&
       !SupportsLMPFeature(
           LMPFeaturesPage0Bits::ENHANCED_DATA_RATE_ESCO_2_MB_S_MODE)) {
-    LOG_INFO(
+    INFO(
         "Table 3.9 validation failed; expected Enhanced Data Rate eSCO 2Mb/s "
         "mode");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::EXTENDED_INQUIRY_RESPONSE) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::RSSI_WITH_INQUIRY_RESULTS)) {
-    LOG_INFO("Table 3.9 validation failed; expected RSSI with Inquiry Results");
+    INFO("Table 3.9 validation failed; expected RSSI with Inquiry Results");
     return false;
   }
   if (SupportsLMPFeature(
           LMPFeaturesPage0Bits::SIMULTANEOUS_LE_AND_BR_CONTROLLER) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::LE_SUPPORTED_CONTROLLER)) {
-    LOG_INFO("Table 3.9 validation failed; expected LE Supported (Controller)");
+    INFO("Table 3.9 validation failed; expected LE Supported (Controller)");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::ERRONEOUS_DATA_REPORTING) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::SCO_LINK) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::EXTENDED_SCO_LINK)) {
-    LOG_INFO(
-        "Table 3.9 validation failed; expected Sco Link or Extended Sco Link");
+    INFO("Table 3.9 validation failed; expected Sco Link or Extended Sco Link");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage0Bits::ENHANCED_POWER_CONTROL) &&
       (!SupportsLMPFeature(LMPFeaturesPage0Bits::POWER_CONTROL_REQUESTS) ||
        !SupportsLMPFeature(LMPFeaturesPage0Bits::POWER_CONTROL))) {
-    LOG_INFO(
+    INFO(
         "Table 3.9 validation failed; expected Power Control Request and Power "
         "Control");
     return false;
@@ -684,20 +681,20 @@ bool ControllerProperties::CheckSupportedFeatures() const {
           LMPFeaturesPage2Bits::
               CONNECTIONLESS_PERIPHERAL_BROADCAST_TRANSMITTER_OPERATION) &&
       !SupportsLMPFeature(LMPFeaturesPage2Bits::SYNCHRONIZATION_TRAIN)) {
-    LOG_INFO("Table 3.9 validation failed; expected Synchronization Train");
+    INFO("Table 3.9 validation failed; expected Synchronization Train");
     return false;
   }
   if (SupportsLMPFeature(
           LMPFeaturesPage2Bits::
               CONNECTIONLESS_PERIPHERAL_BROADCAST_RECEIVER_OPERATION) &&
       !SupportsLMPFeature(LMPFeaturesPage2Bits::SYNCHRONIZATION_SCAN)) {
-    LOG_INFO("Table 3.9 validation failed; expected Synchronization Scan");
+    INFO("Table 3.9 validation failed; expected Synchronization Scan");
     return false;
   }
   if (SupportsLMPFeature(LMPFeaturesPage2Bits::GENERALIZED_INTERLACED_SCAN) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::INTERLACED_INQUIRY_SCAN) &&
       !SupportsLMPFeature(LMPFeaturesPage0Bits::INTERLACED_PAGE_SCAN)) {
-    LOG_INFO(
+    INFO(
         "Table 3.9 validation failed; expected Interlaced Inquiry Scan or "
         "Interlaced Page Scan");
     return false;
@@ -707,7 +704,7 @@ bool ControllerProperties::CheckSupportedFeatures() const {
        !SupportsLMPFeature(LMPFeaturesPage0Bits::AFH_CAPABLE_CENTRAL) ||
        !SupportsLMPFeature(LMPFeaturesPage2Bits::SYNCHRONIZATION_TRAIN) ||
        !SupportsLMPFeature(LMPFeaturesPage2Bits::SYNCHRONIZATION_SCAN))) {
-    LOG_INFO(
+    INFO(
         "Table 3.9 validation failed; expected AFH Capable Central/Peripheral "
         "and Synchronization Train/Scan");
     return false;
@@ -716,7 +713,7 @@ bool ControllerProperties::CheckSupportedFeatures() const {
           LMPFeaturesPage2Bits::SECURE_CONNECTIONS_CONTROLLER_SUPPORT) &&
       (!SupportsLMPFeature(LMPFeaturesPage0Bits::PAUSE_ENCRYPTION) ||
        !SupportsLMPFeature(LMPFeaturesPage2Bits::PING))) {
-    LOG_INFO("Table 3.9 validation failed; expected Pause Encryption and Ping");
+    INFO("Table 3.9 validation failed; expected Pause Encryption and Ping");
     return false;
   }
 
@@ -1370,8 +1367,8 @@ bool ControllerProperties::CheckSupportedCommands() const {
         SupportsCommand(bluetooth::hci::OpCodeIndex::op_code);                 \
     if (!check_command_requirement(br_supported, br_requirement, le_supported, \
                                    le_requirement, command_supported)) {       \
-      LOG_INFO(#op_code " command validation failed (" #br_requirement         \
-                        "," #le_requirement ")");                              \
+      INFO(#op_code " command validation failed (" #br_requirement             \
+                    "," #le_requirement ")");                                  \
     }                                                                          \
   }
 
@@ -1735,14 +1732,14 @@ ControllerProperties::ControllerProperties()
       lmp_features({Page0LmpFeatures(), 0, Page2LmpFeatures()}),
       le_features(LlFeatures()) {
   if (!CheckSupportedFeatures()) {
-    LOG_INFO(
+    INFO(
         "Warning: initial LMP and/or LE are not consistent. Please make sure"
         " that the features are correct w.r.t. the rules described"
         " in Vol 2, Part C 3.5 Feature requirements");
   }
 
   if (!CheckSupportedCommands()) {
-    LOG_INFO(
+    INFO(
         "Warning: initial supported commands are not consistent. Please make"
         " sure that the supported commands are correct w.r.t. the rules"
         " described in Vol 4, Part E § 3 Overview of commands and events");
@@ -1884,14 +1881,14 @@ ControllerProperties::ControllerProperties(
   }
 
   if (!CheckSupportedFeatures()) {
-    LOG_INFO(
+    INFO(
         "Warning: LMP and/or LE features are not consistent. Please make sure"
         " that the features are correct w.r.t. the rules described"
         " in Vol 2, Part C 3.5 Feature requirements");
   }
 
   if (!CheckSupportedCommands()) {
-    LOG_INFO(
+    INFO(
         "Warning: supported commands are not consistent. Please make"
         " sure that the supported commands are correct w.r.t. the rules"
         " described in Vol 4, Part E § 3 Overview of commands and events");

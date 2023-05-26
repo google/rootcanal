@@ -16,15 +16,84 @@
 
 #pragma once
 
-#include <android-base/format.h>
-#include <android-base/logging.h>
+#include <fmt/format.h>
+#include <fmt/printf.h>
 
-// FIXME: remove those shims
-#define LOG_DEBUG(...) LOG(DEBUG) << fmt::sprintf(__VA_ARGS__)
-#define LOG_INFO(...) LOG(INFO) << fmt::sprintf(__VA_ARGS__)
-#define LOG_WARN(...) LOG(WARNING) << fmt::sprintf(__VA_ARGS__)
-#define LOG_ERROR(...) LOG(ERROR) << fmt::sprintf(__VA_ARGS__)
-#define LOG_ALWAYS_FATAL(...) LOG(FATAL) << fmt::sprintf(__VA_ARGS__)
+#include <optional>
 
-#define ASSERT(cond) CHECK(cond)
-#define ASSERT_LOG(cond, ...) CHECK(cond) << fmt::sprintf(__VA_ARGS__)
+namespace rootcanal::log {
+
+enum Verbosity {
+  kDebug,
+  kInfo,
+  kWarning,
+  kError,
+  kFatal,
+};
+
+void SetLogColorEnable(bool);
+
+void VLog(Verbosity verb, char const* file, int line,
+          std::optional<int> instance, char const* format,
+          fmt::format_args args);
+
+template <typename... Args>
+static void Log(Verbosity verb, char const* file, int line, int instance,
+                char const* format, const Args&... args) {
+  VLog(verb, file, line, instance, format, fmt::make_format_args(args...));
+}
+
+template <typename... Args>
+static void Log(Verbosity verb, char const* file, int line, char const* format,
+                const Args&... args) {
+  VLog(verb, file, line, {}, format, fmt::make_format_args(args...));
+}
+
+#define DEBUG(...)                                                           \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kDebug, __FILE__, __LINE__, \
+                      __VA_ARGS__)
+
+#define INFO(...)                                                           \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kInfo, __FILE__, __LINE__, \
+                      __VA_ARGS__)
+
+#define WARNING(...)                                                           \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kWarning, __FILE__, __LINE__, \
+                      __VA_ARGS__)
+
+#define ERROR(...)                                                           \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kError, __FILE__, __LINE__, \
+                      __VA_ARGS__)
+
+#define FATAL(...)                                                           \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, __LINE__, \
+                      __VA_ARGS__)
+
+// TODO: still required by the generated HCI parser and serializer backend.
+#define LOG_INFO(...)                                                       \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kInfo, __FILE__, __LINE__, \
+                      "{}", fmt::sprintf(__VA_ARGS__))
+#define LOG_WARN(...)                                                          \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kWarning, __FILE__, __LINE__, \
+                      "{}", fmt::sprintf(__VA_ARGS__))
+#define LOG_ERROR(...)                                                       \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kError, __FILE__, __LINE__, \
+                      "{}", fmt::sprintf(__VA_ARGS__))
+#define LOG_ALWAYS_FATAL(...)                                                \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, __LINE__, \
+                      "{}", fmt::sprintf(__VA_ARGS__))
+
+#define ASSERT(x)                                                       \
+  __builtin_expect((x) != 0, true) ||                                   \
+      (rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, \
+                           __LINE__, "Check failed: {}", #x),           \
+       false)
+
+#define ASSERT_LOG(x, ...)                                              \
+  __builtin_expect((x) != 0, true) ||                                   \
+      (rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, \
+                           __LINE__, "Check failed: {}, {}", #x,        \
+                           fmt::sprintf(__VA_ARGS__)),                  \
+       false)
+
+}  // namespace rootcanal::log

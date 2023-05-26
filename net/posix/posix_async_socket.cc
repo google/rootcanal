@@ -29,7 +29,7 @@
 #endif
 
 /* set  for very verbose debugging */
-#ifndef DEBUG
+#ifdef NDEBUG
 #define DD(...) (void)0
 #else
 #define DD(...) LOG_INFO(__VA_ARGS__)

@@ -43,7 +43,7 @@ void LinkLayerSocketDevice::Tick() {
     if (bytes_received <= 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         // Nothing available yet.
-        // LOG_DEBUG("Nothing available yet...");
+        // DEBUG("Nothing available yet...");
         return;
       }
       LOG_INFO("Closing socket, received: %zd, %s", bytes_received,
@@ -68,7 +68,7 @@ void LinkLayerSocketDevice::Tick() {
   if (bytes_received <= 0) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       // Nothing available yet.
-      // LOG_DEBUG("Nothing available yet...");
+      // DEBUG("Nothing available yet...");
       return;
     }
     LOG_INFO("Closing socket, received: %zd, %s", bytes_received,
