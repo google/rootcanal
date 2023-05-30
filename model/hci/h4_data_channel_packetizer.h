@@ -21,8 +21,7 @@
 
 #include <memory>  // for shared_ptr
 
-#include "h4_parser.h"     // for ClientDisconnectCallback, H4Parser
-#include "hci_protocol.h"  // for PacketReadCallback, AsyncDataChannel, HciProtocol
+#include "h4_parser.h"               // for ClientDisconnectCallback, H4Parser
 #include "net/async_data_channel.h"  // for AsyncDataChannel
 
 namespace rootcanal {
@@ -31,7 +30,7 @@ using android::net::AsyncDataChannel;
 
 // A socket based H4DataChannelPacketizer. Call OnDataReady whenever
 // data can be read from the socket.
-class H4DataChannelPacketizer : public HciProtocol {
+class H4DataChannelPacketizer {
  public:
   H4DataChannelPacketizer(std::shared_ptr<AsyncDataChannel> socket,
                           PacketReadCallback command_cb,
@@ -40,7 +39,7 @@ class H4DataChannelPacketizer : public HciProtocol {
                           PacketReadCallback iso_cb,
                           ClientDisconnectCallback disconnect_cb);
 
-  size_t Send(uint8_t type, const uint8_t* data, size_t length) override;
+  size_t Send(uint8_t type, const uint8_t* data, size_t length);
 
   void OnDataReady(std::shared_ptr<AsyncDataChannel> socket);
 
