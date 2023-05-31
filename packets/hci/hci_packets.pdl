@@ -656,7 +656,7 @@ enum OpCodeIndex : 16 {
   LE_READ_BUFFER_SIZE_V2 = 415,
   LE_READ_ISO_TX_SYNC = 416,
   LE_SET_CIG_PARAMETERS = 417,
-  LE_SET_CIG_PARAMETERS_TEST = 418,
+  LE_SET_CIG_PARAMETERS_TEST = 420,
   LE_CREATE_CIS = 421,
   LE_REMOVE_CIG = 422,
   LE_ACCEPT_CIS_REQUEST = 423,
@@ -4304,17 +4304,17 @@ packet LeReadIsoTxSyncComplete : CommandComplete (command_op_code = LE_READ_ISO_
 
 struct CisParametersConfig {
   cis_id : 8,
-  max_sdu_m_to_s : 12,
+  max_sdu_c_to_p : 12,
   _reserved_ : 4,
-  max_sdu_s_to_m : 12,
+  max_sdu_p_to_c : 12,
   _reserved_ : 4,
-  phy_m_to_s : 3,
+  phy_c_to_p : 3,
   _reserved_ : 5,
-  phy_s_to_m : 3,
+  phy_p_to_c : 3,
   _reserved_ : 5,
-  rtn_m_to_s : 4,
+  rtn_c_to_p : 4,
   _reserved_ : 4,
-  rtn_s_to_m : 4,
+  rtn_p_to_c : 4,
   _reserved_ : 4,
 }
 
@@ -4336,13 +4336,13 @@ enum ClockAccuracy : 8 {
 
 packet LeSetCigParameters : Command (op_code = LE_SET_CIG_PARAMETERS) {
   cig_id : 8,
-  sdu_interval_m_to_s : 24,
-  sdu_interval_s_to_m : 24,
-  peripherals_clock_accuracy : ClockAccuracy,
+  sdu_interval_c_to_p : 24,
+  sdu_interval_p_to_c : 24,
+  worst_case_sca: ClockAccuracy,
   packing : Packing,
   framing : Enable,
-  max_transport_latency_m_to_s : 16,
-  max_transport_latency_s_to_m : 16,
+  max_transport_latency_c_to_p : 16,
+  max_transport_latency_p_to_c : 16,
   _count_(cis_config) : 8,
   cis_config : CisParametersConfig[],
 }
@@ -4357,24 +4357,24 @@ packet LeSetCigParametersComplete : CommandComplete (command_op_code = LE_SET_CI
 struct LeCisParametersTestConfig {
   cis_id : 8,
   nse : 8,
-  max_sdu_m_to_s : 16,
-  max_sdu_s_to_m : 16,
-  max_pdu_m_to_s : 16,
-  max_pdu_s_to_m : 16,
-  phy_m_to_s : 8,
-  phy_s_to_m : 8,
-  bn_m_to_s : 8,
-  bn_s_to_m : 8,
+  max_sdu_c_to_p : 16,
+  max_sdu_p_to_c : 16,
+  max_pdu_c_to_p : 16,
+  max_pdu_p_to_c : 16,
+  phy_c_to_p : 8,
+  phy_p_to_c : 8,
+  bn_c_to_p : 8,
+  bn_p_to_c : 8,
 }
 
 packet LeSetCigParametersTest : Command (op_code = LE_SET_CIG_PARAMETERS_TEST) {
   cig_id : 8,
-  sdu_interval_m_to_s : 24,
-  sdu_interval_s_to_m : 24,
-  ft_m_to_s : 8,
-  ft_s_to_m : 8,
+  sdu_interval_c_to_p : 24,
+  sdu_interval_p_to_c : 24,
+  ft_c_to_p : 8,
+  ft_p_to_c : 8,
   iso_interval : 16,
-  peripherals_clock_accuracy : ClockAccuracy,
+  worst_case_sca: ClockAccuracy,
   packing : Packing,
   framing : Enable,
   _count_(cis_config) : 8,
@@ -4388,7 +4388,7 @@ packet LeSetCigParametersTestComplete : CommandComplete (command_op_code = LE_SE
   connection_handle : 16[],
 }
 
-struct CreateCisConfig {
+struct LeCreateCisConfig {
   cis_connection_handle : 12,
   _reserved_ : 4,
   acl_connection_handle : 12,
@@ -4397,7 +4397,7 @@ struct CreateCisConfig {
 
 packet LeCreateCis : Command (op_code = LE_CREATE_CIS) {
   _count_(cis_config) : 8,
-  cis_config : CreateCisConfig[],
+  cis_config : LeCreateCisConfig[],
 }
 
 packet LeCreateCisStatus : CommandStatus (command_op_code = LE_CREATE_CIS) {
@@ -5868,20 +5868,20 @@ packet LeCisEstablished : LeMetaEvent (subevent_code = CIS_ESTABLISHED) {
   _reserved_ : 4,
   cig_sync_delay : 24,
   cis_sync_delay : 24,
-  transport_latency_m_to_s : 24,
-  transport_latency_s_to_m : 24,
-  phy_m_to_s : SecondaryPhyType,
-  phy_s_to_m : SecondaryPhyType,
+  transport_latency_c_to_p : 24,
+  transport_latency_p_to_c : 24,
+  phy_c_to_p : SecondaryPhyType,
+  phy_p_to_c : SecondaryPhyType,
   nse : 8,
-  bn_m_to_s : 4,
+  bn_c_to_p : 4,
   _reserved_ : 4,
-  bn_s_to_m : 4,
+  bn_p_to_c : 4,
   _reserved_ : 4,
-  ft_m_to_s : 8,
-  ft_s_to_m : 8,
-  max_pdu_m_to_s : 8,
+  ft_c_to_p : 8,
+  ft_p_to_c : 8,
+  max_pdu_c_to_p : 8,
   _reserved_ : 8,
-  max_pdu_s_to_m : 8,
+  max_pdu_p_to_c : 8,
   _reserved_ : 8,
   iso_interval : 16,
 }
@@ -6191,7 +6191,7 @@ enum IsoPacketStatusFlag : 2 {
 packet IsoWithTimestamp : Iso (ts_flag = PRESENT) {
   time_stamp : 32,
   packet_sequence_number : 16,
-  _size_(_payload_) : 12, // iso_sdu_length
+  iso_sdu_length : 12,
   _reserved_ : 2,
   packet_status_flag : IsoPacketStatusFlag,
   _payload_,
@@ -6199,7 +6199,7 @@ packet IsoWithTimestamp : Iso (ts_flag = PRESENT) {
 
 packet IsoWithoutTimestamp : Iso (ts_flag = NOT_PRESENT) {
   packet_sequence_number : 16,
-  _size_(_payload_) : 12, // iso_sdu_length
+  iso_sdu_length : 12,
   _reserved_ : 2,
   packet_status_flag : IsoPacketStatusFlag,
   _payload_,

@@ -8,7 +8,7 @@ use std::task::{Context, Poll};
 
 use thiserror::Error;
 
-use crate::ffi::LinkManagerOps;
+use crate::ffi::ControllerOps;
 use crate::future::noop_waker;
 use crate::lmp::procedure;
 use crate::num_hci_command_packets;
@@ -88,13 +88,13 @@ pub enum LinkManagerError {
 pub const MAX_PEER_NUMBER: usize = 7;
 
 pub struct LinkManager {
-    ops: LinkManagerOps,
+    ops: ControllerOps,
     links: [Link; MAX_PEER_NUMBER],
     procedures: RefCell<[Option<Pin<Box<dyn Future<Output = ()>>>>; MAX_PEER_NUMBER]>,
 }
 
 impl LinkManager {
-    pub fn new(ops: LinkManagerOps) -> Self {
+    pub fn new(ops: ControllerOps) -> Self {
         Self { ops, links: Default::default(), procedures: Default::default() }
     }
 
@@ -334,7 +334,7 @@ impl procedure::Context for LinkContext {
 
     fn extended_features(&self, features_page: u8) -> u64 {
         if let Some(manager) = self.manager.upgrade() {
-            manager.ops.extended_features(features_page)
+            manager.ops.get_extended_features(features_page)
         } else {
             0
         }

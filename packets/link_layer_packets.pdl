@@ -6,7 +6,12 @@ custom_field ClassOfDevice : 24 "hci/"
 enum PacketType : 8 {
     UNKNOWN = 0x00,
     ACL = 0x01,
-    DISCONNECT = 0x02,
+    SCO = 0x02,
+
+    LE_CONNECTED_ISOCHRONOUS_PDU = 0x03,
+    LE_BROADCAST_ISOCHRONOUS_PDU = 0x04,
+
+    DISCONNECT = 0x05,
     INQUIRY = 0x06,
     INQUIRY_RESPONSE = 0x07,
     LE_LEGACY_ADVERTISING_PDU = 0x0B,
@@ -31,12 +36,8 @@ enum PacketType : 8 {
     READ_REMOTE_VERSION_INFORMATION_RESPONSE = 0x1C,
     REMOTE_NAME_REQUEST = 0x1D,
     REMOTE_NAME_REQUEST_RESPONSE = 0x1E,
-    SCO = 0x1F,
     LE_ENCRYPT_CONNECTION = 0x20,
     LE_ENCRYPT_CONNECTION_RESPONSE = 0x21,
-    ISO = 0x22,
-    ISO_CONNECTION_REQUEST = 0x23,
-    ISO_CONNECTION_RESPONSE = 0x24,
     LE_READ_REMOTE_FEATURES = 0x2C,
     LE_READ_REMOTE_FEATURES_RESPONSE = 0x2D,
     LE_CONNECTION_PARAMETER_REQUEST = 0x2E,
@@ -47,6 +48,7 @@ enum PacketType : 8 {
     SCO_DISCONNECT = 0x32,
 
     LMP = 0x34,
+    LLCP = 0x41,
 
     PING_REQUEST = 0x35,
     PING_RESPONSE = 0x36,
@@ -69,6 +71,20 @@ packet Acl : LinkLayerPacket (type = ACL) {
   packet_boundary_flag : 8,
   broadcast_flag : 8,
   data: 8[],
+}
+
+packet Sco : LinkLayerPacket (type = SCO) {
+  _payload_,
+}
+
+packet LeConnectedIsochronousPdu : LinkLayerPacket (type = LE_CONNECTED_ISOCHRONOUS_PDU) {
+  cig_id: 8,
+  cis_id: 8,
+  sequence_number: 16,
+  data: 8[],
+}
+
+packet LeBroadcastIsochronousPdu : LinkLayerPacket (type = LE_BROADCAST_ISOCHRONOUS_PDU) {
 }
 
 packet Disconnect : LinkLayerPacket (type = DISCONNECT) {
@@ -257,10 +273,6 @@ packet RemoteNameRequestResponse : LinkLayerPacket (type = REMOTE_NAME_REQUEST_R
   name : 8[248],
 }
 
-packet Sco : LinkLayerPacket (type = SCO) {
-  _payload_,
-}
-
 packet LeEncryptConnection : LinkLayerPacket (type = LE_ENCRYPT_CONNECTION) {
   rand : 8[8],
   ediv : 16,
@@ -271,67 +283,6 @@ packet LeEncryptConnectionResponse : LinkLayerPacket (type = LE_ENCRYPT_CONNECTI
   rand : 8[8],
   ediv : 16,
   ltk : 8[16],
-}
-
-enum StartContinuation : 1 {
-  START = 0,
-  CONTINUATION = 1,
-}
-
-enum Complete : 1 {
-  INCOMPLETE = 0,
-  COMPLETE = 1,
-}
-
-packet IsoDataPacket : LinkLayerPacket (type = ISO) {
-  handle : 12,
-  _reserved_ : 4,
-  sc : StartContinuation,
-  cmplt : Complete,
-  _reserved_ : 6,
-  _size_(_payload_) : 16,
-  _payload_,
-}
-
-packet IsoStart : IsoDataPacket (sc = START) {
-  time_offset : 24,
-  _payload_,
-}
-
-packet IsoContinuation : IsoDataPacket (sc = CONTINUATION) {
-  _payload_,
-}
-
-packet IsoConnectionRequest : LinkLayerPacket (type = ISO_CONNECTION_REQUEST) {
-  // Group
-  cig_id : 8,
-  sdu_interval_m_to_s : 32,
-  sdu_interval_s_to_m : 32,
-  interleaved : 1,
-  framed : 1,
-  _reserved_ : 6,
-  latency_m_to_s : 16,
-  latency_s_to_m : 16,
-  // Stream parameters
-  id : 8,
-  max_sdu_m_to_s_ : 16,
-  max_sdu_s_to_m_ : 16,
-  // For the response
-  requester_cis_handle : 12,
-  _reserved_ : 4,
-  requester_acl_handle : 12,
-  _reserved_ : 4,
-}
-
-packet IsoConnectionResponse  : LinkLayerPacket (type = ISO_CONNECTION_RESPONSE){
-  status : 8, // ErrorCode (SUCCESS == connected)
-  requester_cis_handle : 12,
-  _reserved_ : 4,
-  requester_acl_handle : 12,
-  _reserved_ : 4,
-  // For the link layer
-  responder_cis_handle : 12,
-  _reserved_ : 4,
 }
 
 enum PasskeyNotificationType : 8 {
@@ -391,6 +342,10 @@ packet ScoDisconnect : LinkLayerPacket (type = SCO_DISCONNECT) {
 }
 
 packet Lmp : LinkLayerPacket (type = LMP) {
+  _payload_,
+}
+
+packet Llcp : LinkLayerPacket (type = LLCP) {
   _payload_,
 }
 

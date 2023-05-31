@@ -16,13 +16,14 @@
 
 #include "link_layer_controller.h"
 
-#include <algorithm>
 #include <hci/hci_packets.h>
-#include <lmp.h>
+
+#include <algorithm>
 
 #include "crypto/crypto.h"
 #include "log.h"
 #include "packet/raw_builder.h"
+#include "rootcanal_rs.h"
 
 using namespace std::chrono;
 using bluetooth::hci::Address;
@@ -1974,14 +1975,14 @@ LinkLayerController::LinkLayerController(const Address& address,
                                          const ControllerProperties& properties)
     : address_(address),
       properties_(properties),
-      lm_(nullptr, link_manager_destroy) {
-
+      lm_(nullptr, link_manager_destroy),
+      ll_(nullptr, link_layer_destroy) {
   if (properties_.quirks.has_default_random_address) {
     LOG_WARN("Configuring a default random address for this controller");
     random_address_ = Address { 0xba, 0xdb, 0xad, 0xba, 0xdb, 0xad };
   }
 
-  ops_ = {
+  controller_ops_ = {
       .user_pointer = this,
       .get_handle =
           [](void* user, const uint8_t(*address)[6]) {
@@ -2003,10 +2004,22 @@ LinkLayerController::LinkLayerController(const Address& address,
                       reinterpret_cast<uint8_t*>(result));
           },
 
-      .extended_features =
+      .get_extended_features =
           [](void* user, uint8_t features_page) {
             auto controller = static_cast<LinkLayerController*>(user);
             return controller->GetLmpFeatures(features_page);
+          },
+
+      .get_le_features =
+          [](void* user) {
+            auto controller = static_cast<LinkLayerController*>(user);
+            return controller->GetLeSupportedFeatures();
+          },
+
+      .get_le_event_mask =
+          [](void* user) {
+            auto controller = static_cast<LinkLayerController*>(user);
+            return controller->le_event_mask_;
           },
 
       .send_hci_event =
@@ -2034,9 +2047,35 @@ LinkLayerController::LinkLayerController(const Address& address,
 
             controller->SendLinkLayerPacket(model::packets::LmpBuilder::Create(
                 source, dest, std::move(payload)));
+          },
+
+      .send_llcp_packet =
+          [](void* user, uint16_t acl_connection_handle, const uint8_t* data,
+             uintptr_t len) {
+            auto controller = static_cast<LinkLayerController*>(user);
+            auto payload = std::make_unique<bluetooth::packet::RawBuilder>(
+                std::vector(data, data + len));
+
+            if (!controller->connections_.HasHandle(acl_connection_handle)) {
+              LOG_ERROR(
+                  "Dropping LLCP packet sent for unknown connection handle "
+                  "0x%x",
+                  acl_connection_handle);
+              return;
+            }
+
+            AclConnection const& connection =
+                controller->connections_.GetAclConnection(
+                    acl_connection_handle);
+            Address source = connection.GetOwnAddress().GetAddress();
+            Address destination = connection.GetAddress().GetAddress();
+
+            controller->SendLinkLayerPacket(model::packets::LlcpBuilder::Create(
+                source, destination, std::move(payload)));
           }};
 
-  lm_.reset(link_manager_create(ops_));
+  lm_.reset(link_manager_create(controller_ops_));
+  ll_.reset(link_layer_create(controller_ops_));
 }
 
 LinkLayerController::~LinkLayerController() {}
@@ -2251,11 +2290,17 @@ void LinkLayerController::IncomingPacket(
     case model::packets::PacketType::SCO:
       IncomingScoPacket(incoming);
       break;
+    case model::packets::PacketType::LE_CONNECTED_ISOCHRONOUS_PDU:
+      IncomingLeConnectedIsochronousPdu(incoming);
+      break;
     case model::packets::PacketType::DISCONNECT:
       IncomingDisconnectPacket(incoming);
       break;
     case model::packets::PacketType::LMP:
       IncomingLmpPacket(incoming);
+      break;
+    case model::packets::PacketType::LLCP:
+      IncomingLlcpPacket(incoming);
       break;
     case model::packets::PacketType::INQUIRY:
       if (inquiry_scan_enable_) {
@@ -2264,15 +2309,6 @@ void LinkLayerController::IncomingPacket(
       break;
     case model::packets::PacketType::INQUIRY_RESPONSE:
       IncomingInquiryResponsePacket(incoming);
-      break;
-    case PacketType::ISO:
-      IncomingIsoPacket(incoming);
-      break;
-    case PacketType::ISO_CONNECTION_REQUEST:
-      IncomingIsoConnectionRequestPacket(incoming);
-      break;
-    case PacketType::ISO_CONNECTION_RESPONSE:
-      IncomingIsoConnectionResponsePacket(incoming);
       break;
     case model::packets::PacketType::LE_LEGACY_ADVERTISING_PDU:
       IncomingLeLegacyAdvertisingPdu(incoming, rssi);
@@ -2653,6 +2689,8 @@ void LinkLayerController::IncomingDisconnectPacket(
   if (is_br_edr) {
     ASSERT(link_manager_remove_link(
         lm_.get(), reinterpret_cast<uint8_t(*)[6]>(peer.data())));
+  } else {
+    ASSERT(link_layer_remove_link(ll_.get(), handle));
   }
 }
 
@@ -2769,223 +2807,6 @@ void LinkLayerController::IncomingInquiryResponsePacket(
     default:
       LOG_WARN("Unhandled Incoming Inquiry Response of type %d",
                static_cast<int>(basic_inquiry_response.GetInquiryType()));
-  }
-}
-
-void LinkLayerController::IncomingIsoPacket(LinkLayerPacketView incoming) {
-  auto iso = IsoDataPacketView::Create(incoming);
-  ASSERT(iso.IsValid());
-
-  uint16_t cis_handle = iso.GetHandle();
-  if (!connections_.HasCisHandle(cis_handle)) {
-    LOG_INFO("Dropping ISO packet to unknown handle 0x%hx", cis_handle);
-    return;
-  }
-  if (!connections_.HasConnectedCis(cis_handle)) {
-    LOG_INFO("Dropping ISO packet to a disconnected handle 0x%hx", cis_handle);
-    return;
-  }
-
-  auto sc = iso.GetSc();
-  switch (sc) {
-    case StartContinuation::START: {
-      auto iso_start = IsoStartView::Create(iso);
-      ASSERT(iso_start.IsValid());
-      if (iso.GetCmplt() == Complete::COMPLETE) {
-        send_iso_(bluetooth::hci::IsoWithoutTimestampBuilder::Create(
-            cis_handle, bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU,
-            0 /* seq num */, bluetooth::hci::IsoPacketStatusFlag::VALID,
-            std::make_unique<bluetooth::packet::RawBuilder>(
-                std::vector<uint8_t>(iso_start.GetPayload().begin(),
-                                     iso_start.GetPayload().end()))));
-      } else {
-        send_iso_(bluetooth::hci::IsoWithoutTimestampBuilder::Create(
-            cis_handle, bluetooth::hci::IsoPacketBoundaryFlag::FIRST_FRAGMENT,
-            0 /* seq num */, bluetooth::hci::IsoPacketStatusFlag::VALID,
-            std::make_unique<bluetooth::packet::RawBuilder>(
-                std::vector<uint8_t>(iso_start.GetPayload().begin(),
-                                     iso_start.GetPayload().end()))));
-      }
-    } break;
-    case StartContinuation::CONTINUATION: {
-      auto continuation = IsoContinuationView::Create(iso);
-      ASSERT(continuation.IsValid());
-      if (iso.GetCmplt() == Complete::COMPLETE) {
-        send_iso_(bluetooth::hci::IsoWithoutTimestampBuilder::Create(
-            cis_handle, bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT,
-            0 /* seq num */, bluetooth::hci::IsoPacketStatusFlag::VALID,
-            std::make_unique<bluetooth::packet::RawBuilder>(
-                std::vector<uint8_t>(continuation.GetPayload().begin(),
-                                     continuation.GetPayload().end()))));
-      } else {
-        send_iso_(bluetooth::hci::IsoWithoutTimestampBuilder::Create(
-            cis_handle,
-            bluetooth::hci::IsoPacketBoundaryFlag::CONTINUATION_FRAGMENT,
-            0 /* seq num */, bluetooth::hci::IsoPacketStatusFlag::VALID,
-            std::make_unique<bluetooth::packet::RawBuilder>(
-                std::vector<uint8_t>(continuation.GetPayload().begin(),
-                                     continuation.GetPayload().end()))));
-      }
-    } break;
-  }
-}
-
-void LinkLayerController::HandleIso(bluetooth::hci::IsoView iso) {
-  auto cis_handle = iso.GetConnectionHandle();
-  if (!connections_.HasCisHandle(cis_handle)) {
-    LOG_INFO("Dropping ISO packet to unknown handle 0x%hx", cis_handle);
-    return;
-  }
-  if (!connections_.HasConnectedCis(cis_handle)) {
-    LOG_INFO("Dropping ISO packet to disconnected handle 0x%hx", cis_handle);
-    return;
-  }
-
-  auto acl_handle = connections_.GetAclHandleForCisHandle(cis_handle);
-  uint16_t remote_handle =
-      connections_.GetRemoteCisHandleForCisHandle(cis_handle);
-  model::packets::StartContinuation start_flag =
-      model::packets::StartContinuation::START;
-  model::packets::Complete complete_flag = model::packets::Complete::COMPLETE;
-  switch (iso.GetPbFlag()) {
-    case bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU:
-      start_flag = model::packets::StartContinuation::START;
-      complete_flag = model::packets::Complete::COMPLETE;
-      break;
-    case bluetooth::hci::IsoPacketBoundaryFlag::CONTINUATION_FRAGMENT:
-      start_flag = model::packets::StartContinuation::CONTINUATION;
-      complete_flag = model::packets::Complete::INCOMPLETE;
-      break;
-    case bluetooth::hci::IsoPacketBoundaryFlag::FIRST_FRAGMENT:
-      start_flag = model::packets::StartContinuation::START;
-      complete_flag = model::packets::Complete::INCOMPLETE;
-      break;
-    case bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT:
-      start_flag = model::packets::StartContinuation::CONTINUATION;
-      complete_flag = model::packets::Complete::INCOMPLETE;
-      break;
-  }
-  if (start_flag == model::packets::StartContinuation::START) {
-    if (iso.GetTsFlag() == bluetooth::hci::TimeStampFlag::PRESENT) {
-      auto timestamped = bluetooth::hci::IsoWithTimestampView::Create(iso);
-      ASSERT(timestamped.IsValid());
-      uint32_t timestamp = timestamped.GetTimeStamp();
-      std::vector<uint8_t> payload;
-      for (const auto it : timestamped.GetPayload()) {
-        payload.push_back(it);
-      }
-
-      SendLeLinkLayerPacket(model::packets::IsoStartBuilder::Create(
-          connections_.GetOwnAddress(acl_handle).GetAddress(),
-          connections_.GetAddress(acl_handle).GetAddress(), remote_handle,
-          complete_flag, timestamp,
-          std::make_unique<bluetooth::packet::RawBuilder>(std::move(payload))));
-    } else {
-      auto pkt = bluetooth::hci::IsoWithoutTimestampView::Create(iso);
-      ASSERT(pkt.IsValid());
-
-      auto payload =
-          std::make_unique<bluetooth::packet::RawBuilder>(std::vector<uint8_t>(
-              pkt.GetPayload().begin(), pkt.GetPayload().end()));
-
-      SendLeLinkLayerPacket(model::packets::IsoStartBuilder::Create(
-          connections_.GetOwnAddress(acl_handle).GetAddress(),
-          connections_.GetAddress(acl_handle).GetAddress(), remote_handle,
-          complete_flag, 0, std::move(payload)));
-    }
-  } else {
-    auto pkt = bluetooth::hci::IsoWithoutTimestampView::Create(iso);
-    ASSERT(pkt.IsValid());
-    auto payload = std::make_unique<bluetooth::packet::RawBuilder>(
-        std::vector<uint8_t>(pkt.GetPayload().begin(), pkt.GetPayload().end()));
-    SendLeLinkLayerPacket(model::packets::IsoContinuationBuilder::Create(
-        connections_.GetOwnAddress(acl_handle).GetAddress(),
-        connections_.GetAddress(acl_handle).GetAddress(), remote_handle,
-        complete_flag, std::move(payload)));
-  }
-}
-
-void LinkLayerController::IncomingIsoConnectionRequestPacket(
-    LinkLayerPacketView incoming) {
-  auto req = IsoConnectionRequestView::Create(incoming);
-  ASSERT(req.IsValid());
-  std::vector<bluetooth::hci::CisParametersConfig> stream_configs;
-  bluetooth::hci::CisParametersConfig stream_config;
-
-  stream_config.max_sdu_m_to_s_ = req.GetMaxSduMToS();
-  stream_config.max_sdu_s_to_m_ = req.GetMaxSduSToM();
-
-  stream_configs.push_back(stream_config);
-
-  uint8_t group_id = req.GetCigId();
-
-  /* CIG should be created by the local host before use */
-  bluetooth::hci::CreateCisConfig config;
-  config.cis_connection_handle_ = req.GetRequesterCisHandle();
-
-  config.acl_connection_handle_ =
-      connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
-  connections_.CreatePendingCis(config);
-  connections_.SetRemoteCisHandle(config.cis_connection_handle_,
-                                  req.GetRequesterCisHandle());
-  if (IsEventUnmasked(EventCode::LE_META_EVENT)) {
-    send_event_(bluetooth::hci::LeCisRequestBuilder::Create(
-        config.acl_connection_handle_, config.cis_connection_handle_, group_id,
-        req.GetId()));
-  }
-}
-
-void LinkLayerController::IncomingIsoConnectionResponsePacket(
-    LinkLayerPacketView incoming) {
-  auto response = IsoConnectionResponseView::Create(incoming);
-  ASSERT(response.IsValid());
-
-  bluetooth::hci::CreateCisConfig config;
-  config.acl_connection_handle_ = response.GetRequesterAclHandle();
-  config.cis_connection_handle_ = response.GetRequesterCisHandle();
-  if (!connections_.HasPendingCisConnection(config.cis_connection_handle_)) {
-    LOG_INFO("Ignoring connection response with unknown CIS handle 0x%04hx",
-             config.cis_connection_handle_);
-    return;
-  }
-  ErrorCode status = static_cast<ErrorCode>(response.GetStatus());
-  if (status != ErrorCode::SUCCESS) {
-    if (IsEventUnmasked(EventCode::LE_META_EVENT)) {
-      send_event_(bluetooth::hci::LeCisEstablishedBuilder::Create(
-          status, config.cis_connection_handle_, 0, 0, 0, 0,
-          bluetooth::hci::SecondaryPhyType::NO_PACKETS,
-          bluetooth::hci::SecondaryPhyType::NO_PACKETS, 0, 0, 0, 0, 0, 0, 0,
-          0));
-    }
-    return;
-  }
-  connections_.SetRemoteCisHandle(config.cis_connection_handle_,
-                                  response.GetResponderCisHandle());
-  connections_.ConnectCis(config.cis_connection_handle_);
-  auto stream_parameters =
-      connections_.GetStreamParameters(config.cis_connection_handle_);
-  auto group_parameters =
-      connections_.GetGroupParameters(stream_parameters.group_id);
-  // TODO: Which of these are important enough to fake?
-  uint32_t cig_sync_delay = 0x100;
-  uint32_t cis_sync_delay = 0x200;
-  uint32_t latency_m_to_s = group_parameters.max_transport_latency_m_to_s;
-  uint32_t latency_s_to_m = group_parameters.max_transport_latency_s_to_m;
-  uint8_t nse = 1;
-  uint8_t bn_m_to_s = 0;
-  uint8_t bn_s_to_m = 0;
-  uint8_t ft_m_to_s = 0;
-  uint8_t ft_s_to_m = 0;
-  uint8_t max_pdu_m_to_s = 0x40;
-  uint8_t max_pdu_s_to_m = 0x40;
-  uint16_t iso_interval = 0x100;
-  if (IsEventUnmasked(EventCode::LE_META_EVENT)) {
-    send_event_(bluetooth::hci::LeCisEstablishedBuilder::Create(
-        status, config.cis_connection_handle_, cig_sync_delay, cis_sync_delay,
-        latency_m_to_s, latency_s_to_m,
-        bluetooth::hci::SecondaryPhyType::NO_PACKETS,
-        bluetooth::hci::SecondaryPhyType::NO_PACKETS, nse, bn_m_to_s, bn_s_to_m,
-        ft_m_to_s, ft_s_to_m, max_pdu_m_to_s, max_pdu_s_to_m, iso_interval));
   }
 }
 
@@ -4246,6 +4067,160 @@ void LinkLayerController::IncomingLmpPacket(
       packet.size()));
 }
 
+void LinkLayerController::IncomingLlcpPacket(
+    model::packets::LinkLayerPacketView incoming) {
+  Address address = incoming.GetSourceAddress();
+  auto request = model::packets::LlcpView::Create(incoming);
+  ASSERT(request.IsValid());
+  auto payload = request.GetPayload();
+  auto packet = std::vector(payload.begin(), payload.end());
+  uint16_t acl_connection_handle = connections_.GetHandleOnlyAddress(address);
+
+  if (acl_connection_handle == kReservedHandle) {
+    LOG_INFO("Dropping LLCP packet since connection does not exist");
+    return;
+  }
+
+  ASSERT(link_layer_ingest_llcp(ll_.get(), acl_connection_handle, packet.data(),
+                                packet.size()));
+}
+
+void LinkLayerController::IncomingLeConnectedIsochronousPdu(
+    LinkLayerPacketView incoming) {
+  auto pdu = model::packets::LeConnectedIsochronousPduView::Create(incoming);
+  ASSERT(pdu.IsValid());
+  auto data = pdu.GetData();
+  auto packet = std::vector(data.begin(), data.end());
+  uint8_t cig_id = pdu.GetCigId();
+  uint8_t cis_id = pdu.GetCisId();
+  uint16_t cis_connection_handle = 0;
+  uint16_t iso_sdu_length = packet.size();
+
+  if (!link_layer_get_cis_connection_handle(ll_.get(), cig_id, cis_id,
+                                            &cis_connection_handle)) {
+    LOG_INFO(
+        "Dropping CIS pdu received on disconnected CIS cig_id=%d, cis_id=%d",
+        cig_id, cis_id);
+    return;
+  }
+
+  // Fragment the ISO SDU if larger than the maximum payload size (4095).
+  constexpr size_t kMaxPayloadSize = 4095 - 4;  // remove sequence_number and
+                                                // iso_sdu_length
+  size_t remaining_size = packet.size();
+  size_t offset = 0;
+  auto packet_boundary_flag =
+      remaining_size <= kMaxPayloadSize
+          ? bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU
+          : bluetooth::hci::IsoPacketBoundaryFlag::FIRST_FRAGMENT;
+
+  do {
+    size_t fragment_size = std::min(kMaxPayloadSize, remaining_size);
+    std::vector<uint8_t> fragment(packet.data() + offset,
+                                  packet.data() + offset + fragment_size);
+
+    send_iso_(bluetooth::hci::IsoWithoutTimestampBuilder::Create(
+        cis_connection_handle, packet_boundary_flag, pdu.GetSequenceNumber(),
+        iso_sdu_length, bluetooth::hci::IsoPacketStatusFlag::VALID,
+        std::make_unique<bluetooth::packet::RawBuilder>(std::move(fragment))));
+
+    remaining_size -= fragment_size;
+    offset += fragment_size;
+    packet_boundary_flag =
+        remaining_size <= kMaxPayloadSize
+            ? bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT
+            : bluetooth::hci::IsoPacketBoundaryFlag::CONTINUATION_FRAGMENT;
+  } while (remaining_size > 0);
+}
+
+void LinkLayerController::HandleIso(bluetooth::hci::IsoView iso) {
+  uint16_t cis_connection_handle = iso.GetConnectionHandle();
+  auto pb_flag = iso.GetPbFlag();
+  auto ts_flag = iso.GetTsFlag();
+  auto iso_data_load = iso.GetPayload();
+
+  // In the Host to Controller direction, ISO_Data_Load_Length
+  // shall be less than or equal to the size of the buffer supported by the
+  // Controller (which is returned using the ISO_Data_Packet_Length return
+  // parameter of the LE Read Buffer Size command).
+  if (iso_data_load.size() > properties_.iso_data_packet_length) {
+    LOG_ALWAYS_FATAL(
+        "Received ISO HCI packet with ISO_Data_Load_Length (%zu) larger than"
+        " the controller buffer size ISO_Data_Packet_Length (%d)",
+        iso_data_load.size(), properties_.iso_data_packet_length);
+  }
+
+  // The TS_Flag bit shall only be set if the PB_Flag field equals 0b00 or 0b10.
+  if (ts_flag == bluetooth::hci::TimeStampFlag::PRESENT &&
+      (pb_flag ==
+           bluetooth::hci::IsoPacketBoundaryFlag::CONTINUATION_FRAGMENT ||
+       pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT)) {
+    LOG_ALWAYS_FATAL(
+        "Received ISO HCI packet with TS_Flag set, but no ISO Header is "
+        "expected");
+  }
+
+  uint8_t cig_id = 0;
+  uint8_t cis_id = 0;
+  uint16_t acl_connection_handle = kReservedHandle;
+  uint16_t packet_sequence_number = 0;
+  uint16_t max_sdu_length = 0;
+
+  if (!link_layer_get_cis_information(ll_.get(), cis_connection_handle,
+                                      &acl_connection_handle, &cig_id, &cis_id,
+                                      &max_sdu_length)) {
+    LOG_INFO("Ignoring CIS pdu received on disconnected CIS handle=%d",
+             cis_connection_handle);
+    return;
+  }
+
+  if (pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::FIRST_FRAGMENT ||
+      pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU) {
+    iso_sdu_.clear();
+  }
+
+  switch (ts_flag) {
+    case bluetooth::hci::TimeStampFlag::PRESENT: {
+      auto iso_with_timestamp =
+          bluetooth::hci::IsoWithTimestampView::Create(iso);
+      ASSERT(iso_with_timestamp.IsValid());
+      auto iso_payload = iso_with_timestamp.GetPayload();
+      iso_sdu_.insert(iso_sdu_.end(), iso_payload.begin(), iso_payload.end());
+      packet_sequence_number = iso_with_timestamp.GetPacketSequenceNumber();
+      break;
+    }
+    default:
+    case bluetooth::hci::TimeStampFlag::NOT_PRESENT: {
+      auto iso_without_timestamp =
+          bluetooth::hci::IsoWithoutTimestampView::Create(iso);
+      ASSERT(iso_without_timestamp.IsValid());
+      auto iso_payload = iso_without_timestamp.GetPayload();
+      iso_sdu_.insert(iso_sdu_.end(), iso_payload.begin(), iso_payload.end());
+      packet_sequence_number = iso_without_timestamp.GetPacketSequenceNumber();
+      break;
+    }
+  }
+
+  if (pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT ||
+      pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU) {
+    // Validate that the Host stack is not sending ISO SDUs that are larger
+    // that what was configured for the CIS.
+    if (iso_sdu_.size() > max_sdu_length) {
+      LOG_WARN(
+          "attempted to send an SDU of length %zu that exceeds the configure "
+          "Max_SDU_Length (%u)",
+          iso_sdu_.size(), max_sdu_length);
+      return;
+    }
+
+    SendLeLinkLayerPacket(
+        model::packets::LeConnectedIsochronousPduBuilder::Create(
+            address_,
+            connections_.GetAddress(acl_connection_handle).GetAddress(), cig_id,
+            cis_id, packet_sequence_number, std::move(iso_sdu_)));
+  }
+}
+
 uint16_t LinkLayerController::HandleLeConnection(
     AddressWithType address, AddressWithType own_address,
     bluetooth::hci::Role role, uint16_t connection_interval,
@@ -4300,6 +4275,12 @@ uint16_t LinkLayerController::HandleLeConnection(
         address.GetAddress(), connection_interval, connection_latency,
         supervision_timeout, static_cast<bluetooth::hci::ClockAccuracy>(0x00)));
   }
+
+  // Update the link layer with the new link.
+  ASSERT(link_layer_add_link(
+      ll_.get(), handle,
+      reinterpret_cast<const uint8_t(*)[6]>(address.GetAddress().data()),
+      static_cast<uint8_t>(role)));
 
   // Note: the HCI_LE_Connection_Complete event is immediately followed by
   // an HCI_LE_Channel_Selection_Algorithm event if the connection is created
@@ -5264,6 +5245,11 @@ void LinkLayerController::ForwardToLm(bluetooth::hci::CommandView command) {
   ASSERT(link_manager_ingest_hci(lm_.get(), packet.data(), packet.size()));
 }
 
+void LinkLayerController::ForwardToLl(bluetooth::hci::CommandView command) {
+  auto packet = std::vector(command.begin(), command.end());
+  ASSERT(link_layer_ingest_hci(ll_.get(), packet.data(), packet.size()));
+}
+
 std::vector<bluetooth::hci::Lap> const& LinkLayerController::ReadCurrentIacLap()
     const {
   return current_iac_lap_list_;
@@ -5500,6 +5486,8 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle,
     ASSERT(link_manager_remove_link(
         lm_.get(),
         reinterpret_cast<uint8_t(*)[6]>(remote.GetAddress().data())));
+  } else {
+    ASSERT(link_layer_remove_link(ll_.get(), handle));
   }
   return ErrorCode::SUCCESS;
 }
@@ -5876,165 +5864,6 @@ bool LinkLayerController::HasAclConnection(uint16_t connection_handle) {
   return connections_.HasHandle(connection_handle);
 }
 
-void LinkLayerController::LeReadIsoTxSync(uint16_t /* handle */) {}
-
-void LinkLayerController::LeSetCigParameters(
-    uint8_t cig_id, uint32_t sdu_interval_m_to_s, uint32_t sdu_interval_s_to_m,
-    bluetooth::hci::ClockAccuracy clock_accuracy,
-    bluetooth::hci::Packing packing, bluetooth::hci::Enable framing,
-    uint16_t max_transport_latency_m_to_s,
-    uint16_t max_transport_latency_s_to_m,
-    std::vector<bluetooth::hci::CisParametersConfig> cis_config) {
-  if (IsEventUnmasked(EventCode::LE_META_EVENT)) {
-    send_event_(connections_.SetCigParameters(
-        cig_id, sdu_interval_m_to_s, sdu_interval_s_to_m, clock_accuracy,
-        packing, framing, max_transport_latency_m_to_s,
-        max_transport_latency_s_to_m, cis_config));
-  }
-}
-
-ErrorCode LinkLayerController::LeCreateCis(
-    std::vector<bluetooth::hci::CreateCisConfig> cis_config) {
-  if (connections_.HasPendingCis()) {
-    return ErrorCode::COMMAND_DISALLOWED;
-  }
-  for (auto& config : cis_config) {
-    if (!connections_.HasHandle(config.acl_connection_handle_)) {
-      LOG_INFO("Unknown ACL handle %04x", config.acl_connection_handle_);
-      return ErrorCode::UNKNOWN_CONNECTION;
-    }
-    if (!connections_.HasCisHandle(config.cis_connection_handle_)) {
-      LOG_INFO("Unknown CIS handle %04x", config.cis_connection_handle_);
-      return ErrorCode::UNKNOWN_CONNECTION;
-    }
-  }
-  for (auto& config : cis_config) {
-    connections_.CreatePendingCis(config);
-    auto own_address =
-        connections_.GetOwnAddress(config.acl_connection_handle_);
-    auto peer_address = connections_.GetAddress(config.acl_connection_handle_);
-    StreamParameters stream_parameters =
-        connections_.GetStreamParameters(config.cis_connection_handle_);
-    GroupParameters group_parameters =
-        connections_.GetGroupParameters(stream_parameters.group_id);
-
-    SendLeLinkLayerPacket(model::packets::IsoConnectionRequestBuilder::Create(
-        own_address.GetAddress(), peer_address.GetAddress(),
-        stream_parameters.group_id, group_parameters.sdu_interval_m_to_s,
-        group_parameters.sdu_interval_s_to_m, group_parameters.interleaved,
-        group_parameters.framed, group_parameters.max_transport_latency_m_to_s,
-        group_parameters.max_transport_latency_s_to_m,
-        stream_parameters.stream_id, stream_parameters.max_sdu_m_to_s,
-        stream_parameters.max_sdu_s_to_m, config.cis_connection_handle_,
-        config.acl_connection_handle_));
-  }
-  return ErrorCode::SUCCESS;
-}
-
-ErrorCode LinkLayerController::LeRemoveCig(uint8_t cig_id) {
-  return connections_.RemoveCig(cig_id);
-}
-
-ErrorCode LinkLayerController::LeAcceptCisRequest(uint16_t cis_handle) {
-  if (!connections_.HasPendingCisConnection(cis_handle)) {
-    return ErrorCode::UNKNOWN_CONNECTION;
-  }
-  auto acl_handle = connections_.GetPendingAclHandle(cis_handle);
-
-  connections_.ConnectCis(cis_handle);
-
-  SendLeLinkLayerPacket(model::packets::IsoConnectionResponseBuilder::Create(
-      connections_.GetOwnAddress(acl_handle).GetAddress(),
-      connections_.GetAddress(acl_handle).GetAddress(),
-      static_cast<uint8_t>(ErrorCode::SUCCESS), cis_handle, acl_handle,
-      connections_.GetRemoteCisHandleForCisHandle(cis_handle)));
-
-  // Both sides have to send LeCisEstablished event
-
-  uint32_t cig_sync_delay = 0x100;
-  uint32_t cis_sync_delay = 0x200;
-  uint32_t latency_m_to_s = 0x200;
-  uint32_t latency_s_to_m = 0x200;
-  uint8_t nse = 1;
-  uint8_t bn_m_to_s = 0;
-  uint8_t bn_s_to_m = 0;
-  uint8_t ft_m_to_s = 0;
-  uint8_t ft_s_to_m = 0;
-  uint8_t max_pdu_m_to_s = 0x40;
-  uint8_t max_pdu_s_to_m = 0x40;
-  uint16_t iso_interval = 0x100;
-  if (IsEventUnmasked(EventCode::LE_META_EVENT)) {
-    send_event_(bluetooth::hci::LeCisEstablishedBuilder::Create(
-        ErrorCode::SUCCESS, cis_handle, cig_sync_delay, cis_sync_delay,
-        latency_m_to_s, latency_s_to_m,
-        bluetooth::hci::SecondaryPhyType::NO_PACKETS,
-        bluetooth::hci::SecondaryPhyType::NO_PACKETS, nse, bn_m_to_s, bn_s_to_m,
-        ft_m_to_s, ft_s_to_m, max_pdu_m_to_s, max_pdu_s_to_m, iso_interval));
-  }
-  return ErrorCode::SUCCESS;
-}
-
-ErrorCode LinkLayerController::LeRejectCisRequest(uint16_t cis_handle,
-                                                  ErrorCode reason) {
-  if (!connections_.HasPendingCisConnection(cis_handle)) {
-    return ErrorCode::UNKNOWN_CONNECTION;
-  }
-  auto acl_handle = connections_.GetPendingAclHandle(cis_handle);
-
-  SendLeLinkLayerPacket(model::packets::IsoConnectionResponseBuilder::Create(
-      connections_.GetOwnAddress(acl_handle).GetAddress(),
-      connections_.GetAddress(acl_handle).GetAddress(),
-      static_cast<uint8_t>(reason), cis_handle, acl_handle, kReservedHandle));
-  connections_.RejectCis(cis_handle);
-  return ErrorCode::SUCCESS;
-}
-
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-ErrorCode LinkLayerController::LeCreateBig(
-    uint8_t /* big_handle */, uint8_t /* advertising_handle */,
-    uint8_t /* num_bis */, uint32_t /* sdu_interval */, uint16_t /* max_sdu */,
-    uint16_t /* max_transport_latency */, uint8_t /* rtn */,
-    bluetooth::hci::SecondaryPhyType /* phy */,
-    bluetooth::hci::Packing /* packing */, bluetooth::hci::Enable /* framing */,
-    bluetooth::hci::Enable /* encryption */,
-    std::array<uint8_t, 16> /* broadcast_code */) {
-  return ErrorCode::SUCCESS;
-}
-
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-ErrorCode LinkLayerController::LeTerminateBig(uint8_t /* big_handle */,
-                                              ErrorCode /* reason */) {
-  return ErrorCode::SUCCESS;
-}
-
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-ErrorCode LinkLayerController::LeBigCreateSync(
-    uint8_t /* big_handle */, uint16_t /* sync_handle */,
-    bluetooth::hci::Enable /* encryption */,
-    std::array<uint8_t, 16> /* broadcast_code */, uint8_t /* mse */,
-    uint16_t /* big_sync_timeout */, std::vector<uint8_t> /* bis */) {
-  return ErrorCode::SUCCESS;
-}
-
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-void LinkLayerController::LeBigTerminateSync(uint8_t /* big_handle */) {}
-
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-ErrorCode LinkLayerController::LeRequestPeerSca(uint16_t /* request_handle */) {
-  return ErrorCode::SUCCESS;
-}
-
-void LinkLayerController::LeSetupIsoDataPath(
-    uint16_t /* connection_handle */,
-    bluetooth::hci::DataPathDirection /* data_path_direction */,
-    uint8_t /* data_path_id */, uint64_t /* codec_id */,
-    uint32_t /* controller_Delay */,
-    std::vector<uint8_t> /* codec_configuration */) {}
-
-void LinkLayerController::LeRemoveIsoDataPath(
-    uint16_t /* connection_handle */,
-    bluetooth::hci::RemoveDataPathDirection /* remove_data_path_direction */) {}
-
 void LinkLayerController::HandleLeEnableEncryption(
     uint16_t handle, std::array<uint8_t, 8> rand, uint16_t ediv,
     std::array<uint8_t, kLtkSize> ltk) {
@@ -6175,7 +6004,8 @@ void LinkLayerController::Reset() {
     page_timeout_task_id_ = kInvalidTaskId;
   }
 
-  lm_.reset(link_manager_create(ops_));
+  lm_.reset(link_manager_create(controller_ops_));
+  ll_.reset(link_layer_create(controller_ops_));
 }
 
 void LinkLayerController::StartInquiry(milliseconds timeout) {

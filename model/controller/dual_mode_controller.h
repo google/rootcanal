@@ -537,21 +537,6 @@ class DualModeController : public Device {
   // 7.8.77
   void LeSetPrivacyMode(CommandView command);
 
-  // 7.8.96 - 7.8.110
-  void LeReadIsoTxSync(CommandView command);
-  void LeSetCigParameters(CommandView command);
-  void LeCreateCis(CommandView command);
-  void LeRemoveCig(CommandView command);
-  void LeAcceptCisRequest(CommandView command);
-  void LeRejectCisRequest(CommandView command);
-  void LeCreateBig(CommandView command);
-  void LeTerminateBig(CommandView command);
-  void LeBigCreateSync(CommandView command);
-  void LeBigTerminateSync(CommandView command);
-  void LeRequestPeerSca(CommandView command);
-  void LeSetupIsoDataPath(CommandView command);
-  void LeRemoveIsoDataPath(CommandView command);
-
   // 7.8.115
   void LeSetHostFeature(CommandView command);
 
@@ -562,7 +547,6 @@ class DualModeController : public Device {
   void WriteConnectionAcceptTimeout(CommandView command);
 
   // Vendor-specific Commands
-
   void LeGetVendorCapabilities(CommandView command);
   void LeEnergyInfo(CommandView command);
   void LeMultiAdv(CommandView command);
@@ -580,6 +564,7 @@ class DualModeController : public Device {
 
   // Command pass-through.
   void ForwardToLm(CommandView command);
+  void ForwardToLl(CommandView command);
 
  protected:
   // Controller configuration.
