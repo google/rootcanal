@@ -23,11 +23,11 @@
 #include <ostream>     // for operator<<, ostream
 #include <vector>      // for vector
 
-#include "model/hci/h4.h"            // for PacketType
-#include "model/hci/hci_protocol.h"  // for PacketReadCallback
+#include "model/hci/h4.h"  // for PacketType
 
 namespace rootcanal {
 
+using PacketReadCallback = std::function<void(const std::vector<uint8_t>&)>;
 using HciPacketReadyCallback = std::function<void(void)>;
 using ClientDisconnectCallback = std::function<void()>;
 
