@@ -26,12 +26,6 @@ namespace rootcanal {
 
 using ::bluetooth::hci::AddressWithType;
 
-enum AclConnectionState {
-  kActiveMode,
-  kHoldMode,
-  kSniffMode,
-};
-
 // Model the connection of a device to the controller.
 class AclConnection {
  public:
@@ -50,15 +44,8 @@ class AclConnection {
   void Encrypt();
   bool IsEncrypted() const;
 
+  uint16_t GetLinkPolicySettings() const;
   void SetLinkPolicySettings(uint16_t settings);
-  uint16_t GetLinkPolicySettings() const { return link_policy_settings_; }
-  bool IsRoleSwitchEnabled() const {
-    return (link_policy_settings_ & 0x1) != 0;
-  }
-  bool IsHoldModeEnabled() const { return (link_policy_settings_ & 0x2) != 0; }
-  bool IsSniffModeEnabled() const { return (link_policy_settings_ & 0x4) != 0; }
-
-  AclConnectionState GetMode() const { return state_; }
 
   bluetooth::hci::Role GetRole() const;
   void SetRole(bluetooth::hci::Role role);
@@ -94,7 +81,6 @@ class AclConnection {
   // State variables
   bool encrypted_{false};
   uint16_t link_policy_settings_{0};
-  AclConnectionState state_{kActiveMode};
   bluetooth::hci::Role role_{bluetooth::hci::Role::CENTRAL};
   std::chrono::steady_clock::time_point last_packet_timestamp_;
   std::chrono::steady_clock::duration timeout_;
