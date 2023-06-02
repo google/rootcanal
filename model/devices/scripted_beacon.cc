@@ -78,14 +78,14 @@ ScriptedBeacon::ScriptedBeacon(const vector<std::string>& args) : Beacon(args) {
   scan_response_data_ = {
       0x05 /* Length */, 0x08 /* TYPE_NAME_SHORT */, 'g', 'b', 'e', 'a'};
 
-  LOG_INFO("Scripted_beacon registered %s", registered_ ? "true" : "false");
+  INFO("Scripted_beacon registered {}", registered_);
 
   if (args.size() >= 4) {
     config_file_ = args[2];
     events_file_ = args[3];
     set_state(PlaybackEvent::INITIALIZED);
   } else {
-    LOG_ERROR(
+    ERROR(
         "Initialization failed, need playback and playback events file "
         "arguments");
   }
@@ -97,7 +97,7 @@ bool has_time_elapsed(steady_clock::time_point time_point) {
 
 static void populate_event(PlaybackEvent* event,
                            PlaybackEvent::PlaybackEventType type) {
-  LOG_INFO("Adding event: %d", type);
+  INFO("Adding event: {}", type);
   event->set_type(type);
   event->set_secs_since_epoch(system_clock::now().time_since_epoch().count());
 }
@@ -111,7 +111,7 @@ void ScriptedBeacon::set_state(PlaybackEvent::PlaybackEventType state) {
     events_ostream_.open(events_file_,
                          std::ios::out | std::ios::binary | std::ios::trunc);
     if (!events_ostream_.is_open()) {
-      LOG_INFO("Events file not opened yet, for event: %d", state);
+      INFO("Events file not opened yet, for event: {}", state);
       return;
     }
   }
@@ -153,13 +153,12 @@ void ScriptedBeacon::Tick() {
       }
       std::fstream input(config_file_, std::ios::in | std::ios::binary);
       if (!ble_ad_list_.ParseFromIstream(&input)) {
-        LOG_ERROR("Cannot parse playback file %s", config_file_.c_str());
+        ERROR("Cannot parse playback file {}", config_file_);
         set_state(PlaybackEvent::FILE_PARSING_FAILED);
         return;
       }
       set_state(PlaybackEvent::PLAYBACK_STARTED);
-      LOG_INFO("Starting Ble advertisement playback from file: %s",
-               config_file_.c_str());
+      INFO("Starting Ble advertisement playback from file: {}", config_file_);
       next_ad_.ad_time = steady_clock::now();
       get_next_advertisement();
       input.close();
@@ -179,10 +178,10 @@ void ScriptedBeacon::Tick() {
           if (events_ostream_.is_open()) {
             events_ostream_.close();
           }
-          LOG_INFO(
-              "Completed Ble advertisement playback from file: %s with %d "
+          INFO(
+              "Completed Ble advertisement playback from file: {} with {} "
               "packets",
-              config_file_.c_str(), packet_num_);
+              config_file_, packet_num_);
           break;
         }
       }

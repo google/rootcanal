@@ -96,18 +96,17 @@ bool AclConnectionHandler::CreatePendingLeConnection(
     auto connection = std::get<AclConnection>(pair);
     if (connection.GetAddress() == peer ||
         connection.GetResolvedAddress() == resolved_peer) {
-      LOG_INFO("%s: %s is already connected", __func__,
-               peer.ToString().c_str());
+      INFO("{}: {} is already connected", __func__, peer);
       if (connection.GetResolvedAddress() == resolved_peer) {
-        LOG_INFO("%s: allowing a second connection with %s", __func__,
-                 resolved_peer.ToString().c_str());
+        INFO("{}: allowing a second connection with {}", __func__,
+             resolved_peer);
       } else {
         return false;
       }
     }
   }
   if (le_connection_pending_) {
-    LOG_INFO("%s: connection already pending", __func__);
+    INFO("{}: connection already pending", __func__);
     return false;
   }
   le_connection_pending_ = true;

@@ -36,7 +36,7 @@ bool DeviceBoutique::Register(
     const std::string& device_type,
     const std::function<std::shared_ptr<Device>(const vector<std::string>&)>
         method) {
-  LOG_INFO("Registering %s", device_type.c_str());
+  INFO("Registering {}", device_type);
   GetMap()[device_type] = method;
   return true;
 }
@@ -48,7 +48,7 @@ std::shared_ptr<Device> DeviceBoutique::Create(
   auto device = GetMap().find(args[0]);
 
   if (device == GetMap().end()) {
-    LOG_WARN("No constructor registered for %s", args[0].c_str());
+    WARNING("No constructor registered for {}", args[0]);
     return std::shared_ptr<Device>(nullptr);
   }
 

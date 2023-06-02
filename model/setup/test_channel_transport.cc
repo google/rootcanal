@@ -23,7 +23,7 @@
 #include <cstring>      // for strerror
 #include <type_traits>  // for remove_extent_t
 
-#include "log.h"                     // for LOG_INFO, ASSERT_LOG, LOG_WARN
+#include "log.h"
 #include "net/async_data_channel.h"  // for AsyncDataChannel
 
 using std::vector;
@@ -48,21 +48,21 @@ void TestChannelTransport::OnCommandReady(AsyncDataChannel* socket,
   uint8_t command_name_size = 0;
   ssize_t bytes_read = socket->Recv(&command_name_size, 1);
   if (bytes_read != 1) {
-    LOG_INFO("Unexpected (command_name_size) bytes_read: %zd != %d, %s",
-             bytes_read, 1, strerror(errno));
+    INFO("Unexpected (command_name_size) bytes_read: {} != {}, {}", bytes_read,
+         1, strerror(errno));
     socket->Close();
   }
   vector<uint8_t> command_name_raw;
   command_name_raw.resize(command_name_size);
   bytes_read = socket->Recv(command_name_raw.data(), command_name_size);
   if (bytes_read != command_name_size) {
-    LOG_INFO("Unexpected (command_name) bytes_read: %zd != %d, %s", bytes_read,
-             command_name_size, strerror(errno));
+    INFO("Unexpected (command_name) bytes_read: {} != {}, {}", bytes_read,
+         command_name_size, strerror(errno));
   }
   std::string command_name(command_name_raw.begin(), command_name_raw.end());
 
   if (command_name == "CLOSE_TEST_CHANNEL" || command_name.empty()) {
-    LOG_INFO("Test channel closed");
+    INFO("Test channel closed");
     unwatch();
     socket->Close();
     return;
@@ -71,23 +71,23 @@ void TestChannelTransport::OnCommandReady(AsyncDataChannel* socket,
   uint8_t num_args = 0;
   bytes_read = socket->Recv(&num_args, 1);
   if (bytes_read != 1) {
-    LOG_INFO("Unexpected (num_args) bytes_read: %zd != %d, %s", bytes_read, 1,
-             strerror(errno));
+    INFO("Unexpected (num_args) bytes_read: {} != {}, {}", bytes_read, 1,
+         strerror(errno));
   }
   vector<std::string> args;
   for (uint8_t i = 0; i < num_args; ++i) {
     uint8_t arg_size = 0;
     bytes_read = socket->Recv(&arg_size, 1);
     if (bytes_read != 1) {
-      LOG_INFO("Unexpected (arg_size) bytes_read: %zd != %d, %s", bytes_read, 1,
-               strerror(errno));
+      INFO("Unexpected (arg_size) bytes_read: {} != {}, {}", bytes_read, 1,
+           strerror(errno));
     }
     vector<uint8_t> arg;
     arg.resize(arg_size);
     bytes_read = socket->Recv(arg.data(), arg_size);
     if (bytes_read != arg_size) {
-      LOG_INFO("Unexpected (arg) bytes_read: %zd != %d, %s", bytes_read,
-               arg_size, strerror(errno));
+      INFO("Unexpected (arg) bytes_read: {} != {}, {}", bytes_read, arg_size,
+           strerror(errno));
     }
     args.push_back(std::string(arg.begin(), arg.end()));
   }
@@ -108,7 +108,7 @@ void TestChannelTransport::SendResponse(
                          static_cast<uint8_t>((size >> 24) & 0xff)};
   ssize_t written = socket->Send(size_buf, 4);
   if (written == -1 && errno == EBADF) {
-    LOG_WARN("Unable to send a response.  EBADF");
+    WARNING("Unable to send a response.  EBADF");
     return;
   }
   ASSERT_LOG(written == 4, "What happened? written = %zd errno = %d", written,

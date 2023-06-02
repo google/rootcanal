@@ -23,7 +23,7 @@
 #include <functional>   // for __base, function
 #include <type_traits>  // for remove_extent_t
 
-#include "log.h"                           // for LOG_INFO, LOG_ERROR
+#include "log.h"
 #include "net/posix/posix_async_socket.h"  // for PosixAsyncSocket, AsyncMan...
 
 namespace android {
@@ -41,14 +41,14 @@ PosixAsyncSocketServer::PosixAsyncSocketServer(int port, AsyncManager* am)
   } while (listen_fd == -1 && errno == EAGAIN);
 
   if (listen_fd < 0) {
-    LOG_INFO("Error creating socket for test channel.");
+    INFO("Error creating socket for test channel.");
     return;
   }
 
   int enable = 1;
   if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) <
       0) {
-    LOG_ERROR("setsockopt(SO_REUSEADDR) failed: %s", strerror(errno));
+    ERROR("setsockopt(SO_REUSEADDR) failed: {}", strerror(errno));
   }
 
   listen_address.sin_family = AF_INET;
@@ -57,14 +57,14 @@ PosixAsyncSocketServer::PosixAsyncSocketServer(int port, AsyncManager* am)
 
   if (bind(listen_fd, reinterpret_cast<sockaddr*>(&listen_address),
            sockaddr_in_size) < 0) {
-    LOG_INFO("Error binding test channel listener socket to port: %d, %s", port,
-             strerror(errno));
+    INFO("Error binding test channel listener socket to port: {}, {}", port,
+         strerror(errno));
     close(listen_fd);
     return;
   }
 
   if (listen(listen_fd, 1) < 0) {
-    LOG_INFO("Error listening for test channel: %s", strerror(errno));
+    INFO("Error listening for test channel: {}", strerror(errno));
     close(listen_fd);
     return;
   }
@@ -72,11 +72,11 @@ PosixAsyncSocketServer::PosixAsyncSocketServer(int port, AsyncManager* am)
   struct sockaddr_in sin;
   socklen_t slen = sizeof(sin);
   if (getsockname(listen_fd, (struct sockaddr*)&sin, &slen) == -1) {
-    LOG_INFO("Error retrieving actual port: %s", strerror(errno));
+    INFO("Error retrieving actual port: {}", strerror(errno));
   } else {
     port_ = ntohs(sin.sin_port);
   }
-  LOG_INFO("Listening on: %d (%d)", port_, listen_fd);
+  INFO("Listening on: {} ({})", port_, listen_fd);
   server_socket_ = std::make_shared<PosixAsyncSocket>(listen_fd, am_);
 }
 
@@ -105,12 +105,12 @@ void PosixAsyncSocketServer::AcceptSocket() {
   REPEAT_UNTIL_NO_INTR(accept_fd = accept(server_socket_->fd(), NULL, NULL));
 
   if (accept_fd < 0) {
-    LOG_INFO("Error accepting test channel connection errno=%d (%s).", errno,
-             strerror(errno));
+    INFO("Error accepting test channel connection errno={} ({}).", errno,
+         strerror(errno));
     return;
   }
 
-  LOG_INFO("accept_fd = %d.", accept_fd);
+  INFO("accept_fd = {}.", accept_fd);
   StopListening();
   callback_(std::make_shared<PosixAsyncSocket>(accept_fd, am_), this);
 }

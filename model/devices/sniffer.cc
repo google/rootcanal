@@ -45,8 +45,8 @@ void Sniffer::ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView packet,
   }
 
   INFO("{} {} -> {} (Type {})",
-       (match_source ? (match_dest ? "<->" : "<--") : "-->"), source.ToString(),
-       dest.ToString(), model::packets::PacketTypeText(packet_type));
+       (match_source ? (match_dest ? "<->" : "<--") : "-->"), source, dest,
+       model::packets::PacketTypeText(packet_type));
 }
 
 }  // namespace rootcanal

@@ -82,7 +82,7 @@ bool crash_callback(const void* crash_context, size_t crash_context_size,
   }
   ERROR("Backtrace:");
   for (const auto& frame : data.frames) {
-    ERROR("{}", unwinder.FormatFrame(frame).c_str());
+    ERROR("{}", unwinder.FormatFrame(frame));
   }
   return true;
 }

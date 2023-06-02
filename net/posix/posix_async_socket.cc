@@ -21,7 +21,7 @@
 
 #include <functional>  // for __base
 
-#include "log.h"                        // for LOG_INFO
+#include "log.h"
 #include "model/setup/async_manager.h"  // for AsyncManager
 
 #ifdef _WIN32
@@ -32,7 +32,7 @@
 #ifdef NDEBUG
 #define DD(...) (void)0
 #else
-#define DD(...) LOG_INFO(__VA_ARGS__)
+#define DD(...) INFO(__VA_ARGS__)
 #endif
 
 namespace android {
@@ -76,9 +76,9 @@ ssize_t PosixAsyncSocket::Recv(uint8_t* buffer, uint64_t bufferSize) {
   REPEAT_UNTIL_NO_INTR(res = read(fd_, buffer, bufferSize));
 
   if (res < 0) {
-    DD("Recv < 0: %s (%d)", strerror(errno), fd_);
+    DD("Recv < 0: {} ({})", strerror(errno), fd_);
   }
-  DD("%zd bytes (%d)", res, fd_);
+  DD("{} bytes ({})", res, fd_);
   return res;
 };
 
@@ -97,7 +97,7 @@ ssize_t PosixAsyncSocket::Send(const uint8_t* buffer, uint64_t bufferSize) {
 
   REPEAT_UNTIL_NO_INTR(res = send(fd_, buffer, bufferSize, sendFlags));
 
-  DD("%zd bytes (%d)", res, fd_);
+  DD("{} bytes ({})", res, fd_);
   return res;
 }
 
@@ -107,7 +107,7 @@ bool PosixAsyncSocket::Connected() {
   }
   char buf;
   if (recv(fd_, &buf, 1, MSG_PEEK | MSG_DONTWAIT) != 1) {
-    DD("Recv not 1, could be connected: %s (%d)", strerror(errno), fd_);
+    DD("Recv not 1, could be connected: {} ({})", strerror(errno), fd_);
     return errno == EAGAIN || errno == EWOULDBLOCK;
   }
 
@@ -133,9 +133,9 @@ void PosixAsyncSocket::Close() {
 
   error_code = ::close(fd_);
   if (error_code == -1) {
-    LOG_INFO("Failed to close: %s (%d)", strerror(errno), fd_);
+    INFO("Failed to close: {} ({})", strerror(errno), fd_);
   }
-  LOG_INFO("(%d)", fd_);
+  INFO("({})", fd_);
   fd_ = -1;
 }
 

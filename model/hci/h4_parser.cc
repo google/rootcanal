@@ -23,7 +23,7 @@
 #include <utility>     // for move
 #include <vector>      // for vector
 
-#include "log.h"  // for LOG_ALWAYS_FATAL, LOG_INFO
+#include "log.h"
 
 namespace rootcanal {
 
@@ -85,8 +85,7 @@ void H4Parser::OnPacketReady() {
       iso_cb_(packet_);
       break;
     default:
-      LOG_ALWAYS_FATAL("Unimplemented packet type %d",
-                       static_cast<int>(hci_packet_type_));
+      FATAL("Unimplemented packet type {}", hci_packet_type_);
   }
   // Get ready for the next type byte.
   hci_packet_type_ = PacketType::UNKNOWN;
@@ -106,13 +105,12 @@ size_t H4Parser::BytesRequested() {
 bool H4Parser::Consume(const uint8_t* buffer, int32_t bytes_read) {
   size_t bytes_to_read = BytesRequested();
   if (bytes_read <= 0) {
-    LOG_INFO("remote disconnected, or unhandled error?");
+    INFO("remote disconnected, or unhandled error?");
     return false;
   }
   if ((uint32_t)bytes_read > BytesRequested()) {
-    LOG_ALWAYS_FATAL("More bytes read (%u) than expected (%u)!",
-                     static_cast<int>(bytes_read),
-                     static_cast<int>(bytes_to_read));
+    FATAL("More bytes read ({}) than expected ({})!", bytes_read,
+          bytes_to_read);
   }
 
   static const size_t preamble_size[static_cast<size_t>(PacketType::ISO) + 1] =
@@ -136,8 +134,7 @@ bool H4Parser::Consume(const uint8_t* buffer, int32_t bytes_read) {
       // The parser can end up in a bad state when the host is restarted.
       const std::array<uint8_t, 4> reset_command{0x01, 0x03, 0x0c, 0x00};
       size_t offset = packet_.size();
-      LOG_WARN("Received byte in recovery state : 0x%x",
-               static_cast<unsigned>(*buffer));
+      WARNING("Received byte in recovery state : 0x{:x}", *buffer);
       packet_.push_back(*buffer);
 
       // Last byte does not match expected byte in the sequence.
@@ -152,7 +149,7 @@ bool H4Parser::Consume(const uint8_t* buffer, int32_t bytes_read) {
 
       // Received full reset command.
       if (packet_.size() == reset_command.size()) {
-        LOG_INFO("Received HCI Reset command, exiting recovery state");
+        INFO("Received HCI Reset command, exiting recovery state");
         // Pop the Idc from the received packet.
         packet_.erase(packet_.begin());
         bytes_wanted_ = 0;
@@ -176,11 +173,10 @@ bool H4Parser::Consume(const uint8_t* buffer, int32_t bytes_read) {
           hci_packet_type_ != PacketType::EVENT &&
           hci_packet_type_ != PacketType::ISO) {
         if (!enable_recovery_state_) {
-          LOG_ALWAYS_FATAL("Received invalid packet type 0x%x",
-                           static_cast<unsigned>(packet_type_));
+          FATAL("Received invalid packet type 0x{:x}", packet_type_);
         }
-        LOG_ERROR("Received invalid packet type 0x%x, entering recovery state",
-                  static_cast<unsigned>(packet_type_));
+        ERROR("Received invalid packet type 0x{:x}, entering recovery state",
+              packet_type_);
         state_ = HCI_RECOVERY;
         hci_packet_type_ = PacketType::COMMAND;
         bytes_wanted_ = 1;

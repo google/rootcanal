@@ -16,7 +16,7 @@
 
 #include "hci_socket_transport.h"
 
-#include "log.h"  // for LOG_INFO, LOG_ALWAYS_FATAL
+#include "log.h"
 
 namespace rootcanal {
 
@@ -37,7 +37,7 @@ void HciSocketTransport::RegisterCallbacks(PacketCallback command_callback,
         command_callback(packet_copy);
       },
       [](const std::vector<uint8_t>&) {
-        LOG_ALWAYS_FATAL("Unexpected Event in HciSocketTransport!");
+        FATAL("Unexpected Event in HciSocketTransport!");
       },
       [acl_callback](const std::vector<uint8_t>& raw_acl) {
         std::shared_ptr<std::vector<uint8_t>> packet_copy =
@@ -62,8 +62,7 @@ void HciSocketTransport::Tick() { h4_.OnDataReady(socket_); }
 void HciSocketTransport::SendHci(PacketType packet_type,
                                  const std::vector<uint8_t>& packet) {
   if (!socket_ || !socket_->Connected()) {
-    LOG_INFO("Closed socket. Dropping packet of type %d",
-             static_cast<int>(packet_type));
+    INFO("Closed socket. Dropping packet of type {}", packet_type);
     return;
   }
   uint8_t type = static_cast<uint8_t>(packet_type);

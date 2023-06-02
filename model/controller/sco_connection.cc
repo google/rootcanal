@@ -86,7 +86,7 @@ std::optional<ScoLinkParameters> ScoConnectionParameters::GetLinkParameters()
   }
   // Ignore empty bandwidths for now.
   if (transmit_bandwidth == 0 || receive_bandwidth == 0) {
-    LOG_WARN("eSCO transmissions with null bandwidths are not supported");
+    WARNING("eSCO transmissions with null bandwidths are not supported");
     return {};
   }
 
@@ -108,8 +108,8 @@ std::optional<ScoLinkParameters> ScoConnectionParameters::GetLinkParameters()
         continue;
       }
 
-      LOG_INFO("Testing combination %u/%u : %u/%u", tx.length, tx.slots,
-               rx.length, rx.slots);
+      INFO("Testing combination {}/{} : {}/{}", tx.length, tx.slots, rx.length,
+           rx.slots);
 
       unsigned rx_max_interval = (1600 * rx.length) / receive_bandwidth;
 
@@ -119,7 +119,7 @@ std::optional<ScoLinkParameters> ScoConnectionParameters::GetLinkParameters()
       transmission_interval -= transmission_interval % 2;
       transmission_interval = std::min(transmission_interval, 254U);
 
-      LOG_INFO("Transmission interval: %u slots", transmission_interval);
+      INFO("Transmission interval: {} slots", transmission_interval);
 
       // Compute retransmission window.
       unsigned retransmission_window =
@@ -134,7 +134,7 @@ std::optional<ScoLinkParameters> ScoConnectionParameters::GetLinkParameters()
               ? 2 * (rx.slots + tx.slots)
               : 0;
 
-      LOG_INFO("Retransmission window: %u slots", retransmission_window);
+      INFO("Retransmission window: {} slots", retransmission_window);
 
       // Compute transmission window and validate latency.
       unsigned transmission_window =
@@ -149,7 +149,7 @@ std::optional<ScoLinkParameters> ScoConnectionParameters::GetLinkParameters()
       // Compute and validate latency.
       unsigned latency = (transmission_window * 1250) / 2;
 
-      LOG_INFO("Latency: %u us (max %u us)", latency, max_latency * 1000U);
+      INFO("Latency: {} us (max {} us)", latency, max_latency * 1000U);
 
       if (latency > (1000 * max_latency)) {
         // Oops
@@ -162,7 +162,7 @@ std::optional<ScoLinkParameters> ScoConnectionParameters::GetLinkParameters()
           (double)transmission_window / (double)transmission_interval;
 
       if (bandwidth_usage <= best_bandwidth_usage) {
-        LOG_INFO("Valid combination!");
+        INFO("Valid combination!");
 
         uint16_t tx_packet_length =
             (transmit_bandwidth * transmission_interval + 1600 - 1) / 1600;
@@ -194,7 +194,7 @@ std::optional<ScoLinkParameters> ScoConnectionParameters::GetLinkParameters()
           (uint8_t)RetransmissionEffort::OPTIMIZED_FOR_POWER ||
       retransmission_effort ==
           (uint8_t)RetransmissionEffort::OPTIMIZED_FOR_LINK_QUALITY) {
-    LOG_WARN("SCO Retransmission effort must be None or Don't care");
+    WARNING("SCO Retransmission effort must be None or Don't care");
     return {};
   }
 
@@ -212,7 +212,7 @@ std::optional<ScoLinkParameters> ScoConnectionParameters::GetLinkParameters()
     transmission_interval = 2;
     packet_length = 10;
   } else {
-    LOG_WARN("No SCO packet type enabled");
+    WARNING("No SCO packet type enabled");
     return {};
   }
 
@@ -231,25 +231,23 @@ bool ScoConnection::NegotiateLinkParameters(
     ScoConnectionParameters const& peer) {
   if (peer.transmit_bandwidth != 0xffff &&
       peer.transmit_bandwidth != parameters_.receive_bandwidth) {
-    LOG_WARN("Transmit bandwidth requirements cannot be met");
+    WARNING("Transmit bandwidth requirements cannot be met");
     return false;
   }
 
   if (state_ == SCO_STATE_SENT_ESCO_CONNECTION_REQUEST &&
       peer.receive_bandwidth != 0xffff &&
       peer.receive_bandwidth != parameters_.transmit_bandwidth) {
-    LOG_WARN("Receive bandwidth requirements cannot be met");
+    WARNING("Receive bandwidth requirements cannot be met");
     return false;
   }
 
   // mask out the air coding format bits before comparison, as per 5.3 Vol
   // 4E 6.12
   if ((peer.voice_setting & ~0x3) != (parameters_.voice_setting & ~0x3)) {
-    LOG_WARN("Voice setting requirements cannot be met");
-    LOG_WARN("Remote voice setting: 0x%04x",
-             static_cast<unsigned>(parameters_.voice_setting));
-    LOG_WARN("Local voice setting: 0x%04x",
-             static_cast<unsigned>(peer.voice_setting));
+    WARNING("Voice setting requirements cannot be met");
+    WARNING("Remote voice setting: 0x{:04x}", parameters_.voice_setting);
+    WARNING("Local voice setting: 0x{:04x}", peer.voice_setting);
     return false;
   }
 
@@ -257,11 +255,9 @@ bool ScoConnection::NegotiateLinkParameters(
   packet_type |= (peer.packet_type | parameters_.packet_type) & 0x3c0;
 
   if (packet_type == 0x3c0) {
-    LOG_WARN("Packet type requirements cannot be met");
-    LOG_WARN("Remote packet type: 0x%04x",
-             static_cast<unsigned>(parameters_.packet_type));
-    LOG_WARN("Local packet type: 0x%04x",
-             static_cast<unsigned>(peer.packet_type));
+    WARNING("Packet type requirements cannot be met");
+    WARNING("Remote packet type: 0x{:04x}", parameters_.packet_type);
+    WARNING("Local packet type: 0x{:04x}", peer.packet_type);
     return false;
   }
 
@@ -285,11 +281,11 @@ bool ScoConnection::NegotiateLinkParameters(
                  (uint8_t)RetransmissionEffort::NO_RETRANSMISSION ||
              parameters_.retransmission_effort ==
                  (uint8_t)RetransmissionEffort::NO_RETRANSMISSION) {
-    LOG_WARN("Retransmission effort requirements cannot be met");
-    LOG_WARN("Remote retransmission effort: 0x%02x",
-             static_cast<unsigned>(parameters_.retransmission_effort));
-    LOG_WARN("Local retransmission effort: 0x%04x",
-             static_cast<unsigned>(peer.retransmission_effort));
+    WARNING("Retransmission effort requirements cannot be met");
+    WARNING("Remote retransmission effort: 0x{:02x}",
+            parameters_.retransmission_effort);
+    WARNING("Local retransmission effort: 0x{:02x}",
+            peer.retransmission_effort);
     return false;
   } else {
     retransmission_effort = (uint8_t)RetransmissionEffort::OPTIMIZED_FOR_POWER;
@@ -306,19 +302,16 @@ bool ScoConnection::NegotiateLinkParameters(
   auto link_parameters = negotiated_parameters.GetLinkParameters();
   if (link_parameters.has_value()) {
     link_parameters_ = link_parameters.value();
-    LOG_INFO("Negotiated link parameters for SCO connection:");
-    LOG_INFO("  Transmission interval: %u slots",
-             static_cast<unsigned>(link_parameters_.transmission_interval));
-    LOG_INFO("  Retransmission window: %u slots",
-             static_cast<unsigned>(link_parameters_.retransmission_window));
-    LOG_INFO("  RX packet length: %u bytes",
-             static_cast<unsigned>(link_parameters_.rx_packet_length));
-    LOG_INFO("  TX packet length: %u bytes",
-             static_cast<unsigned>(link_parameters_.tx_packet_length));
-    LOG_INFO("  Air mode: %u",
-             static_cast<unsigned>(link_parameters_.air_mode));
+    INFO("Negotiated link parameters for SCO connection:");
+    INFO("  Transmission interval: {} slots",
+         link_parameters_.transmission_interval);
+    INFO("  Retransmission window: {} slots",
+         link_parameters_.retransmission_window);
+    INFO("  RX packet length: {} bytes", link_parameters_.rx_packet_length);
+    INFO("  TX packet length: {} bytes", link_parameters_.tx_packet_length);
+    INFO("  Air mode: {}", link_parameters_.air_mode);
   } else {
-    LOG_WARN("Failed to derive link parameters");
+    WARNING("Failed to derive link parameters");
   }
   return link_parameters.has_value();
 }

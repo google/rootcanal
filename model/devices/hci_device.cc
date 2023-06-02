@@ -80,7 +80,7 @@ HciDevice::HciDevice(std::shared_ptr<HciTransport> transport,
         HandleIso(iso);
       },
       [this]() {
-        LOG_INFO("HCI transport closed");
+        INFO("HCI transport closed");
         Close();
       });
 }

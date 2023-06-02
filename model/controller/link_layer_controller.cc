@@ -2055,9 +2055,9 @@ LinkLayerController::LinkLayerController(const Address& address,
                 std::vector(data, data + len));
 
             if (!controller->connections_.HasHandle(acl_connection_handle)) {
-              LOG_ERROR(
+              ERROR(
                   "Dropping LLCP packet sent for unknown connection handle "
-                  "0x%x",
+                  "0x{:x}",
                   acl_connection_handle);
               return;
             }
@@ -4037,7 +4037,7 @@ void LinkLayerController::IncomingLlcpPacket(
   uint16_t acl_connection_handle = connections_.GetHandleOnlyAddress(address);
 
   if (acl_connection_handle == kReservedHandle) {
-    LOG_INFO("Dropping LLCP packet since connection does not exist");
+    INFO(id_, "Dropping LLCP packet since connection does not exist");
     return;
   }
 
@@ -4058,9 +4058,9 @@ void LinkLayerController::IncomingLeConnectedIsochronousPdu(
 
   if (!link_layer_get_cis_connection_handle(ll_.get(), cig_id, cis_id,
                                             &cis_connection_handle)) {
-    LOG_INFO(
-        "Dropping CIS pdu received on disconnected CIS cig_id=%d, cis_id=%d",
-        cig_id, cis_id);
+    INFO(id_,
+         "Dropping CIS pdu received on disconnected CIS cig_id={}, cis_id={}",
+         cig_id, cis_id);
     return;
   }
 
@@ -4104,10 +4104,10 @@ void LinkLayerController::HandleIso(bluetooth::hci::IsoView iso) {
   // Controller (which is returned using the ISO_Data_Packet_Length return
   // parameter of the LE Read Buffer Size command).
   if (iso_data_load.size() > properties_.iso_data_packet_length) {
-    LOG_ALWAYS_FATAL(
-        "Received ISO HCI packet with ISO_Data_Load_Length (%zu) larger than"
-        " the controller buffer size ISO_Data_Packet_Length (%d)",
-        iso_data_load.size(), properties_.iso_data_packet_length);
+    FATAL(id_,
+          "Received ISO HCI packet with ISO_Data_Load_Length ({}) larger than"
+          " the controller buffer size ISO_Data_Packet_Length ({})",
+          iso_data_load.size(), properties_.iso_data_packet_length);
   }
 
   // The TS_Flag bit shall only be set if the PB_Flag field equals 0b00 or 0b10.
@@ -4115,9 +4115,9 @@ void LinkLayerController::HandleIso(bluetooth::hci::IsoView iso) {
       (pb_flag ==
            bluetooth::hci::IsoPacketBoundaryFlag::CONTINUATION_FRAGMENT ||
        pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT)) {
-    LOG_ALWAYS_FATAL(
-        "Received ISO HCI packet with TS_Flag set, but no ISO Header is "
-        "expected");
+    FATAL(id_,
+          "Received ISO HCI packet with TS_Flag set, but no ISO Header is "
+          "expected");
   }
 
   uint8_t cig_id = 0;
@@ -4129,8 +4129,8 @@ void LinkLayerController::HandleIso(bluetooth::hci::IsoView iso) {
   if (!link_layer_get_cis_information(ll_.get(), cis_connection_handle,
                                       &acl_connection_handle, &cig_id, &cis_id,
                                       &max_sdu_length)) {
-    LOG_INFO("Ignoring CIS pdu received on disconnected CIS handle=%d",
-             cis_connection_handle);
+    INFO(id_, "Ignoring CIS pdu received on disconnected CIS handle={}",
+         cis_connection_handle);
     return;
   }
 
@@ -4166,9 +4166,10 @@ void LinkLayerController::HandleIso(bluetooth::hci::IsoView iso) {
     // Validate that the Host stack is not sending ISO SDUs that are larger
     // that what was configured for the CIS.
     if (iso_sdu_.size() > max_sdu_length) {
-      LOG_WARN(
-          "attempted to send an SDU of length %zu that exceeds the configure "
-          "Max_SDU_Length (%u)",
+      WARNING(
+          id_,
+          "attempted to send an SDU of length {} that exceeds the configure "
+          "Max_SDU_Length ({})",
           iso_sdu_.size(), max_sdu_length);
       return;
     }
@@ -5226,7 +5227,7 @@ void LinkLayerController::MakePeripheralConnection(const Address& addr,
 
   uint16_t handle = connections_.CreateConnection(addr, GetAddress());
   if (handle == kReservedHandle) {
-    LOG_INFO("CreateConnection failed");
+    INFO(id_, "CreateConnection failed");
     return;
   }
   ASSERT(link_manager_add_link(

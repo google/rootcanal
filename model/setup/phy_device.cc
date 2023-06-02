@@ -50,7 +50,7 @@ void PhyDevice::Receive(std::vector<uint8_t> const& packet, Phy::Type type,
   if (packet_view.IsValid()) {
     device_->ReceiveLinkLayerPacket(std::move(packet_view), type, rssi);
   } else {
-    LOG_WARN("received invalid LL packet");
+    WARNING("received invalid LL packet");
   }
 }
 

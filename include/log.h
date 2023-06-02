@@ -69,20 +69,6 @@ static void Log(Verbosity verb, char const* file, int line, char const* format,
   rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, __LINE__, \
                       __VA_ARGS__)
 
-// TODO: still required by the generated HCI parser and serializer backend.
-#define LOG_INFO(...)                                                       \
-  rootcanal::log::Log(rootcanal::log::Verbosity::kInfo, __FILE__, __LINE__, \
-                      "{}", fmt::sprintf(__VA_ARGS__))
-#define LOG_WARN(...)                                                          \
-  rootcanal::log::Log(rootcanal::log::Verbosity::kWarning, __FILE__, __LINE__, \
-                      "{}", fmt::sprintf(__VA_ARGS__))
-#define LOG_ERROR(...)                                                       \
-  rootcanal::log::Log(rootcanal::log::Verbosity::kError, __FILE__, __LINE__, \
-                      "{}", fmt::sprintf(__VA_ARGS__))
-#define LOG_ALWAYS_FATAL(...)                                                \
-  rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, __LINE__, \
-                      "{}", fmt::sprintf(__VA_ARGS__))
-
 #define ASSERT(x)                                                       \
   __builtin_expect((x) != 0, true) ||                                   \
       (rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, \

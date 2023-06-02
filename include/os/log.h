@@ -18,3 +18,16 @@
 // FIXME: Change hci_packets.h to not depend on os/log.h
 //        and remove this.
 #include "include/log.h"
+
+#define LOG_INFO(...)                                                       \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kInfo, __FILE__, __LINE__, \
+                      "{}", fmt::sprintf(__VA_ARGS__))
+#define LOG_WARN(...)                                                          \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kWarning, __FILE__, __LINE__, \
+                      "{}", fmt::sprintf(__VA_ARGS__))
+#define LOG_ERROR(...)                                                       \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kError, __FILE__, __LINE__, \
+                      "{}", fmt::sprintf(__VA_ARGS__))
+#define LOG_ALWAYS_FATAL(...)                                                \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, __LINE__, \
+                      "{}", fmt::sprintf(__VA_ARGS__))

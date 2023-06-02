@@ -26,7 +26,7 @@
 #include <utility>      // for move
 #include <vector>       // for vector
 
-#include "log.h"                     // for LOG_ERROR, LOG_ALWAYS_FATAL
+#include "log.h"
 #include "model/hci/h4_parser.h"     // for H4Parser, ClientDisconnectCa...
 #include "net/async_data_channel.h"  // for AsyncDataChannel
 
@@ -45,20 +45,19 @@ size_t H4DataChannelPacketizer::Send(uint8_t type, const uint8_t* data,
                                      size_t length) {
   ssize_t ret = uart_socket_->Send(&type, sizeof(type));
   if (ret == -1) {
-    LOG_ERROR("Error writing to UART (%s)", strerror(errno));
+    ERROR("Error writing to UART ({})", strerror(errno));
   }
   size_t to_be_written = ret;
 
   ret = uart_socket_->Send(data, length);
   if (ret == -1) {
-    LOG_ERROR("Error writing to UART (%s)", strerror(errno));
+    ERROR("Error writing to UART ({})", strerror(errno));
   }
   to_be_written += ret;
 
   if (to_be_written != length + sizeof(type)) {
-    LOG_ERROR("%d / %d bytes written - something went wrong...",
-              static_cast<int>(to_be_written),
-              static_cast<int>(length + sizeof(type)));
+    ERROR("{} / {} bytes written - something went wrong...", to_be_written,
+          length + sizeof(type));
   }
   return to_be_written;
 }
@@ -75,7 +74,7 @@ void H4DataChannelPacketizer::OnDataReady(
 
     ssize_t bytes_read = socket->Recv(buffer.data(), bytes_to_read);
     if (bytes_read == 0) {
-      LOG_INFO("remote disconnected!");
+      INFO("remote disconnected!");
       disconnected_ = true;
       disconnect_cb_();
       return;
@@ -91,8 +90,7 @@ void H4DataChannelPacketizer::OnDataReady(
         disconnect_cb_();
         return;
       }
-      LOG_ALWAYS_FATAL("Read error in %u: %s", h4_parser_.CurrentState(),
-                       strerror(errno));
+      FATAL("Read error in {}: {}", h4_parser_.CurrentState(), strerror(errno));
     }
     h4_parser_.Consume(buffer.data(), bytes_read);
   }
