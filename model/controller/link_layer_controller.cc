@@ -284,8 +284,7 @@ ErrorCode LinkLayerController::LeSetRandomAddress(Address random_address) {
     return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
   }
 
-  INFO(id_, "device random address configured to {}",
-       random_address.ToString());
+  INFO(id_, "device random address configured to {}", random_address);
   random_address_ = random_address;
   return ErrorCode::SUCCESS;
 }
@@ -462,9 +461,8 @@ void LinkLayerController::IncomingLlPhyReq(
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
 
   if (connection_handle == kReservedHandle) {
-    INFO(id_, "@{}: Unknown connection @{}",
-         incoming.GetDestinationAddress().ToString(),
-         incoming.GetSourceAddress().ToString());
+    INFO(id_, "@{}: Unknown connection @{}", incoming.GetDestinationAddress(),
+         incoming.GetSourceAddress());
     return;
   }
 
@@ -525,9 +523,8 @@ void LinkLayerController::IncomingLlPhyRsp(
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
 
   if (connection_handle == kReservedHandle) {
-    INFO(id_, "@{}: Unknown connection @{}",
-         incoming.GetDestinationAddress().ToString(),
-         incoming.GetSourceAddress().ToString());
+    INFO(id_, "@{}: Unknown connection @{}", incoming.GetDestinationAddress(),
+         incoming.GetSourceAddress());
     return;
   }
 
@@ -577,9 +574,8 @@ void LinkLayerController::IncomingLlPhyUpdateInd(
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
 
   if (connection_handle == kReservedHandle) {
-    INFO(id_, "@{}: Unknown connection @{}",
-         incoming.GetDestinationAddress().ToString(),
-         incoming.GetSourceAddress().ToString());
+    INFO(id_, "@{}: Unknown connection @{}", incoming.GetDestinationAddress(),
+         incoming.GetSourceAddress());
     return;
   }
 
@@ -775,8 +771,7 @@ ErrorCode LinkLayerController::LeReadPeerResolvableAddress(
   INFO(id_,
        "peer identity address {}[{}] not found in the resolving list,"
        " or peer resolvable address unavailable",
-       peer_identity_address.ToString(),
-       PeerAddressTypeText(peer_identity_address_type));
+       peer_identity_address, PeerAddressTypeText(peer_identity_address_type));
   return ErrorCode::UNKNOWN_CONNECTION;
 }
 
@@ -800,8 +795,7 @@ ErrorCode LinkLayerController::LeReadLocalResolvableAddress(
   INFO(id_,
        "peer identity address {}[{}] not found in the resolving list,"
        " or peer resolvable address unavailable",
-       peer_identity_address.ToString(),
-       PeerAddressTypeText(peer_identity_address_type));
+       peer_identity_address, PeerAddressTypeText(peer_identity_address_type));
   return ErrorCode::UNKNOWN_CONNECTION;
 }
 
@@ -1078,7 +1072,7 @@ ErrorCode LinkLayerController::LePeriodicAdvertisingCreateSync(
     INFO(id_,
          "the controller is already synchronized on the periodic advertising"
          " train from {}[{}] - SID=0x{:x}",
-         advertiser_address.ToString(),
+         advertiser_address,
          bluetooth::hci::AdvertiserAddressTypeText(advertiser_address_type),
          advertising_sid);
     return ErrorCode::CONNECTION_ALREADY_EXISTS;
@@ -2281,8 +2275,8 @@ void LinkLayerController::IncomingPacket(
   // Drop packets not addressed to me
   if (!address_matches) {
     INFO(id_, "{} | Dropping packet not addressed to me {}->{} (type 0x{:x})",
-         address_.ToString(), source_address.ToString(),
-         destination_address.ToString(), static_cast<int>(incoming.GetType()));
+         address_, source_address, destination_address,
+         static_cast<int>(incoming.GetType()));
     return;
   }
 
@@ -2452,8 +2446,7 @@ void LinkLayerController::IncomingAclPacket(
   }
 
   INFO(id_, "Acl Packet [{}] {} -> {}", acl_data.size(),
-       incoming.GetSourceAddress().ToString(),
-       incoming.GetDestinationAddress().ToString());
+       incoming.GetSourceAddress(), incoming.GetDestinationAddress());
 
   uint16_t connection_handle =
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
@@ -2492,7 +2485,7 @@ void LinkLayerController::IncomingScoPacket(
   Address source = incoming.GetSourceAddress();
   uint16_t sco_handle = connections_.GetScoHandle(source);
   if (!connections_.HasScoHandle(sco_handle)) {
-    INFO(id_, "Spurious SCO packet from {}", source.ToString());
+    INFO(id_, "Spurious SCO packet from {}", source);
     return;
   }
 
@@ -2502,8 +2495,7 @@ void LinkLayerController::IncomingScoPacket(
   std::vector<uint8_t> sco_data_bytes(sco_data.begin(), sco_data.end());
 
   INFO(id_, "Sco Packet [{}] {} -> {}", static_cast<int>(sco_data_bytes.size()),
-       incoming.GetSourceAddress().ToString(),
-       incoming.GetDestinationAddress().ToString());
+       incoming.GetSourceAddress(), incoming.GetDestinationAddress());
 
   send_sco_(bluetooth::hci::ScoBuilder::Create(
       sco_handle, bluetooth::hci::PacketStatusFlag::CORRECTLY_RECEIVED,
@@ -2567,8 +2559,7 @@ void LinkLayerController::IncomingReadRemoteSupportedFeaturesResponse(
   Address source = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(source);
   if (handle == kReservedHandle) {
-    INFO(id_, "Discarding response from a disconnected device {}",
-         source.ToString());
+    INFO(id_, "Discarding response from a disconnected device {}", source);
     return;
   }
   if (IsEventUnmasked(EventCode::READ_REMOTE_SUPPORTED_FEATURES_COMPLETE)) {
@@ -2602,8 +2593,7 @@ void LinkLayerController::IncomingReadRemoteExtendedFeaturesResponse(
   Address source = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(source);
   if (handle == kReservedHandle) {
-    INFO(id_, "Discarding response from a disconnected device {}",
-         source.ToString());
+    INFO(id_, "Discarding response from a disconnected device {}", source);
     return;
   }
   if (IsEventUnmasked(EventCode::READ_REMOTE_EXTENDED_FEATURES_COMPLETE)) {
@@ -2632,8 +2622,7 @@ void LinkLayerController::IncomingReadRemoteVersionResponse(
   Address source = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(source);
   if (handle == kReservedHandle) {
-    INFO(id_, "Discarding response from a disconnected device {}",
-         source.ToString());
+    INFO(id_, "Discarding response from a disconnected device {}", source);
     return;
   }
   if (IsEventUnmasked(EventCode::READ_REMOTE_VERSION_INFORMATION_COMPLETE)) {
@@ -2658,8 +2647,7 @@ void LinkLayerController::IncomingReadClockOffsetResponse(
   Address source = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(source);
   if (handle == kReservedHandle) {
-    INFO(id_, "Discarding response from a disconnected device {}",
-         source.ToString());
+    INFO(id_, "Discarding response from a disconnected device {}", source);
     return;
   }
   if (IsEventUnmasked(EventCode::READ_CLOCK_OFFSET_COMPLETE)) {
@@ -2677,8 +2665,7 @@ void LinkLayerController::IncomingDisconnectPacket(
   Address peer = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(peer);
   if (handle == kReservedHandle) {
-    INFO(id_, "Discarding disconnect from a disconnected device {}",
-         peer.ToString());
+    INFO(id_, "Discarding disconnect from a disconnected device {}", peer);
     return;
   }
   auto is_br_edr = connections_.GetPhyType(handle) == Phy::Type::BR_EDR;
@@ -2843,7 +2830,7 @@ Address LinkLayerController::generate_rpa(
   rpa.address[0] = p[0];
   rpa.address[1] = p[1];
   rpa.address[2] = p[2];
-  INFO("RPA {}", rpa.ToString());
+  INFO("RPA {}", rpa);
   return rpa;
 }
 
@@ -2892,9 +2879,8 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
       ResolvePrivateAddress(target_address, IrkSelection::Peer);
 
   if (resolved_advertising_address != advertising_address) {
-    DEBUG(id_, "Resolved the advertising address {} to {}",
-          advertising_address.ToString(),
-          resolved_advertising_address.ToString());
+    DEBUG(id_, "Resolved the advertising address {} to {}", advertising_address,
+          resolved_advertising_address);
   }
 
   // Vol 6, Part B § 4.3.3 Scanner filter policy
@@ -2909,7 +2895,7 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
         DEBUG(id_,
               "Legacy advertising ignored by scanner because the advertising "
               "address {} is not in the filter accept list",
-              resolved_advertising_address.ToString());
+              resolved_advertising_address);
         return;
       }
       break;
@@ -2939,7 +2925,7 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
                 "Legacy advertising ignored by scanner because the directed "
                 "address {} does not match the current device or cannot be "
                 "resolved",
-                target_address.ToString());
+                target_address);
           return;
         }
         break;
@@ -2956,7 +2942,7 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
                 "Legacy advertising ignored by scanner because the directed "
                 "address {} does not match the current device or is not a "
                 "resovable private address",
-                target_address.ToString());
+                target_address);
           return;
         }
         should_send_directed_advertising_report =
@@ -3076,22 +3062,22 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
     DEBUG(id_,
           "Not sending LE Scan request to advertising address {} because "
           "it is not scannable",
-          advertising_address.ToString());
+          advertising_address);
   } else if (!active_scanning) {
     DEBUG(id_,
           "Not sending LE Scan request to advertising address {} because "
           "the scanner is passive",
-          advertising_address.ToString());
+          advertising_address);
   } else if (scanner_.pending_scan_request) {
     DEBUG(id_,
           "Not sending LE Scan request to advertising address {} because "
           "an LE Scan request is already pending",
-          advertising_address.ToString());
+          advertising_address);
   } else if (!should_send_advertising_report) {
     DEBUG(id_,
           "Not sending LE Scan request to advertising address {} because "
           "the advertising message was filtered",
-          advertising_address.ToString());
+          advertising_address);
   } else {
     // TODO: apply privacy mode in resolving list.
     // Scan requests with public or random device addresses must be ignored
@@ -3139,7 +3125,7 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
     INFO(id_,
          "Sending LE Scan request to advertising address {} with scanning "
          "address {}",
-         advertising_address.ToString(), scanning_address.ToString());
+         advertising_address, scanning_address);
 
     // The advertiser’s device address (AdvA field) in the scan request PDU
     // shall be the same as the advertiser’s device address (AdvA field)
@@ -3205,8 +3191,7 @@ void LinkLayerController::ConnectIncomingLeLegacyAdvertisingPdu(
         DEBUG(id_,
               "Legacy advertising ignored by initiator because the "
               "advertising address {} does not match the peer address {}",
-              resolved_advertising_address.ToString(),
-              initiator_.peer_address.ToString());
+              resolved_advertising_address, initiator_.peer_address);
         return;
       }
       break;
@@ -3215,7 +3200,7 @@ void LinkLayerController::ConnectIncomingLeLegacyAdvertisingPdu(
         DEBUG(id_,
               "Legacy advertising ignored by initiator because the "
               "advertising address {} is not in the filter accept list",
-              resolved_advertising_address.ToString());
+              resolved_advertising_address);
         return;
       }
       break;
@@ -3234,7 +3219,7 @@ void LinkLayerController::ConnectIncomingLeLegacyAdvertisingPdu(
       DEBUG(id_,
             "Directed legacy advertising ignored by initiator because the "
             "target address {} does not match the current device addresses",
-            resolved_advertising_address.ToString());
+            resolved_advertising_address);
       return;
     }
     if (resolved_target_address == target_address &&
@@ -3246,7 +3231,7 @@ void LinkLayerController::ConnectIncomingLeLegacyAdvertisingPdu(
             "Directed legacy advertising ignored by initiator because the "
             "target address {} is static or public and the initiator is "
             "configured to use resolvable addresses",
-            resolved_advertising_address.ToString());
+            resolved_advertising_address);
       return;
     }
   }
@@ -3292,13 +3277,13 @@ void LinkLayerController::ConnectIncomingLeLegacyAdvertisingPdu(
               : AddressWithType{},
           initiating_address)) {
     WARNING(id_, "CreatePendingLeConnection failed for connection to {}",
-            advertising_address.ToString());
+            advertising_address);
   }
 
   initiator_.pending_connect_request = advertising_address;
 
   INFO(id_, "Sending LE Connect request to {} with initiating address {}",
-       resolved_advertising_address.ToString(), initiating_address.ToString());
+       resolved_advertising_address, initiating_address);
 
   // The advertiser’s device address (AdvA field) in the initiating PDU
   // shall be the same as the advertiser’s device address (AdvA field)
@@ -3366,9 +3351,8 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
       ResolvePrivateAddress(target_address, IrkSelection::Peer);
 
   if (resolved_advertising_address != advertising_address) {
-    DEBUG(id_, "Resolved the advertising address {} to {}",
-          advertising_address.ToString(), advertising_address.GetAddressType(),
-          resolved_advertising_address.ToString(),
+    DEBUG(id_, "Resolved the advertising address {} to {}", advertising_address,
+          advertising_address.GetAddressType(), resolved_advertising_address,
           resolved_advertising_address.GetAddressType());
   }
 
@@ -3384,7 +3368,7 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
         DEBUG(id_,
               "Extended advertising ignored by scanner because the advertising "
               "address {} is not in the filter accept list",
-              resolved_advertising_address.ToString());
+              resolved_advertising_address);
         return;
       }
       break;
@@ -3405,7 +3389,7 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
                 "Extended advertising ignored by scanner because the directed "
                 "address {} does not match the current device or cannot be "
                 "resolved",
-                target_address.ToString());
+                target_address);
           return;
         }
         break;
@@ -3422,7 +3406,7 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
                 "Extended advertising ignored by scanner because the directed "
                 "address {} does not match the current device or is not a "
                 "resovable private address",
-                target_address.ToString());
+                target_address);
           return;
         }
         break;
@@ -3505,22 +3489,22 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
     DEBUG(id_,
           "Not sending LE Scan request to advertising address {} because "
           "it is not scannable",
-          advertising_address.ToString());
+          advertising_address);
   } else if (!active_scanning) {
     DEBUG(id_,
           "Not sending LE Scan request to advertising address {} because "
           "the scanner is passive",
-          advertising_address.ToString());
+          advertising_address);
   } else if (scanner_.pending_scan_request) {
     DEBUG(id_,
           "Not sending LE Scan request to advertising address {} because "
           "an LE Scan request is already pending",
-          advertising_address.ToString());
+          advertising_address);
   } else if (!should_send_advertising_report) {
     DEBUG(id_,
           "Not sending LE Scan request to advertising address {} because "
           "the advertising message was filtered",
-          advertising_address.ToString());
+          advertising_address);
   } else {
     // TODO: apply privacy mode in resolving list.
     // Scan requests with public or random device addresses must be ignored
@@ -3569,7 +3553,7 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
     INFO(id_,
          "Sending LE Scan request to advertising address {} with scanning "
          "address {}",
-         advertising_address.ToString(), scanning_address.ToString());
+         advertising_address, scanning_address);
 
     // The advertiser’s device address (AdvA field) in the scan request PDU
     // shall be the same as the advertiser’s device address (AdvA field)
@@ -3633,8 +3617,7 @@ void LinkLayerController::ConnectIncomingLeExtendedAdvertisingPdu(
         DEBUG(id_,
               "Extended advertising ignored by initiator because the "
               "advertising address {} does not match the peer address {}",
-              resolved_advertising_address.ToString(),
-              initiator_.peer_address.ToString());
+              resolved_advertising_address, initiator_.peer_address);
         return;
       }
       break;
@@ -3643,7 +3626,7 @@ void LinkLayerController::ConnectIncomingLeExtendedAdvertisingPdu(
         DEBUG(id_,
               "Extended advertising ignored by initiator because the "
               "advertising address {} is not in the filter accept list",
-              resolved_advertising_address.ToString());
+              resolved_advertising_address);
         return;
       }
       break;
@@ -3662,7 +3645,7 @@ void LinkLayerController::ConnectIncomingLeExtendedAdvertisingPdu(
       DEBUG(id_,
             "Directed extended advertising ignored by initiator because the "
             "target address {} does not match the current device addresses",
-            resolved_advertising_address.ToString());
+            resolved_advertising_address);
       return;
     }
     if (resolved_target_address == target_address &&
@@ -3674,7 +3657,7 @@ void LinkLayerController::ConnectIncomingLeExtendedAdvertisingPdu(
             "Directed extended advertising ignored by initiator because the "
             "target address {} is static or public and the initiator is "
             "configured to use resolvable addresses",
-            resolved_advertising_address.ToString());
+            resolved_advertising_address);
       return;
     }
   }
@@ -3720,13 +3703,13 @@ void LinkLayerController::ConnectIncomingLeExtendedAdvertisingPdu(
               : AddressWithType{},
           initiating_address)) {
     WARNING(id_, "CreatePendingLeConnection failed for connection to {}",
-            advertising_address.ToString());
+            advertising_address);
   }
 
   initiator_.pending_connect_request = advertising_address;
 
   INFO(id_, "Sending LE Connect request to {} with initiating address {}",
-       resolved_advertising_address.ToString(), initiating_address.ToString());
+       resolved_advertising_address, initiating_address);
 
   // The advertiser’s device address (AdvA field) in the initiating PDU
   // shall be the same as the advertiser’s device address (AdvA field)
@@ -3820,7 +3803,7 @@ void LinkLayerController::IncomingLePeriodicAdvertisingPdu(
   // create the synchronized train and report to the Host.
   if (matches_synchronizing) {
     INFO(id_, "Established Sync with advertiser {}[{}] - SID 0x{:x}",
-         advertiser_address.ToString(),
+         advertiser_address,
          bluetooth::hci::AdvertiserAddressTypeText(advertiser_address_type),
          advertising_sid);
     // Use the first unused Sync_Handle.
@@ -3914,7 +3897,7 @@ void LinkLayerController::IncomingScoConnectionRequest(
   auto request = model::packets::ScoConnectionRequestView::Create(incoming);
   ASSERT(request.IsValid());
 
-  INFO(id_, "Received eSCO connection request from {}", address.ToString());
+  INFO(id_, "Received eSCO connection request from {}", address);
 
   // Automatically reject if connection request was already sent
   // from the current device.
@@ -3922,7 +3905,7 @@ void LinkLayerController::IncomingScoConnectionRequest(
     INFO(id_,
          "Rejecting eSCO connection request from {}, "
          "an eSCO connection already exist with this device",
-         address.ToString());
+         address);
 
     SendLinkLayerPacket(model::packets::ScoConnectionResponseBuilder::Create(
         GetAddress(), address,
@@ -3960,7 +3943,7 @@ void LinkLayerController::IncomingScoConnectionResponse(
   bool is_legacy = connections_.IsLegacyScoConnection(address);
 
   INFO(id_, "Received eSCO connection response with status 0x{:02x} from {}",
-       static_cast<unsigned>(status), incoming.GetSourceAddress().ToString());
+       static_cast<unsigned>(status), incoming.GetSourceAddress());
 
   if (status == ErrorCode::SUCCESS) {
     bool extended = response.GetExtended();
@@ -4022,7 +4005,7 @@ void LinkLayerController::IncomingScoDisconnect(
   INFO(id_,
        "Received eSCO disconnection request with"
        " reason 0x{:02x} from {}",
-       static_cast<unsigned>(reason), incoming.GetSourceAddress().ToString());
+       static_cast<unsigned>(reason), incoming.GetSourceAddress());
 
   if (handle != kReservedHandle) {
     connections_.Disconnect(
@@ -4209,8 +4192,7 @@ uint16_t LinkLayerController::HandleLeConnection(
 
   uint16_t handle = connections_.CreateLeConnection(address, own_address, role);
   if (handle == kReservedHandle) {
-    WARNING(id_, "No pending connection for connection from {}",
-            address.ToString());
+    WARNING(id_, "No pending connection for connection from {}", address);
     return kReservedHandle;
   }
 
@@ -4229,8 +4211,8 @@ uint16_t LinkLayerController::HandleLeConnection(
                  AddressType::RANDOM_DEVICE_ADDRESS) {
         peer_address_type = AddressType::RANDOM_IDENTITY_ADDRESS;
       } else {
-        WARNING(id_, "Unhandled resolved address type {} -> {}",
-                address.ToString(), peer_resolved_address.ToString());
+        WARNING(id_, "Unhandled resolved address type {} -> {}", address,
+                peer_resolved_address);
       }
       connection_address = peer_resolved_address.GetAddress();
     }
@@ -4302,8 +4284,7 @@ bool LinkLayerController::ProcessIncomingLegacyConnectRequest(
     DEBUG(id_,
           "LE Connect request ignored by legacy advertiser because the "
           "advertising address {} does not match {}",
-          advertising_address.ToString(),
-          legacy_advertiser_.GetAdvertisingAddress().ToString());
+          advertising_address, legacy_advertiser_.GetAdvertisingAddress());
     return false;
   }
 
@@ -4317,9 +4298,8 @@ bool LinkLayerController::ProcessIncomingLegacyConnectRequest(
           .value_or(initiating_address);
 
   if (resolved_initiating_address != initiating_address) {
-    DEBUG(id_, "Resolved the initiating address {} to {}",
-          initiating_address.ToString(),
-          resolved_initiating_address.ToString());
+    DEBUG(id_, "Resolved the initiating address {} to {}", initiating_address,
+          resolved_initiating_address);
   }
 
   // When the Link Layer is [...] connectable directed advertising events the
@@ -4329,8 +4309,7 @@ bool LinkLayerController::ProcessIncomingLegacyConnectRequest(
       DEBUG(id_,
             "LE Connect request ignored by legacy advertiser because the "
             "initiating address {} does not match the target address {}",
-            resolved_initiating_address.ToString(),
-            legacy_advertiser_.GetTargetAddress().ToString());
+            resolved_initiating_address, legacy_advertiser_.GetTargetAddress());
       return false;
     }
   } else {
@@ -4346,7 +4325,7 @@ bool LinkLayerController::ProcessIncomingLegacyConnectRequest(
           DEBUG(id_,
                 "LE Connect request ignored by legacy advertiser because the "
                 "initiating address {} is not in the filter accept list",
-                resolved_initiating_address.ToString());
+                resolved_initiating_address);
           return false;
         }
         break;
@@ -4356,7 +4335,7 @@ bool LinkLayerController::ProcessIncomingLegacyConnectRequest(
   INFO(id_,
        "Accepting LE Connect request to legacy advertiser from initiating "
        "address {}",
-       resolved_initiating_address.ToString());
+       resolved_initiating_address);
 
   if (!connections_.CreatePendingLeConnection(
           initiating_address,
@@ -4365,7 +4344,7 @@ bool LinkLayerController::ProcessIncomingLegacyConnectRequest(
               : AddressWithType{},
           advertising_address)) {
     WARNING(id_, "CreatePendingLeConnection failed for connection from {}",
-            initiating_address.GetAddress().ToString());
+            initiating_address.GetAddress());
     return false;
   }
 
@@ -4416,8 +4395,8 @@ bool LinkLayerController::ProcessIncomingExtendedConnectRequest(
     DEBUG(id_,
           "LE Connect request ignored by extended advertiser {} because the "
           "advertising address {} does not match {}",
-          advertiser.advertising_handle, advertising_address.ToString(),
-          advertiser.GetAdvertisingAddress().ToString());
+          advertiser.advertising_handle, advertising_address,
+          advertiser.GetAdvertisingAddress());
     return false;
   }
 
@@ -4431,9 +4410,8 @@ bool LinkLayerController::ProcessIncomingExtendedConnectRequest(
           .value_or(initiating_address);
 
   if (resolved_initiating_address != initiating_address) {
-    DEBUG(id_, "Resolved the initiating address {} to {}",
-          initiating_address.ToString(),
-          resolved_initiating_address.ToString());
+    DEBUG(id_, "Resolved the initiating address {} to {}", initiating_address,
+          resolved_initiating_address);
   }
 
   // When the Link Layer is [...] connectable directed advertising events the
@@ -4443,9 +4421,8 @@ bool LinkLayerController::ProcessIncomingExtendedConnectRequest(
       DEBUG(id_,
             "LE Connect request ignored by extended advertiser {} because the "
             "initiating address {} does not match the target address {}",
-            advertiser.advertising_handle,
-            resolved_initiating_address.ToString(),
-            advertiser.GetTargetAddress().ToString());
+            advertiser.advertising_handle, resolved_initiating_address,
+            advertiser.GetTargetAddress());
       return false;
     }
   } else {
@@ -4461,8 +4438,7 @@ bool LinkLayerController::ProcessIncomingExtendedConnectRequest(
           DEBUG(id_,
                 "LE Connect request ignored by extended advertiser {} because "
                 "the initiating address {} is not in the filter accept list",
-                advertiser.advertising_handle,
-                resolved_initiating_address.ToString());
+                advertiser.advertising_handle, resolved_initiating_address);
           return false;
         }
         break;
@@ -4472,7 +4448,7 @@ bool LinkLayerController::ProcessIncomingExtendedConnectRequest(
   INFO(id_,
        "Accepting LE Connect request to extended advertiser {} from initiating "
        "address {}",
-       advertiser.advertising_handle, resolved_initiating_address.ToString());
+       advertiser.advertising_handle, resolved_initiating_address);
 
   if (!connections_.CreatePendingLeConnection(
           initiating_address,
@@ -4481,7 +4457,7 @@ bool LinkLayerController::ProcessIncomingExtendedConnectRequest(
               : AddressWithType{},
           advertising_address)) {
     WARNING(id_, "CreatePendingLeConnection failed for connection from {}",
-            initiating_address.GetAddress().ToString());
+            initiating_address.GetAddress());
     return false;
   }
 
@@ -4543,7 +4519,7 @@ void LinkLayerController::IncomingLeConnectCompletePacket(
                                        complete.GetAdvertisingAddressType())};
 
   INFO(id_, "Received LE Connect complete response with advertising address {}",
-       advertising_address.ToString());
+       advertising_address);
 
   HandleLeConnection(advertising_address,
                      AddressWithType(incoming.GetDestinationAddress(),
@@ -4566,8 +4542,8 @@ void LinkLayerController::IncomingLeConnectionParameterRequest(
   Address peer = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(peer);
   if (handle == kReservedHandle) {
-    INFO(id_, "@{}: Unknown connection @{}",
-         incoming.GetDestinationAddress().ToString(), peer.ToString());
+    INFO(id_, "@{}: Unknown connection @{}", incoming.GetDestinationAddress(),
+         peer);
     return;
   }
 
@@ -4596,8 +4572,8 @@ void LinkLayerController::IncomingLeConnectionParameterUpdate(
   Address peer = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(peer);
   if (handle == kReservedHandle) {
-    INFO(id_, "@{}: Unknown connection @{}",
-         incoming.GetDestinationAddress().ToString(), peer.ToString());
+    INFO(id_, "@{}: Unknown connection @{}", incoming.GetDestinationAddress(),
+         peer);
     return;
   }
   if (IsLeEventUnmasked(SubeventCode::CONNECTION_UPDATE_COMPLETE)) {
@@ -4614,8 +4590,8 @@ void LinkLayerController::IncomingLeEncryptConnection(
   Address peer = incoming.GetSourceAddress();
   uint16_t handle = connections_.GetHandleOnlyAddress(peer);
   if (handle == kReservedHandle) {
-    INFO(id_, "@{}: Unknown connection @{}",
-         incoming.GetDestinationAddress().ToString(), peer.ToString());
+    INFO(id_, "@{}: Unknown connection @{}", incoming.GetDestinationAddress(),
+         peer);
     return;
   }
   auto le_encrypt = model::packets::LeEncryptConnectionView::Create(incoming);
@@ -4636,9 +4612,8 @@ void LinkLayerController::IncomingLeEncryptConnectionResponse(
   uint16_t handle =
       connections_.GetHandleOnlyAddress(incoming.GetSourceAddress());
   if (handle == kReservedHandle) {
-    INFO(id_, "@{}: Unknown connection @{}",
-         incoming.GetDestinationAddress().ToString(),
-         incoming.GetSourceAddress().ToString());
+    INFO(id_, "@{}: Unknown connection @{}", incoming.GetDestinationAddress(),
+         incoming.GetSourceAddress());
     return;
   }
   ErrorCode status = ErrorCode::SUCCESS;
@@ -4679,8 +4654,7 @@ void LinkLayerController::IncomingLeReadRemoteFeatures(
   ErrorCode status = ErrorCode::SUCCESS;
   if (handle == kReservedHandle) {
     WARNING(id_, "@{}: Unknown connection @{}",
-            incoming.GetDestinationAddress().ToString(),
-            incoming.GetSourceAddress().ToString());
+            incoming.GetDestinationAddress(), incoming.GetSourceAddress());
   }
   SendLeLinkLayerPacket(
       model::packets::LeReadRemoteFeaturesResponseBuilder::Create(
@@ -4697,9 +4671,8 @@ void LinkLayerController::IncomingLeReadRemoteFeaturesResponse(
       model::packets::LeReadRemoteFeaturesResponseView::Create(incoming);
   ASSERT(response.IsValid());
   if (handle == kReservedHandle) {
-    INFO(id_, "@{}: Unknown connection @{}",
-         incoming.GetDestinationAddress().ToString(),
-         incoming.GetSourceAddress().ToString());
+    INFO(id_, "@{}: Unknown connection @{}", incoming.GetDestinationAddress(),
+         incoming.GetSourceAddress());
     status = ErrorCode::UNKNOWN_CONNECTION;
   } else {
     status = static_cast<ErrorCode>(response.GetStatus());
@@ -4730,8 +4703,7 @@ void LinkLayerController::ProcessIncomingLegacyScanRequest(
         id_,
         "LE Scan request ignored by legacy advertiser because the advertising "
         "address {} does not match {}",
-        advertising_address.ToString(),
-        legacy_advertiser_.GetAdvertisingAddress().ToString());
+        advertising_address, legacy_advertiser_.GetAdvertisingAddress());
     return;
   }
 
@@ -4748,7 +4720,7 @@ void LinkLayerController::ProcessIncomingLegacyScanRequest(
             id_,
             "LE Scan request ignored by legacy advertiser because the scanning "
             "address {} is not in the filter accept list",
-            resolved_scanning_address.ToString());
+            resolved_scanning_address);
         return;
       }
       break;
@@ -4757,7 +4729,7 @@ void LinkLayerController::ProcessIncomingLegacyScanRequest(
   INFO(id_,
        "Accepting LE Scan request to legacy advertiser from scanning address "
        "{}",
-       resolved_scanning_address.ToString());
+       resolved_scanning_address);
 
   // Generate the SCAN_RSP packet.
   // Note: If the advertiser processes the scan request, the advertiser’s
@@ -4794,8 +4766,8 @@ void LinkLayerController::ProcessIncomingExtendedScanRequest(
     DEBUG(id_,
           "LE Scan request ignored by extended advertiser {} because the "
           "advertising address {} does not match {}",
-          advertiser.advertising_handle, advertising_address.ToString(),
-          advertiser.GetAdvertisingAddress().ToString());
+          advertiser.advertising_handle, advertising_address,
+          advertiser.GetAdvertisingAddress());
     return;
   }
 
@@ -4811,8 +4783,7 @@ void LinkLayerController::ProcessIncomingExtendedScanRequest(
         DEBUG(id_,
               "LE Scan request ignored by extended advertiser {} because the "
               "scanning address {} is not in the filter accept list",
-              advertiser.advertising_handle,
-              resolved_scanning_address.ToString());
+              advertiser.advertising_handle, resolved_scanning_address);
         return;
       }
       break;
@@ -4825,15 +4796,15 @@ void LinkLayerController::ProcessIncomingExtendedScanRequest(
     DEBUG(id_,
           "LE Scan request ignored by extended advertiser {} because the "
           "scanning address {} does not match the target address {}",
-          advertiser.advertising_handle, resolved_scanning_address.ToString(),
-          advertiser.GetTargetAddress().ToString());
+          advertiser.advertising_handle, resolved_scanning_address,
+          advertiser.GetTargetAddress());
     return;
   }
 
   INFO(id_,
        "Accepting LE Scan request to extended advertiser {} from scanning "
        "address {}",
-       advertiser.advertising_handle, resolved_scanning_address.ToString());
+       advertiser.advertising_handle, resolved_scanning_address);
 
   // Generate the SCAN_RSP packet.
   // Note: If the advertiser processes the scan request, the advertiser’s
@@ -4874,8 +4845,8 @@ void LinkLayerController::IncomingLeScanPacket(
           .value_or(scanning_address);
 
   if (resolved_scanning_address != scanning_address) {
-    DEBUG(id_, "Resolved the scanning address {} to {}",
-          scanning_address.ToString(), resolved_scanning_address.ToString());
+    DEBUG(id_, "Resolved the scanning address {} to {}", scanning_address,
+          resolved_scanning_address);
   }
 
   ProcessIncomingLegacyScanRequest(scanning_address, resolved_scanning_address,
@@ -4915,8 +4886,7 @@ void LinkLayerController::IncomingLeScanResponsePacket(
     DEBUG(id_,
           "LE Scan response ignored by scanner because the advertising address "
           "{} does not match the pending request {}",
-          advertising_address.ToString(),
-          scanner_.pending_scan_request.value().ToString());
+          advertising_address, scanner_.pending_scan_request.value());
     return;
   }
 
@@ -4925,13 +4895,12 @@ void LinkLayerController::IncomingLeScanResponsePacket(
           .value_or(advertising_address);
 
   if (advertising_address != resolved_advertising_address) {
-    DEBUG(id_, "Resolved the advertising address {} to {}",
-          advertising_address.ToString(),
-          resolved_advertising_address.ToString());
+    DEBUG(id_, "Resolved the advertising address {} to {}", advertising_address,
+          resolved_advertising_address);
   }
 
   INFO(id_, "Accepting LE Scan response from advertising address {}",
-       resolved_advertising_address.ToString());
+       resolved_advertising_address);
 
   scanner_.pending_scan_request = {};
 
@@ -5044,7 +5013,7 @@ void LinkLayerController::IncomingPagePacket(
     model::packets::LinkLayerPacketView incoming) {
   auto page = model::packets::PageView::Create(incoming);
   ASSERT(page.IsValid());
-  INFO(id_, "from {}", incoming.GetSourceAddress().ToString());
+  INFO(id_, "from {}", incoming.GetSourceAddress());
 
   bool allow_role_switch = page.GetAllowRoleSwitch();
   if (!connections_.CreatePendingConnection(
@@ -5053,7 +5022,7 @@ void LinkLayerController::IncomingPagePacket(
           allow_role_switch)) {
     // Send a response to indicate that we're busy, or drop the packet?
     WARNING(id_, "Failed to create a pending connection for {}",
-            incoming.GetSourceAddress().ToString());
+            incoming.GetSourceAddress());
   }
 
   bluetooth::hci::Address source_address{};
@@ -5069,7 +5038,7 @@ void LinkLayerController::IncomingPagePacket(
 
 void LinkLayerController::IncomingPageRejectPacket(
     model::packets::LinkLayerPacketView incoming) {
-  INFO(id_, "{}", incoming.GetSourceAddress().ToString());
+  INFO(id_, "{}", incoming.GetSourceAddress());
   auto reject = model::packets::PageRejectView::Create(incoming);
   ASSERT(reject.IsValid());
   INFO(id_, "Sending CreateConnectionComplete");
@@ -5084,7 +5053,7 @@ void LinkLayerController::IncomingPageRejectPacket(
 void LinkLayerController::IncomingPageResponsePacket(
     model::packets::LinkLayerPacketView incoming) {
   Address peer = incoming.GetSourceAddress();
-  INFO(id_, "{}", peer.ToString());
+  INFO(id_, "{}", peer);
   uint16_t handle =
       connections_.CreateConnection(peer, incoming.GetDestinationAddress());
   if (handle == kReservedHandle) {
@@ -5198,9 +5167,9 @@ void LinkLayerController::WriteCurrentIacLap(
 ErrorCode LinkLayerController::AcceptConnectionRequest(const Address& bd_addr,
                                                        bool try_role_switch) {
   if (connections_.HasPendingConnection(bd_addr)) {
-    INFO(id_, "Accepting connection request from {}", bd_addr.ToString());
+    INFO(id_, "Accepting connection request from {}", bd_addr);
     ScheduleTask(kNoDelayMs, [this, bd_addr, try_role_switch]() {
-      INFO(id_, "Accepted connection from {}", bd_addr.ToString());
+      INFO(id_, "Accepted connection from {}", bd_addr);
       MakePeripheralConnection(bd_addr, try_role_switch);
     });
 
@@ -5245,13 +5214,13 @@ ErrorCode LinkLayerController::AcceptConnectionRequest(const Address& bd_addr,
     return ErrorCode::SUCCESS;
   }
 
-  INFO(id_, "No pending connection for {}", bd_addr.ToString());
+  INFO(id_, "No pending connection for {}", bd_addr);
   return ErrorCode::UNKNOWN_CONNECTION;
 }
 
 void LinkLayerController::MakePeripheralConnection(const Address& addr,
                                                    bool try_role_switch) {
-  INFO(id_, "Sending page response to {}", addr.ToString());
+  INFO(id_, "Sending page response to {}", addr);
   SendLinkLayerPacket(model::packets::PageResponseBuilder::Create(
       GetAddress(), addr, try_role_switch));
 
@@ -5291,7 +5260,7 @@ void LinkLayerController::MakePeripheralConnection(const Address& addr,
 ErrorCode LinkLayerController::RejectConnectionRequest(const Address& addr,
                                                        uint8_t reason) {
   if (!connections_.HasPendingConnection(addr)) {
-    INFO(id_, "No pending connection for {}", addr.ToString());
+    INFO(id_, "No pending connection for {}", addr);
     return ErrorCode::UNKNOWN_CONNECTION;
   }
 
@@ -5304,8 +5273,7 @@ ErrorCode LinkLayerController::RejectConnectionRequest(const Address& addr,
 
 void LinkLayerController::RejectPeripheralConnection(const Address& addr,
                                                      uint8_t reason) {
-  INFO(id_, "Sending page reject to {} (reason 0x{:02x})", addr.ToString(),
-       reason);
+  INFO(id_, "Sending page reject to {} (reason 0x{:02x})", addr, reason);
   SendLinkLayerPacket(
       model::packets::PageRejectBuilder::Create(GetAddress(), addr, reason));
 
@@ -5364,7 +5332,7 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle,
                                           ErrorCode controller_reason) {
   if (connections_.HasScoHandle(handle)) {
     const Address remote = connections_.GetScoAddress(handle);
-    INFO(id_, "Disconnecting eSCO connection with {}", remote.ToString());
+    INFO(id_, "Disconnecting eSCO connection with {}", remote);
 
     SendLinkLayerPacket(model::packets::ScoDisconnectBuilder::Create(
         GetAddress(), remote, static_cast<uint8_t>(host_reason)));
@@ -5383,7 +5351,7 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle,
   auto is_br_edr = connections_.GetPhyType(handle) == Phy::Type::BR_EDR;
 
   if (is_br_edr) {
-    INFO(id_, "Disconnecting ACL connection with {}", remote.ToString());
+    INFO(id_, "Disconnecting ACL connection with {}", remote);
 
     uint16_t sco_handle = connections_.GetScoHandle(remote.GetAddress());
     if (sco_handle != kReservedHandle) {
@@ -5399,7 +5367,7 @@ ErrorCode LinkLayerController::Disconnect(uint16_t handle,
     SendLinkLayerPacket(model::packets::DisconnectBuilder::Create(
         GetAddress(), remote.GetAddress(), static_cast<uint8_t>(host_reason)));
   } else {
-    INFO(id_, "Disconnecting LE connection with {}", remote.ToString());
+    INFO(id_, "Disconnecting LE connection with {}", remote);
 
     SendLeLinkLayerPacket(model::packets::DisconnectBuilder::Create(
         connections_.GetOwnAddress(handle).GetAddress(), remote.GetAddress(),
@@ -6002,7 +5970,7 @@ ErrorCode LinkLayerController::AddScoConnection(uint16_t connection_handle,
     return ErrorCode::COMMAND_DISALLOWED;
   }
 
-  INFO(id_, "Creating SCO connection with {}", bd_addr.ToString());
+  INFO(id_, "Creating SCO connection with {}", bd_addr);
 
   // Save connection parameters.
   ScoConnectionParameters connection_parameters = {
@@ -6051,7 +6019,7 @@ ErrorCode LinkLayerController::SetupSynchronousConnection(
     return ErrorCode::COMMAND_DISALLOWED;
   }
 
-  INFO(id_, "Creating eSCO connection with {}", bd_addr.ToString());
+  INFO(id_, "Creating eSCO connection with {}", bd_addr);
 
   // Save connection parameters.
   ScoConnectionParameters connection_parameters = {
@@ -6072,10 +6040,10 @@ ErrorCode LinkLayerController::AcceptSynchronousConnection(
     Address bd_addr, uint32_t transmit_bandwidth, uint32_t receive_bandwidth,
     uint16_t max_latency, uint16_t voice_setting, uint8_t retransmission_effort,
     uint16_t packet_types) {
-  INFO(id_, "Accepting eSCO connection request from {}", bd_addr.ToString());
+  INFO(id_, "Accepting eSCO connection request from {}", bd_addr);
 
   if (!connections_.HasPendingScoConnection(bd_addr)) {
-    INFO(id_, "No pending eSCO connection for {}", bd_addr.ToString());
+    INFO(id_, "No pending eSCO connection for {}", bd_addr);
     return ErrorCode::COMMAND_DISALLOWED;
   }
 
@@ -6124,7 +6092,7 @@ ErrorCode LinkLayerController::AcceptSynchronousConnection(
 
 ErrorCode LinkLayerController::RejectSynchronousConnection(Address bd_addr,
                                                            uint16_t reason) {
-  INFO(id_, "Rejecting eSCO connection request from {}", bd_addr.ToString());
+  INFO(id_, "Rejecting eSCO connection request from {}", bd_addr);
 
   if (reason == (uint8_t)ErrorCode::SUCCESS) {
     reason = (uint8_t)ErrorCode::REMOTE_USER_TERMINATED_CONNECTION;

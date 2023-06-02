@@ -1359,7 +1359,7 @@ void DualModeController::WriteScanEnable(CommandView command) {
       scan_enable == bluetooth::hci::ScanEnable::INQUIRY_AND_PAGE_SCAN ||
       scan_enable == bluetooth::hci::ScanEnable::PAGE_SCAN_ONLY;
 
-  INFO(id_, "{} | WriteScanEnable {}", GetAddress().ToString(),
+  INFO(id_, "{} | WriteScanEnable {}", GetAddress(),
        bluetooth::hci::ScanEnableText(scan_enable));
 
   link_layer_controller_.SetInquiryScanEnable(inquiry_scan);
@@ -1552,8 +1552,8 @@ void DualModeController::LeReadLocalSupportedFeatures(CommandView command) {
       bluetooth::hci::LeReadLocalSupportedFeaturesView::Create(command);
   ASSERT(command_view.IsValid());
   uint64_t le_features = link_layer_controller_.GetLeSupportedFeatures();
-  INFO(id_, "{} | LeReadLocalSupportedFeatures {:016x}",
-       GetAddress().ToString(), le_features);
+  INFO(id_, "{} | LeReadLocalSupportedFeatures {:016x}", GetAddress(),
+       le_features);
 
   send_event_(
       bluetooth::hci::LeReadLocalSupportedFeaturesCompleteBuilder::Create(
@@ -1620,7 +1620,7 @@ void DualModeController::LeSetAdvertisingEnable(CommandView command) {
       bluetooth::hci::LeSetAdvertisingEnableView::Create(command);
   ASSERT(command_view.IsValid());
 
-  INFO(id_, "{} | LeSetAdvertisingEnable ({})", GetAddress().ToString(),
+  INFO(id_, "{} | LeSetAdvertisingEnable ({})", GetAddress(),
        command_view.GetAdvertisingEnable() == bluetooth::hci::Enable::ENABLED);
 
   ErrorCode status = link_layer_controller_.LeSetAdvertisingEnable(
@@ -1645,7 +1645,7 @@ void DualModeController::LeSetScanEnable(CommandView command) {
   auto command_view = bluetooth::hci::LeSetScanEnableView::Create(command);
   ASSERT(command_view.IsValid());
 
-  INFO(id_, "{} | LeSetScanEnable ({})", GetAddress().ToString(),
+  INFO(id_, "{} | LeSetScanEnable ({})", GetAddress(),
        command_view.GetLeScanEnable() == bluetooth::hci::Enable::ENABLED);
 
   ErrorCode status = link_layer_controller_.LeSetScanEnable(
