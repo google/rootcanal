@@ -217,7 +217,7 @@ void DualModeController::HandleCommand(
   }
   // Command is supported but not implemented:
   // the command needs to be implemented to fix this.
-  else if (is_supported_command) {
+  else if (is_supported_command && properties_.strict) {
     FATAL(id_,
           "Unimplemented command {};\n"
           "This message will be displayed if the command is set as supported\n"

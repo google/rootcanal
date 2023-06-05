@@ -1818,7 +1818,8 @@ static void SetSupportedCommandBits(std::array<uint8_t, 64>& supported_commands,
 
 ControllerProperties::ControllerProperties(
     rootcanal::configuration::Controller const& config)
-    : supported_commands(std::move(SupportedCommands())),
+    : strict(!config.has_strict() || config.strict()),
+      supported_commands(std::move(SupportedCommands())),
       lmp_features({Page0LmpFeatures(), 0, Page2LmpFeatures()}),
       le_features(LlFeatures()) {
   using namespace rootcanal::configuration;

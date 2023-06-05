@@ -83,6 +83,9 @@ struct ControllerProperties {
   // Enabled quirks.
   ControllerQuirks quirks{};
 
+  // Strict mode.
+  bool strict{true};
+
   // Local Version Information (Vol 4, Part E § 7.4.1).
   HciVersion hci_version{HciVersion::V_5_3};
   LmpVersion lmp_version{LmpVersion::V_5_3};
