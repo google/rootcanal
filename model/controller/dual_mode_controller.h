@@ -256,6 +256,9 @@ class DualModeController : public Device {
   // 7.3.28
   void WriteVoiceSetting(CommandView command);
 
+  // 7.3.35
+  void ReadTransmitPowerLevel(CommandView command);
+
   // 7.3.36
   void ReadSynchronousFlowControlEnable(CommandView command);
 
@@ -315,6 +318,9 @@ class DualModeController : public Device {
 
   // 7.3.69
   void SetEventMaskPage2(CommandView command);
+
+  // 7.3.74
+  void ReadEnhancedTransmitPowerLevel(CommandView command);
 
   // 7.3.79
   void WriteLeHostSupport(CommandView command);
