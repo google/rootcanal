@@ -39,6 +39,10 @@ message Controller {
   // Quirks are behaviors observed in real controllers that are not valid
   // according to the specification.
   optional ControllerQuirks quirks = 3;
+  // Enable strict mode (defaults to enabled).
+  // Activate assertion checks in RootCanal for missing RootCanal features
+  // or Host stack misbehavior.
+  optional bool strict = 4;
 }
 
 message TcpServer {
