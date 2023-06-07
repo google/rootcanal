@@ -18,7 +18,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <random>
 
 #include "crypto/crypto.h"
 #include "log.h"
@@ -67,7 +66,8 @@ void DualModeController::SendCommandCompleteUnknownOpCodeEvent(
 }
 
 DualModeController::DualModeController(ControllerProperties properties)
-    : id_(next_instance_id()), properties_(std::move(properties)) {
+    : id_(next_instance_id()), properties_(std::move(properties)),
+      random_generator_(id_) {
   Address public_address{};
   ASSERT(Address::FromString("3C:5A:B4:04:05:06", public_address));
   SetAddress(public_address);
@@ -2164,17 +2164,12 @@ void DualModeController::LeEncrypt(CommandView command) {
       kNumCommandPackets, ErrorCode::SUCCESS, encrypted_data));
 }
 
-static std::random_device rd{};
-static std::mt19937_64 s_mt{rd()};
-
 void DualModeController::LeRand(CommandView command) {
   auto command_view = bluetooth::hci::LeRandView::Create(command);
   ASSERT(command_view.IsValid());
 
-  uint64_t random_val = s_mt();
-
   send_event_(bluetooth::hci::LeRandCompleteBuilder::Create(
-      kNumCommandPackets, ErrorCode::SUCCESS, random_val));
+      kNumCommandPackets, ErrorCode::SUCCESS, random_generator_()));
 }
 
 void DualModeController::LeReadSupportedStates(CommandView command) {
