@@ -33,10 +33,6 @@ void AclConnection::Encrypt() { encrypted_ = true; };
 
 bool AclConnection::IsEncrypted() const { return encrypted_; };
 
-uint16_t AclConnection::GetLinkPolicySettings() const {
-  return link_policy_settings_;
-};
-
 void AclConnection::SetLinkPolicySettings(uint16_t settings) {
   link_policy_settings_ = settings;
 }

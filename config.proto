@@ -29,11 +29,8 @@ message ControllerQuirks {
   optional bool send_acl_data_before_connection_complete = 1;
   // Configure a default value for the LE random address.
   optional bool has_default_random_address = 2;
-  // Send the Role Change event before the Connection Complete event
-  // in the case where a role switch is initiated at connection establishment.
-  optional bool send_role_change_before_connection_complete = 3;
   // Send an Hardware Error event if any command is called before HCI Reset.
-  optional bool hardware_error_before_reset = 4;
+  optional bool hardware_error_before_reset = 3;
 }
 
 message Controller {

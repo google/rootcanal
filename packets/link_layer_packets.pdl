@@ -356,12 +356,10 @@ packet PingResponse : LinkLayerPacket (type = PING_RESPONSE) {
 }
 
 packet RoleSwitchRequest : LinkLayerPacket (type = ROLE_SWITCH_REQUEST) {
-  initiator_new_role: 8,
 }
 
 packet RoleSwitchResponse : LinkLayerPacket (type = ROLE_SWITCH_RESPONSE) {
   status: 8,
-  initiator_new_role: 8,
 }
 
 packet LlPhyReq : LinkLayerPacket (type = LL_PHY_REQ) {

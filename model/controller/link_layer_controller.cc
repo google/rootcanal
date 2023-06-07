@@ -5065,32 +5065,39 @@ void LinkLayerController::IncomingPageResponsePacket(
     WARNING(id_, "No free handles");
     return;
   }
+
   CancelScheduledTask(page_timeout_task_id_);
   ASSERT(link_manager_add_link(
       lm_.get(), reinterpret_cast<const uint8_t(*)[6]>(peer.data())));
 
   CheckExpiringConnection(handle);
 
-  auto addr = incoming.GetSourceAddress();
+  AclConnection& connection = connections_.GetAclConnection(handle);
+  auto bd_addr = incoming.GetSourceAddress();
   auto response = model::packets::PageResponseView::Create(incoming);
   ASSERT(response.IsValid());
-  /* Role change event before connection complete is a quirk commonly exists in
-   * Android-capatable Bluetooth controllers.
-   * On the initiator side, only connection in peripheral role should be
-   * accompanied with a role change event */
-  // TODO(b/274476773): Add a config option for this quirk
-  if (connections_.IsRoleSwitchAllowedForPendingConnection() &&
-      response.GetTryRoleSwitch()) {
-    auto role = bluetooth::hci::Role::PERIPHERAL;
-    connections_.SetAclRole(handle, role);
-    if (IsEventUnmasked(EventCode::ROLE_CHANGE)) {
-      send_event_(bluetooth::hci::RoleChangeBuilder::Create(ErrorCode::SUCCESS,
-                                                            addr, role));
-    }
+
+  bluetooth::hci::Role role =
+      connections_.IsRoleSwitchAllowedForPendingConnection() &&
+              response.GetTryRoleSwitch()
+          ? bluetooth::hci::Role::PERIPHERAL
+          : bluetooth::hci::Role::CENTRAL;
+
+  connection.SetLinkPolicySettings(default_link_policy_settings_);
+  connection.SetRole(role);
+
+  // Role change event before connection complete generates an HCI Role Change
+  // event on the initiator side if accepted; the event is sent before the
+  // HCI Connection Complete event.
+  if (role == bluetooth::hci::Role::PERIPHERAL &&
+      IsEventUnmasked(EventCode::ROLE_CHANGE)) {
+    send_event_(bluetooth::hci::RoleChangeBuilder::Create(ErrorCode::SUCCESS,
+                                                          bd_addr, role));
   }
+
   if (IsEventUnmasked(EventCode::CONNECTION_COMPLETE)) {
     send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
-        ErrorCode::SUCCESS, handle, addr, bluetooth::hci::LinkType::ACL,
+        ErrorCode::SUCCESS, handle, bd_addr, bluetooth::hci::LinkType::ACL,
         bluetooth::hci::Enable::DISABLED));
   }
 }
@@ -5223,42 +5230,49 @@ ErrorCode LinkLayerController::AcceptConnectionRequest(const Address& bd_addr,
   return ErrorCode::UNKNOWN_CONNECTION;
 }
 
-void LinkLayerController::MakePeripheralConnection(const Address& addr,
+void LinkLayerController::MakePeripheralConnection(const Address& bd_addr,
                                                    bool try_role_switch) {
-  INFO(id_, "Sending page response to {}", addr);
+  INFO(id_, "Sending page response to {}", bd_addr);
   SendLinkLayerPacket(model::packets::PageResponseBuilder::Create(
-      GetAddress(), addr, try_role_switch));
+      GetAddress(), bd_addr, try_role_switch));
 
-  uint16_t handle = connections_.CreateConnection(addr, GetAddress());
-  if (handle == kReservedHandle) {
+  uint16_t connection_handle =
+      connections_.CreateConnection(bd_addr, GetAddress());
+  if (connection_handle == kReservedHandle) {
     INFO(id_, "CreateConnection failed");
     return;
   }
+
   ASSERT(link_manager_add_link(
-      lm_.get(), reinterpret_cast<const uint8_t(*)[6]>(addr.data())));
+      lm_.get(), reinterpret_cast<const uint8_t(*)[6]>(bd_addr.data())));
 
-  CheckExpiringConnection(handle);
+  CheckExpiringConnection(connection_handle);
 
-  /* Role change event before connection complete is a quirk commonly exists in
-   * Android-capatable Bluetooth controllers.
-   * On the responder side, any connection should be accompanied with a role
-   * change event */
-  // TODO(b/274476773): Add a config option for this quirk
-  auto role =
+  bluetooth::hci::Role role =
       try_role_switch && connections_.IsRoleSwitchAllowedForPendingConnection()
           ? bluetooth::hci::Role::CENTRAL
           : bluetooth::hci::Role::PERIPHERAL;
-  connections_.SetAclRole(handle, role);
-  if (IsEventUnmasked(EventCode::ROLE_CHANGE)) {
+
+  AclConnection& connection = connections_.GetAclConnection(connection_handle);
+
+  connection.SetLinkPolicySettings(default_link_policy_settings_);
+  connection.SetRole(role);
+
+  // Role change event before connection complete generates an HCI Role Change
+  // event on the acceptor side if accepted; the event is sent before the
+  // HCI Connection Complete event.
+  if (role == bluetooth::hci::Role::CENTRAL &&
+      IsEventUnmasked(EventCode::ROLE_CHANGE)) {
+    INFO(id_, "Role at connection setup accepted");
     send_event_(bluetooth::hci::RoleChangeBuilder::Create(ErrorCode::SUCCESS,
-                                                          addr, role));
+                                                          bd_addr, role));
   }
 
-  INFO(id_, "CreateConnection returned handle 0x{:x}", handle);
+  INFO(id_, "CreateConnection returned handle 0x{:x}", connection_handle);
   if (IsEventUnmasked(EventCode::CONNECTION_COMPLETE)) {
     send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
-        ErrorCode::SUCCESS, handle, addr, bluetooth::hci::LinkType::ACL,
-        bluetooth::hci::Enable::DISABLED));
+        ErrorCode::SUCCESS, connection_handle, bd_addr,
+        bluetooth::hci::LinkType::ACL, bluetooth::hci::Enable::DISABLED));
   }
 }
 
@@ -5488,67 +5502,124 @@ ErrorCode LinkLayerController::RoleDiscovery(uint16_t handle,
   if (!connections_.HasHandle(handle)) {
     return ErrorCode::UNKNOWN_CONNECTION;
   }
+
   *role = connections_.GetAclRole(handle);
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::SwitchRole(Address addr,
+ErrorCode LinkLayerController::SwitchRole(Address bd_addr,
                                           bluetooth::hci::Role role) {
-  auto handle = connections_.GetHandleOnlyAddress(addr);
-  if (handle == rootcanal::kReservedHandle) {
+  // The BD_ADDR command parameter indicates for which connection
+  // the role switch is to be performed and shall specify a BR/EDR Controller
+  // for which a connection already exists.
+  uint16_t connection_handle = connections_.GetHandleOnlyAddress(bd_addr);
+  if (connection_handle == kReservedHandle) {
+    INFO(id_, "unknown connection address {}", bd_addr);
     return ErrorCode::UNKNOWN_CONNECTION;
   }
-  // TODO(b/274248798): Reject role switch if disabled in link policy
-  SendLinkLayerPacket(model::packets::RoleSwitchRequestBuilder::Create(
-      GetAddress(), addr, static_cast<uint8_t>(role)));
+
+  AclConnection& connection = connections_.GetAclConnection(connection_handle);
+
+  // If there is an (e)SCO connection between the local device and the device
+  // identified by the BD_ADDR parameter, an attempt to perform a role switch
+  // shall be rejected by the local device.
+  if (connections_.GetScoHandle(bd_addr) != kReservedHandle) {
+    INFO(id_,
+         "role switch rejected because an Sco link is opened with"
+         " the target device");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  // If the connection between the local device and the device identified by the
+  // BD_ADDR parameter is placed in Sniff mode, an attempt to perform a role
+  // switch shall be rejected by the local device.
+  if (connection.GetMode() == AclConnectionState::kSniffMode) {
+    INFO(id_,
+         "role switch rejected because the acl connection is in sniff mode");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  if (role != connection.GetRole()) {
+    SendLinkLayerPacket(model::packets::RoleSwitchRequestBuilder::Create(
+        GetAddress(), bd_addr));
+  } else if (IsEventUnmasked(EventCode::ROLE_CHANGE)) {
+    // Note: the status is Success only if the role change procedure was
+    // actually performed, otherwise the status is >0.
+    ScheduleTask(kNoDelayMs, [this, bd_addr, role]() {
+      send_event_(bluetooth::hci::RoleChangeBuilder::Create(
+          ErrorCode::ROLE_SWITCH_FAILED, bd_addr, role));
+    });
+  }
+
   return ErrorCode::SUCCESS;
 }
 
 void LinkLayerController::IncomingRoleSwitchRequest(
     model::packets::LinkLayerPacketView incoming) {
-  auto addr = incoming.GetSourceAddress();
-  auto handle = connections_.GetHandleOnlyAddress(addr);
-  auto request = model::packets::RoleSwitchRequestView::Create(incoming);
-  ASSERT(request.IsValid());
+  auto bd_addr = incoming.GetSourceAddress();
+  auto connection_handle = connections_.GetHandleOnlyAddress(bd_addr);
+  auto switch_req = model::packets::RoleSwitchRequestView::Create(incoming);
+  ASSERT(switch_req.IsValid());
 
-  // TODO(b/274248798): Reject role switch if disabled in link policy
-  Role remote_role = static_cast<Role>(request.GetInitiatorNewRole());
-  Role local_role =
-      remote_role == Role::CENTRAL ? Role::PERIPHERAL : Role::CENTRAL;
-  connections_.SetAclRole(handle, local_role);
-  if (IsEventUnmasked(EventCode::ROLE_CHANGE)) {
-    ScheduleTask(kNoDelayMs, [this, addr, local_role]() {
-      send_event_(bluetooth::hci::RoleChangeBuilder::Create(ErrorCode::SUCCESS,
-                                                            addr, local_role));
-    });
+  if (connection_handle == kReservedHandle) {
+    INFO(id_, "ignoring Switch Request received on unknown connection");
+    return;
   }
-  ScheduleTask(kNoDelayMs, [this, addr, remote_role]() {
+
+  AclConnection& connection = connections_.GetAclConnection(connection_handle);
+
+  if (!connection.IsRoleSwitchEnabled()) {
+    INFO(id_, "role switch disabled by local link policy settings");
     SendLinkLayerPacket(model::packets::RoleSwitchResponseBuilder::Create(
-        GetAddress(), addr, static_cast<uint8_t>(ErrorCode::SUCCESS),
-        static_cast<uint8_t>(remote_role)));
-  });
+        GetAddress(), bd_addr,
+        static_cast<uint8_t>(ErrorCode::ROLE_CHANGE_NOT_ALLOWED)));
+  } else {
+    INFO(id_, "role switch request accepted by local device");
+    SendLinkLayerPacket(model::packets::RoleSwitchResponseBuilder::Create(
+        GetAddress(), bd_addr, static_cast<uint8_t>(ErrorCode::SUCCESS)));
+
+    bluetooth::hci::Role new_role =
+        connection.GetRole() == bluetooth::hci::Role::CENTRAL
+            ? bluetooth::hci::Role::PERIPHERAL
+            : bluetooth::hci::Role::CENTRAL;
+
+    connection.SetRole(new_role);
+
+    if (IsEventUnmasked(EventCode::ROLE_CHANGE)) {
+      ScheduleTask(kNoDelayMs, [this, bd_addr, new_role]() {
+        send_event_(bluetooth::hci::RoleChangeBuilder::Create(
+            ErrorCode::SUCCESS, bd_addr, new_role));
+      });
+    }
+  }
 }
 
 void LinkLayerController::IncomingRoleSwitchResponse(
     model::packets::LinkLayerPacketView incoming) {
-  auto addr = incoming.GetSourceAddress();
-  auto handle = connections_.GetHandleOnlyAddress(addr);
-  auto response = model::packets::RoleSwitchResponseView::Create(incoming);
-  ASSERT(response.IsValid());
+  auto bd_addr = incoming.GetSourceAddress();
+  auto connection_handle = connections_.GetHandleOnlyAddress(bd_addr);
+  auto switch_rsp = model::packets::RoleSwitchResponseView::Create(incoming);
+  ASSERT(switch_rsp.IsValid());
 
-  // TODO(b/274248798): Reject role switch if disabled in link policy
-  ErrorCode status = ErrorCode::SUCCESS;
-  Role role = static_cast<Role>(response.GetInitiatorNewRole());
-  if (response.GetStatus() == static_cast<uint8_t>(ErrorCode::SUCCESS)) {
-    connections_.SetAclRole(handle, role);
-  } else {
-    status = static_cast<ErrorCode>(response.GetStatus());
+  if (connection_handle == kReservedHandle) {
+    INFO(id_, "ignoring Switch Response received on unknown connection");
+    return;
   }
 
+  AclConnection& connection = connections_.GetAclConnection(connection_handle);
+  ErrorCode status = ErrorCode(switch_rsp.GetStatus());
+  bluetooth::hci::Role new_role =
+      status != ErrorCode::SUCCESS ? connection.GetRole()
+      : connection.GetRole() == bluetooth::hci::Role::CENTRAL
+          ? bluetooth::hci::Role::PERIPHERAL
+          : bluetooth::hci::Role::CENTRAL;
+
+  connection.SetRole(new_role);
+
   if (IsEventUnmasked(EventCode::ROLE_CHANGE)) {
-    ScheduleTask(kNoDelayMs, [this, status, addr, role]() {
+    ScheduleTask(kNoDelayMs, [this, status, bd_addr, new_role]() {
       send_event_(
-          bluetooth::hci::RoleChangeBuilder::Create(status, addr, role));
+          bluetooth::hci::RoleChangeBuilder::Create(status, bd_addr, new_role));
     });
   }
 }
@@ -5558,6 +5629,7 @@ ErrorCode LinkLayerController::ReadLinkPolicySettings(uint16_t handle,
   if (!connections_.HasHandle(handle)) {
     return ErrorCode::UNKNOWN_CONNECTION;
   }
+
   *settings = connections_.GetAclLinkPolicySettings(handle);
   return ErrorCode::SUCCESS;
 }
@@ -5579,6 +5651,7 @@ ErrorCode LinkLayerController::WriteDefaultLinkPolicySettings(
   if (settings > 7 /* Sniff + Hold + Role switch */) {
     return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
   }
+
   default_link_policy_settings_ = settings;
   return ErrorCode::SUCCESS;
 }
