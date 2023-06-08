@@ -284,7 +284,6 @@ ErrorCode LinkLayerController::LeSetRandomAddress(Address random_address) {
     return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
   }
 
-  INFO(id_, "device random address configured to {}", random_address);
   random_address_ = random_address;
   return ErrorCode::SUCCESS;
 }
