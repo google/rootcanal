@@ -496,6 +496,9 @@ class DualModeController : public Device {
   // 7.8.77
   void LeSetPrivacyMode(CommandView command);
 
+  // 7.8.108
+  void LeRequestPeerSca(CommandView command);
+
   // 7.8.115
   void LeSetHostFeature(CommandView command);
 

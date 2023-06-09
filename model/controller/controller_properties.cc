@@ -386,8 +386,8 @@ static std::array<uint8_t, 64> SupportedCommands() {
       // OpCodeIndex::LE_TERMINATE_BIG,
       // OpCodeIndex::LE_BIG_CREATE_SYNC,
       // OpCodeIndex::LE_BIG_TERMINATE_SYNC,
-      // OpCodeIndex::LE_REQUEST_PEER_SCA,
-      OpCodeIndex::LE_SETUP_ISO_DATA_PATH, OpCodeIndex::LE_REMOVE_ISO_DATA_PATH,
+      OpCodeIndex::LE_REQUEST_PEER_SCA, OpCodeIndex::LE_SETUP_ISO_DATA_PATH,
+      OpCodeIndex::LE_REMOVE_ISO_DATA_PATH,
       // OpCodeIndex::LE_ISO_TRANSMIT_TEST,
       // OpCodeIndex::LE_ISO_RECEIVE_TEST,
       // OpCodeIndex::LE_ISO_READ_TEST_COUNTERS,
@@ -1802,6 +1802,7 @@ static std::vector<OpCodeIndex> ll_connected_isochronous_stream_commands_ = {
     OpCodeIndex::LE_REJECT_CIS_REQUEST,
     OpCodeIndex::LE_SETUP_ISO_DATA_PATH,
     OpCodeIndex::LE_REMOVE_ISO_DATA_PATH,
+    OpCodeIndex::LE_REQUEST_PEER_SCA,
 };
 
 static void SetLLFeatureBit(uint64_t& le_features, LLFeaturesBits bit,

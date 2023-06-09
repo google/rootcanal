@@ -1816,6 +1816,38 @@ void DualModeController::LeSetEventMask(CommandView command) {
       kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
+void DualModeController::LeRequestPeerSca(CommandView command) {
+  auto command_view = bluetooth::hci::LeRequestPeerScaView::Create(command);
+  ASSERT(command_view.IsValid());
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE Request Peer SCA");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  // If the Host sends this command and the peer device does not support the
+  // Sleep Clock Accuracy Updates feature, the Controller shall return the error
+  // code Unsupported Feature or Parameter Value (0x11) in the HCI_LE_-
+  // Request_Peer_SCA_Complete event.
+  // TODO
+
+  // If the Host issues this command when the Controller is aware (e.g., through
+  // a previous feature exchange) that the peer device's Link Layer does not
+  // support the Sleep Clock Accuracy Updates feature, the Controller shall
+  // return the error code Unsupported Remote Feature (0x1A).
+  // TODO
+
+  if (link_layer_controller_.HasAclConnection(connection_handle)) {
+    send_event_(bluetooth::hci::LeRequestPeerScaStatusBuilder::Create(
+        ErrorCode::SUCCESS, kNumCommandPackets));
+    send_event_(bluetooth::hci::LeRequestPeerScaCompleteBuilder::Create(
+        ErrorCode::SUCCESS, connection_handle,
+        bluetooth::hci::ClockAccuracy::PPM_500));
+  } else {
+    send_event_(bluetooth::hci::LeRequestPeerScaStatusBuilder::Create(
+        ErrorCode::UNKNOWN_CONNECTION, kNumCommandPackets));
+  }
+}
+
 void DualModeController::LeSetHostFeature(CommandView command) {
   auto command_view = bluetooth::hci::LeSetHostFeatureView::Create(command);
   ASSERT(command_view.IsValid());
@@ -4234,7 +4266,7 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
         //{OpCode::LE_BIG_CREATE_SYNC, &DualModeController::LeBigCreateSync},
         //{OpCode::LE_BIG_TERMINATE_SYNC,
         //&DualModeController::LeBigTerminateSync},
-        //{OpCode::LE_REQUEST_PEER_SCA, &DualModeController::LeRequestPeerSca},
+        {OpCode::LE_REQUEST_PEER_SCA, &DualModeController::LeRequestPeerSca},
         {OpCode::LE_SETUP_ISO_DATA_PATH, &DualModeController::ForwardToLl},
         {OpCode::LE_REMOVE_ISO_DATA_PATH, &DualModeController::ForwardToLl},
         //{OpCode::LE_ISO_TRANSMIT_TEST,
