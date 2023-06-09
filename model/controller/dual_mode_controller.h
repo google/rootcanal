@@ -134,9 +134,6 @@ class DualModeController : public Device {
   // 7.1.19
   void RemoteNameRequest(CommandView command);
 
-  // 7.2.8
-  void SwitchRole(CommandView command);
-
   // 7.1.21
   void ReadRemoteSupportedFeatures(CommandView command);
 
@@ -182,6 +179,9 @@ class DualModeController : public Device {
   // 7.2.7
   void RoleDiscovery(CommandView command);
 
+  // 7.2.8
+  void SwitchRole(CommandView command);
+
   // 7.2.9
   void ReadLinkPolicySettings(CommandView command);
 
@@ -221,49 +221,43 @@ class DualModeController : public Device {
   // 7.3.12
   void ReadLocalName(CommandView command);
 
-  // 7.3.15
-  void ReadPageTimeout(CommandView command);
+  // 7.3.13 - 7.3.14
+  void ReadConnectionAcceptTimeout(CommandView command);
+  void WriteConnectionAcceptTimeout(CommandView command);
 
-  // 7.3.16
+  // 7.3.15 - 7.3.16
+  void ReadPageTimeout(CommandView command);
   void WritePageTimeout(CommandView command);
 
-  // 7.3.17
+  // 7.3.17 - 7.3.18
   void ReadScanEnable(CommandView command);
-
-  // 7.3.18
   void WriteScanEnable(CommandView command);
 
-  // 7.3.19
+  // 7.3.19 - 7.3.20
   void ReadPageScanActivity(CommandView command);
-
-  // 7.3.20
   void WritePageScanActivity(CommandView command);
 
-  // 7.3.21
+  // 7.3.21 - 7.3.22
   void ReadInquiryScanActivity(CommandView command);
-
-  // 7.3.22
   void WriteInquiryScanActivity(CommandView command);
 
-  // 7.3.23
+  // 7.3.23 - 7.3.24
   void ReadAuthenticationEnable(CommandView command);
-
-  // 7.3.24
   void WriteAuthenticationEnable(CommandView command);
 
-  // 7.3.26
+  // 7.3.25 - 7.3.26
+  void ReadClassOfDevice(CommandView command);
   void WriteClassOfDevice(CommandView command);
 
-  // 7.3.28
+  // 7.3.27 - 7.3.28
+  void ReadVoiceSetting(CommandView command);
   void WriteVoiceSetting(CommandView command);
 
   // 7.3.35
   void ReadTransmitPowerLevel(CommandView command);
 
-  // 7.3.36
+  // 7.3.36 - 7.3.37
   void ReadSynchronousFlowControlEnable(CommandView command);
-
-  // 7.3.37
   void WriteSynchronousFlowControlEnable(CommandView command);
 
   // 7.3.39
@@ -275,10 +269,8 @@ class DualModeController : public Device {
   // 7.3.43
   void ReadNumberOfSupportedIac(CommandView command);
 
-  // 7.3.44
+  // 7.3.44 - 7.3.45
   void ReadCurrentIacLap(CommandView command);
-
-  // 7.3.45
   void WriteCurrentIacLap(CommandView command);
 
   // 7.3.47
@@ -384,7 +376,7 @@ class DualModeController : public Device {
   // 7.8.1
   void LeSetEventMask(CommandView command);
 
-  // 7.8.2 and 7.8.93
+  // 7.8.2 - 7.8.93
   void LeReadBufferSizeV1(CommandView command);
   void LeReadBufferSizeV2(CommandView command);
 
@@ -394,43 +386,25 @@ class DualModeController : public Device {
   // 7.8.4
   void LeSetRandomAddress(CommandView command);
 
-  // 7.8.5
+  // 7.8.5 - 7.8.9
   void LeSetAdvertisingParameters(CommandView command);
-
-  // 7.8.6
   void LeReadAdvertisingPhysicalChannelTxPower(CommandView command);
-
-  // 7.8.7
   void LeSetAdvertisingData(CommandView command);
-
-  // 7.8.8
   void LeSetScanResponseData(CommandView command);
-
-  // 7.8.9
   void LeSetAdvertisingEnable(CommandView command);
 
-  // 7.8.10
+  // 7.8.10 - 7.8.11
   void LeSetScanParameters(CommandView command);
-
-  // 7.8.11
   void LeSetScanEnable(CommandView command);
 
-  // 7.8.12
+  // 7.8.12 - 7.8.13
   void LeCreateConnection(CommandView command);
-
-  // 7.8.13
   void LeCreateConnectionCancel(CommandView command);
 
-  // 7.8.14
+  // 7.8.14 - 7.8.17
   void LeReadFilterAcceptListSize(CommandView command);
-
-  // 7.8.15
   void LeClearFilterAcceptList(CommandView command);
-
-  // 7.8.16
   void LeAddDeviceToFilterAcceptList(CommandView command);
-
-  // 7.8.17
   void LeRemoveDeviceFromFilterAcceptList(CommandView command);
 
   // 7.8.18
@@ -448,25 +422,19 @@ class DualModeController : public Device {
   // 7.8.24
   void LeStartEncryption(CommandView command);
 
-  // 7.8.25
+  // 7.8.25 - 7.8.26
   void LeLongTermKeyRequestReply(CommandView command);
-
-  // 7.8.26
   void LeLongTermKeyRequestNegativeReply(CommandView command);
 
   // 7.8.27
   void LeReadSupportedStates(CommandView command);
 
-  // 7.8.31
+  // 7.8.31 - 7.8.32
   void LeRemoteConnectionParameterRequestReply(CommandView command);
-
-  // 7.8.32
   void LeRemoteConnectionParameterRequestNegativeReply(CommandView command);
 
-  // 7.8.34
+  // 7.8.34 - 7.8.35
   void LeReadSuggestedDefaultDataLength(CommandView command);
-
-  // 7.8.35
   void LeWriteSuggestedDefaultDataLength(CommandView command);
 
   // 7.8.38 - 7.8.41
@@ -479,44 +447,27 @@ class DualModeController : public Device {
   void LeReadPeerResolvableAddress(CommandView command);
   void LeReadLocalResolvableAddress(CommandView command);
 
-  // 7.8.44
+  // 7.8.44 - 7.8.45
   void LeSetAddressResolutionEnable(CommandView command);
-
-  // 7.8.45
   void LeSetResolvablePrivateAddressTimeout(CommandView command);
 
   // 7.8.46
   void LeReadMaximumDataLength(CommandView command);
 
+  // 7.8.47 - 7.8.49
   void LeReadPhy(CommandView command);
   void LeSetDefaultPhy(CommandView command);
   void LeSetPhy(CommandView command);
 
-  // 7.8.52
+  // 7.8.52 - 7.8.60
   void LeSetAdvertisingSetRandomAddress(CommandView command);
-
-  // 7.8.53
   void LeSetExtendedAdvertisingParameters(CommandView command);
-
-  // 7.8.54
   void LeSetExtendedAdvertisingData(CommandView command);
-
-  // 7.8.55
   void LeSetExtendedScanResponseData(CommandView command);
-
-  // 7.8.56
   void LeSetExtendedAdvertisingEnable(CommandView command);
-
-  // 7.8.57
   void LeReadMaximumAdvertisingDataLength(CommandView command);
-
-  // 7.8.58
   void LeReadNumberOfSupportedAdvertisingSets(CommandView command);
-
-  // 7.8.59
   void LeRemoveAdvertisingSet(CommandView command);
-
-  // 7.8.60
   void LeClearAdvertisingSets(CommandView command);
 
   // 7.8.61 - 7.8.63
@@ -535,10 +486,8 @@ class DualModeController : public Device {
   void LeClearPeriodicAdvertiserList(CommandView command);
   void LeReadPeriodicAdvertiserListSize(CommandView command);
 
-  // 7.8.64
+  // 7.8.64 - 7.8.65
   void LeSetExtendedScanParameters(CommandView command);
-
-  // 7.8.65
   void LeSetExtendedScanEnable(CommandView command);
 
   // 7.8.66
@@ -549,12 +498,6 @@ class DualModeController : public Device {
 
   // 7.8.115
   void LeSetHostFeature(CommandView command);
-
-  // Required commands for handshaking with hci driver
-  void ReadClassOfDevice(CommandView command);
-  void ReadVoiceSetting(CommandView command);
-  void ReadConnectionAcceptTimeout(CommandView command);
-  void WriteConnectionAcceptTimeout(CommandView command);
 
   // Vendor-specific Commands
   void LeGetVendorCapabilities(CommandView command);

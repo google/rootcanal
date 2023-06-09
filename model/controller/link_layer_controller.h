@@ -727,6 +727,9 @@ class LinkLayerController {
 
   void SetLocalName(std::vector<uint8_t> const& local_name);
   void SetLocalName(std::array<uint8_t, kLocalNameSize> const& local_name);
+
+  void SetExtendedInquiryResponse(
+      std::array<uint8_t, 240> const& extended_inquiry_response);
   void SetExtendedInquiryResponse(
       std::vector<uint8_t> const& extended_inquiry_response);
 
