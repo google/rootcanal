@@ -108,13 +108,13 @@ static constexpr uint64_t LlFeatures() {
       LLFeaturesBits::LE_PING,
       LLFeaturesBits::LL_PRIVACY,
       LLFeaturesBits::EXTENDED_SCANNER_FILTER_POLICIES,
-      LLFeaturesBits::LE_2M_PHY, LLFeaturesBits::LE_CODED_PHY,
+      LLFeaturesBits::LE_2M_PHY,
+      LLFeaturesBits::LE_CODED_PHY,
       LLFeaturesBits::LE_EXTENDED_ADVERTISING,
       LLFeaturesBits::LE_PERIODIC_ADVERTISING,
 
-      // TODO: breaks AVD boot tests with LE audio
-      // LLFeaturesBits::CONNECTED_ISOCHRONOUS_STREAM_CENTRAL,
-      // LLFeaturesBits::CONNECTED_ISOCHRONOUS_STREAM_PERIPHERAL,
+      LLFeaturesBits::CONNECTED_ISOCHRONOUS_STREAM_CENTRAL,
+      LLFeaturesBits::CONNECTED_ISOCHRONOUS_STREAM_PERIPHERAL,
   };
 
   uint64_t value = 0;
@@ -377,20 +377,17 @@ static std::array<uint8_t, 64> SupportedCommands() {
       // OpCodeIndex::LE_MODIFY_SLEEP_CLOCK_ACCURACY,
       OpCodeIndex::LE_READ_BUFFER_SIZE_V2,
       // OpCodeIndex::LE_READ_ISO_TX_SYNC,
-      // OpCodeIndex::LE_SET_CIG_PARAMETERS,
-      // OpCodeIndex::LE_SET_CIG_PARAMETERS_TEST,
-      // OpCodeIndex::LE_CREATE_CIS,
-      // OpCodeIndex::LE_REMOVE_CIG,
-      // OpCodeIndex::LE_ACCEPT_CIS_REQUEST,
-      // OpCodeIndex::LE_REJECT_CIS_REQUEST,
+      OpCodeIndex::LE_SET_CIG_PARAMETERS,
+      OpCodeIndex::LE_SET_CIG_PARAMETERS_TEST, OpCodeIndex::LE_CREATE_CIS,
+      OpCodeIndex::LE_REMOVE_CIG, OpCodeIndex::LE_ACCEPT_CIS_REQUEST,
+      OpCodeIndex::LE_REJECT_CIS_REQUEST,
       // OpCodeIndex::LE_CREATE_BIG,
       // OpCodeIndex::LE_CREATE_BIG_TEST,
       // OpCodeIndex::LE_TERMINATE_BIG,
       // OpCodeIndex::LE_BIG_CREATE_SYNC,
       // OpCodeIndex::LE_BIG_TERMINATE_SYNC,
       // OpCodeIndex::LE_REQUEST_PEER_SCA,
-      // OpCodeIndex::LE_SETUP_ISO_DATA_PATH,
-      // OpCodeIndex::LE_REMOVE_ISO_DATA_PATH,
+      OpCodeIndex::LE_SETUP_ISO_DATA_PATH, OpCodeIndex::LE_REMOVE_ISO_DATA_PATH,
       // OpCodeIndex::LE_ISO_TRANSMIT_TEST,
       // OpCodeIndex::LE_ISO_RECEIVE_TEST,
       // OpCodeIndex::LE_ISO_READ_TEST_COUNTERS,
@@ -1794,6 +1791,19 @@ static std::vector<OpCodeIndex> ll_privacy_commands_ = {
     OpCodeIndex::LE_SET_RESOLVABLE_PRIVATE_ADDRESS_TIMEOUT,
 };
 
+// Commands enabled by the LL Connected Isochronous Stream feature bit.
+// Central and Peripheral support bits are enabled together.
+static std::vector<OpCodeIndex> ll_connected_isochronous_stream_commands_ = {
+    OpCodeIndex::LE_SET_CIG_PARAMETERS,
+    OpCodeIndex::LE_SET_CIG_PARAMETERS_TEST,
+    OpCodeIndex::LE_CREATE_CIS,
+    OpCodeIndex::LE_REMOVE_CIG,
+    OpCodeIndex::LE_ACCEPT_CIS_REQUEST,
+    OpCodeIndex::LE_REJECT_CIS_REQUEST,
+    OpCodeIndex::LE_SETUP_ISO_DATA_PATH,
+    OpCodeIndex::LE_REMOVE_ISO_DATA_PATH,
+};
+
 static void SetLLFeatureBit(uint64_t& le_features, LLFeaturesBits bit,
                             bool set) {
   if (set) {
@@ -1864,6 +1874,17 @@ ControllerProperties::ControllerProperties(
     if (features.has_le_coded_phy()) {
       SetLLFeatureBit(le_features, LLFeaturesBits::LE_CODED_PHY,
                       features.le_coded_phy());
+    }
+    if (features.has_le_connected_isochronous_stream()) {
+      SetLLFeatureBit(le_features,
+                      LLFeaturesBits::CONNECTED_ISOCHRONOUS_STREAM_CENTRAL,
+                      features.le_connected_isochronous_stream());
+      SetLLFeatureBit(le_features,
+                      LLFeaturesBits::CONNECTED_ISOCHRONOUS_STREAM_PERIPHERAL,
+                      features.le_connected_isochronous_stream());
+      SetSupportedCommandBits(supported_commands,
+                              ll_connected_isochronous_stream_commands_,
+                              features.le_connected_isochronous_stream());
     }
   }
 
