@@ -6,6 +6,8 @@ option optimize_for = CODE_SIZE;
 enum ControllerPreset {
   // Version 5.3, all features enabled, all quirks disabled.
   DEFAULT = 0;
+  // Official PTS dongle, Laird BL654.
+  LAIRD_BL654 = 1;
 }
 
 message ControllerFeatures {
