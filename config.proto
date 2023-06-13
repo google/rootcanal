@@ -8,6 +8,8 @@ enum ControllerPreset {
   DEFAULT = 0;
   // Official PTS dongle, Laird BL654.
   LAIRD_BL654 = 1;
+  // Official PTS dongle, CSR rck.
+  CSR_RCK_PTS_DONGLE = 2;
 }
 
 message ControllerFeatures {

@@ -1859,6 +1859,7 @@ ControllerProperties::ControllerProperties(
             0xff, 0xc1, 0xe3, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         };
+        lmp_features = std::array<uint64_t, 3> { 0x6000000000, 0x0, 0x0 };
         le_features = 0x19beff017fff;
         le_acl_data_packet_length = 512;
         total_num_le_acl_data_packets = 4;
@@ -1870,6 +1871,36 @@ ControllerProperties::ControllerProperties(
         le_max_advertising_data_length = 256;
         le_num_supported_advertising_sets = 4;
         le_periodic_advertiser_list_size = 4;
+        break;
+
+      case ControllerPreset::CSR_RCK_PTS_DONGLE:
+        // Configuration extracted with the helper script controller_info.py
+        br_supported = true;
+        le_supported = true;
+        hci_version = bluetooth::hci::HciVersion::V_4_2;
+        hci_subversion = 0x30e8;
+        lmp_version = bluetooth::hci::LmpVersion::V_4_2;
+        lmp_subversion = 0x30e8;
+        company_identifier = 0xa;
+        supported_commands = std::array<uint8_t, 64> {
+            0xff, 0xff, 0xff, 0x03, 0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xf3, 0x0f, 0xe8, 0xfe, 0x3f, 0xf7, 0x83, 0xff, 0x1c, 0x00,
+            0x04, 0x00, 0x61, 0xf7, 0xff, 0xff, 0x7f, 0x00, 0xc0, 0xff, 0xff,
+            0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        };
+        lmp_features = std::array<uint64_t, 3> { 0x875b1fd87e8fffff, 0x0, 0x30f };
+        acl_data_packet_length = 310;
+        total_num_acl_data_packets = 10;
+        sco_data_packet_length = 64;
+        total_num_sco_data_packets = 8;
+        num_supported_iac = 2;
+        le_features = 0x1f;
+        le_acl_data_packet_length = 0;
+        total_num_le_acl_data_packets = 0;
+        le_filter_accept_list_size = 25;
+        le_supported_states = 0x3ffffffffff;
         break;
 
       default:
