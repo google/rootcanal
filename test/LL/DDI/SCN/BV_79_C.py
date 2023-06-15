@@ -81,8 +81,8 @@ class Test(ControllerTest):
             # nonzero Periodic_Advertising_Interval, Data Status in the Event_Type[i] field set to the value
             # 0b00 (Complete), and RSSI[i] set to a valid value.
             await self.expect_evt(
-                hci.LeExtendedAdvertisingReportRaw(responses=[
-                    hci.LeExtendedAdvertisingResponseRaw(
+                hci.LeExtendedAdvertisingReport(responses=[
+                    hci.LeExtendedAdvertisingResponse(
                         connectable=False,
                         scannable=False,
                         directed=False,

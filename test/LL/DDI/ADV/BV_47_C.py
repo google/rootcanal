@@ -126,10 +126,10 @@ class Test(ControllerTest):
                 operation = hci.Operation.INTERMEDIATE_FRAGMENT
 
             controller.send_cmd(
-                hci.LeSetExtendedAdvertisingDataRaw(advertising_handle=0,
-                                                    operation=operation,
-                                                    advertising_data=advertising_data[fragment_offset:fragment_offset +
-                                                                                      fragment_length]))
+                hci.LeSetExtendedAdvertisingData(advertising_handle=0,
+                                                 operation=operation,
+                                                 advertising_data=advertising_data[fragment_offset:fragment_offset +
+                                                                                   fragment_length]))
 
             await self.expect_evt(
                 hci.LeSetExtendedAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))

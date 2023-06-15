@@ -51,11 +51,16 @@ tests = [
     'LMP.LIH.BV_149_C',
 ]
 
+
+def include_test(test: str, patterns) -> bool:
+    return not patterns or any(test.startswith(prefix) for prefix in patterns)
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite()
+    patterns = [arg for arg in sys.argv[1:] if not arg.startswith('-')]
     for test in tests:
-        if len(sys.argv) > 1 and test not in sys.argv:
-            continue
-        module = importlib.import_module(f'test.{test}')
-        suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(module))
+        if include_test(test, patterns):
+            module = importlib.import_module(f'test.{test}')
+            suite.addTest(unittest.defaultTestLoader.loadTestsFromModule(module))
     unittest.TextTestRunner(verbosity=3).run(suite)

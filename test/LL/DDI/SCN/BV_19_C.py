@@ -170,8 +170,8 @@ class Test(ControllerTest):
                 fragment_length = min(max_fragment_length, remaining_length)
                 data_status = hci.DataStatus.CONTINUING if remaining_length > max_fragment_length else hci.DataStatus.COMPLETE
                 await self.expect_evt(
-                    hci.LeExtendedAdvertisingReportRaw(responses=[
-                        hci.LeExtendedAdvertisingResponseRaw(
+                    hci.LeExtendedAdvertisingReport(responses=[
+                        hci.LeExtendedAdvertisingResponse(
                             connectable=connectable,
                             scannable=scannable,
                             directed=not target_address is None,

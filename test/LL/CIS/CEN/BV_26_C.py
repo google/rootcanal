@@ -21,8 +21,8 @@ class Test(ControllerTest):
     Max_SDU_P_TO_C = 16
     PHY_C_TO_P = 0x1
     PHY_P_TO_C = 0x1
-    Max_Transport_Latency_C_TO_P = 60000  # 60ms
-    Max_Transport_Latency_P_TO_C = 60000  # 60ms
+    Max_Transport_Latency_C_TO_P = 60  # 60ms
+    Max_Transport_Latency_P_TO_C = 60  # 60ms
     RTN_C_TO_P = 3
     RTN_P_TO_C = 3
 

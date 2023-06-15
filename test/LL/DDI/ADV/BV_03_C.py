@@ -37,7 +37,7 @@ class Test(ControllerTest):
         # HCI_Command_Complete in response. The data element used in the command is the length of
         # the data field. The data length is 1 byte.
         advertising_data = [1]
-        controller.send_cmd(hci.LeSetAdvertisingDataRaw(advertising_data=advertising_data))
+        controller.send_cmd(hci.LeSetAdvertisingData(advertising_data=advertising_data))
 
         await self.expect_evt(hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
@@ -67,7 +67,7 @@ class Test(ControllerTest):
 
         # 9. Upper Tester sends an HCI_LE_Set_Advertising_Data to configure the IUT to send advertising
         # packets without advertising data and receives an HCI_Command_Complete event in response.
-        controller.send_cmd(hci.LeSetAdvertisingDataRaw(advertising_data=[]))
+        controller.send_cmd(hci.LeSetAdvertisingData(advertising_data=[]))
 
         await self.expect_evt(hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
@@ -101,7 +101,7 @@ class Test(ControllerTest):
         # zeroes. The data length is either 31 bytes by default or it may be specified by IXIT value if less
         # than 31 bytes.
         advertising_data = [31] + [0] * 30
-        controller.send_cmd(hci.LeSetAdvertisingDataRaw(advertising_data=advertising_data))
+        controller.send_cmd(hci.LeSetAdvertisingData(advertising_data=advertising_data))
 
         await self.expect_evt(hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
@@ -121,7 +121,7 @@ class Test(ControllerTest):
 
         await self.expect_evt(hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
-        controller.send_cmd(hci.LeSetAdvertisingDataRaw(advertising_data=[]))
+        controller.send_cmd(hci.LeSetAdvertisingData(advertising_data=[]))
 
         await self.expect_evt(hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 

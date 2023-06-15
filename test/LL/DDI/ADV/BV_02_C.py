@@ -32,7 +32,7 @@ class Test(ControllerTest):
         await self.expect_evt(
             hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
-        controller.send_cmd(hci.LeSetAdvertisingDataRaw())
+        controller.send_cmd(hci.LeSetAdvertisingData())
 
         await self.expect_evt(hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 

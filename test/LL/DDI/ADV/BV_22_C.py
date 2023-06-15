@@ -45,9 +45,9 @@ class Test(ControllerTest):
         # 3. Upper Tester sends an HCI_LE_Set_Extended_Advertising_Data command to the IUT with
         # values according to Table 4.4 and receives an HCI_Command_Complete in response.
         controller.send_cmd(
-            hci.LeSetExtendedAdvertisingDataRaw(advertising_handle=0,
-                                                operation=hci.Operation.COMPLETE_ADVERTISEMENT,
-                                                advertising_data=advertising_data))
+            hci.LeSetExtendedAdvertisingData(advertising_handle=0,
+                                             operation=hci.Operation.COMPLETE_ADVERTISEMENT,
+                                             advertising_data=advertising_data))
 
         await self.expect_evt(
             hci.LeSetExtendedAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))

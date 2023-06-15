@@ -100,12 +100,12 @@ class Test(ControllerTest):
         # HCI_LE_Advertising_Report containing the information used in the
         # ADV_SCAN_IND packets.
         await self.expect_evt(
-            hci.LeAdvertisingReportRaw(responses=[
-                hci.LeAdvertisingResponseRaw(event_type=hci.AdvertisingEventType.ADV_SCAN_IND,
-                                             address_type=hci.AddressType.PUBLIC_IDENTITY_ADDRESS,
-                                             address=peer_identity_address,
-                                             advertising_data=[1, 2, 3],
-                                             rssi=0xf0)
+            hci.LeAdvertisingReport(responses=[
+                hci.LeAdvertisingResponse(event_type=hci.AdvertisingEventType.ADV_SCAN_IND,
+                                          address_type=hci.AddressType.PUBLIC_IDENTITY_ADDRESS,
+                                          address=peer_identity_address,
+                                          advertising_data=[1, 2, 3],
+                                          rssi=0xf0)
             ]))
 
         # 7. Lower Tester sends a SCAN_RSP packet T_IFS after the SCAN_REQ
@@ -119,11 +119,11 @@ class Test(ControllerTest):
         # 9. Interleave with step 7: Upper Tester receives an
         # HCI_LE_Advertising_Report event containing the scan response
         # information.
-        await self.expect_evt(hci.LeAdvertisingReportRaw(responses=[
-            hci.LeAdvertisingResponseRaw(event_type=hci.AdvertisingEventType.SCAN_RESPONSE,
-                                         address_type=hci.AddressType.PUBLIC_IDENTITY_ADDRESS,
-                                         address=peer_identity_address,
-                                         advertising_data=[4, 5, 6],
-                                         rssi=0xf0)
+        await self.expect_evt(hci.LeAdvertisingReport(responses=[
+            hci.LeAdvertisingResponse(event_type=hci.AdvertisingEventType.SCAN_RESPONSE,
+                                      address_type=hci.AddressType.PUBLIC_IDENTITY_ADDRESS,
+                                      address=peer_identity_address,
+                                      advertising_data=[4, 5, 6],
+                                      rssi=0xf0)
         ]),
                               timeout=3)

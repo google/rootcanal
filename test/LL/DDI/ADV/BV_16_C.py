@@ -35,7 +35,7 @@ class Test(ControllerTest):
         # HCI_Command_Complete in response. The data element used in the command is a number
         # indicating the length of the data. The data length is 1 byte.
         advertising_data = [1]
-        controller.send_cmd(hci.LeSetAdvertisingDataRaw(advertising_data=advertising_data))
+        controller.send_cmd(hci.LeSetAdvertisingData(advertising_data=advertising_data))
 
         await self.expect_evt(hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
@@ -98,7 +98,7 @@ class Test(ControllerTest):
         # data field in the first octet encoded unsigned least significant bit first and the rest of the octets
         # zeroes. The data length is 31 bytes.
         advertising_data = [31] + [0] * 30
-        controller.send_cmd(hci.LeSetAdvertisingDataRaw(advertising_data=advertising_data))
+        controller.send_cmd(hci.LeSetAdvertisingData(advertising_data=advertising_data))
 
         await self.expect_evt(hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 

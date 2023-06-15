@@ -38,7 +38,7 @@ class Test(ControllerTest):
 
         # 3. Configure Scan Response Data in the IUT using device name length of 0 as response data.
         scan_response_data = []
-        controller.send_cmd(hci.LeSetScanResponseDataRaw(advertising_data=scan_response_data))
+        controller.send_cmd(hci.LeSetScanResponseData(advertising_data=scan_response_data))
 
         await self.expect_evt(hci.LeSetScanResponseDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
@@ -56,7 +56,7 @@ class Test(ControllerTest):
 
         # 7. Configure Scan Response Data in the IUT using device name length of 31 as response data.
         scan_response_data = [31] + [0] * 31
-        controller.send_cmd(hci.LeSetScanResponseDataRaw(advertising_data=scan_response_data))
+        controller.send_cmd(hci.LeSetScanResponseData(advertising_data=scan_response_data))
 
         await self.expect_evt(hci.LeSetScanResponseDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
@@ -78,7 +78,7 @@ class Test(ControllerTest):
 
         # 10. Configure Scan Response Data in the IUT using device name length of 0 as response data.
         scan_response_data = []
-        controller.send_cmd(hci.LeSetScanResponseDataRaw(advertising_data=scan_response_data))
+        controller.send_cmd(hci.LeSetScanResponseData(advertising_data=scan_response_data))
 
         await self.expect_evt(hci.LeSetScanResponseDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
@@ -91,7 +91,7 @@ class Test(ControllerTest):
 
         # 12. Configure Scan Response Data in the IUT using device name length of 31 as response data.
         scan_response_data = [31] + [0] * 31
-        controller.send_cmd(hci.LeSetScanResponseDataRaw(advertising_data=scan_response_data))
+        controller.send_cmd(hci.LeSetScanResponseData(advertising_data=scan_response_data))
 
         await self.expect_evt(hci.LeSetScanResponseDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 

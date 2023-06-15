@@ -77,12 +77,12 @@ class Test(ControllerTest):
         # reporting the advertising packets sent by the Lower Tester. The address in
         # the report is resolved by the IUT using the distributed IRK.
         await self.expect_evt(
-            hci.LeAdvertisingReportRaw(responses=[
-                hci.LeAdvertisingResponseRaw(event_type=hci.AdvertisingEventType.ADV_NONCONN_IND,
-                                             address_type=hci.AddressType.PUBLIC_IDENTITY_ADDRESS,
-                                             address=peer_identity_address,
-                                             advertising_data=[1, 2, 3],
-                                             rssi=0xf0)
+            hci.LeAdvertisingReport(responses=[
+                hci.LeAdvertisingResponse(event_type=hci.AdvertisingEventType.ADV_NONCONN_IND,
+                                          address_type=hci.AddressType.PUBLIC_IDENTITY_ADDRESS,
+                                          address=peer_identity_address,
+                                          advertising_data=[1, 2, 3],
+                                          rssi=0xf0)
             ]))
 
         # 6. The Upper Tester sends an HCI_LE_Set_Scan_Enable to the IUT to stop the
@@ -116,12 +116,12 @@ class Test(ControllerTest):
         # unresolved (as received in the advertising PDU) in the advertising report
         # events to the Upper Tester.
         await self.expect_evt(
-            hci.LeAdvertisingReportRaw(responses=[
-                hci.LeAdvertisingResponseRaw(event_type=hci.AdvertisingEventType.ADV_NONCONN_IND,
-                                             address_type=hci.AddressType.RANDOM_DEVICE_ADDRESS,
-                                             address=peer_resolvable_address,
-                                             advertising_data=[1, 2, 3],
-                                             rssi=0xf0)
+            hci.LeAdvertisingReport(responses=[
+                hci.LeAdvertisingResponse(event_type=hci.AdvertisingEventType.ADV_NONCONN_IND,
+                                          address_type=hci.AddressType.RANDOM_DEVICE_ADDRESS,
+                                          address=peer_resolvable_address,
+                                          advertising_data=[1, 2, 3],
+                                          rssi=0xf0)
             ]))
 
         # 11. The Upper Tester sends an HCI_LE_Set_Scan_Enable to the IUT to stop the

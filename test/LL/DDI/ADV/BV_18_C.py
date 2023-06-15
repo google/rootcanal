@@ -51,7 +51,7 @@ class Test(ControllerTest):
             hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         scan_response_data = [ord('I'), ord('U'), ord('T')]
-        controller.send_cmd(hci.LeSetScanResponseDataRaw(advertising_data=scan_response_data))
+        controller.send_cmd(hci.LeSetScanResponseData(advertising_data=scan_response_data))
 
         await self.expect_evt(hci.LeSetScanResponseDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
