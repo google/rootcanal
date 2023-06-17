@@ -1594,7 +1594,7 @@ ErrorCode LinkLayerController::LeSetPeriodicAdvertisingEnable(
 }
 
 uint16_t ExtendedAdvertiser::GetMaxPeriodicAdvertisingDataLength(
-    slots periodic_advertising_interval) {
+    slots /*periodic_advertising_interval*/) {
   // TODO: evaluate the maximum length of the advertising PDU that can
   // be physically sent in the advertising interval.
   return max_extended_advertising_pdu_size;

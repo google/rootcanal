@@ -53,8 +53,8 @@ class Device {
   virtual void Close();
 
   virtual void ReceiveLinkLayerPacket(
-      model::packets::LinkLayerPacketView packet, Phy::Type type,
-      int8_t rssi){};
+      model::packets::LinkLayerPacketView /*packet*/, Phy::Type /*type*/,
+      int8_t /*rssi*/){};
 
   void SendLinkLayerPacket(
       std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,

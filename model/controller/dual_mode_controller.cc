@@ -2949,7 +2949,7 @@ void DualModeController::CsrReadVarid(CsrVarid varid,
 }
 
 void DualModeController::CsrWriteVarid(
-    CsrVarid varid, std::vector<uint8_t> const& value) const {
+    CsrVarid varid, std::vector<uint8_t> const& /*value*/) const {
   INFO(id_, "Unsupported write of CSR varid 0x{:04x}", varid);
 }
 

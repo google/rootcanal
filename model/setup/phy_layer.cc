@@ -44,9 +44,9 @@ void PhyLayer::UnregisterAll() {
   phy_devices_.clear();
 }
 
-int8_t PhyLayer::ComputeRssi(PhyDevice::Identifier sender_id,
-                             PhyDevice::Identifier receiver_id,
-                             int8_t tx_power) {
+int8_t PhyLayer::ComputeRssi(PhyDevice::Identifier /*sender_id*/,
+                             PhyDevice::Identifier /*receiver_id*/,
+                             int8_t /*tx_power*/) {
   // Perform no RSSI computation by default.
   // Clients overriding this function should use the TX power and
   // positional information to derive correct device-to-device RSSI.
