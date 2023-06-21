@@ -44,7 +44,7 @@ class HciSniffer : public HciTransport {
   static std::shared_ptr<HciTransport> Create(
       std::shared_ptr<HciTransport> transport,
       std::shared_ptr<std::ostream> outputStream = nullptr,
-      std::shared_ptr<PcapFilter> filter = nullptr) {
+      std::shared_ptr<PcapFilter> /*filter*/ = nullptr) {
     return std::make_shared<HciSniffer>(transport, outputStream);
   }
 
