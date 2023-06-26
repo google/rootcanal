@@ -1,5 +1,3 @@
-#include "log.h"
-
 /*
  * Copyright 2023 The Android Open Source Project
  *
@@ -15,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+#include "log.h"
 
 #include <fmt/color.h>
 
