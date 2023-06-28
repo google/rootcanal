@@ -15,11 +15,10 @@
  */
 
 #include <hci/pcap_filter.h>
-#include <packet/raw_builder.h>
-#include <packets/hci_packets.h>
+#include "packets/hci_packets.h"
+#include "log.h"
 
 using namespace bluetooth::hci;
-using namespace bluetooth::packet;
 
 namespace rootcanal {
 

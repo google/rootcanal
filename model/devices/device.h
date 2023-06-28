@@ -21,10 +21,12 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "hci/address.h"
 #include "packets/link_layer_packets.h"
 #include "phy.h"
+#include "log.h"
 
 namespace rootcanal {
 

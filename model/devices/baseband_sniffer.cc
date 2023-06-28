@@ -17,14 +17,13 @@
 #include "baseband_sniffer.h"
 
 #include "log.h"
-#include "packet/raw_builder.h"
 #include "pcap.h"
 
 using std::vector;
 
 namespace rootcanal {
 
-#include "bredr_bb.h"
+#include "packets/bredr_bb_packets.h"
 
 BaseBandSniffer::BaseBandSniffer(const std::string& filename) {
   output_.open(filename, std::ios::binary);

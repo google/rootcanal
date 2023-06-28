@@ -21,7 +21,6 @@
 
 #include "crypto/crypto.h"
 #include "log.h"
-#include "packet/raw_builder.h"
 
 using bluetooth::hci::ErrorCode;
 using bluetooth::hci::LoopbackMode;

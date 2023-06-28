@@ -1,0 +1,30 @@
+# Copyright 2023 Google Inc. All Rights Reserved.
+
+cc_library(
+    name = "fmtlib",
+    srcs = [
+        "include/fmt/format-inl.h",
+    ],
+    hdrs = [
+        "include/fmt/chrono.h",
+        "include/fmt/color.h",
+        "include/fmt/compile.h",
+        "include/fmt/core.h",
+        "include/fmt/format.h",
+        "include/fmt/locale.h",
+        "include/fmt/os.h",
+        "include/fmt/ostream.h",
+        "include/fmt/posix.h",
+        "include/fmt/printf.h",
+        "include/fmt/ranges.h",
+    ],
+    copts = [
+        "-Wno-google3-inline-namespace",
+    ],
+    defines = [
+        "FMT_HEADER_ONLY=1",
+        "FMT_USE_USER_DEFINED_LITERALS=0",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+)

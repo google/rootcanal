@@ -20,9 +20,7 @@
 #include "log.h"
 // clang-format on
 
-#include <client/linux/handler/exception_handler.h>
 #include <gflags/gflags.h>
-#include <unwindstack/AndroidUnwinder.h>
 
 #include <fstream>
 #include <future>
@@ -55,45 +53,7 @@ DEFINE_uint32(hci_port, 6402, "hci server tcp port");
 DEFINE_uint32(link_port, 6403, "link server tcp port");
 DEFINE_uint32(link_ble_port, 6404, "le link server tcp port");
 
-extern "C" const char* __asan_default_options() {
-  return "detect_container_overflow=0";
-}
-
-bool crash_callback(const void* crash_context, size_t crash_context_size,
-                    void* /* context */) {
-  std::optional<pid_t> tid;
-  if (crash_context_size >=
-      sizeof(google_breakpad::ExceptionHandler::CrashContext)) {
-    auto* ctx =
-        static_cast<const google_breakpad::ExceptionHandler::CrashContext*>(
-            crash_context);
-    tid = ctx->tid;
-    int signal_number = ctx->siginfo.si_signo;
-    ERROR("Process crashed, signal: {}[{}], tid: {}", strsignal(signal_number),
-          signal_number, ctx->tid);
-  } else {
-    ERROR("Process crashed, signal: unknown, tid: unknown");
-  }
-  unwindstack::AndroidLocalUnwinder unwinder;
-  unwindstack::AndroidUnwinderData data;
-  if (!unwinder.Unwind(tid, data)) {
-    ERROR("Unwind failed");
-    return false;
-  }
-  ERROR("Backtrace:");
-  for (const auto& frame : data.frames) {
-    ERROR("{}", unwinder.FormatFrame(frame));
-  }
-  return true;
-}
-
 int main(int argc, char** argv) {
-  google_breakpad::MinidumpDescriptor descriptor(
-      google_breakpad::MinidumpDescriptor::kMicrodumpOnConsole);
-  google_breakpad::ExceptionHandler eh(descriptor, nullptr, nullptr, nullptr,
-                                       true, -1);
-  eh.set_crash_handler(crash_callback);
-
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   rootcanal::log::SetLogColorEnable(FLAGS_enable_log_color);
 
