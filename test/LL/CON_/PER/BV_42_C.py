@@ -77,8 +77,8 @@ class Test(ControllerTest):
                                              role=hci.Role.PERIPHERAL,
                                              peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
                                              peer_address=peer_address,
-                                             conn_interval=0x200,
-                                             conn_latency=0x200,
+                                             connection_interval=0x200,
+                                             peripheral_latency=0x200,
                                              supervision_timeout=0x200,
                                              central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 

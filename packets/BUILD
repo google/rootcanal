@@ -7,9 +7,9 @@ exports_files(["hci_packets.pdl"])
 
 genrule(
     name = "hci_packets_json",
-    cmd = "pdlc $(location hci/hci_packets.pdl) > $(location hci_packets.json)",
+    cmd = "pdlc $(location hci_packets.pdl) > $(location hci_packets.json)",
     outs = ["hci_packets.json"],
-    srcs = ["hci/hci_packets.pdl"],
+    srcs = ["hci_packets.pdl"],
 )
 
 genrule(

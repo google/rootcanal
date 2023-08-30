@@ -46,13 +46,13 @@ class Test(ControllerTest):
                                            peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
                                            peer_address=peer_address,
                                            initiating_phys=0x1,
-                                           phy_scan_parameters=[
-                                               hci.LeCreateConnPhyScanParameters(
+                                           initiating_phy_parameters=[
+                                               hci.InitiatingPhyParameters(
                                                    scan_interval=0x200,
                                                    scan_window=0x100,
-                                                   conn_interval_min=0x200,
-                                                   conn_interval_max=0x200,
-                                                   conn_latency=0x6,
+                                                   connection_interval_min=0x200,
+                                                   connection_interval_max=0x200,
+                                                   max_latency=0x6,
                                                    supervision_timeout=0xc80,
                                                    min_ce_length=0,
                                                    max_ce_length=0,
@@ -91,8 +91,8 @@ class Test(ControllerTest):
                                              role=hci.Role.CENTRAL,
                                              peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
                                              peer_address=peer_address,
-                                             conn_interval=0x200,
-                                             conn_latency=0x6,
+                                             connection_interval=0x200,
+                                             peripheral_latency=0x6,
                                              supervision_timeout=0xc80,
                                              central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 

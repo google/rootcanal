@@ -18,12 +18,11 @@
 
 #include "log.h"
 #include "pcap.h"
+#include "packets/bredr_bb_packets.h"
 
 using std::vector;
 
 namespace rootcanal {
-
-#include "packets/bredr_bb_packets.h"
 
 BaseBandSniffer::BaseBandSniffer(const std::string& filename) {
   output_.open(filename, std::ios::binary);
@@ -147,9 +146,7 @@ void BaseBandSniffer::ReceiveLinkLayerPacket(
   } else if (packet_type == model::packets::PacketType::LMP) {
     auto lmp_view = model::packets::LmpView::Create(packet);
     ASSERT(lmp_view.IsValid());
-    auto lmp_bytes = std::vector<uint8_t>(lmp_view.GetPayload().begin(),
-                                          lmp_view.GetPayload().end());
-
+    auto lmp_bytes = lmp_view.GetPayload();
     uint8_t bt_packet_type = 0b0011;  // DM1
 
     AppendRecord(bredr_bb::DM1AclPacketBuilder::Create(

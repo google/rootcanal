@@ -20,32 +20,28 @@
 #include <memory>
 #include <vector>
 
+#include "model/hci/h4.h"
+
 namespace rootcanal {
 
-using PacketCallback =
-    std::function<void(const std::shared_ptr<std::vector<uint8_t>>)>;
+using PacketCallback = std::function<void(
+    PacketType, const std::shared_ptr<std::vector<uint8_t>>)>;
 using CloseCallback = std::function<void()>;
 
 class HciTransport {
  public:
   virtual ~HciTransport() = default;
 
-  virtual void SendEvent(const std::vector<uint8_t>& packet) = 0;
+  /// Send the input HCI packet with the selected H4 packet type.
+  /// The packet data contains the H4 header but not the IDC byte.
+  virtual void Send(PacketType packet_type,
+                    std::vector<uint8_t> const& packet) = 0;
 
-  virtual void SendAcl(const std::vector<uint8_t>& packet) = 0;
-
-  virtual void SendSco(const std::vector<uint8_t>& packet) = 0;
-
-  virtual void SendIso(const std::vector<uint8_t>& packet) = 0;
-
-  virtual void RegisterCallbacks(PacketCallback command_callback,
-                                 PacketCallback acl_callback,
-                                 PacketCallback sco_callback,
-                                 PacketCallback iso_callback,
+  /// Register the handler for received HCI packets.
+  virtual void RegisterCallbacks(PacketCallback packet_callback,
                                  CloseCallback close_callback) = 0;
 
   virtual void Tick() = 0;
-
   virtual void Close() = 0;
 };
 

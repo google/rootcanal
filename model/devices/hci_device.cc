@@ -54,33 +54,41 @@ HciDevice::HciDevice(std::shared_ptr<HciTransport> transport,
   }));
 
   RegisterEventChannel([this](std::shared_ptr<std::vector<uint8_t>> packet) {
-    transport_->SendEvent(*packet);
+    transport_->Send(PacketType::EVENT, *packet);
   });
   RegisterAclChannel([this](std::shared_ptr<std::vector<uint8_t>> packet) {
-    transport_->SendAcl(*packet);
+    transport_->Send(PacketType::ACL, *packet);
   });
   RegisterScoChannel([this](std::shared_ptr<std::vector<uint8_t>> packet) {
-    transport_->SendSco(*packet);
+    transport_->Send(PacketType::SCO, *packet);
   });
   RegisterIsoChannel([this](std::shared_ptr<std::vector<uint8_t>> packet) {
-    transport_->SendIso(*packet);
+    transport_->Send(PacketType::ISO, *packet);
   });
 
   transport_->RegisterCallbacks(
-      [this](const std::shared_ptr<std::vector<uint8_t>> command) {
-        HandleCommand(command);
-      },
-      [this](const std::shared_ptr<std::vector<uint8_t>> acl) {
-        HandleAcl(acl);
-      },
-      [this](const std::shared_ptr<std::vector<uint8_t>> sco) {
-        HandleSco(sco);
-      },
-      [this](const std::shared_ptr<std::vector<uint8_t>> iso) {
-        HandleIso(iso);
+      [this](PacketType packet_type,
+             const std::shared_ptr<std::vector<uint8_t>> packet) {
+        switch (packet_type) {
+          case PacketType::COMMAND:
+            HandleCommand(packet);
+            break;
+          case PacketType::ACL:
+            HandleAcl(packet);
+            break;
+          case PacketType::SCO:
+            HandleSco(packet);
+            break;
+          case PacketType::ISO:
+            HandleIso(packet);
+            break;
+          default:
+            ASSERT(false);
+            break;
+        }
       },
       [this]() {
-        INFO("HCI transport closed");
+        INFO(id_, "HCI transport closed");
         Close();
       });
 }

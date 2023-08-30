@@ -69,7 +69,7 @@ class Test(ControllerTest):
         await self.steps_4_6(peer_address=peer_address, scan_response_data=scan_response_data)
 
         # 7. Configure Scan Response Data in the IUT using device name length of 31 as response data.
-        scan_response_data = [31] + [0] * 31
+        scan_response_data = [31] + [0] * 30
         controller.send_cmd(hci.LeSetScanResponseData(advertising_data=scan_response_data))
 
         await self.expect_evt(hci.LeSetScanResponseDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
@@ -104,7 +104,7 @@ class Test(ControllerTest):
         await self.steps_4_6(peer_address=peer_address, scan_response_data=scan_response_data)
 
         # 12. Configure Scan Response Data in the IUT using device name length of 31 as response data.
-        scan_response_data = [31] + [0] * 31
+        scan_response_data = [31] + [0] * 30
         controller.send_cmd(hci.LeSetScanResponseData(advertising_data=scan_response_data))
 
         await self.expect_evt(hci.LeSetScanResponseDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))

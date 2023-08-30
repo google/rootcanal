@@ -36,27 +36,16 @@ class HciSocketTransport : public HciTransport {
     return std::make_shared<HciSocketTransport>(socket);
   }
 
-  void SendEvent(const std::vector<uint8_t>& packet) override;
+  void Send(PacketType packet_type,
+            const std::vector<uint8_t>& packet) override;
 
-  void SendAcl(const std::vector<uint8_t>& packet) override;
-
-  void SendSco(const std::vector<uint8_t>& packet) override;
-
-  void SendIso(const std::vector<uint8_t>& packet) override;
-
-  void RegisterCallbacks(PacketCallback command_callback,
-                         PacketCallback acl_callback,
-                         PacketCallback sco_callback,
-                         PacketCallback iso_callback,
+  void RegisterCallbacks(PacketCallback packet_callback,
                          CloseCallback close_callback) override;
 
   void Tick() override;
-
   void Close() override;
 
  private:
-  void SendHci(PacketType packet_type, const std::vector<uint8_t>& packet);
-
   std::shared_ptr<AsyncDataChannel> socket_;
   H4DataChannelPacketizer h4_{socket_,
                               [](const std::vector<uint8_t>&) {},

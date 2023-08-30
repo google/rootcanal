@@ -75,14 +75,22 @@ class AclConnectionHandler {
   bool HasPendingLeConnection(bluetooth::hci::AddressWithType addr) const;
   bool CancelPendingLeConnection(bluetooth::hci::AddressWithType addr);
 
+  // \p pending is true if the connection is expected to be
+  // in pending state.
   uint16_t CreateConnection(bluetooth::hci::Address addr,
-                            bluetooth::hci::Address own_addr);
+                            bluetooth::hci::Address own_addr,
+                            bool pending = true);
   uint16_t CreateLeConnection(bluetooth::hci::AddressWithType addr,
                               bluetooth::hci::AddressWithType own_addr,
                               bluetooth::hci::Role role);
   bool Disconnect(uint16_t handle, std::function<void(TaskId)> stopStream);
   bool HasHandle(uint16_t handle) const;
   bool HasScoHandle(uint16_t handle) const;
+
+  // Return the connection handle for a classic ACL connection only.
+  // \p bd_addr is the peer address.
+  std::optional<uint16_t> GetAclConnectionHandle(
+      bluetooth::hci::Address bd_addr) const;
 
   uint16_t GetHandle(bluetooth::hci::AddressWithType addr) const;
   uint16_t GetHandleOnlyAddress(bluetooth::hci::Address addr) const;

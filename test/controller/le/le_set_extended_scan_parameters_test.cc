@@ -33,10 +33,10 @@ class LeSetExtendedScanParametersTest : public ::testing::Test {
   LinkLayerController controller_{address_, properties_};
 };
 
-static PhyScanParameters MakePhyScanParameters(LeScanType scan_type,
-                                               uint16_t scan_interval,
-                                               uint16_t scan_window) {
-  PhyScanParameters parameters;
+static ScanningPhyParameters MakeScanningPhyParameters(LeScanType scan_type,
+                                                       uint16_t scan_interval,
+                                                       uint16_t scan_window) {
+  ScanningPhyParameters parameters;
   parameters.le_scan_type_ = scan_type;
   parameters.le_scan_interval_ = scan_interval;
   parameters.le_scan_window_ = scan_window;
@@ -47,8 +47,8 @@ TEST_F(LeSetExtendedScanParametersTest, Success) {
   ASSERT_EQ(controller_.LeSetExtendedScanParameters(
                 OwnAddressType::PUBLIC_DEVICE_ADDRESS,
                 LeScanningFilterPolicy::ACCEPT_ALL, 0x5,
-                {MakePhyScanParameters(LeScanType::PASSIVE, 0x2000, 0x200),
-                 MakePhyScanParameters(LeScanType::ACTIVE, 0x2000, 0x200)}),
+                {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200),
+                 MakeScanningPhyParameters(LeScanType::ACTIVE, 0x2000, 0x200)}),
             ErrorCode::SUCCESS);
 }
 
@@ -56,8 +56,8 @@ TEST_F(LeSetExtendedScanParametersTest, ScanningActive) {
   ASSERT_EQ(controller_.LeSetExtendedScanParameters(
                 OwnAddressType::PUBLIC_DEVICE_ADDRESS,
                 LeScanningFilterPolicy::ACCEPT_ALL, 0x5,
-                {MakePhyScanParameters(LeScanType::PASSIVE, 0x2000, 0x200),
-                 MakePhyScanParameters(LeScanType::ACTIVE, 0x2000, 0x200)}),
+                {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200),
+                 MakeScanningPhyParameters(LeScanType::ACTIVE, 0x2000, 0x200)}),
             ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetExtendedScanEnable(
                 true, FilterDuplicates::DISABLED, 0, 0),
@@ -66,17 +66,18 @@ TEST_F(LeSetExtendedScanParametersTest, ScanningActive) {
   ASSERT_EQ(controller_.LeSetExtendedScanParameters(
                 OwnAddressType::PUBLIC_DEVICE_ADDRESS,
                 LeScanningFilterPolicy::ACCEPT_ALL, 0x5,
-                {MakePhyScanParameters(LeScanType::PASSIVE, 0x2000, 0x200),
-                 MakePhyScanParameters(LeScanType::ACTIVE, 0x2000, 0x200)}),
+                {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200),
+                 MakeScanningPhyParameters(LeScanType::ACTIVE, 0x2000, 0x200)}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeSetExtendedScanParametersTest, ReservedPhy) {
-  ASSERT_EQ(controller_.LeSetExtendedScanParameters(
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                LeScanningFilterPolicy::ACCEPT_ALL, 0x80,
-                {MakePhyScanParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
-            ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
+  ASSERT_EQ(
+      controller_.LeSetExtendedScanParameters(
+          OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+          LeScanningFilterPolicy::ACCEPT_ALL, 0x80,
+          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
+      ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 }
 
 TEST_F(LeSetExtendedScanParametersTest, InvalidPhyParameters) {
@@ -85,19 +86,20 @@ TEST_F(LeSetExtendedScanParametersTest, InvalidPhyParameters) {
                 LeScanningFilterPolicy::ACCEPT_ALL, 0x1, {}),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 
-  ASSERT_EQ(controller_.LeSetExtendedScanParameters(
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-                {MakePhyScanParameters(LeScanType::PASSIVE, 0x2000, 0x200),
-                 MakePhyScanParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
-            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(
+      controller_.LeSetExtendedScanParameters(
+          OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+          LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
+          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200),
+           MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
+      ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeSetExtendedScanParametersTest, InvalidScanInterval) {
   ASSERT_EQ(controller_.LeSetExtendedScanParameters(
                 OwnAddressType::PUBLIC_DEVICE_ADDRESS,
                 LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-                {MakePhyScanParameters(LeScanType::PASSIVE, 0x0, 0x200)}),
+                {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x0, 0x200)}),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
@@ -105,14 +107,15 @@ TEST_F(LeSetExtendedScanParametersTest, InvalidScanWindow) {
   ASSERT_EQ(controller_.LeSetExtendedScanParameters(
                 OwnAddressType::PUBLIC_DEVICE_ADDRESS,
                 LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-                {MakePhyScanParameters(LeScanType::PASSIVE, 0x2000, 0x0)}),
+                {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x0)}),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 
-  ASSERT_EQ(controller_.LeSetExtendedScanParameters(
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-                {MakePhyScanParameters(LeScanType::PASSIVE, 0x2000, 0x2001)}),
-            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(
+      controller_.LeSetExtendedScanParameters(
+          OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+          LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
+          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x2001)}),
+      ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 }  // namespace rootcanal

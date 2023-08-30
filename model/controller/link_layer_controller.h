@@ -57,14 +57,17 @@ class LinkLayerController {
   static constexpr size_t kExtendedInquiryResponseSize = 240;
 
   // Unique instance identifier.
-  const int id_;
+  const uint32_t id_;
 
   // Generate a resolvable private address using the specified IRK.
   static Address generate_rpa(
       std::array<uint8_t, LinkLayerController::kIrkSize> irk);
 
+  // Return true if the input IRK is all 0s.
+  static bool irk_is_zero(std::array<uint8_t, LinkLayerController::kIrkSize> irk);
+
   LinkLayerController(const Address& address,
-                      const ControllerProperties& properties, int id = 0);
+                      const ControllerProperties& properties, uint32_t id = 0);
   ~LinkLayerController();
 
   ErrorCode SendCommandToRemoteByAddress(OpCode opcode, pdl::packet::slice args,
@@ -88,18 +91,22 @@ class LinkLayerController {
   void MakePeripheralConnection(const Address& addr, bool try_role_switch);
   ErrorCode RejectConnectionRequest(const Address& addr, uint8_t reason);
   void RejectPeripheralConnection(const Address& addr, uint8_t reason);
-  ErrorCode CreateConnection(const Address& addr, uint16_t packet_type,
+
+  // HCI command Create Connection (Vol 4, Part E § 7.1.5).
+  ErrorCode CreateConnection(const Address& bd_addr, uint16_t packet_type,
                              uint8_t page_scan_mode, uint16_t clock_offset,
                              uint8_t allow_role_switch);
-  ErrorCode CreateConnectionCancel(const Address& addr);
 
-  // Disconnect a link.
+  // HCI command Disconnect (Vol 4, Part E § 7.1.6).
   // \p host_reason is taken from the Disconnect command, and sent over
   // to the remote as disconnect error. \p controller_reason is the code
   // used in the DisconnectionComplete event.
   ErrorCode Disconnect(uint16_t handle, ErrorCode host_reason,
                        ErrorCode controller_reason =
                            ErrorCode::CONNECTION_TERMINATED_BY_LOCAL_HOST);
+
+  // HCI command Create Connection Cancel (Vol 4, Part E § 7.1.7).
+  ErrorCode CreateConnectionCancel(const Address& bd_addr);
 
   // Internal task scheduler.
   // This scheduler is driven by the tick function only,
@@ -164,6 +171,7 @@ class LinkLayerController {
 
   void Reset();
 
+  void Paging();
   void LeAdvertising();
   void LeScanning();
   void LeSynchronization();
@@ -475,7 +483,8 @@ class LinkLayerController {
       bluetooth::hci::OwnAddressType own_address_type,
       bluetooth::hci::LeScanningFilterPolicy scanning_filter_policy,
       uint8_t scanning_phys,
-      std::vector<bluetooth::hci::PhyScanParameters> scanning_phy_parameters);
+      std::vector<bluetooth::hci::ScanningPhyParameters>
+          scanning_phy_parameters);
 
   // HCI command LE_Set_Extended_Scan_Enable (Vol 4, Part E § 7.8.65).
   ErrorCode LeSetExtendedScanEnable(
@@ -504,7 +513,7 @@ class LinkLayerController {
       bluetooth::hci::InitiatorFilterPolicy initiator_filter_policy,
       bluetooth::hci::OwnAddressType own_address_type,
       AddressWithType peer_address, uint8_t initiating_phys,
-      std::vector<bluetooth::hci::LeCreateConnPhyScanParameters>
+      std::vector<bluetooth::hci::InitiatingPhyParameters>
           initiating_phy_parameters);
 
   // Periodic Advertising
@@ -1083,7 +1092,16 @@ class LinkLayerController {
   struct ControllerOps controller_ops_;
 
   // Classic state.
-  TaskId page_timeout_task_id_ = kInvalidTaskId;
+  struct Page {
+    Address bd_addr;
+    uint8_t allow_role_switch;
+    std::chrono::steady_clock::time_point next_page_event{};
+    std::chrono::steady_clock::time_point page_timeout{};
+  };
+
+  // Page substate.
+  // RootCanal will allow only one page request running at the same time.
+  std::optional<Page> page_;
 
   std::chrono::steady_clock::time_point last_inquiry_;
   model::packets::InquiryType inquiry_mode_{

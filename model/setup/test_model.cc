@@ -24,6 +24,7 @@
 #include <optional>
 #include <type_traits>  // for remove_extent_t
 #include <utility>      // for move
+#include <optional>
 
 #include "include/phy.h"  // for Phy, Phy::Type
 #include "log.h"
@@ -91,34 +92,42 @@ std::unique_ptr<PhyLayer> TestModel::CreatePhyLayer(PhyLayer::Identifier id,
 }
 
 std::shared_ptr<PhyDevice> TestModel::CreatePhyDevice(
-    PhyDevice::Identifier id, std::string type,
-    std::shared_ptr<Device> device) {
-  return std::make_shared<PhyDevice>(id, std::move(type), std::move(device));
+    std::string type, std::shared_ptr<Device> device) {
+  return std::make_shared<PhyDevice>(std::move(type), std::move(device));
 }
 
-// Add a device to the test model.
-PhyDevice::Identifier TestModel::AddDevice(std::shared_ptr<Device> device) {
-  std::optional<PhyDevice::Identifier> device_id{};
-  if (reuse_device_ids_) {
-    // Find the first unused identifier.
-    // The identifier is used to generate the bluetooth address,
-    // and reusing the first unused identifier lets a re-connecting
-    // get the same identifier and address.
-    for (PhyDevice::Identifier id = 0; id < next_device_id_; id++) {
-      if (phy_devices_.count(id) == 0) {
-        device_id = id;
+Address TestModel::GenerateBluetoothAddress(uint32_t device_id) const {
+  Address address({
+      static_cast<uint8_t>(device_id),
+      bluetooth_address_prefix_[4],
+      bluetooth_address_prefix_[3],
+      bluetooth_address_prefix_[2],
+      bluetooth_address_prefix_[1],
+      bluetooth_address_prefix_[0],
+  });
+
+  if (reuse_device_addresses_) {
+    // Find the first unused address.
+    for (uint16_t b0 = 0; b0 <= 0xff; b0++) {
+      address.address[0] = b0;
+      bool used = std::any_of(phy_devices_.begin(), phy_devices_.end(),
+                              [address](auto& device) {
+                                return device.second->GetAddress() == address;
+                              });
+      if (!used) {
         break;
       }
     }
   }
 
-  if (!device_id.has_value()) {
-    device_id = next_device_id_++;
-  }
+  return address;
+}
 
+// Add a device to the test model.
+PhyDevice::Identifier TestModel::AddDevice(std::shared_ptr<Device> device) {
   std::string device_type = device->GetTypeString();
   std::shared_ptr<PhyDevice> phy_device =
-      CreatePhyDevice(device_id.value(), device_type, std::move(device));
+      CreatePhyDevice(device_type, std::move(device));
   phy_devices_[phy_device->id] = phy_device;
   return phy_device->id;
 }
@@ -166,7 +175,7 @@ void TestModel::RemoveDeviceFromPhy(PhyDevice::Identifier device_id,
 
 void TestModel::AddLinkLayerConnection(std::shared_ptr<Device> device,
                                        Phy::Type type) {
-  INFO("Adding a new link layer connection of type: {}",
+  INFO(device->id_, "Adding a new link layer connection of type: {}",
        type == Phy::Type::BR_EDR ? "BR_EDR" : "LOW_ENERGY");
 
   PhyDevice::Identifier device_id = AddDevice(device);
@@ -195,25 +204,18 @@ void TestModel::AddRemote(const std::string& server, int port, Phy::Type type) {
 }
 
 PhyDevice::Identifier TestModel::AddHciConnection(
-    std::shared_ptr<HciDevice> device) {
-  PhyDevice::Identifier device_id =
-      AddDevice(std::static_pointer_cast<Device>(device));
-  auto bluetooth_address = Address{{
-      uint8_t(device_id),
-      bluetooth_address_prefix_[4],
-      bluetooth_address_prefix_[3],
-      bluetooth_address_prefix_[2],
-      bluetooth_address_prefix_[1],
-      bluetooth_address_prefix_[0],
-  }};
-  device->SetAddress(bluetooth_address);
+    std::shared_ptr<HciDevice> device, std::optional<Address> address) {
+  // clients can specify BD_ADDR or have it set based on device_id.
+  device->SetAddress(address.value_or(GenerateBluetoothAddress(device->id_)));
+  AddDevice(std::static_pointer_cast<Device>(device));
 
-  INFO("Initialized device with address {}", bluetooth_address.ToString());
+  INFO(device->id_, "Initialized device with address {}", device->GetAddress());
 
   for (auto& [_, phy_layer] : phy_layers_) {
-    phy_layer->Register(phy_devices_[device_id]);
+    phy_layer->Register(phy_devices_[device->id_]);
   }
 
+  PhyDevice::Identifier device_id = device->id_;
   AsyncUserId user_id = get_user_id_();
   device->RegisterCloseCallback([this, device_id, user_id] {
     schedule_task_(user_id, std::chrono::milliseconds(0),
@@ -221,7 +223,7 @@ PhyDevice::Identifier TestModel::AddHciConnection(
                      OnConnectionClosed(device_id, user_id);
                    });
   });
-  return device_id;
+  return device->id_;
 }
 
 void TestModel::OnConnectionClosed(PhyDevice::Identifier device_id,
@@ -272,7 +274,6 @@ void TestModel::Reset() {
       phy_layer->UnregisterAll();
     }
     phy_devices_.clear();
-    next_device_id_ = 0;
   });
 }
 

@@ -16,10 +16,9 @@
 
 #include "acl_connection_handler.h"
 
-#include "packets/hci_packets.h"
-
 #include "hci/address.h"
 #include "log.h"
+#include "packets/hci_packets.h"
 
 namespace rootcanal {
 
@@ -61,7 +60,7 @@ uint16_t AclConnectionHandler::GetUnusedHandle() {
 bool AclConnectionHandler::CreatePendingConnection(Address addr,
                                                    bool authenticate_on_connect,
                                                    bool allow_role_switch) {
-  if (classic_connection_pending_) {
+  if (classic_connection_pending_ || GetAclConnectionHandle(addr).has_value()) {
     return false;
   }
   classic_connection_pending_ = true;
@@ -132,9 +131,9 @@ bool AclConnectionHandler::CancelPendingLeConnection(AddressWithType addr) {
   return true;
 }
 
-uint16_t AclConnectionHandler::CreateConnection(Address addr,
-                                                Address own_addr) {
-  if (CancelPendingConnection(addr)) {
+uint16_t AclConnectionHandler::CreateConnection(Address addr, Address own_addr,
+                                                bool pending) {
+  if (!pending || CancelPendingConnection(addr)) {
     uint16_t handle = GetUnusedHandle();
     acl_connections_.emplace(
         handle,
@@ -197,6 +196,17 @@ uint16_t AclConnectionHandler::GetHandleOnlyAddress(
     }
   }
   return kReservedHandle;
+}
+
+std::optional<uint16_t> AclConnectionHandler::GetAclConnectionHandle(
+    bluetooth::hci::Address bd_addr) const {
+  for (auto const& [handle, connection] : acl_connections_) {
+    if (connection.GetAddress().GetAddress() == bd_addr &&
+        connection.GetPhyType() == Phy::Type::BR_EDR) {
+      return handle;
+    }
+  }
+  return {};
 }
 
 AclConnection& AclConnectionHandler::GetAclConnection(uint16_t handle) {

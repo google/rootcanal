@@ -50,9 +50,6 @@ using ::bluetooth::hci::CommandView;
 // "Hci" to distinguish it as a controller command.
 class DualModeController : public Device {
  public:
-  // Unique instance identifier.
-  const int id_;
-
   DualModeController(ControllerProperties properties = ControllerProperties());
   DualModeController(DualModeController&&) = delete;
   DualModeController(const DualModeController&) = delete;
@@ -504,10 +501,11 @@ class DualModeController : public Device {
 
   // Vendor-specific Commands
   void LeGetVendorCapabilities(CommandView command);
-  void LeEnergyInfo(CommandView command);
-  void LeMultiAdv(CommandView command);
-  void LeAdvertisingFilter(CommandView command);
-  void LeExtendedScanParams(CommandView command);
+  void LeBatchScan(CommandView command);
+  void LeApcf(CommandView command);
+  void LeGetControllerActivityEnergyInfo(CommandView command);
+  void LeExSetScanParameters(CommandView command);
+  void GetControllerDebugInfo(CommandView command);
 
   // CSR vendor command.
   // Implement the command specific to the CSR controller

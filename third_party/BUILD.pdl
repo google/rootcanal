@@ -6,34 +6,34 @@ load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 py_binary(
     name = "generate_cxx_backend",
-    main = "scripts/generate_cxx_backend.py",
+    main = "pdl-compiler/scripts/generate_cxx_backend.py",
     srcs = [
-        "scripts/generate_cxx_backend.py",
-        "scripts/pdl/ast.py",
-        "scripts/pdl/core.py",
-        "scripts/pdl/utils.py",
+        "pdl-compiler/scripts/generate_cxx_backend.py",
+        "pdl-compiler/scripts/pdl/ast.py",
+        "pdl-compiler/scripts/pdl/core.py",
+        "pdl-compiler/scripts/pdl/utils.py",
     ],
     legacy_create_init = 0,
-    imports = ["scripts"],
+    imports = ["pdl-compiler/scripts"],
     visibility = ["//visibility:public"],
 )
 
 py_binary(
     name = "generate_python_backend",
     srcs = [
-        "scripts/generate_python_backend.py",
-        "scripts/pdl/ast.py",
-        "scripts/pdl/core.py",
-        "scripts/pdl/utils.py",
+        "pdl-compiler/scripts/generate_python_backend.py",
+        "pdl-compiler/scripts/pdl/ast.py",
+        "pdl-compiler/scripts/pdl/core.py",
+        "pdl-compiler/scripts/pdl/utils.py",
     ],
     legacy_create_init = 0,
-    imports = ["scripts"],
+    imports = ["pdl-compiler/scripts"],
     visibility = ["//visibility:public"],
 )
 
 cc_library(
     name = "packet_runtime",
-    srcs = ["scripts/packet_runtime.h"],
-    includes = ["scripts"],
+    srcs = ["pdl-compiler/scripts/packet_runtime.h"],
+    includes = ["pdl-compiler/scripts"],
     visibility = ["//visibility:public"],
 )

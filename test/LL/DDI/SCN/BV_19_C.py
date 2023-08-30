@@ -82,10 +82,10 @@ class Test(ControllerTest):
             hci.LeSetExtendedScanParameters(own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
                                             scanning_filter_policy=hci.LeScanningFilterPolicy.ACCEPT_ALL,
                                             scanning_phys=0x1,
-                                            parameters=[
-                                                hci.PhyScanParameters(le_scan_type=hci.LeScanType.PASSIVE,
-                                                                      le_scan_interval=0x0010,
-                                                                      le_scan_window=0x0010)
+                                            scanning_phy_parameters=[
+                                                hci.ScanningPhyParameters(le_scan_type=hci.LeScanType.PASSIVE,
+                                                                          le_scan_interval=0x0010,
+                                                                          le_scan_window=0x0010)
                                             ]))
 
         await self.expect_evt(

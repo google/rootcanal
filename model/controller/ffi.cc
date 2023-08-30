@@ -117,9 +117,7 @@ __attribute__((visibility("default"))) void ffi_controller_receive_ll(
   std::shared_ptr<std::vector<uint8_t>> bytes =
       std::make_shared<std::vector<uint8_t>>(data, data + data_len);
   model::packets::LinkLayerPacketView packet =
-      model::packets::LinkLayerPacketView::Create(
-          bluetooth::packet::PacketView<bluetooth::packet::kLittleEndian>(
-              bytes));
+      model::packets::LinkLayerPacketView::Create(pdl::packet::slice(bytes));
   if (!packet.IsValid()) {
     std::cerr << "Dropping malformed LL packet" << std::endl;
     return;

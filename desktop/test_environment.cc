@@ -57,7 +57,7 @@ TestEnvironment::TestEnvironment(
   link_socket_server_ = open_server(&async_manager_, link_port);
   link_ble_socket_server_ = open_server(&async_manager_, link_ble_port);
   connector_ = open_connector(&async_manager_);
-  test_model_.SetReuseDeviceIds(!disable_address_reuse);
+  test_model_.SetReuseDeviceAddresses(!disable_address_reuse);
 
   // Get a user ID for tasks scheduled within the test environment.
   socket_user_id_ = async_manager_.GetNextUserId();

@@ -15,8 +15,9 @@
  */
 
 #include <hci/pcap_filter.h>
-#include "packets/hci_packets.h"
+
 #include "log.h"
+#include "packets/hci_packets.h"
 
 using namespace bluetooth::hci;
 
@@ -73,19 +74,6 @@ std::vector<uint8_t> PcapFilter::FilterHciCommand(
       return FilterLeSetExtendedScanResponseData(command);
     case OpCode::LE_SET_PERIODIC_ADVERTISING_DATA:
       return FilterLeSetPeriodicAdvertisingData(command);
-    case OpCode::LE_MULTI_ADVT: {
-      auto le_multi_advt_command = LeMultiAdvtView::Create(command);
-      ASSERT(le_multi_advt_command.IsValid());
-      switch (le_multi_advt_command.GetSubCmd()) {
-        case SubOcf::SET_DATA:
-          return FilterLeMultiAdvtSetData(le_multi_advt_command);
-        case SubOcf::SET_SCAN_RESP:
-          return FilterLeMultiAdvtSetScanResp(le_multi_advt_command);
-        default:
-          break;
-      }
-      break;
-    }
     default:
       break;
   }
@@ -214,8 +202,7 @@ std::vector<uint8_t> PcapFilter::FilterWriteLocalName(CommandView& command) {
 
   std::array<uint8_t, 248> local_name =
       ChangeDeviceName(parameters.GetLocalName());
-  return WriteLocalNameBuilder::Create(local_name)
-      ->SerializeToBytes();
+  return WriteLocalNameBuilder::Create(local_name)->SerializeToBytes();
 }
 
 // Replace the device names in the GAP entries of the extended inquiry response.
@@ -301,32 +288,6 @@ std::vector<uint8_t> PcapFilter::FilterLeSetPeriodicAdvertisingData(
       ->SerializeToBytes();
 }
 
-// Replace the device names in the GAP entries of the advertising data.
-std::vector<uint8_t> PcapFilter::FilterLeMultiAdvtSetData(
-    bluetooth::hci::LeMultiAdvtView& command) {
-  auto parameters = LeMultiAdvtSetDataView::Create(command);
-  ASSERT(parameters.IsValid());
-
-  std::vector<uint8_t> advertising_data = parameters.GetAdvertisingData();
-  FilterGapData(advertising_data);
-  return LeMultiAdvtSetDataBuilder::Create(advertising_data,
-                                           parameters.GetAdvertisingInstance())
-      ->SerializeToBytes();
-}
-
-// Replace the device names in the GAP entries of the scan response data.
-std::vector<uint8_t> PcapFilter::FilterLeMultiAdvtSetScanResp(
-    bluetooth::hci::LeMultiAdvtView& command) {
-  auto parameters = LeMultiAdvtSetScanRespView::Create(command);
-  ASSERT(parameters.IsValid());
-
-  std::vector<uint8_t> advertising_data = parameters.GetAdvertisingData();
-  FilterGapData(advertising_data);
-  return LeMultiAdvtSetScanRespBuilder::Create(
-             advertising_data, parameters.GetAdvertisingInstance())
-      ->SerializeToBytes();
-}
-
 // Replace the local device name in the read local name complete event.
 std::vector<uint8_t> PcapFilter::FilterReadLocalNameComplete(
     bluetooth::hci::CommandCompleteView& command_complete) {
@@ -408,8 +369,7 @@ std::vector<uint8_t> PcapFilter::FilterLeAdvertisingReport(
     FilterGapData(response.advertising_data_);
   }
 
-  return LeAdvertisingReportBuilder::Create(responses)
-      ->SerializeToBytes();
+  return LeAdvertisingReportBuilder::Create(responses)->SerializeToBytes();
 }
 
 // Replace the device names in the GAP entries in the extended advertising

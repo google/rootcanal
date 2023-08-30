@@ -1876,6 +1876,7 @@ ControllerProperties::ControllerProperties(
 
       case ControllerPreset::CSR_RCK_PTS_DONGLE:
         // Configuration extracted with the helper script controller_info.py
+        vendor_csr = true;
         br_supported = true;
         le_supported = true;
         hci_version = bluetooth::hci::HciVersion::V_4_2;
@@ -1964,6 +1965,13 @@ ControllerProperties::ControllerProperties(
           config.quirks().hardware_error_before_reset();
     }
     // TODO(b/270606199): support send_acl_data_before_connection_complete
+  }
+
+  // Apply selected vendor features.
+  if (config.has_vendor()) {
+    if (config.vendor().has_csr()) {
+      vendor_csr = config.vendor().csr();
+    }
   }
 
   if (!CheckSupportedFeatures()) {

@@ -143,11 +143,14 @@ async fn receive_public_key(ctx: &impl Context, transaction_id: u8) -> PublicKey
 const COMMITMENT_VALUE_SIZE: usize = 16;
 const NONCE_SIZE: usize = 16;
 
-async fn receive_commitment(ctx: &impl Context, skip_first: bool) {
-    let commitment_value = [0; COMMITMENT_VALUE_SIZE];
+fn build_commitment(_ctx: &impl Context) -> [u8; COMMITMENT_VALUE_SIZE] {
+    [0; COMMITMENT_VALUE_SIZE]
+}
 
-    if !skip_first {
-        let confirm = ctx.receive_lmp_packet::<lmp::SimplePairingConfirm>().await;
+async fn receive_commitment(ctx: &impl Context, confirm: Option<lmp::SimplePairingConfirm>) {
+    let commitment_value = build_commitment(ctx);
+
+    if let Some(confirm) = confirm {
         if confirm.get_commitment_value() != &commitment_value {
             todo!();
         }
@@ -177,16 +180,8 @@ async fn receive_commitment(ctx: &impl Context, skip_first: bool) {
         .await;
 }
 
-async fn send_commitment(ctx: &impl Context, skip_first: bool) {
-    let commitment_value = [0; COMMITMENT_VALUE_SIZE];
-
-    if !skip_first {
-        ctx.send_lmp_packet(
-            lmp::SimplePairingConfirmBuilder { transaction_id: 0, commitment_value }.build(),
-        );
-    }
-
-    let confirm = ctx.receive_lmp_packet::<lmp::SimplePairingConfirm>().await;
+async fn send_commitment(ctx: &impl Context, confirm: lmp::SimplePairingConfirm) {
+    let commitment_value = build_commitment(ctx);
 
     if confirm.get_commitment_value() != &commitment_value {
         todo!();
@@ -437,14 +432,33 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
         match auth_method {
             AuthenticationMethod::NumericComparisonJustWork
             | AuthenticationMethod::NumericComparisonUserConfirm => {
-                send_commitment(ctx, true).await;
+                let confirm = ctx.receive_lmp_packet::<lmp::SimplePairingConfirm>().await;
+                send_commitment(ctx, confirm).await;
 
-                user_confirmation_request(ctx).await?;
+                if user_confirmation_request(ctx).await.is_err() {
+                    ctx.send_lmp_packet(
+                        lmp::NumericComparisonFailedBuilder { transaction_id: 0 }.build(),
+                    );
+                    Err(())?;
+                }
                 Ok(())
             }
             AuthenticationMethod::PasskeyEntry => {
-                if initiator.io_capability == hci::IoCapability::KeyboardOnly {
-                    user_passkey_request(ctx).await?;
+                let confirm = if initiator.io_capability == hci::IoCapability::KeyboardOnly {
+                    if user_passkey_request(ctx).await.is_err() {
+                        ctx.send_lmp_packet(
+                            lmp::PasskeyFailedBuilder { transaction_id: 0 }.build(),
+                        );
+                        Err(())?;
+                    }
+                    ctx.send_lmp_packet(
+                        lmp::SimplePairingConfirmBuilder {
+                            transaction_id: 0,
+                            commitment_value: build_commitment(ctx),
+                        }
+                        .build(),
+                    );
+                    ctx.receive_lmp_packet::<lmp::SimplePairingConfirm>().await
                 } else {
                     ctx.send_hci_event(
                         hci::UserPasskeyNotificationBuilder {
@@ -453,9 +467,32 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
                         }
                         .build(),
                     );
-                }
-                for _ in 0..PASSKEY_ENTRY_REPEAT_NUMBER {
-                    send_commitment(ctx, false).await;
+                    ctx.send_lmp_packet(
+                        lmp::SimplePairingConfirmBuilder {
+                            transaction_id: 0,
+                            commitment_value: build_commitment(ctx),
+                        }
+                        .build(),
+                    );
+                    match ctx
+                        .receive_lmp_packet::<Either<lmp::SimplePairingConfirm, lmp::NotAccepted>>()
+                        .await
+                    {
+                        Either::Left(confirm) => confirm,
+                        Either::Right(_) => Err(())?,
+                    }
+                };
+                send_commitment(ctx, confirm).await;
+                for _ in 1..PASSKEY_ENTRY_REPEAT_NUMBER {
+                    ctx.send_lmp_packet(
+                        lmp::SimplePairingConfirmBuilder {
+                            transaction_id: 0,
+                            commitment_value: build_commitment(ctx),
+                        }
+                        .build(),
+                    );
+                    let confirm = ctx.receive_lmp_packet::<lmp::SimplePairingConfirm>().await;
+                    send_commitment(ctx, confirm).await;
                 }
                 Ok(())
             }
@@ -464,7 +501,15 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
                     remote_oob_data_request(ctx).await?;
                 }
 
-                send_commitment(ctx, false).await;
+                ctx.send_lmp_packet(
+                    lmp::SimplePairingConfirmBuilder {
+                        transaction_id: 0,
+                        commitment_value: build_commitment(ctx),
+                    }
+                    .build(),
+                );
+                let confirm = ctx.receive_lmp_packet::<lmp::SimplePairingConfirm>().await;
+                send_commitment(ctx, confirm).await;
                 Ok(())
             }
         }
@@ -472,7 +517,6 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     .await;
 
     if result.is_err() {
-        ctx.send_lmp_packet(lmp::NumericComparisonFailedBuilder { transaction_id: 0 }.build());
         ctx.send_hci_event(
             hci::SimplePairingCompleteBuilder {
                 status: hci::ErrorCode::AuthenticationFailure,
@@ -644,37 +688,78 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReq) -> Resul
 
     // Authentication Stage 1
     let auth_method = authentication_method(initiator, responder);
-    let negative_user_confirmation = match auth_method {
-        AuthenticationMethod::NumericComparisonJustWork
-        | AuthenticationMethod::NumericComparisonUserConfirm => {
-            receive_commitment(ctx, true).await;
+    let result: Result<bool, ()> = async {
+        match auth_method {
+            AuthenticationMethod::NumericComparisonJustWork
+            | AuthenticationMethod::NumericComparisonUserConfirm => {
+                receive_commitment(ctx, None).await;
 
-            let user_confirmation = user_confirmation_request(ctx).await;
-            user_confirmation.is_err()
-        }
-        AuthenticationMethod::PasskeyEntry => {
-            if responder.io_capability == hci::IoCapability::KeyboardOnly {
-                // TODO: handle error
-                let _user_passkey = user_passkey_request(ctx).await;
-            } else {
-                ctx.send_hci_event(
-                    hci::UserPasskeyNotificationBuilder { bd_addr: ctx.peer_address(), passkey: 0 }
+                let user_confirmation = user_confirmation_request(ctx).await;
+                Ok(user_confirmation.is_err())
+            }
+            AuthenticationMethod::PasskeyEntry => {
+                let confirm = if responder.io_capability == hci::IoCapability::KeyboardOnly {
+                    let user_passkey = user_passkey_request(ctx).await;
+                    let confirm = ctx.receive_lmp_packet::<lmp::SimplePairingConfirm>().await;
+                    if user_passkey.is_err() {
+                        ctx.send_lmp_packet(
+                            lmp::NotAcceptedBuilder {
+                                transaction_id: 0,
+                                not_accepted_opcode: lmp::Opcode::SimplePairingConfirm,
+                                error_code: hci::ErrorCode::AuthenticationFailure.into(),
+                            }.build(),
+                        );
+                        return Err(());
+                    }
+                    confirm
+                } else {
+                    ctx.send_hci_event(
+                        hci::UserPasskeyNotificationBuilder {
+                            bd_addr: ctx.peer_address(),
+                            passkey: 0,
+                        }
                         .build(),
-                );
+                    );
+                    match ctx
+                        .receive_lmp_packet::<Either<lmp::SimplePairingConfirm, lmp::PasskeyFailed>>()
+                        .await
+                    {
+                        Either::Left(confirm) => confirm,
+                        Either::Right(_) => Err(())?,
+                    }
+                };
+                receive_commitment(ctx, Some(confirm)).await;
+                for _ in 1..PASSKEY_ENTRY_REPEAT_NUMBER {
+                    let confirm = ctx.receive_lmp_packet::<lmp::SimplePairingConfirm>().await;
+                    receive_commitment(ctx, Some(confirm)).await;
+                }
+                Ok(false)
             }
-            for _ in 0..PASSKEY_ENTRY_REPEAT_NUMBER {
-                receive_commitment(ctx, false).await;
-            }
-            false
-        }
-        AuthenticationMethod::OutOfBand => {
-            if responder.oob_data_present != hci::OobDataPresent::NotPresent {
-                // TODO: handle error
-                let _remote_oob_data = remote_oob_data_request(ctx).await;
-            }
+            AuthenticationMethod::OutOfBand => {
+                if responder.oob_data_present != hci::OobDataPresent::NotPresent {
+                    // TODO: handle error
+                    let _remote_oob_data = remote_oob_data_request(ctx).await;
+                }
 
-            receive_commitment(ctx, false).await;
-            false
+                let confirm = ctx.receive_lmp_packet::<lmp::SimplePairingConfirm>().await;
+                receive_commitment(ctx, Some(confirm)).await;
+                Ok(false)
+            }
+        }
+    }
+    .await;
+
+    let negative_user_confirmation = match result {
+        Ok(negative_user_confirmation) => negative_user_confirmation,
+        Err(_) => {
+            ctx.send_hci_event(
+                hci::SimplePairingCompleteBuilder {
+                    status: hci::ErrorCode::AuthenticationFailure,
+                    bd_addr: ctx.peer_address(),
+                }
+                .build(),
+            );
+            return Err(());
         }
     };
 
@@ -867,8 +952,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic] // TODO: make the test pass
-    fn passkey_entry_initiator_failure_on_initiating_side() {
+    fn passkey_entry_initiator_negative_reply_on_initiating_side() {
         let context = TestContext::new();
         let procedure = initiate;
 
@@ -876,12 +960,27 @@ mod tests {
     }
 
     #[test]
-    #[should_panic] // TODO: make the test pass
-    fn passkey_entry_responder_failure_on_initiating_side() {
+    fn passkey_entry_responder_negative_reply_on_responding_side() {
+        let context = TestContext::new();
+        let procedure = respond;
+
+        include!("../../../test/SP/BV-14bis-C.in");
+    }
+
+    #[test]
+    fn passkey_entry_responder_negative_reply_on_initiating_side() {
         let context = TestContext::new();
         let procedure = respond;
 
         include!("../../../test/SP/BV-15-C.in");
+    }
+
+    #[test]
+    fn passkey_entry_initiator_negative_reply_on_responding_side() {
+        let context = TestContext::new();
+        let procedure = initiate;
+
+        include!("../../../test/SP/BV-15bis-C.in");
     }
 
     #[test]

@@ -18,6 +18,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include "device.h"

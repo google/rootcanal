@@ -18,7 +18,18 @@
 
 #include <vector>
 
+#include "log.h"
+
 namespace rootcanal {
+
+static uint32_t next_instance_id() {
+  static uint32_t instance_counter = 0;
+  return instance_counter++;
+}
+
+Device::Device() : id_(next_instance_id()) {
+  ASSERT(Address::FromString("BB:BB:BB:BB:BB:AD", address_));
+}
 
 std::string Device::ToString() const {
   return GetTypeString() + "@" + address_.ToString();
@@ -33,8 +44,7 @@ void Device::Close() {
 void Device::SendLinkLayerPacket(
     std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
     Phy::Type type, int8_t tx_power) {
-  SendLinkLayerPacket(packet->SerializeToBytes(), type,
-                      tx_power);
+  SendLinkLayerPacket(packet->SerializeToBytes(), type, tx_power);
 }
 
 void Device::SendLinkLayerPacket(std::vector<uint8_t> const& packet,

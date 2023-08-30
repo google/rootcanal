@@ -73,32 +73,14 @@ void HciSniffer::AppendRecord(PacketDirection packet_direction,
   output_->flush();
 }
 
-void HciSniffer::RegisterCallbacks(PacketCallback command_callback,
-                                   PacketCallback acl_callback,
-                                   PacketCallback sco_callback,
-                                   PacketCallback iso_callback,
+void HciSniffer::RegisterCallbacks(PacketCallback packet_callback,
                                    CloseCallback close_callback) {
   transport_->RegisterCallbacks(
-      [this,
-       command_callback](const std::shared_ptr<std::vector<uint8_t>> command) {
-        AppendRecord(PacketDirection::HOST_TO_CONTROLLER, PacketType::COMMAND,
-                     *command);
-        command_callback(command);
-      },
-      [this, acl_callback](const std::shared_ptr<std::vector<uint8_t>> acl) {
-        AppendRecord(PacketDirection::HOST_TO_CONTROLLER, PacketType::ACL,
-                     *acl);
-        acl_callback(acl);
-      },
-      [this, sco_callback](const std::shared_ptr<std::vector<uint8_t>> sco) {
-        AppendRecord(PacketDirection::HOST_TO_CONTROLLER, PacketType::SCO,
-                     *sco);
-        sco_callback(sco);
-      },
-      [this, iso_callback](const std::shared_ptr<std::vector<uint8_t>> iso) {
-        AppendRecord(PacketDirection::HOST_TO_CONTROLLER, PacketType::ISO,
-                     *iso);
-        iso_callback(iso);
+      [this, packet_callback](
+          PacketType packet_type,
+          const std::shared_ptr<std::vector<uint8_t>> packet) {
+        AppendRecord(PacketDirection::HOST_TO_CONTROLLER, packet_type, *packet);
+        packet_callback(packet_type, packet);
       },
       close_callback);
 }
@@ -112,23 +94,10 @@ void HciSniffer::Close() {
   }
 }
 
-void HciSniffer::SendEvent(const std::vector<uint8_t>& packet) {
-  AppendRecord(PacketDirection::CONTROLLER_TO_HOST, PacketType::EVENT, packet);
-  transport_->SendEvent(packet);
+void HciSniffer::Send(PacketType packet_type,
+                      const std::vector<uint8_t>& packet) {
+  AppendRecord(PacketDirection::CONTROLLER_TO_HOST, packet_type, packet);
+  transport_->Send(packet_type, packet);
 }
 
-void HciSniffer::SendAcl(const std::vector<uint8_t>& packet) {
-  AppendRecord(PacketDirection::CONTROLLER_TO_HOST, PacketType::ACL, packet);
-  transport_->SendAcl(packet);
-}
-
-void HciSniffer::SendSco(const std::vector<uint8_t>& packet) {
-  AppendRecord(PacketDirection::CONTROLLER_TO_HOST, PacketType::SCO, packet);
-  transport_->SendSco(packet);
-}
-
-void HciSniffer::SendIso(const std::vector<uint8_t>& packet) {
-  AppendRecord(PacketDirection::CONTROLLER_TO_HOST, PacketType::ISO, packet);
-  transport_->SendIso(packet);
-}
 }  // namespace rootcanal

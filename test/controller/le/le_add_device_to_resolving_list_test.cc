@@ -130,4 +130,16 @@ TEST_F(LeAddDeviceToResolvingListTest, PeerIrkDuplicate) {
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
+TEST_F(LeAddDeviceToResolvingListTest, EmptyPeerIrkDuplicate) {
+  ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
+                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                std::array<uint8_t, 16>{0}, std::array<uint8_t, 16>{1}),
+            ErrorCode::SUCCESS);
+
+  ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
+                PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                std::array<uint8_t, 16>{0}, std::array<uint8_t, 16>{1}),
+            ErrorCode::SUCCESS);
+}
+
 }  // namespace rootcanal

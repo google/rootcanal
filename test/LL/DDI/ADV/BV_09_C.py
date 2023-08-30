@@ -310,8 +310,8 @@ class Test(ControllerTest):
                 peer_address_type=(hci.AddressType.PUBLIC_DEVICE_ADDRESS if peer_address_type == ll.AddressType.PUBLIC
                                    else hci.AddressType.RANDOM_DEVICE_ADDRESS),
                 peer_address=peer_address,
-                conn_interval=self.LL_initiator_connInterval,
-                conn_latency=self.LL_initiator_connPeripheralLatency,
+                connection_interval=self.LL_initiator_connInterval,
+                peripheral_latency=self.LL_initiator_connPeripheralLatency,
                 supervision_timeout=self.LL_initiator_connSupervisionTimeout,
                 central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 
@@ -380,8 +380,8 @@ class Test(ControllerTest):
                 peer_address_type=(hci.AddressType.PUBLIC_DEVICE_ADDRESS if peer_address_type == ll.AddressType.PUBLIC
                                    else hci.AddressType.RANDOM_DEVICE_ADDRESS),
                 peer_address=peer_address,
-                conn_interval=self.LL_initiator_connInterval,
-                conn_latency=self.LL_initiator_connPeripheralLatency,
+                connection_interval=self.LL_initiator_connInterval,
+                peripheral_latency=self.LL_initiator_connPeripheralLatency,
                 supervision_timeout=self.LL_initiator_connSupervisionTimeout,
                 central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 

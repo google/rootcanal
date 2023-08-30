@@ -1,0 +1,25 @@
+filegroup {
+    name: "rootcanal-protos",
+    srcs: [
+        "rootcanal/configuration.proto",
+    ],
+}
+
+// This library contains the generated headers for the
+// RootCanal configuration file / parameter.
+cc_library_static {
+    name: "librootcanal_config",
+    host_supported: true,
+    vendor_available: true,
+    proto: {
+        export_proto_headers: true,
+        canonical_path_from_root: false,
+        include_dirs: [
+            "packages/modules/Bluetooth/tools/rootcanal/proto",
+        ],
+    },
+    shared_libs: [
+        "libprotobuf-cpp-full",
+    ],
+    srcs: [":rootcanal-protos"],
+}

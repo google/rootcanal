@@ -16,9 +16,9 @@
 
 #pragma once
 
-#include "packets/hci_packets.h"
-
 #include <unordered_map>
+
+#include "packets/hci_packets.h"
 
 namespace rootcanal {
 
@@ -63,10 +63,6 @@ class PcapFilter final {
       bluetooth::hci::CommandView& command);
   std::vector<uint8_t> FilterLeSetPeriodicAdvertisingData(
       bluetooth::hci::CommandView& command);
-  std::vector<uint8_t> FilterLeMultiAdvtSetData(
-      bluetooth::hci::LeMultiAdvtView& command);
-  std::vector<uint8_t> FilterLeMultiAdvtSetScanResp(
-      bluetooth::hci::LeMultiAdvtView& command);
 
   // Specific filters for HCI events.
   std::vector<uint8_t> FilterReadLocalNameComplete(

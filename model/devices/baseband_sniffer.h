@@ -21,11 +21,11 @@
 
 #include "device.h"
 
-namespace rootcanal {
-
 namespace bredr_bb {
 class BaseBandPacketBuilder;
 }  // namespace bredr_bb
+
+namespace rootcanal {
 
 using ::bluetooth::hci::Address;
 

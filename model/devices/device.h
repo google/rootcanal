@@ -18,15 +18,14 @@
 
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
-#include <functional>
 
 #include "hci/address.h"
 #include "packets/link_layer_packets.h"
 #include "phy.h"
-#include "log.h"
 
 namespace rootcanal {
 
@@ -36,7 +35,10 @@ using ::bluetooth::hci::Address;
 //  - Provide Get*() and Set*() functions for device attributes.
 class Device {
  public:
-  Device() { ASSERT(Address::FromString("BB:BB:BB:BB:BB:AD", address_)); }
+  // Unique device identifier.
+  const uint32_t id_;
+
+  Device();
   virtual ~Device() = default;
 
   // Return a string representation of the type of device.

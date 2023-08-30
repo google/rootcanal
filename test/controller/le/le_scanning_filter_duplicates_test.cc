@@ -24,8 +24,6 @@
 
 #include "hci/address.h"
 #include "model/controller/link_layer_controller.h"
-#include "packet/bit_inserter.h"
-#include "packet/packet_view.h"
 #include "packets/hci_packets.h"
 #include "packets/link_layer_packets.h"
 
@@ -73,7 +71,7 @@ class LeScanningFilterDuplicates : public ::testing::Test {
 
   void StartExtendedScan(FilterDuplicates filter_duplicates,
                          uint16_t duration = 0, uint16_t period = 0) {
-    bluetooth::hci::PhyScanParameters param;
+    bluetooth::hci::ScanningPhyParameters param;
     param.le_scan_type_ = LeScanType::ACTIVE;
     param.le_scan_interval_ = 0x4;
     param.le_scan_window_ = 0x4;
@@ -95,7 +93,7 @@ class LeScanningFilterDuplicates : public ::testing::Test {
   /// Helper for building ScanResponse packets
   static model::packets::LinkLayerPacketView LeScanResponse(
       std::vector<uint8_t> const data = {}) {
-    return FromBuilder(*model::packets::LeScanResponseBuilder::Create(
+    return FromBuilder(model::packets::LeScanResponseBuilder::Create(
         Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC,
         data));
   }
@@ -103,7 +101,7 @@ class LeScanningFilterDuplicates : public ::testing::Test {
   /// Helper for building LeLegacyAdvertisingPdu packets
   static model::packets::LinkLayerPacketView LeLegacyAdvertisingPdu(
       std::vector<uint8_t> const data = {}) {
-    return FromBuilder(*model::packets::LeLegacyAdvertisingPduBuilder::Create(
+    return FromBuilder(model::packets::LeLegacyAdvertisingPduBuilder::Create(
         Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC,
         model::packets::AddressType::PUBLIC,
         model::packets::LegacyAdvertisingType::ADV_IND, data));
@@ -112,11 +110,19 @@ class LeScanningFilterDuplicates : public ::testing::Test {
   /// Helper for building LeExtendedAdvertisingPdu packets
   static model::packets::LinkLayerPacketView LeExtendedAdvertisingPdu(
       std::vector<uint8_t> const data = {}) {
-    return FromBuilder(*model::packets::LeExtendedAdvertisingPduBuilder::Create(
+    return FromBuilder(model::packets::LeExtendedAdvertisingPduBuilder::Create(
         Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC,
         model::packets::AddressType::PUBLIC, 0, 1, 0, 0, 0,
         model::packets::PrimaryPhyType::LE_1M,
         model::packets::SecondaryPhyType::LE_1M, 0, data));
+  }
+
+  static model::packets::LinkLayerPacketView FromBuilder(
+      std::unique_ptr<pdl::packet::Builder> builder) {
+    auto data =
+        std::make_shared<std::vector<uint8_t>>(builder->SerializeToBytes());
+    return model::packets::LinkLayerPacketView::Create(
+        pdl::packet::slice(data));
   }
 
   enum Filtered {
@@ -154,18 +160,6 @@ class LeScanningFilterDuplicates : public ::testing::Test {
   static void remote_listener_(
       std::shared_ptr<model::packets::LinkLayerPacketBuilder> /* packet */,
       Phy::Type /* phy */, int8_t /* tx_power */) {}
-
-  /// Helper for building packet view from packet builder
-  static model::packets::LinkLayerPacketView FromBuilder(
-      model::packets::LinkLayerPacketBuilder& builder) {
-    std::shared_ptr<std::vector<uint8_t>> buffer(new std::vector<uint8_t>);
-    auto bit_inserter = bluetooth::packet::BitInserter(*buffer);
-
-    builder.Serialize(bit_inserter);
-
-    return model::packets::LinkLayerPacketView::Create(
-        PacketView<kLittleEndian>(buffer));
-  }
 };
 
 unsigned LeScanningFilterDuplicates::event_listener_called_ = 0;

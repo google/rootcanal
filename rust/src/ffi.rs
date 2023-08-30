@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO(b/290018030): Remove this and add proper safety comments.
+#![allow(clippy::undocumented_unsafe_blocks)]
+
 use std::convert::TryFrom;
 use std::mem::ManuallyDrop;
 use std::rc::Rc;
@@ -105,8 +108,8 @@ pub unsafe extern "C" fn link_manager_add_link(
     lm: *const LinkManager,
     peer: *const [u8; 6],
 ) -> bool {
-    let lm = ManuallyDrop::new(Rc::from_raw(lm));
-    lm.add_link(hci::Address::from(&*peer)).is_ok()
+    let lm = ManuallyDrop::new(unsafe { Rc::from_raw(lm) });
+    unsafe { lm.add_link(hci::Address::from(&*peer)).is_ok() }
 }
 
 /// Unregister a link with a peer inside the link manager
@@ -123,8 +126,8 @@ pub unsafe extern "C" fn link_manager_remove_link(
     lm: *const LinkManager,
     peer: *const [u8; 6],
 ) -> bool {
-    let lm = ManuallyDrop::new(Rc::from_raw(lm));
-    lm.remove_link(hci::Address::from(&*peer)).is_ok()
+    let lm = ManuallyDrop::new(unsafe { Rc::from_raw(lm) });
+    unsafe { lm.remove_link(hci::Address::from(&*peer)).is_ok() }
 }
 
 /// Run the Link Manager procedures
@@ -135,7 +138,7 @@ pub unsafe extern "C" fn link_manager_remove_link(
 /// - `lm` must be a valid pointer
 #[no_mangle]
 pub unsafe extern "C" fn link_manager_tick(lm: *const LinkManager) {
-    let lm = ManuallyDrop::new(Rc::from_raw(lm));
+    let lm = ManuallyDrop::new(unsafe { Rc::from_raw(lm) });
     lm.as_ref().tick();
 }
 
@@ -155,8 +158,8 @@ pub unsafe extern "C" fn link_manager_ingest_hci(
     data: *const u8,
     len: usize,
 ) -> bool {
-    let lm = ManuallyDrop::new(Rc::from_raw(lm));
-    let data = slice::from_raw_parts(data, len);
+    let lm = ManuallyDrop::new(unsafe { Rc::from_raw(lm) });
+    let data = unsafe { slice::from_raw_parts(data, len) };
 
     if let Ok(packet) = hci::Command::parse(data) {
         lm.ingest_hci(packet).is_ok()
@@ -184,11 +187,11 @@ pub unsafe extern "C" fn link_manager_ingest_lmp(
     data: *const u8,
     len: usize,
 ) -> bool {
-    let lm = ManuallyDrop::new(Rc::from_raw(lm));
-    let data = slice::from_raw_parts(data, len);
+    let lm = ManuallyDrop::new(unsafe { Rc::from_raw(lm) });
+    let data = unsafe { slice::from_raw_parts(data, len) };
 
     if let Ok(packet) = lmp::LmpPacket::parse(data) {
-        lm.ingest_lmp(hci::Address::from(&*from), packet).is_ok()
+        unsafe { lm.ingest_lmp(hci::Address::from(&*from), packet).is_ok() }
     } else {
         false
     }
@@ -202,7 +205,9 @@ pub unsafe extern "C" fn link_manager_ingest_lmp(
 /// - `lm` must be a valid pointers and must not be reused afterwards
 #[no_mangle]
 pub unsafe extern "C" fn link_manager_destroy(lm: *const LinkManager) {
-    let _ = Rc::from_raw(lm);
+    unsafe {
+        let _ = Rc::from_raw(lm);
+    }
 }
 
 /// Create a new link manager instance
@@ -231,10 +236,10 @@ pub unsafe extern "C" fn link_layer_add_link(
     peer_address: *const [u8; 6],
     role: u8,
 ) -> bool {
-    let mut ll = ManuallyDrop::new(Rc::from_raw(ll));
+    let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
     let ll = Rc::get_mut(&mut ll).unwrap();
     let role = hci::Role::try_from(role).unwrap_or(hci::Role::Peripheral);
-    ll.add_link(handle, hci::Address::from(&*peer_address), role).is_ok()
+    unsafe { ll.add_link(handle, hci::Address::from(&*peer_address), role).is_ok() }
 }
 
 /// Unregister a link with a peer inside the link layer
@@ -248,7 +253,7 @@ pub unsafe extern "C" fn link_layer_add_link(
 /// - `peer` must be valid for reads for 6 bytes
 #[no_mangle]
 pub unsafe extern "C" fn link_layer_remove_link(ll: *const LinkLayer, handle: u16) -> bool {
-    let mut ll = ManuallyDrop::new(Rc::from_raw(ll));
+    let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
     let ll = Rc::get_mut(&mut ll).unwrap();
     ll.remove_link(handle).is_ok()
 }
@@ -261,7 +266,7 @@ pub unsafe extern "C" fn link_layer_remove_link(ll: *const LinkLayer, handle: u1
 /// - `ll` must be a valid pointer
 #[no_mangle]
 pub unsafe extern "C" fn link_layer_tick(ll: *const LinkLayer) {
-    let mut ll = ManuallyDrop::new(Rc::from_raw(ll));
+    let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
     let ll = Rc::get_mut(&mut ll).unwrap();
     ll.tick();
 }
@@ -282,9 +287,9 @@ pub unsafe extern "C" fn link_layer_ingest_hci(
     data: *const u8,
     len: usize,
 ) -> bool {
-    let mut ll = ManuallyDrop::new(Rc::from_raw(ll));
+    let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
     let ll = Rc::get_mut(&mut ll).unwrap();
-    let data = slice::from_raw_parts(data, len);
+    let data = unsafe { slice::from_raw_parts(data, len) };
 
     if let Ok(packet) = hci::Command::parse(data) {
         ll.ingest_hci(packet).is_ok()
@@ -311,9 +316,9 @@ pub unsafe extern "C" fn link_layer_ingest_llcp(
     data: *const u8,
     len: usize,
 ) -> bool {
-    let mut ll = ManuallyDrop::new(Rc::from_raw(ll));
+    let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
     let ll = Rc::get_mut(&mut ll).unwrap();
-    let data = slice::from_raw_parts(data, len);
+    let data = unsafe { slice::from_raw_parts(data, len) };
 
     if let Ok(packet) = llcp::LlcpPacket::parse(data) {
         ll.ingest_llcp(handle, packet).is_ok()
@@ -340,10 +345,10 @@ pub unsafe extern "C" fn link_layer_get_cis_connection_handle(
     cis_id: u8,
     cis_connection_handle: *mut u16,
 ) -> bool {
-    let mut ll = ManuallyDrop::new(Rc::from_raw(ll));
+    let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
     let ll = Rc::get_mut(&mut ll).unwrap();
     ll.get_cis_connection_handle(cig_id, cis_id)
-        .map(|handle| {
+        .map(|handle| unsafe {
             *cis_connection_handle = handle;
         })
         .is_some()
@@ -369,16 +374,20 @@ pub unsafe extern "C" fn link_layer_get_cis_information(
     cis_id: *mut u8,
     max_sdu_tx: *mut u16,
 ) -> bool {
-    let mut ll = ManuallyDrop::new(Rc::from_raw(ll));
+    let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
     let ll = Rc::get_mut(&mut ll).unwrap();
     ll.get_cis(cis_connection_handle)
         .map(|cis| {
             if let Some(handle) = cis.acl_connection_handle {
-                *acl_connection_handle = handle;
+                unsafe {
+                    *acl_connection_handle = handle;
+                }
             }
-            *cig_id = cis.cig_id;
-            *cis_id = cis.cis_id;
-            *max_sdu_tx = cis.max_sdu_tx().unwrap_or(0);
+            unsafe {
+                *cig_id = cis.cig_id;
+                *cis_id = cis.cis_id;
+                *max_sdu_tx = cis.max_sdu_tx().unwrap_or(0);
+            }
         })
         .is_some()
 }
@@ -391,5 +400,7 @@ pub unsafe extern "C" fn link_layer_get_cis_information(
 /// - `ll` must be a valid pointers and must not be reused afterwards
 #[no_mangle]
 pub unsafe extern "C" fn link_layer_destroy(ll: *const LinkLayer) {
-    let _ = Rc::from_raw(ll);
+    unsafe {
+        let _ = Rc::from_raw(ll);
+    }
 }

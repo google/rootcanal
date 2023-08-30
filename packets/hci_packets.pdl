@@ -371,14 +371,11 @@ enum OpCode : 16 {
   // MSFT_OPCODE_xxxx below is needed for the tests.
   MSFT_OPCODE_INTEL = 0xFC1E,
   LE_GET_VENDOR_CAPABILITIES = 0xFD53,
-  LE_MULTI_ADVT = 0xFD54,
   LE_BATCH_SCAN = 0xFD56,
-  LE_ADV_FILTER = 0xFD57,
-  LE_ENERGY_INFO = 0xFD59,
-  LE_EXTENDED_SCAN_PARAMS = 0xFD5A,
-  CONTROLLER_DEBUG_INFO = 0xFD5B,
-  CONTROLLER_A2DP_OPCODE = 0xFD5D,
-  CONTROLLER_BQR = 0xFD5E,
+  LE_APCF = 0xFD57,
+  LE_GET_CONTROLLER_ACTIVITY_ENERGY_INFO = 0xFD59,
+  LE_EX_SET_SCAN_PARAMETERS = 0xFD5A,
+  GET_CONTROLLER_DEBUG_INFO = 0xFD5B,
   // MSFT_OPCODE_xxxx below are needed for the tests.
   MSFT_OPCODE_MEDIATEK = 0xFD30,
   MSFT_OPCODE_QUALCOMM = 0xFD70,
@@ -697,10 +694,6 @@ packet Command {
   _payload_,
 }
 
-// Packets for interfaces
-
-packet VendorCommand : Command { _payload_, }
-
 // HCI Event Packets
 
 enum EventCode : 8 {
@@ -759,14 +752,7 @@ enum EventCode : 8 {
   VENDOR_SPECIFIC = 0xFF,
 }
 
-packet Event {
-  event_code : EventCode,
-  _size_(_payload_) : 8,
-  _payload_,
-}
-
-// LE Events
-
+// LE events
 enum SubeventCode : 8 {
   CONNECTION_COMPLETE = 0x01,
   ADVERTISING_REPORT = 0x02,
@@ -807,11 +793,17 @@ enum SubeventCode : 8 {
 
 // Vendor specific events
 enum VseSubeventCode : 8 {
-  BLE_THRESHOLD = 0x54,
-  BLE_STCHANGE = 0x55,
-  BLE_TRACKING = 0x56,
-  DEBUG_INFO = 0x57,
-  BQR_EVENT = 0x58,
+  STORAGE_THRESHOLD_BREACH = 0x54,
+  LE_MULTI_ADVERTISING_STATE_CHANGE = 0x55,
+  LE_ADVERTISEMENT_TRACKING = 0x56,
+  CONTROLLER_DEBUG_INFO = 0x57,
+  BLUETOOTH_QUALITY_REPORT = 0x58,
+}
+
+packet Event {
+  event_code : EventCode,
+  _size_(_payload_) : 8,
+  _payload_,
 }
 
 // Common definitions for commands and events
@@ -883,6 +875,11 @@ packet CommandStatus : Event (event_code = COMMAND_STATUS) {
   status : ErrorCode, // SUCCESS means PENDING
   num_hci_command_packets : 8,
   command_op_code : OpCode,
+  _payload_,
+}
+
+packet VendorSpecificEvent : Event (event_code = VENDOR_SPECIFIC) {
+  subevent_code : VseSubeventCode,
   _payload_,
 }
 
@@ -3279,12 +3276,12 @@ packet LeCreateConnection : Command (op_code = LE_CREATE_CONNECTION) {
   peer_address_type : AddressType,
   peer_address : Address,
   own_address_type : OwnAddressType,
-  conn_interval_min : 16, // 0x0006-0x0C80 (7.5ms to 4s)
-  conn_interval_max : 16, // 0x0006-0x0C80 (7.5ms to 4s)
-  conn_latency : 16, // 0x0006-0x01F3
+  connection_interval_min : 16, // 0x0006-0x0C80 (7.5ms to 4s)
+  connection_interval_max : 16, // 0x0006-0x0C80 (7.5ms to 4s)
+  max_latency : 16, // 0x0006-0x01F3
   supervision_timeout : 16, // 0x00A to 0x0C80 (100ms to 32s)
-  minimum_ce_length : 16, // 0.625ms
-  maximum_ce_length : 16, // 0.625ms
+  min_ce_length : 16, // 0.625ms
+  max_ce_length : 16, // 0.625ms
 }
 
 packet LeCreateConnectionStatus : CommandStatus (command_op_code = LE_CREATE_CONNECTION) {
@@ -3347,12 +3344,12 @@ packet LeRemoveDeviceFromFilterAcceptListComplete : CommandComplete (command_op_
 packet LeConnectionUpdate : Command (op_code = LE_CONNECTION_UPDATE) {
   connection_handle : 12,
   _reserved_ : 4,
-  conn_interval_min : 16, // 0x0006-0x0C80 (7.5ms to 4s)
-  conn_interval_max : 16, // 0x0006-0x0C80 (7.5ms to 4s)
-  conn_latency : 16, // 0x0006-0x01F3
+  connection_interval_min : 16, // 0x0006-0x0C80 (7.5ms to 4s)
+  connection_interval_max : 16, // 0x0006-0x0C80 (7.5ms to 4s)
+  max_latency : 16, // 0x0006-0x01F3
   supervision_timeout : 16, // 0x00A to 0x0C80 (100ms to 32s)
-  minimum_ce_length : 16, // 0.625ms
-  maximum_ce_length : 16, // 0.625ms
+  min_ce_length : 16, // 0.625ms
+  max_ce_length : 16, // 0.625ms
 }
 
 packet LeConnectionUpdateStatus : CommandStatus (command_op_code = LE_CONNECTION_UPDATE) {
@@ -3988,7 +3985,7 @@ packet LeSetPeriodicAdvertisingEnableComplete : CommandComplete (command_op_code
   status : ErrorCode,
 }
 
-struct PhyScanParameters {
+struct ScanningPhyParameters {
   le_scan_type : LeScanType,
   le_scan_interval : 16, // 0x0004-0xFFFF Default 0x10 (10ms)
   le_scan_window : 16, // 0x004-0xFFFF Default 0x10 (10ms)
@@ -3998,7 +3995,7 @@ packet LeSetExtendedScanParameters : Command (op_code = LE_SET_EXTENDED_SCAN_PAR
   own_address_type : OwnAddressType,
   scanning_filter_policy : LeScanningFilterPolicy,
   scanning_phys : 8,
-  parameters : PhyScanParameters[],
+  scanning_phy_parameters : ScanningPhyParameters[],
 }
 
 test LeSetExtendedScanParameters {
@@ -4040,12 +4037,12 @@ test LeSetExtendedScanEnableComplete {
   "\x0e\x04\x01\x42\x20\x00",
 }
 
-struct LeCreateConnPhyScanParameters {
+struct InitiatingPhyParameters {
   scan_interval : 16, // 0x0004-0xFFFF
   scan_window : 16, // < = LeScanInterval
-  conn_interval_min : 16, // 0x0006-0x0C80 (7.5ms to 4s)
-  conn_interval_max : 16, // 0x0006-0x0C80 (7.5ms to 4s)
-  conn_latency : 16, // 0x0006-0x01F3
+  connection_interval_min : 16, // 0x0006-0x0C80 (7.5ms to 4s)
+  connection_interval_max : 16, // 0x0006-0x0C80 (7.5ms to 4s)
+  max_latency : 16, // 0x0006-0x01F3
   supervision_timeout : 16, // 0x00A to 0x0C80 (100ms to 32s)
   min_ce_length : 16, // 0.625ms
   max_ce_length : 16, // 0.625ms
@@ -4054,10 +4051,10 @@ struct LeCreateConnPhyScanParameters {
 packet LeExtendedCreateConnection : Command (op_code = LE_EXTENDED_CREATE_CONNECTION) {
   initiator_filter_policy : InitiatorFilterPolicy,
   own_address_type : OwnAddressType,
-  peer_address_type : AddressType,
+  peer_address_type : PeerAddressType,
   peer_address : Address,
   initiating_phys : 8,
-  phy_scan_parameters : LeCreateConnPhyScanParameters[],
+  initiating_phy_parameters : InitiatingPhyParameters[],
 }
 
 test LeExtendedCreateConnection {
@@ -4690,494 +4687,6 @@ packet LeSubrateRequest : Command (op_code = LE_SUBRATE_REQUEST) {
 packet LeSubrateRequestStatus : CommandStatus (command_op_code = LE_SUBRATE_REQUEST) {
 }
 
-  // VENDOR_SPECIFIC
-packet LeGetVendorCapabilities : VendorCommand (op_code = LE_GET_VENDOR_CAPABILITIES) {
-}
-
-test LeGetVendorCapabilities {
-  "\x53\xfd\x00",
-}
-
-struct BaseVendorCapabilities {
-  max_advt_instances: 8,
-  offloaded_resolution_of_private_address : 8,
-  total_scan_results_storage: 16,
-  max_irk_list_sz: 8,
-  filtering_support: 8,
-  max_filter: 8,
-  activity_energy_info_support: 8,
-}
-
-packet LeGetVendorCapabilitiesComplete : CommandComplete (command_op_code = LE_GET_VENDOR_CAPABILITIES) {
-  status : ErrorCode,
-  base_vendor_capabilities : BaseVendorCapabilities,
-  _payload_,
-}
-
-packet LeGetVendorCapabilitiesComplete095 : LeGetVendorCapabilitiesComplete {
-  version_supported: 16,
-  total_num_of_advt_tracked: 16,
-  extended_scan_support: 8,
-  debug_logging_supported: 8,
-  _payload_,
-}
-
-packet LeGetVendorCapabilitiesComplete096 : LeGetVendorCapabilitiesComplete095 {
-  le_address_generation_offloading_support: 8,
-  _payload_,
-}
-
-packet LeGetVendorCapabilitiesComplete098 : LeGetVendorCapabilitiesComplete096 {
-  a2dp_source_offload_capability_mask: 32,
-  bluetooth_quality_report_support: 8
-}
-
-enum SubOcf : 8 {
-  SET_PARAM = 0x01,
-  SET_DATA = 0x02,
-  SET_SCAN_RESP = 0x03,
-  SET_RANDOM_ADDR = 0x04,
-  SET_ENABLE = 0x05,
-}
-
-packet LeMultiAdvt : Command (op_code = LE_MULTI_ADVT) {
-  sub_cmd : SubOcf,
-  _body_,
-}
-
-packet LeMultiAdvtComplete : CommandComplete (command_op_code = LE_MULTI_ADVT) {
-  status : ErrorCode,
-  sub_cmd : SubOcf,
-}
-
-packet LeMultiAdvtParam : LeMultiAdvt (sub_cmd = SET_PARAM) {
-  interval_min : 16,
-  interval_max : 16,
-  advertising_type : AdvertisingType,
-  own_address_type : OwnAddressType,
-  own_address : Address,
-  peer_address_type : PeerAddressType,
-  peer_address : Address,
-  channel_map : 8,
-  filter_policy : AdvertisingFilterPolicy,
-  _reserved_ : 6,
-  instance : 8,
-  tx_power : 8,
-}
-
-packet LeMultiAdvtParamComplete : LeMultiAdvtComplete (sub_cmd = SET_PARAM) {
-}
-
-packet LeMultiAdvtSetData : LeMultiAdvt (sub_cmd = SET_DATA) {
-  _size_(advertising_data) : 8,
-  advertising_data : 8[],
-  _padding_[31], // Zero padding to 31 bytes of advertising_data
-  advertising_instance : 8,
-}
-
-packet LeMultiAdvtSetDataComplete : LeMultiAdvtComplete (sub_cmd = SET_DATA) {
-}
-
-packet LeMultiAdvtSetScanResp : LeMultiAdvt (sub_cmd = SET_SCAN_RESP) {
-  _size_(advertising_data) : 8,
-  advertising_data : 8[],
-  _padding_[31], // Zero padding to 31 bytes of advertising_data
-  advertising_instance : 8,
-}
-
-packet LeMultiAdvtSetScanRespComplete : LeMultiAdvtComplete (sub_cmd = SET_SCAN_RESP) {
-}
-
-packet LeMultiAdvtSetRandomAddr : LeMultiAdvt (sub_cmd = SET_RANDOM_ADDR) {
-  random_address : Address,
-  advertising_instance : 8,
-}
-
-packet LeMultiAdvtSetRandomAddrComplete : LeMultiAdvtComplete (sub_cmd = SET_RANDOM_ADDR) {
-}
-
-packet LeMultiAdvtSetEnable : LeMultiAdvt (sub_cmd = SET_ENABLE) {
-  advertising_enable : Enable, // Default DISABLED
-  advertising_instance : 8,
-}
-
-packet LeMultiAdvtSetEnableComplete : LeMultiAdvtComplete (sub_cmd = SET_ENABLE) {
-}
-
-enum BatchScanOpcode : 8 {
-  ENABLE = 0x01,
-  SET_STORAGE_PARAMETERS = 0x02,
-  SET_SCAN_PARAMETERS = 0x03,
-  READ_RESULT_PARAMETERS = 0x04,
-}
-
-// https://source.android.com/devices/bluetooth/hci_requirements#batching-of-scan-results
-packet LeBatchScan : Command (op_code = LE_BATCH_SCAN) {
-  batch_scan_opcode : BatchScanOpcode,
-  _body_,
-}
-
-packet LeBatchScanComplete : CommandComplete (command_op_code = LE_BATCH_SCAN) {
-  status : ErrorCode,
-  batch_scan_opcode : BatchScanOpcode,
-  _body_,
-}
-
-packet LeBatchScanEnable : LeBatchScan (batch_scan_opcode = ENABLE) {
-  enable : Enable,
-}
-
-packet LeBatchScanEnableComplete : LeBatchScanComplete (batch_scan_opcode = ENABLE) {
-}
-
-packet LeBatchScanSetStorageParameters : LeBatchScan (batch_scan_opcode = SET_STORAGE_PARAMETERS) {
-  batch_scan_full_max_percentage : 8,
-  batch_scan_truncated_max_percentage : 8,
-  batch_scan_notify_threshold_percentage : 8,
-}
-
-packet LeBatchScanSetStorageParametersComplete : LeBatchScanComplete (batch_scan_opcode = SET_STORAGE_PARAMETERS) {
-}
-
-enum BatchScanDiscardRule : 8 {
-  OLDEST = 0x00,
-  WEAKEST_RSSI = 0x01,
-}
-
-packet LeBatchScanSetScanParameters : LeBatchScan (batch_scan_opcode = SET_SCAN_PARAMETERS) {
-  truncated_mode_enabled : 1,
-  full_mode_enabled : 1,
-  _reserved_ : 6,
-  duty_cycle_scan_window_slots : 32,
-  duty_cycle_scan_interval_slots : 32,
-  own_address_type : PeerAddressType,
-  batch_scan_discard_rule : BatchScanDiscardRule,
-}
-
-packet LeBatchScanSetScanParametersComplete : LeBatchScanComplete (batch_scan_opcode = SET_SCAN_PARAMETERS) {
-}
-
-enum BatchScanDataRead : 8 {
-  TRUNCATED_MODE_DATA = 0x01,
-  FULL_MODE_DATA = 0x02,
-}
-
-packet LeBatchScanReadResultParameters : LeBatchScan (batch_scan_opcode = READ_RESULT_PARAMETERS) {
-  batch_scan_data_read : BatchScanDataRead,
-}
-
-packet LeBatchScanReadResultParametersCompleteRaw : LeBatchScanComplete (batch_scan_opcode = READ_RESULT_PARAMETERS) {
-  batch_scan_data_read : BatchScanDataRead,
-  num_of_records : 8,
-  raw_data : 8[],
-}
-
-packet LeBatchScanReadResultParametersComplete : LeBatchScanComplete (batch_scan_opcode = READ_RESULT_PARAMETERS) {
-  batch_scan_data_read : BatchScanDataRead,
-  _body_,
-}
-
-struct TruncatedResult {
-  bd_addr : Address,
-  address_type : AddressType,
-  tx_power : 8,
-  rssi : 8,
-  timestamp : 16,
-}
-
-packet LeBatchScanReadTruncatedResultParametersComplete : LeBatchScanReadResultParametersComplete (batch_scan_data_read = TRUNCATED_MODE_DATA) {
-  _count_(results) : 8,
-  results : TruncatedResult[],
-}
-
-struct FullResult {
-  bd_addr : Address,
-  address_type : AddressType,
-  tx_power : 8,
-  rssi : 8,
-  timestamp : 16,
-  _size_(adv_packet) : 8,
-  adv_packet : 8[],
-  _size_(scan_response) : 8,
-  scan_response : 8[],
-}
-
-packet LeBatchScanReadFullResultParametersComplete : LeBatchScanReadResultParametersComplete (batch_scan_data_read = FULL_MODE_DATA) {
-  _count_(results) : 8,
-  results : FullResult[],
-}
-
-enum ApcfOpcode : 8 {
-  ENABLE = 0x00,
-  SET_FILTERING_PARAMETERS = 0x01,
-  BROADCASTER_ADDRESS = 0x02,
-  SERVICE_UUID = 0x03,
-  SERVICE_SOLICITATION_UUID = 0x04,
-  LOCAL_NAME = 0x05,
-  MANUFACTURER_DATA = 0x06,
-  SERVICE_DATA = 0x07,
-  TRANSPORT_DISCOVERY_DATA = 0x08,
-  AD_TYPE = 0x09,
-  READ_EXTENDED_FEATURES = 0xFF,
-}
-
-// https://source.android.com/devices/bluetooth/hci_requirements#advertising-packet-content-filter
-packet LeAdvFilter : Command (op_code = LE_ADV_FILTER) {
-  apcf_opcode : ApcfOpcode,
-  _body_,
-}
-
-packet LeAdvFilterComplete : CommandComplete (command_op_code = LE_ADV_FILTER) {
-  status : ErrorCode,
-  apcf_opcode : ApcfOpcode,
-  _body_,
-}
-
-packet LeAdvFilterEnable : LeAdvFilter (apcf_opcode = ENABLE) {
-  apcf_enable : Enable,
-}
-
-packet LeAdvFilterEnableComplete : LeAdvFilterComplete (apcf_opcode = ENABLE) {
-  apcf_enable : Enable,
-}
-
-enum ApcfAction : 8 {
-  ADD = 0x00,
-  DELETE = 0x01,
-  CLEAR = 0x02,
-}
-
-enum DeliveryMode : 8 {
-  IMMEDIATE = 0x00,
-  ONFOUND = 0x01,
-  BATCHED = 0x02,
-}
-
-// Bit masks for the selected features
-enum ApcfFilterType : 8 {
-  BROADCASTER_ADDRESS = 0x00,
-  SERVICE_DATA_CHANGE = 0x01,
-  SERVICE_UUID = 0x02,
-  SERVICE_SOLICITATION_UUID = 0x03,
-  LOCAL_NAME = 0x04,
-  MANUFACTURER_DATA = 0x05,
-  SERVICE_DATA = 0x06,
-  TRANSPORT_DISCOVERY_DATA = 0x07,
-  AD_TYPE = 0x08,
-}
-
-packet LeAdvFilterSetFilteringParameters : LeAdvFilter (apcf_opcode = SET_FILTERING_PARAMETERS) {
-  apcf_action : ApcfAction,
-  _body_,
-}
-
-packet LeAdvFilterAddFilteringParameters : LeAdvFilterSetFilteringParameters (apcf_action = ADD) {
-  apcf_filter_index : 8,
-  apcf_feature_selection : 16,
-  apcf_list_logic_type : 16,
-  apcf_filter_logic_type : 8,
-  rssi_high_thresh : 8,
-  delivery_mode : DeliveryMode,
-  onfound_timeout : 16,
-  onfound_timeout_cnt : 8,
-  rssi_low_thresh : 8,
-  onlost_timeout : 16,
-  num_of_tracking_entries : 16,
-}
-
-packet LeAdvFilterDeleteFilteringParameters : LeAdvFilterSetFilteringParameters (apcf_action = DELETE) {
-  apcf_filter_index : 8,
-}
-
-packet LeAdvFilterClearFilteringParameters : LeAdvFilterSetFilteringParameters (apcf_action = CLEAR) {
-}
-
-packet LeAdvFilterSetFilteringParametersComplete : LeAdvFilterComplete (apcf_opcode = SET_FILTERING_PARAMETERS) {
-  apcf_action : ApcfAction,
-  apcf_available_spaces : 8,
-}
-
-enum ApcfApplicationAddressType : 8 {
-  PUBLIC = 0x00,
-  RANDOM = 0x01,
-  NOT_APPLICABLE = 0x02,
-}
-
-packet LeAdvFilterBroadcasterAddress : LeAdvFilter (apcf_opcode = BROADCASTER_ADDRESS) {
-  apcf_action : ApcfAction,
-  apcf_filter_index : 8,
-  apcf_broadcaster_address : Address,
-  apcf_application_address_type : ApcfApplicationAddressType,
-}
-
-packet LeAdvFilterClearBroadcasterAddress : LeAdvFilter (apcf_opcode = BROADCASTER_ADDRESS) {
-  _fixed_ = 0x02 : 8,
-  apcf_filter_index : 8,
-}
-
-packet LeAdvFilterBroadcasterAddressComplete : LeAdvFilterComplete (apcf_opcode = BROADCASTER_ADDRESS) {
-  apcf_action : ApcfAction,
-  apcf_available_spaces : 8,
-}
-
-
-packet LeAdvFilterServiceUuid : LeAdvFilter (apcf_opcode = SERVICE_UUID) {
-  apcf_action : ApcfAction,
-  apcf_filter_index : 8,
-  acpf_uuid_data : 8[],
-}
-
-packet LeAdvFilterServiceUuidComplete : LeAdvFilterComplete (apcf_opcode = SERVICE_UUID) {
-  apcf_action : ApcfAction,
-  apcf_available_spaces : 8,
-}
-
-packet LeAdvFilterSolicitationUuid : LeAdvFilter (apcf_opcode = SERVICE_SOLICITATION_UUID) {
-  apcf_action : ApcfAction,
-  apcf_filter_index : 8,
-  acpf_uuid_data : 8[],
-}
-
-packet LeAdvFilterSolicitationUuidComplete : LeAdvFilterComplete (apcf_opcode = SERVICE_SOLICITATION_UUID) {
-  apcf_action : ApcfAction,
-  apcf_available_spaces : 8,
-}
-
-packet LeAdvFilterLocalName : LeAdvFilter (apcf_opcode = LOCAL_NAME) {
-  apcf_action : ApcfAction,
-  apcf_filter_index : 8,
-  apcf_local_name : 8[],
-}
-
-packet LeAdvFilterLocalNameComplete : LeAdvFilterComplete (apcf_opcode = LOCAL_NAME) {
-  apcf_action : ApcfAction,
-  apcf_available_spaces : 8,
-}
-
-packet LeAdvFilterManufacturerData : LeAdvFilter (apcf_opcode = MANUFACTURER_DATA) {
-  apcf_action : ApcfAction,
-  apcf_filter_index : 8,
-  apcf_manufacturer_data : 8[],
-}
-
-packet LeAdvFilterManufacturerDataComplete : LeAdvFilterComplete (apcf_opcode = MANUFACTURER_DATA) {
-  apcf_action : ApcfAction,
-  apcf_available_spaces : 8,
-}
-
-packet LeAdvFilterServiceData : LeAdvFilter (apcf_opcode = SERVICE_DATA) {
-  apcf_action : ApcfAction,
-  apcf_filter_index : 8,
-  apcf_service_data : 8[],
-}
-
-packet LeAdvFilterServiceDataComplete : LeAdvFilterComplete (apcf_opcode = SERVICE_DATA) {
-  apcf_action : ApcfAction,
-  apcf_available_spaces : 8,
-}
-
-packet LeAdvFilterTransportDiscoveryData : LeAdvFilter (apcf_opcode = TRANSPORT_DISCOVERY_DATA) {
-  apcf_action : ApcfAction,
-  apcf_filter_index : 8,
-  apcf_transport_discovery_data : 8[],
-}
-
-packet LeAdvFilterTransportDiscoveryDataComplete : LeAdvFilterComplete (apcf_opcode = TRANSPORT_DISCOVERY_DATA) {
-  apcf_action : ApcfAction,
-  apcf_available_spaces : 8,
-}
-
-packet LeAdvFilterADType : LeAdvFilter (apcf_opcode = AD_TYPE) {
-  apcf_action : ApcfAction,
-  apcf_filter_index : 8,
-  apcf_ad_type_data : 8[],
-}
-
-packet LeAdvFilterADTypeComplete : LeAdvFilterComplete (apcf_opcode = AD_TYPE) {
-  apcf_action : ApcfAction,
-  apcf_available_spaces : 8,
-}
-
-packet LeAdvFilterReadExtendedFeatures : LeAdvFilter (apcf_opcode = READ_EXTENDED_FEATURES) {
-}
-
-test LeAdvFilterReadExtendedFeatures {
-  "\x57\xfd\x01\xff",
-}
-
-packet LeAdvFilterReadExtendedFeaturesComplete : LeAdvFilterComplete (apcf_opcode = READ_EXTENDED_FEATURES) {
-  transport_discovery_data_filter : 1,
-  ad_type_filter : 1,
-  _reserved_ : 14,
-}
-
-test LeAdvFilterReadExtendedFeaturesComplete {
-  "\x0e\x07\x01\x57\xfd\x00\xff\x03\x00",
-}
-
-packet LeEnergyInfo : VendorCommand (op_code = LE_ENERGY_INFO) {
-}
-
-packet LeEnergyInfoComplete : CommandComplete (command_op_code = LE_ENERGY_INFO) {
-  status : ErrorCode,
-  total_tx_time_ms : 32,
-  total_rx_time_ms : 32,
-  total_idle_time_ms : 32,
-  total_energy_used_ma_v_ms : 32,
-}
-
-packet LeExtendedScanParams : Command (op_code = LE_EXTENDED_SCAN_PARAMS) {
-  le_scan_type : LeScanType,
-  le_scan_interval : 32, // 0x0004-0x4000 Default 0x10 (10ms)
-  le_scan_window : 32, // Default 0x10 (10ms)
-  own_address_type : OwnAddressType,
-  scanning_filter_policy : LeScanningFilterPolicy,
-}
-
-packet LeExtendedScanParamsComplete : CommandComplete (command_op_code = LE_EXTENDED_SCAN_PARAMS) {
-  status : ErrorCode,
-}
-
-packet ControllerDebugInfo : VendorCommand (op_code = CONTROLLER_DEBUG_INFO) {
-}
-
-packet ControllerDebugInfoComplete : CommandComplete (command_op_code = CONTROLLER_DEBUG_INFO) {
-  status : ErrorCode,
-}
-
-packet ControllerA2DPOpcode : VendorCommand (op_code = CONTROLLER_A2DP_OPCODE) {
-  _payload_,  // placeholder (unimplemented)
-}
-
-packet ControllerA2DPOpcodeComplete : CommandComplete (command_op_code = CONTROLLER_A2DP_OPCODE) {
-  _payload_,  // placeholder (unimplemented)
-}
-
-enum BqrReportAction : 8 {
-  ADD = 0x00,
-  DELETE = 0x01,
-  CLEAR = 0x02,
-}
-
-packet ControllerBqr : VendorCommand(op_code = CONTROLLER_BQR) {
-  bqr_report_action : BqrReportAction,
-  bqr_quality_event_mask : 32,
-  bqr_minimum_report_interval : 16,
-}
-
-test ControllerBqr {
-  "\x5e\xfd\x07\x00\x1f\x00\x07\x00\x88\x13",
-}
-
-packet ControllerBqrComplete : CommandComplete (command_op_code = CONTROLLER_BQR) {
-  status : ErrorCode,
-  current_quality_event_mask : 32
-}
-
-test ControllerBqrComplete {
-  "\x0e\x08\x01\x5e\xfd\x00\x1f\x00\x07\x00",
-}
-
 // HCI Event Packets
 
 packet InquiryComplete : Event (event_code = INQUIRY_COMPLETE) {
@@ -5625,8 +5134,8 @@ packet LeConnectionComplete : LeMetaEvent (subevent_code = CONNECTION_COMPLETE) 
   role : Role,
   peer_address_type : AddressType,
   peer_address : Address,
-  conn_interval : 16, // 0x006 - 0x0C80 (7.5ms - 4000ms)
-  conn_latency : 16,  // Number of connection events
+  connection_interval : 16, // 0x006 - 0x0C80 (7.5ms - 4000ms)
+  peripheral_latency : 16,
   supervision_timeout : 16,  // 0x000A to 0x0C80 (100ms to 32s)
   central_clock_accuracy : ClockAccuracy,
 }
@@ -5657,8 +5166,8 @@ packet LeConnectionUpdateComplete : LeMetaEvent (subevent_code = CONNECTION_UPDA
   status : ErrorCode,
   connection_handle : 12,
   _reserved_ : 4,
-  conn_interval : 16, // 0x006 - 0x0C80 (7.5ms - 4000ms)
-  conn_latency : 16,  // Number of connection events
+  connection_interval : 16, // 0x006 - 0x0C80 (7.5ms - 4000ms)
+  peripheral_latency : 16,  // Number of connection events
   supervision_timeout : 16,  // 0x000A to 0x0C80 (100ms to 32s)
 }
 
@@ -5713,8 +5222,8 @@ packet LeEnhancedConnectionComplete : LeMetaEvent (subevent_code = ENHANCED_CONN
   peer_address : Address,
   local_resolvable_private_address : Address,
   peer_resolvable_private_address : Address,
-  conn_interval : 16, // 0x006 - 0x0C80 (7.5ms - 4000ms)
-  conn_latency : 16,  // Number of connection events
+  connection_interval : 16, // 0x006 - 0x0C80 (7.5ms - 4000ms)
+  peripheral_latency : 16,
   supervision_timeout : 16,  // 0x000A to 0x0C80 (100ms to 32s)
   central_clock_accuracy : ClockAccuracy,
 }
@@ -6018,163 +5527,6 @@ packet LeSubrateChange : LeMetaEvent (subevent_code = LE_SUBRATE_CHANGE) {
   _reserved_ : 4,
 }
 
-// Vendor specific events
-
-packet VendorSpecificEvent : Event (event_code = VENDOR_SPECIFIC) {
-  subevent_code : VseSubeventCode,
-  _payload_,
-}
-
-packet StorageThresholdBreachEvent : VendorSpecificEvent (subevent_code = BLE_THRESHOLD) {
-}
-
-enum AdvtInfoPresent : 8 {
-  ADVT_INFO_PRESENT = 0x00,
-  NO_ADVT_INFO_PRESENT = 0x01,
-}
-
-packet LEAdvertisementTrackingEvent : VendorSpecificEvent (subevent_code = BLE_TRACKING) {
-  apcf_filter_index : 8,
-  advertiser_state : 8,
-  advt_info_present : AdvtInfoPresent,
-  advertiser_address : Address,
-  advertiser_address_type : 8,
-  _body_,
-}
-
-enum VseStateChangeReason : 8 {
-  CONNECTION_RECEIVED = 0x00,
-}
-
-packet LEAdvertiseStateChangeEvent : VendorSpecificEvent (subevent_code = BLE_STCHANGE) {
-  advertising_instance : 8,
-  state_change_reason : VseStateChangeReason,
-  connection_handle : 12,
-  _reserved_ : 4,
-}
-
-packet LEAdvertisementTrackingWithInfoEvent : LEAdvertisementTrackingEvent {
-  tx_power : 8,
-  rssi : 8,
-  timestamp : 16,
-  _size_(adv_packet) : 8,
-  adv_packet : 8[],
-  _size_(scan_response) : 8,
-  scan_response : 8[],
-}
-
-enum QualityReportId : 8 {
-  MONITOR_MODE = 0x01,
-  APPROACH_LSTO = 0x02,
-  A2DP_AUDIO_CHOPPY = 0x03,
-  SCO_VOICE_CHOPPY = 0x04,
-  ROOT_INFLAMMATION = 0x05,
-  LMP_LL_MESSAGE_TRACE = 0x11,
-  BT_SCHEDULING_TRACE = 0x12,
-  CONTROLLER_DBG_INFO = 0x13,
-}
-
-packet BqrEvent : VendorSpecificEvent (subevent_code = BQR_EVENT) {
-  quality_report_id : QualityReportId,
-  _payload_,
-}
-
-enum BqrPacketType : 8 {
-  TYPE_ID = 0x01,
-  TYPE_NULL = 0x02,
-  TYPE_POLL = 0x03,
-  TYPE_FHS = 0x04,
-  TYPE_HV1 = 0x05,
-  TYPE_HV2 = 0x06,
-  TYPE_HV3 = 0x07,
-  TYPE_DV = 0x08,
-  TYPE_EV3 = 0x09,
-  TYPE_EV4 = 0x0A,
-  TYPE_EV5 = 0x0B,
-  TYPE_2EV3 = 0x0C,
-  TYPE_2EV5 = 0x0D,
-  TYPE_3EV3 = 0x0E,
-  TYPE_3EV5 = 0x0F,
-  TYPE_DM1 = 0x10,
-  TYPE_DH1 = 0x11,
-  TYPE_DM3 = 0x12,
-  TYPE_DH3 = 0x13,
-  TYPE_DM5 = 0x14,
-  TYPE_DH5 = 0x15,
-  TYPE_AUX1 = 0x16,
-  TYPE_2DH1 = 0x17,
-  TYPE_2DH3 = 0x18,
-  TYPE_2DH5 = 0x19,
-  TYPE_3DH1 = 0x1A,
-  TYPE_3DH3 = 0x1B,
-  TYPE_3DH5 = 0x1C,
-}
-
-packet BqrLinkQualityEvent : BqrEvent {
-  packet_type : BqrPacketType,
-  connection_handle : 12,
-  _reserved_ : 4,
-  connection_role : Role,
-  tx_power_level : 8,
-  rssi : 8,
-  snr : 8,
-  unused_afh_channel_count : 8,
-  afh_select_unideal_channel_count : 8,
-  lsto : 16,
-  connection_piconet_clock : 32,
-  retransmission_count : 32,
-  no_rx_count : 32,
-  nak_count : 32,
-  last_tx_ack_timestamp : 32,
-  flow_off_count : 32,
-  last_flow_on_timestamp : 32,
-  buffer_overflow_bytes : 32,
-  buffer_underflow_bytes : 32,
-  _payload_,
-}
-
-packet BqrMonitorModeEvent : BqrLinkQualityEvent (quality_report_id = MONITOR_MODE) {
- _payload_, // vendor specific parameter
-}
-
-packet BqrApproachLstoEvent : BqrLinkQualityEvent (quality_report_id = APPROACH_LSTO) {
- _payload_, // vendor specific parameter
-}
-
-packet BqrA2dpAudioChoppyEvent : BqrLinkQualityEvent (quality_report_id = A2DP_AUDIO_CHOPPY) {
-  _payload_, // vendor specific parameter
-}
-
-packet BqrScoVoiceChoppyEvent : BqrLinkQualityEvent (quality_report_id = SCO_VOICE_CHOPPY) {
- _payload_, // vendor specific parameter
-}
-
-packet BqrRootInflammationEvent : BqrEvent (quality_report_id = ROOT_INFLAMMATION) {
-  error_code : 8,
-  vendor_specific_error_code : 8,
-  _payload_, // vendor specific parameter
-}
-
-packet BqrLogDumpEvent : BqrEvent {
-  connection_handle : 12,
-  _reserved_ : 4,
-  _payload_,
-}
-
-packet BqrLmpLlMessageTraceEvent : BqrLogDumpEvent (quality_report_id = LMP_LL_MESSAGE_TRACE) {
-  _payload_, // vendor specific parameter
-}
-
-packet BqrBtSchedulingTraceEvent : BqrLogDumpEvent (quality_report_id = BT_SCHEDULING_TRACE) {
- _payload_, // vendor specific parameter
-}
-
-packet BqrControllerDbgInfoEvent : BqrLogDumpEvent (quality_report_id = CONTROLLER_DBG_INFO) {
- _payload_, // vendor specific parameter
-}
-
-// Isochronous Adaptation Layer
-
 enum IsoPacketBoundaryFlag : 2 {
   FIRST_FRAGMENT = 0,
   CONTINUATION_FRAGMENT = 1,
@@ -6220,8 +5572,492 @@ packet IsoWithoutTimestamp : Iso (ts_flag = NOT_PRESENT) {
   _payload_,
 }
 
-// MSFT packets
-// Reference: https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/microsoft-defined-bluetooth-hci-commands-and-events
+// https://www.bluetooth.com/specifications/assigned-numbers/generic-access-profile
+enum GapDataType : 8 {
+  INVALID = 0x00,
+  FLAGS = 0x01,
+  INCOMPLETE_LIST_16_BIT_UUIDS = 0x02,
+  COMPLETE_LIST_16_BIT_UUIDS = 0x03,
+  INCOMPLETE_LIST_32_BIT_UUIDS = 0x04,
+  COMPLETE_LIST_32_BIT_UUIDS = 0x05,
+  INCOMPLETE_LIST_128_BIT_UUIDS = 0x06,
+  COMPLETE_LIST_128_BIT_UUIDS = 0x07,
+  SHORTENED_LOCAL_NAME = 0x08,
+  COMPLETE_LOCAL_NAME = 0x09,
+  TX_POWER_LEVEL = 0x0A,
+  CLASS_OF_DEVICE = 0x0D,
+  SIMPLE_PAIRING_HASH_C = 0x0E,
+  SIMPLE_PAIRING_RANDOMIZER_R = 0x0F,
+  DEVICE_ID = 0x10,
+  SECURITY_MANAGER_OOB_FLAGS = 0x11,
+  SLAVE_CONNECTION_INTERVAL_RANGE = 0x12,
+  LIST_16BIT_SERVICE_SOLICITATION_UUIDS = 0x14,
+  LIST_128BIT_SERVICE_SOLICITATION_UUIDS = 0x15,
+  SERVICE_DATA_16_BIT_UUIDS = 0x16,
+  PUBLIC_TARGET_ADDRESS = 0x17,
+  RANDOM_TARGET_ADDRESS = 0x18,
+  APPEARANCE = 0x19,
+  ADVERTISING_INTERVAL = 0x1A,
+  LE_BLUETOOTH_DEVICE_ADDRESS = 0x1B,
+  LE_ROLE = 0x1C,
+  SIMPLE_PAIRING_HASH_C_256 = 0x1D,
+  SIMPLE_PAIRING_RANDOMIZER_R_256 = 0x1E,
+  LIST_32BIT_SERVICE_SOLICITATION_UUIDS = 0x1F,
+  SERVICE_DATA_32_BIT_UUIDS = 0x20,
+  SERVICE_DATA_128_BIT_UUIDS = 0x21,
+  LE_SECURE_CONNECTIONS_CONFIRMATION_VALUE = 0x22,
+  LE_SECURE_CONNECTIONS_RANDOM_VALUE = 0x23,
+  URI = 0x24,
+  INDOOR_POSITIONING = 0x25,
+  TRANSPORT_DISCOVERY_DATA = 0x26,
+  LE_SUPPORTED_FEATURES = 0x27,
+  CHANNEL_MAP_UPDATE_INDICATION = 0x28,
+  MESH_PB_ADV = 0x29,
+  MESH_MESSAGE = 0x2A,
+  MESH_BEACON = 0x2B,
+  BIG_INFO = 0x2C,
+  BROADCAST_CODE = 0x2D,
+  THREE_D_INFORMATION_DATA = 0x3D,
+  MANUFACTURER_SPECIFIC_DATA = 0xFF,
+}
+
+// -----------------------------------------------------------------------------
+//  LE Get Vendor Capabilities Command
+//  https://source.android.com/docs/core/connect/bluetooth/hci_requirements#vendor-specific-capabilities
+// -----------------------------------------------------------------------------
+
+packet LeGetVendorCapabilities : Command (op_code = LE_GET_VENDOR_CAPABILITIES) {
+}
+
+test LeGetVendorCapabilities {
+  "\x53\xfd\x00",
+}
+
+struct BaseVendorCapabilities {
+  max_advt_instances: 8,
+  offloaded_resolution_of_private_address : 8,
+  total_scan_results_storage: 16,
+  max_irk_list_sz: 8,
+  filtering_support: 8,
+  max_filter: 8,
+  activity_energy_info_support: 8,
+}
+
+packet LeGetVendorCapabilitiesComplete : CommandComplete (command_op_code = LE_GET_VENDOR_CAPABILITIES) {
+  status : ErrorCode,
+  base_vendor_capabilities : BaseVendorCapabilities,
+  _payload_,
+}
+
+packet LeGetVendorCapabilitiesComplete095 : LeGetVendorCapabilitiesComplete {
+  version_supported: 16,
+  total_num_of_advt_tracked: 16,
+  extended_scan_support: 8,
+  debug_logging_supported: 8,
+  _payload_,
+}
+
+packet LeGetVendorCapabilitiesComplete096 : LeGetVendorCapabilitiesComplete095 {
+  le_address_generation_offloading_support: 8,
+  _payload_,
+}
+
+packet LeGetVendorCapabilitiesComplete098 : LeGetVendorCapabilitiesComplete096 {
+  a2dp_source_offload_capability_mask: 32,
+  bluetooth_quality_report_support: 8
+}
+
+// -----------------------------------------------------------------------------
+//  LE Batch Scan Command
+//  https://source.android.com/docs/core/connect/bluetooth/hci_requirements#le_batch_scan_command
+//  https://source.android.com/docs/core/connect/bluetooth/hci_requirements#storage-threshold-breach-subevent
+// -----------------------------------------------------------------------------
+
+enum BatchScanOpcode : 8 {
+  ENABLE = 0x01,
+  SET_STORAGE_PARAMETERS = 0x02,
+  SET_SCAN_PARAMETERS = 0x03,
+  READ_RESULT_PARAMETERS = 0x04,
+}
+
+packet LeBatchScan : Command (op_code = LE_BATCH_SCAN) {
+  batch_scan_opcode : BatchScanOpcode,
+  _body_,
+}
+
+packet LeBatchScanComplete : CommandComplete (command_op_code = LE_BATCH_SCAN) {
+  status : ErrorCode,
+  batch_scan_opcode : BatchScanOpcode,
+  _body_,
+}
+
+packet LeBatchScanEnable : LeBatchScan (batch_scan_opcode = ENABLE) {
+  enable : Enable,
+}
+
+packet LeBatchScanEnableComplete : LeBatchScanComplete (batch_scan_opcode = ENABLE) {
+}
+
+packet LeBatchScanSetStorageParameters : LeBatchScan (batch_scan_opcode = SET_STORAGE_PARAMETERS) {
+  batch_scan_full_max_percentage : 8,
+  batch_scan_truncated_max_percentage : 8,
+  batch_scan_notify_threshold_percentage : 8,
+}
+
+packet LeBatchScanSetStorageParametersComplete : LeBatchScanComplete (batch_scan_opcode = SET_STORAGE_PARAMETERS) {
+}
+
+enum BatchScanDiscardRule : 8 {
+  OLDEST = 0x00,
+  WEAKEST_RSSI = 0x01,
+}
+
+packet LeBatchScanSetScanParameters : LeBatchScan (batch_scan_opcode = SET_SCAN_PARAMETERS) {
+  truncated_mode_enabled : 1,
+  full_mode_enabled : 1,
+  _reserved_ : 6,
+  duty_cycle_scan_window_slots : 32,
+  duty_cycle_scan_interval_slots : 32,
+  own_address_type : PeerAddressType,
+  batch_scan_discard_rule : BatchScanDiscardRule,
+}
+
+packet LeBatchScanSetScanParametersComplete : LeBatchScanComplete (batch_scan_opcode = SET_SCAN_PARAMETERS) {
+}
+
+enum BatchScanDataRead : 8 {
+  TRUNCATED_MODE_DATA = 0x01,
+  FULL_MODE_DATA = 0x02,
+}
+
+packet LeBatchScanReadResultParameters : LeBatchScan (batch_scan_opcode = READ_RESULT_PARAMETERS) {
+  batch_scan_data_read : BatchScanDataRead,
+}
+
+packet LeBatchScanReadResultParametersCompleteRaw : LeBatchScanComplete (batch_scan_opcode = READ_RESULT_PARAMETERS) {
+  batch_scan_data_read : BatchScanDataRead,
+  num_of_records : 8,
+  raw_data : 8[],
+}
+
+packet LeBatchScanReadResultParametersComplete : LeBatchScanComplete (batch_scan_opcode = READ_RESULT_PARAMETERS) {
+  batch_scan_data_read : BatchScanDataRead,
+  _body_,
+}
+
+struct TruncatedResult {
+  bd_addr : Address,
+  address_type : AddressType,
+  tx_power : 8,
+  rssi : 8,
+  timestamp : 16,
+}
+
+packet LeBatchScanReadTruncatedResultParametersComplete : LeBatchScanReadResultParametersComplete (batch_scan_data_read = TRUNCATED_MODE_DATA) {
+  _count_(results) : 8,
+  results : TruncatedResult[],
+}
+
+struct FullResult {
+  bd_addr : Address,
+  address_type : AddressType,
+  tx_power : 8,
+  rssi : 8,
+  timestamp : 16,
+  _size_(adv_packet) : 8,
+  adv_packet : 8[],
+  _size_(scan_response) : 8,
+  scan_response : 8[],
+}
+
+packet LeBatchScanReadFullResultParametersComplete : LeBatchScanReadResultParametersComplete (batch_scan_data_read = FULL_MODE_DATA) {
+  _count_(results) : 8,
+  results : FullResult[],
+}
+
+packet StorageThresholdBreachEvent : VendorSpecificEvent (subevent_code = STORAGE_THRESHOLD_BREACH) {
+}
+
+// -----------------------------------------------------------------------------
+//  Advertising Packet Content Filter (APCF) Command.
+//  https://source.android.com/docs/core/connect/bluetooth/hci_requirements#advertising-packet-content-filter
+//  https://source.android.com/docs/core/connect/bluetooth/hci_requirements#le-advertisement-tracking-sub-event
+// -----------------------------------------------------------------------------
+
+enum ApcfOpcode : 8 {
+  ENABLE = 0x00,
+  SET_FILTERING_PARAMETERS = 0x01,
+  BROADCASTER_ADDRESS = 0x02,
+  SERVICE_UUID = 0x03,
+  SERVICE_SOLICITATION_UUID = 0x04,
+  LOCAL_NAME = 0x05,
+  MANUFACTURER_DATA = 0x06,
+  SERVICE_DATA = 0x07,
+  TRANSPORT_DISCOVERY_SERVICE = 0x08,
+  AD_TYPE_FILTER = 0x09,
+  READ_EXTENDED_FEATURES = 0xFF,
+}
+
+packet LeApcf : Command (op_code = LE_APCF) {
+  apcf_opcode : ApcfOpcode,
+  _payload_,
+}
+
+packet LeApcfComplete : CommandComplete (command_op_code = LE_APCF) {
+  status : ErrorCode,
+  apcf_opcode : ApcfOpcode,
+  _payload_
+}
+
+packet LeApcfEnable : LeApcf (apcf_opcode = ENABLE) {
+  apcf_enable : Enable,
+}
+
+packet LeApcfEnableComplete : LeApcfComplete (apcf_opcode = ENABLE) {
+  apcf_enable : Enable,
+}
+
+enum ApcfAction : 8 {
+  ADD = 0x00,
+  DELETE = 0x01,
+  CLEAR = 0x02,
+}
+
+enum DeliveryMode : 8 {
+  IMMEDIATE = 0x00,
+  ONFOUND = 0x01,
+  BATCHED = 0x02,
+}
+
+// Bit mask for the APCF Feature Selection field.
+enum ApcfFeatureSelection : 8 {
+  BROADCASTER_ADDRESS = 0x00,
+  SERVICE_DATA_CHANGE = 0x01,
+  SERVICE_UUID = 0x02,
+  SERVICE_SOLICITATION_UUID = 0x03,
+  LOCAL_NAME = 0x04,
+  MANUFACTURER_DATA = 0x05,
+  SERVICE_DATA = 0x06,
+  TRANSPORT_DISCOVERY_DATA = 0x07,
+  AD_TYPE = 0x08,
+}
+
+packet LeApcfSetFilteringParameters : LeApcf (apcf_opcode = SET_FILTERING_PARAMETERS) {
+  apcf_action : ApcfAction,
+  apcf_filter_index : 8,
+  apcf_feature_selection : 16,
+  apcf_list_logic_type : 16,
+  apcf_filter_logic_type : 8,
+  rssi_high_thresh : 8,
+  delivery_mode : DeliveryMode,
+  onfound_timeout : 16,
+  onfound_timeout_cnt : 8,
+  rssi_low_thresh : 8,
+  onlost_timeout : 16,
+  num_of_tracking_entries : 16,
+}
+
+packet LeApcfSetFilteringParametersComplete : LeApcfComplete (apcf_opcode = SET_FILTERING_PARAMETERS) {
+  apcf_action : ApcfAction,
+  apcf_available_spaces : 8,
+}
+
+enum ApcfApplicationAddressType : 8 {
+  PUBLIC = 0x00,
+  RANDOM = 0x01,
+  NOT_APPLICABLE = 0x02,
+}
+
+packet LeApcfBroadcasterAddress : LeApcf (apcf_opcode = BROADCASTER_ADDRESS) {
+  apcf_action : ApcfAction,
+  apcf_filter_index : 8,
+  apcf_broadcaster_address : Address,
+  apcf_application_address_type : ApcfApplicationAddressType,
+}
+
+packet LeApcfBroadcasterAddressComplete : LeApcfComplete (apcf_opcode = BROADCASTER_ADDRESS) {
+  apcf_action : ApcfAction,
+  apcf_available_spaces : 8,
+}
+
+packet LeApcfServiceUuid : LeApcf (apcf_opcode = SERVICE_UUID) {
+  apcf_action : ApcfAction,
+  apcf_filter_index : 8,
+  acpf_uuid_data : 8[],
+}
+
+packet LeApcfServiceUuidComplete : LeApcfComplete (apcf_opcode = SERVICE_UUID) {
+  apcf_action : ApcfAction,
+  apcf_available_spaces : 8,
+}
+
+packet LeApcfSolicitationUuid : LeApcf (apcf_opcode = SERVICE_SOLICITATION_UUID) {
+  apcf_action : ApcfAction,
+  apcf_filter_index : 8,
+  acpf_uuid_data : 8[],
+}
+
+packet LeApcfSolicitationUuidComplete : LeApcfComplete (apcf_opcode = SERVICE_SOLICITATION_UUID) {
+  apcf_action : ApcfAction,
+  apcf_available_spaces : 8,
+}
+
+packet LeApcfLocalName : LeApcf (apcf_opcode = LOCAL_NAME) {
+  apcf_action : ApcfAction,
+  apcf_filter_index : 8,
+  apcf_local_name : 8[],
+}
+
+packet LeApcfLocalNameComplete : LeApcfComplete (apcf_opcode = LOCAL_NAME) {
+  apcf_action : ApcfAction,
+  apcf_available_spaces : 8,
+}
+
+packet LeApcfManufacturerData : LeApcf (apcf_opcode = MANUFACTURER_DATA) {
+  apcf_action : ApcfAction,
+  apcf_filter_index : 8,
+  apcf_manufacturer_data : 8[],
+}
+
+packet LeApcfManufacturerDataComplete : LeApcfComplete (apcf_opcode = MANUFACTURER_DATA) {
+  apcf_action : ApcfAction,
+  apcf_available_spaces : 8,
+}
+
+packet LeApcfServiceData : LeApcf (apcf_opcode = SERVICE_DATA) {
+  apcf_action : ApcfAction,
+  apcf_filter_index : 8,
+  apcf_service_data : 8[],
+}
+
+packet LeApcfServiceDataComplete : LeApcfComplete (apcf_opcode = SERVICE_DATA) {
+  apcf_action : ApcfAction,
+  apcf_available_spaces : 8,
+}
+
+packet LeApcfADType : LeApcf (apcf_opcode = AD_TYPE_FILTER) {
+  apcf_action : ApcfAction,
+  apcf_filter_index : 8,
+  apcf_ad_type_data : 8[],
+}
+
+packet LeApcfADTypeComplete : LeApcfComplete (apcf_opcode = AD_TYPE_FILTER) {
+  apcf_action : ApcfAction,
+  apcf_available_spaces : 8,
+}
+
+packet LeApcfReadExtendedFeatures : LeApcf (apcf_opcode = READ_EXTENDED_FEATURES) {
+}
+
+test LeApcfReadExtendedFeatures {
+  "\x57\xfd\x01\xff",
+}
+
+packet LeApcfReadExtendedFeaturesComplete : LeApcfComplete (apcf_opcode = READ_EXTENDED_FEATURES) {
+  transport_discovery_data_filter : 1,
+  ad_type_filter : 1,
+  _reserved_ : 14,
+}
+
+test LeApcfReadExtendedFeaturesComplete {
+  "\x0e\x07\x01\x57\xfd\x00\xff\x03\x00",
+}
+
+enum AdvertiserState : 8 {
+  ADVERTISER_FOUND = 0x0,
+  ADVERTISER_LOST = 0x1,
+}
+
+enum AdvtInfoPresent : 8 {
+  ADVT_INFO_PRESENT = 0x0,
+  ADVT_INFO_NOT_PRESENT = 0x1,
+}
+
+struct AdvtInfo {
+  tx_power : 8,
+  rssi : 8,
+  timestamp : 16,
+  _size_(adv_packet) : 8,
+  adv_packet : 8[],
+  _size_(scan_data_resp) : 8,
+  scan_data_resp : 8[],
+}
+
+packet LeAdvertisementTrackingEvent : VendorSpecificEvent (subevent_code = LE_ADVERTISEMENT_TRACKING) {
+  apcf_filter_index : 8,
+  advertiser_state : AdvertiserState,
+  advt_info_present : AdvtInfoPresent,
+  advertiser_address : Address,
+  advertiser_address_type : PeerAddressType,
+  advt_info : AdvtInfo[],
+}
+
+// -----------------------------------------------------------------------------
+//  LE Get Controller Activity Energy Info Command
+//  https://source.android.com/docs/core/connect/bluetooth/hci_requirements#le_get_controller_activity_energy_info
+// -----------------------------------------------------------------------------
+
+packet LeGetControllerActivityEnergyInfo : Command (op_code = LE_GET_CONTROLLER_ACTIVITY_ENERGY_INFO) {
+}
+
+packet LeGetControllerActivityEnergyInfoComplete : CommandComplete (command_op_code = LE_GET_CONTROLLER_ACTIVITY_ENERGY_INFO) {
+  status : ErrorCode,
+  total_tx_time_ms : 32,
+  total_rx_time_ms : 32,
+  total_idle_time_ms : 32,
+  total_energy_used : 32,
+}
+
+// -----------------------------------------------------------------------------
+//  LE Extended Set Scan Parameters Command
+//  https://source.android.com/docs/core/connect/bluetooth/hci_requirements#le-extended-set-scan-parameters-command
+// -----------------------------------------------------------------------------
+
+enum LeExScanType : 8 {
+  PASSIVE = 0x0,
+  ACTIVE = 0x1,
+}
+
+enum LeExScanFilterPolicy : 8 {
+  ACCEPT_ALL = 0x0,
+  FILTER_ACCEPT_LIST_ONLY = 0x01,
+}
+
+packet LeExSetScanParameters : Command (op_code = LE_EX_SET_SCAN_PARAMETERS) {
+  le_ex_scan_type : LeExScanType,
+  le_ex_scan_interval : 32,
+  le_ex_scan_window : 32,
+  own_address_type : OwnAddressType,
+  le_ex_scan_filter_policy : LeExScanFilterPolicy,
+}
+
+packet LeExSetScanParametersComplete : CommandComplete (command_op_code = LE_EX_SET_SCAN_PARAMETERS) {
+  status : ErrorCode,
+}
+
+// -----------------------------------------------------------------------------
+//  Get Controller Debug Info Command
+//  https://source.android.com/docs/core/connect/bluetooth/hci_requirements#get-controller-debug-info-command
+// -----------------------------------------------------------------------------
+
+packet GetControllerDebugInfo : Command (op_code = GET_CONTROLLER_DEBUG_INFO) {
+}
+
+packet GetControllerDebugInfoComplete : CommandComplete (command_op_code = GET_CONTROLLER_DEBUG_INFO) {
+  status : ErrorCode,
+}
+
+packet ControllerDebugInfoEvent : VendorSpecificEvent (subevent_code = CONTROLLER_DEBUG_INFO) {
+  debug_block_byte_offset_start : 16,
+  last_block : 8,
+  _size_(debug_data) : 16,
+  debug_data : 8[],
+}
+
+// -----------------------------------------------------------------------------
+//  Microsoft Commands
+//  https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/microsoft-defined-bluetooth-hci-commands-and-events
+// -----------------------------------------------------------------------------
 
 enum MsftSubcommandOpcode : 8 {
   MSFT_READ_SUPPORTED_FEATURES = 0x00,
@@ -6233,7 +6069,7 @@ enum MsftSubcommandOpcode : 8 {
   MSFT_READ_ABSOLUTE_RSSI = 0x06,
 }
 
-// MSFT Commands don't have a constant opcode, so leave `op_code` undefined.
+// MSFT Commands do not have a constant opcode, so leave `op_code` undefined.
 packet MsftCommand : Command {
   subcommand_opcode: MsftSubcommandOpcode,
   _payload_,
@@ -6399,53 +6235,4 @@ packet MsftLeMonitorDeviceEventPayload : MsftEventPayload (msft_event_code = MSF
 test MsftLeMonitorDeviceEventPayload {
   "\x02\x01\x00\x01\x02\x03\x04\x05\x10\x00",
   "\x02\x02\xf0\xf1\xf2\xf3\xf4\xf5\xaa\x02",
-}
-
-// https://www.bluetooth.com/specifications/assigned-numbers/generic-access-profile
-enum GapDataType : 8 {
-  INVALID = 0x00,
-  FLAGS = 0x01,
-  INCOMPLETE_LIST_16_BIT_UUIDS = 0x02,
-  COMPLETE_LIST_16_BIT_UUIDS = 0x03,
-  INCOMPLETE_LIST_32_BIT_UUIDS = 0x04,
-  COMPLETE_LIST_32_BIT_UUIDS = 0x05,
-  INCOMPLETE_LIST_128_BIT_UUIDS = 0x06,
-  COMPLETE_LIST_128_BIT_UUIDS = 0x07,
-  SHORTENED_LOCAL_NAME = 0x08,
-  COMPLETE_LOCAL_NAME = 0x09,
-  TX_POWER_LEVEL = 0x0A,
-  CLASS_OF_DEVICE = 0x0D,
-  SIMPLE_PAIRING_HASH_C = 0x0E,
-  SIMPLE_PAIRING_RANDOMIZER_R = 0x0F,
-  DEVICE_ID = 0x10,
-  SECURITY_MANAGER_OOB_FLAGS = 0x11,
-  SLAVE_CONNECTION_INTERVAL_RANGE = 0x12,
-  LIST_16BIT_SERVICE_SOLICITATION_UUIDS = 0x14,
-  LIST_128BIT_SERVICE_SOLICITATION_UUIDS = 0x15,
-  SERVICE_DATA_16_BIT_UUIDS = 0x16,
-  PUBLIC_TARGET_ADDRESS = 0x17,
-  RANDOM_TARGET_ADDRESS = 0x18,
-  APPEARANCE = 0x19,
-  ADVERTISING_INTERVAL = 0x1A,
-  LE_BLUETOOTH_DEVICE_ADDRESS = 0x1B,
-  LE_ROLE = 0x1C,
-  SIMPLE_PAIRING_HASH_C_256 = 0x1D,
-  SIMPLE_PAIRING_RANDOMIZER_R_256 = 0x1E,
-  LIST_32BIT_SERVICE_SOLICITATION_UUIDS = 0x1F,
-  SERVICE_DATA_32_BIT_UUIDS = 0x20,
-  SERVICE_DATA_128_BIT_UUIDS = 0x21,
-  LE_SECURE_CONNECTIONS_CONFIRMATION_VALUE = 0x22,
-  LE_SECURE_CONNECTIONS_RANDOM_VALUE = 0x23,
-  URI = 0x24,
-  INDOOR_POSITIONING = 0x25,
-  TRANSPORT_DISCOVERY_DATA = 0x26,
-  LE_SUPPORTED_FEATURES = 0x27,
-  CHANNEL_MAP_UPDATE_INDICATION = 0x28,
-  MESH_PB_ADV = 0x29,
-  MESH_MESSAGE = 0x2A,
-  MESH_BEACON = 0x2B,
-  BIG_INFO = 0x2C,
-  BROADCAST_CODE = 0x2D,
-  THREE_D_INFORMATION_DATA = 0x3D,
-  MANUFACTURER_SPECIFIC_DATA = 0xFF,
 }

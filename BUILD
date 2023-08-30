@@ -25,7 +25,8 @@ cc_library(
 
 proto_library(
     name = "rootcanal_proto",
-    srcs = ["config.proto"],
+    srcs = ["proto/rootcanal/configuration.proto"],
+    strip_import_prefix = "proto",
 )
 
 cc_proto_library(
@@ -49,9 +50,9 @@ genrule(
 
 genrule(
     name = "hci_packets_rs",
-    cmd = "pdlc --output-format rust $(location //packets:hci/hci_packets.pdl) > $(location hci_packets.rs)",
+    cmd = "pdlc --output-format rust $(location //packets:hci_packets.pdl) > $(location hci_packets.rs)",
     outs = ["hci_packets.rs"],
-    srcs = ["//packets:hci/hci_packets.pdl"],
+    srcs = ["//packets:hci_packets.pdl"],
     visibility = ["//visibility:public"],
 )
 

@@ -33,11 +33,6 @@ constexpr uint16_t kLeMaximumDataLength = 64;
 constexpr uint16_t kLeMaximumDataTime = 0x148;
 constexpr uint8_t kTransmitPowerLevel = -20;
 
-static int next_instance_id() {
-  static int instance_counter = 0;
-  return instance_counter++;
-}
-
 // Device methods.
 std::string DualModeController::GetTypeString() const {
   return "Simulated Bluetooth Controller";
@@ -65,8 +60,7 @@ void DualModeController::SendCommandCompleteUnknownOpCodeEvent(
 }
 
 DualModeController::DualModeController(ControllerProperties properties)
-    : id_(next_instance_id()), properties_(std::move(properties)),
-      random_generator_(id_) {
+    : properties_(std::move(properties)), random_generator_(id_) {
   Address public_address{};
   ASSERT(Address::FromString("3C:5A:B4:04:05:06", public_address));
   SetAddress(public_address);
@@ -93,8 +87,7 @@ void DualModeController::HandleAcl(
   if (loopback_mode_ == LoopbackMode::ENABLE_LOCAL) {
     uint16_t handle = acl_packet.GetHandle();
 
-    std::vector<uint8_t> payload{acl_packet.GetPayload().begin(),
-                                 acl_packet.GetPayload().end()};
+    std::vector<uint8_t> payload(acl_packet.GetPayload());
     send_acl_(bluetooth::hci::AclBuilder::Create(
         handle, acl_packet.GetPacketBoundaryFlag(),
         acl_packet.GetBroadcastFlag(), std::move(payload)));
@@ -185,8 +178,7 @@ void DualModeController::HandleCommand(
   // Quirk to reset the host stack when a command is received before the Hci
   // Reset command.
   else if (properties_.quirks.hardware_error_before_reset &&
-           !controller_reset_ &&
-           op_code != OpCode::RESET) {
+           !controller_reset_ && op_code != OpCode::RESET) {
     WARNING(id_,
             "Received command {} before HCI Reset; sending the Hardware"
             " Error event",
@@ -1780,8 +1772,7 @@ void DualModeController::RemoteNameRequest(CommandView command) {
   DEBUG(id_, "   bd_addr={}", bd_addr);
 
   auto status = link_layer_controller_.SendCommandToRemoteByAddress(
-      OpCode::REMOTE_NAME_REQUEST, command_view.bytes(), GetAddress(),
-      bd_addr);
+      OpCode::REMOTE_NAME_REQUEST, command_view.bytes(), GetAddress(), bd_addr);
 
   send_event_(bluetooth::hci::RemoteNameRequestStatusBuilder::Create(
       status, kNumCommandPackets));
@@ -2064,10 +2055,10 @@ void DualModeController::LeCreateConnection(CommandView command) {
           command_view.GetPeerAddress(),
           command_view.GetPeerAddressType(),
       },
-      command_view.GetOwnAddressType(), command_view.GetConnIntervalMin(),
-      command_view.GetConnIntervalMax(), command_view.GetConnLatency(),
-      command_view.GetSupervisionTimeout(), command_view.GetMinimumCeLength(),
-      command_view.GetMaximumCeLength());
+      command_view.GetOwnAddressType(), command_view.GetConnectionIntervalMin(),
+      command_view.GetConnectionIntervalMax(), command_view.GetMaxLatency(),
+      command_view.GetSupervisionTimeout(), command_view.GetMinCeLength(),
+      command_view.GetMaxCeLength());
   send_event_(bluetooth::hci::LeCreateConnectionStatusBuilder::Create(
       status, kNumCommandPackets));
 }
@@ -2092,8 +2083,9 @@ void DualModeController::LeConnectionUpdate(CommandView command) {
   DEBUG(id_, "   connection_handle=0x{:x}", command_view.GetConnectionHandle());
 
   ErrorCode status = link_layer_controller_.LeConnectionUpdate(
-      command_view.GetConnectionHandle(), command_view.GetConnIntervalMin(),
-      command_view.GetConnIntervalMax(), command_view.GetConnLatency(),
+      command_view.GetConnectionHandle(),
+      command_view.GetConnectionIntervalMin(),
+      command_view.GetConnectionIntervalMax(), command_view.GetMaxLatency(),
       command_view.GetSupervisionTimeout());
 
   send_event_(bluetooth::hci::LeConnectionUpdateStatusBuilder::Create(
@@ -2611,7 +2603,7 @@ void DualModeController::LeSetExtendedScanParameters(CommandView command) {
 
   ErrorCode status = link_layer_controller_.LeSetExtendedScanParameters(
       command_view.GetOwnAddressType(), command_view.GetScanningFilterPolicy(),
-      command_view.GetScanningPhys(), command_view.GetParameters());
+      command_view.GetScanningPhys(), command_view.GetScanningPhyParameters());
   send_event_(
       bluetooth::hci::LeSetExtendedScanParametersCompleteBuilder::Create(
           kNumCommandPackets, status));
@@ -2642,18 +2634,30 @@ void DualModeController::LeExtendedCreateConnection(CommandView command) {
   DEBUG(id_, "<< LE Extended Create Connection");
   DEBUG(id_, "   peer_address={}", command_view.GetPeerAddress());
   DEBUG(id_, "   peer_address_type={}",
-        bluetooth::hci::AddressTypeText(command_view.GetPeerAddressType()));
+        bluetooth::hci::PeerAddressTypeText(command_view.GetPeerAddressType()));
   DEBUG(id_, "   initiator_filter_policy={}",
         bluetooth::hci::InitiatorFilterPolicyText(
             command_view.GetInitiatorFilterPolicy()));
+
+  AddressType peer_address_type;
+  switch (command_view.GetPeerAddressType()) {
+    case PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS:
+    default:
+      peer_address_type = AddressType::PUBLIC_DEVICE_ADDRESS;
+      break;
+    case PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS:
+      peer_address_type = AddressType::RANDOM_DEVICE_ADDRESS;
+      break;
+  }
 
   ErrorCode status = link_layer_controller_.LeExtendedCreateConnection(
       command_view.GetInitiatorFilterPolicy(), command_view.GetOwnAddressType(),
       AddressWithType{
           command_view.GetPeerAddress(),
-          command_view.GetPeerAddressType(),
+          peer_address_type,
       },
-      command_view.GetInitiatingPhys(), command_view.GetPhyScanParameters());
+      command_view.GetInitiatingPhys(),
+      command_view.GetInitiatingPhyParameters());
   send_event_(bluetooth::hci::LeExtendedCreateConnectionStatusBuilder::Create(
       status, kNumCommandPackets));
 }
@@ -2768,8 +2772,8 @@ void DualModeController::LeRemoteConnectionParameterRequestNegativeReply(
 }
 
 void DualModeController::LeGetVendorCapabilities(CommandView command) {
-  auto command_view = bluetooth::hci::LeGetVendorCapabilitiesView::Create(
-      bluetooth::hci::VendorCommandView::Create(command));
+  auto command_view =
+      bluetooth::hci::LeGetVendorCapabilitiesView::Create(command);
   ASSERT(command_view.IsValid());
 
   if (!properties_.supports_le_get_vendor_capabilities_command) {
@@ -2792,29 +2796,56 @@ void DualModeController::LeGetVendorCapabilities(CommandView command) {
       std::move(return_parameters)));
 }
 
-void DualModeController::LeMultiAdv(CommandView command) {
-  auto command_view = bluetooth::hci::LeMultiAdvtView::Create(command);
+void DualModeController::LeBatchScan(CommandView command) {
+  auto command_view = bluetooth::hci::LeBatchScanView::Create(command);
   ASSERT(command_view.IsValid());
-  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_MULTI_ADVT);
+  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_BATCH_SCAN);
 }
 
-void DualModeController::LeAdvertisingFilter(CommandView command) {
-  auto command_view = bluetooth::hci::LeAdvFilterView::Create(command);
+void DualModeController::LeApcf(CommandView command) {
+  auto command_view = bluetooth::hci::LeApcfView::Create(command);
   ASSERT(command_view.IsValid());
-  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_ADV_FILTER);
+  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_APCF);
 }
 
-void DualModeController::LeEnergyInfo(CommandView command) {
-  auto command_view = bluetooth::hci::LeEnergyInfoView::Create(
-      bluetooth::hci::VendorCommandView::Create(command));
+void DualModeController::LeGetControllerActivityEnergyInfo(
+    CommandView command) {
+  auto command_view =
+      bluetooth::hci::LeGetControllerActivityEnergyInfoView::Create(command);
   ASSERT(command_view.IsValid());
-  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_ENERGY_INFO);
+  SendCommandCompleteUnknownOpCodeEvent(
+      OpCode::LE_GET_CONTROLLER_ACTIVITY_ENERGY_INFO);
+}
+
+void DualModeController::LeExSetScanParameters(CommandView command) {
+  auto command_view =
+      bluetooth::hci::LeExSetScanParametersView::Create(command);
+  ASSERT(command_view.IsValid());
+  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_EX_SET_SCAN_PARAMETERS);
+}
+
+void DualModeController::GetControllerDebugInfo(CommandView command) {
+  auto command_view =
+      bluetooth::hci::GetControllerDebugInfoView::Create(command);
+  ASSERT(command_view.IsValid());
+
+  DEBUG(id_, "<< Get Controller Debug Info");
+
+  send_event_(bluetooth::hci::GetControllerDebugInfoCompleteBuilder::Create(
+      kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
 // CSR vendor command.
 // Implement the command specific to the CSR controller
 // used specifically by the PTS tool to pass certification tests.
 void DualModeController::CsrVendorCommand(CommandView command) {
+  if (!properties_.vendor_csr) {
+    SendCommandCompleteUnknownOpCodeEvent(OpCode(CSR_VENDOR));
+    return;
+  }
+
+  DEBUG(id_, "<< CSR");
+
   // The byte order is little endian.
   // The command parameters are formatted as
   //
@@ -2830,8 +2861,7 @@ void DualModeController::CsrVendorCommand(CommandView command) {
   //
   // BlueZ has a reference implementation of the CSR vendor command.
 
-  std::vector<uint8_t> parameters(command.GetPayload().begin(),
-                                  command.GetPayload().end());
+  std::vector<uint8_t> parameters(command.GetPayload());
 
   uint16_t type = 0;
   uint16_t length = 0;
@@ -3130,12 +3160,6 @@ void DualModeController::LeClearAdvertisingSets(CommandView command) {
   auto status = link_layer_controller_.LeClearAdvertisingSets();
   send_event_(bluetooth::hci::LeClearAdvertisingSetsCompleteBuilder::Create(
       kNumCommandPackets, status));
-}
-
-void DualModeController::LeExtendedScanParams(CommandView command) {
-  auto command_view = bluetooth::hci::LeExtendedScanParamsView::Create(command);
-  ASSERT(command_view.IsValid());
-  SendCommandCompleteUnknownOpCodeEvent(OpCode::LE_EXTENDED_SCAN_PARAMS);
 }
 
 void DualModeController::LeStartEncryption(CommandView command) {
@@ -4279,12 +4303,15 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
 
         // VENDOR
         {OpCode(CSR_VENDOR), &DualModeController::CsrVendorCommand},
-        {OpCode::LE_MULTI_ADVT, &DualModeController::LeMultiAdv},
-        {OpCode::LE_ADV_FILTER, &DualModeController::LeAdvertisingFilter},
-        {OpCode::LE_EXTENDED_SCAN_PARAMS,
-         &DualModeController::LeExtendedScanParams},
-        {OpCode::LE_ENERGY_INFO, &DualModeController::LeEnergyInfo},
         {OpCode::LE_GET_VENDOR_CAPABILITIES,
-         &DualModeController::LeGetVendorCapabilities}};
+         &DualModeController::LeGetVendorCapabilities},
+        {OpCode::LE_BATCH_SCAN, &DualModeController::LeBatchScan},
+        {OpCode::LE_APCF, &DualModeController::LeApcf},
+        {OpCode::LE_GET_CONTROLLER_ACTIVITY_ENERGY_INFO,
+         &DualModeController::LeGetControllerActivityEnergyInfo},
+        {OpCode::LE_EX_SET_SCAN_PARAMETERS,
+         &DualModeController::LeExSetScanParameters},
+        {OpCode::GET_CONTROLLER_DEBUG_INFO,
+         &DualModeController::GetControllerDebugInfo}};
 
 }  // namespace rootcanal

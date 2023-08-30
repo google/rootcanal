@@ -49,18 +49,18 @@ MakeAdvertisingEventProperties(unsigned mask = 0) {
   return set;
 }
 
-[[maybe_unused]] static bluetooth::hci::LeCreateConnPhyScanParameters
+[[maybe_unused]] static bluetooth::hci::InitiatingPhyParameters
 MakeInitiatingPhyParameters(uint16_t scan_interval, uint16_t scan_window,
                             uint16_t connection_interval_min,
                             uint16_t connection_interval_max,
                             uint16_t max_latency, uint16_t supervision_timeout,
                             uint16_t min_ce_length, uint16_t max_ce_length) {
-  bluetooth::hci::LeCreateConnPhyScanParameters parameters;
+  bluetooth::hci::InitiatingPhyParameters parameters;
   parameters.scan_interval_ = scan_interval;
   parameters.scan_window_ = scan_window;
-  parameters.conn_interval_min_ = connection_interval_min;
-  parameters.conn_interval_max_ = connection_interval_max;
-  parameters.conn_latency_ = max_latency;
+  parameters.connection_interval_min_ = connection_interval_min;
+  parameters.connection_interval_max_ = connection_interval_max;
+  parameters.max_latency_ = max_latency;
   parameters.supervision_timeout_ = supervision_timeout;
   parameters.min_ce_length_ = min_ce_length;
   parameters.max_ce_length_ = max_ce_length;
