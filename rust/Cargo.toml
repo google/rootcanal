@@ -31,6 +31,9 @@ pin-utils = "0.1.0"
 rand = "0.8.3"
 thiserror = "1.0.23"
 
+[build-dependencies]
+pdl-compiler = "0.2.3"
+
 [lib]
 path="src/lib.rs"
 crate-type = ["staticlib"]
