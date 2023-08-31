@@ -21,12 +21,22 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <unistd.h>
 #include <vector>
 
 #include "fcntl.h"
 #include "log.h"
 #include "sys/select.h"
-#include "unistd.h"
+
+#ifndef TEMP_FAILURE_RETRY
+/* Used to retry syscalls that can return EINTR. */
+#define TEMP_FAILURE_RETRY(exp) ({         \
+    __typeof__(exp) _rc;                   \
+    do {                                   \
+        _rc = (exp);                       \
+    } while (_rc == -1 && errno == EINTR); \
+    _rc; })
+#endif  // TEMP_FAILURE_RETRY
 
 namespace rootcanal {
 // Implementation of AsyncManager is divided between two classes, three if
