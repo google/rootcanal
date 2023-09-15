@@ -1,0 +1,50 @@
+[project]
+name = "rootcanal"
+description = "Virtual Bluetooth controller"
+requires-python = ">=3.10"
+license.text = "Apache-2.0"
+readme = "README.md"
+maintainers = [
+  { name="Henri Chataing", email="henrichataing@google.com" },
+  { name="David Duarte", email="licorne@google.com" },
+]
+dynamic = [
+  "version"
+]
+keywords = ["Bluetooth", "Controller", "Emulation"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/google/rootcanal"
+"Bug Tracker" = "https://github.com/google/rootcanal/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/rootcanal/__about__.py"
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel]
+include = [
+  "src/rootcanal/__init__.py",
+  "src/rootcanal/__main__.py",
+  "src/rootcanal/controller.py",
+  "src/rootcanal/bluetooth.py",
+  "src/rootcanal/packets/__init__.py",
+  "src/rootcanal/packets/hci.py",
+  "src/rootcanal/packets/ll.py",
+  "src/rootcanal/packets/lmp.py",
+  "src/rootcanal/packets/llcp.py",
+  "src/rootcanal/bin/linux-x86_64/rootcanal",
+  "src/rootcanal/bin/linux-x86_64/librootcanal_ffi.so",
+  "src/rootcanal/bin/macos-x86_64/rootcanal",
+  "src/rootcanal/bin/macos-x86_64/librootcanal_ffi.so",
+]

@@ -14,20 +14,24 @@
 
 import asyncio
 import collections
+import distutils
 import enum
-import hci_packets as hci
-import link_layer_packets as ll
-import llcp_packets as llcp
-import py.bluetooth
+import os
+from .packets import hci
+from .packets import ll
+from .packets import llcp
+from .packets.hci import ErrorCode
+from . import bluetooth
 import sys
 import typing
 import unittest
 from typing import Optional, Tuple, Union
-from hci_packets import ErrorCode
 
 from ctypes import *
 
-rootcanal = cdll.LoadLibrary("lib_rootcanal_ffi.so")
+librootcanal_ffi_path = os.path.join(
+    os.path.dirname(__file__), "bin", distutils.util.get_platform(), "librootcanal_ffi.so")
+rootcanal = cdll.LoadLibrary(librootcanal_ffi_path)
 rootcanal.ffi_controller_new.restype = c_void_p
 
 SEND_HCI_FUNC = CFUNCTYPE(None, c_int, POINTER(c_ubyte), c_size_t)
