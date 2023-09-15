@@ -27,7 +27,8 @@ jobs:
           submodules: recursive
 
       - name: Install dependencies
-        run: cargo install pdl-compiler
+        run: |
+          cargo install pdl-compiler
 
       - name: Build
         run: |
@@ -36,16 +37,13 @@ jobs:
 
       - name: Package Artifacts
         run: |
-          mkdir -p bin
-          mkdir -p lib
-          mkdir -p include
-          cp bazel-bin/rootcanal bin
-          cp bazel-bin/librootcanal_ffi.so lib
-          cp model/controller/ffi.h include/rootcanal_ffi.h
-          zip -r rootcanal-${{ matrix.release }} \
-              bin/rootcanal \
-              lib/librootcanal_ffi.so \
-              include/rootcanal_ffi.h
+          mkdir -p rootcanal-${{ matrix.release }}/bin
+          mkdir -p rootcanal-${{ matrix.release }}/lib
+          mkdir -p rootcanal-${{ matrix.release }}/include
+          cp bazel-bin/rootcanal rootcanal-${{ matrix.release }}/bin
+          cp bazel-bin/librootcanal_ffi.so rootcanal-${{ matrix.release }}/lib
+          cp model/controller/ffi.h rootcanal-${{ matrix.release }}/include/rootcanal_ffi.h
+          zip -r rootcanal-${{ matrix.release }} rootcanal-${{ matrix.release }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
@@ -60,6 +58,21 @@ jobs:
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          cargo install pdl-compiler
+          python3 -m pip install hatch
+
+      - name: Set VERSION
+        run: |
+          TAG=${{ github.ref_name }}
+          echo "VERSION=${TAG#v}" >> $GITHUB_ENV
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -81,6 +94,19 @@ jobs:
         with:
           name: rootcanal-macos-x86_64
 
+      - name: Build Python Wheel
+        run: bash py/make_wheel.sh ${{ env.VERSION }}
+
+      - name: Upload Python Wheel
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: py/dist/rootcanal-${{ env.VERSION }}-py3-none-any.whl
+          asset_name: rootcanal-${{ env.VERSION }}-py3-none-any.whl
+          asset_content_type: application/x-wheel+zip
+
       - name: Upload rootcanal-linux-x86_64
         uses: actions/upload-release-asset@v1
         env:
@@ -88,7 +114,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: rootcanal-linux-x86_64.zip
-          asset_name: rootcanal-${{ github.ref_name }}-linux-x86_64.zip
+          asset_name: rootcanal-${{ env.VERSION }}-linux-x86_64.zip
           asset_content_type: application/zip
 
       - name: Upload rootcanal-macos-x86_64
@@ -98,5 +124,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: rootcanal-macos-x86_64.zip
-          asset_name: rootcanal-${{ github.ref_name }}-macos-x86_64.zip
+          asset_name: rootcanal-${{ env.VERSION }}-macos-x86_64.zip
           asset_content_type: application/zip
