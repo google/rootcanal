@@ -1,20 +1,24 @@
-name: build
+name: Build and release
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
+    tags:
+      - 'v*'
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   build:
     name: Build
     strategy:
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
+        include:
+          - os: ubuntu-latest
+            release: linux-x86_64
+          - os: macos-latest
+            release: macos-x86_64
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
@@ -27,3 +31,63 @@ jobs:
 
       - name: Build
         run: bazel build :rootcanal
+
+      - name: Package Artifacts
+        run: |
+          mkdir bin
+          cp bazel-bin/rootcanal bin
+          zip -r rootcanal-${{ matrix.release }} bin/
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: rootcanal-${{ matrix.release }}
+          path: rootcanal-${{ matrix.release }}.zip
+          retention-days: 1
+
+  release:
+    name: Release
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: RootCanal ${{ github.ref_name }}
+          draft: true
+          prerelease: false
+
+      - name: Download rootcanal-linux-x86_64
+        uses: actions/download-artifact@v3
+        with:
+          name: rootcanal-linux-x86_64
+
+      - name: Download rootcanal-macos-x86_64
+        uses: actions/download-artifact@v3
+        with:
+          name: rootcanal-macos-x86_64
+
+      - name: Upload rootcanal-linux-x86_64
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: rootcanal-linux-x86_64.zip
+          asset_name: rootcanal-${{ github.ref_name }}-linux-x86_64.zip
+          asset_content_type: application/zip
+
+      - name: Upload rootcanal-macos-x86_64
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: rootcanal-macos-x86_64.zip
+          asset_name: rootcanal-${{ github.ref_name }}-macos-x86_64.zip
+          asset_content_type: application/zip
