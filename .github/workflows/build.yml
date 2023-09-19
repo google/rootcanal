@@ -30,13 +30,22 @@ jobs:
         run: cargo install pdl-compiler
 
       - name: Build
-        run: bazel build :rootcanal
+        run: |
+          bazel build :rootcanal
+          bazel build :librootcanal_ffi.so
 
       - name: Package Artifacts
         run: |
-          mkdir bin
+          mkdir -p bin
+          mkdir -p lib
+          mkdir -p include
           cp bazel-bin/rootcanal bin
-          zip -r rootcanal-${{ matrix.release }} bin/
+          cp bazel-bin/librootcanal_ffi.so lib
+          cp model/controller/ffi.h include/rootcanal_ffi.h
+          zip -r rootcanal-${{ matrix.release }} \
+              bin/rootcanal \
+              lib/librootcanal_ffi.so \
+              include/rootcanal_ffi.h
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
