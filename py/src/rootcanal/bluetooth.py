@@ -26,20 +26,20 @@ class Address:
         elif isinstance(address, Address):
             self.address = address.address
         elif isinstance(address, str):
-            self.address = bytes([int(b, 16) for b in address.split(':')])
+            self.address = bytes([int(b, 16) for b in address.split(":")])
         elif isinstance(address, (bytes, list)) and len(address) == 6:
             self.address = bytes(address)
         elif isinstance(address, bytes):
-            address = address.decode('utf-8')
-            self.address = bytes([int(b, 16) for b in address.split(':')])
+            address = address.decode("utf-8")
+            self.address = bytes([int(b, 16) for b in address.split(":")])
         else:
-            raise Exception(f'unsupported address type: {address}')
+            raise Exception(f"unsupported address type: {address}")
 
-    def parse(span: bytes) -> Tuple['Address', bytes]:
+    def parse(span: bytes) -> Tuple["Address", bytes]:
         assert len(span) >= 6
         return (Address(bytes(reversed(span[:6]))), span[6:])
 
-    def parse_all(span: bytes) -> 'Address':
+    def parse_all(span: bytes) -> "Address":
         assert len(span) == 6
         return Address(bytes(reversed(span)))
 
@@ -47,16 +47,16 @@ class Address:
         return bytes(reversed(self.address))
 
     def is_resolvable(self) -> bool:
-        return (self.address[0] & 0xc0) == 0x40
+        return (self.address[0] & 0xC0) == 0x40
 
     def is_non_resolvable(self) -> bool:
-        return (self.address[0] & 0xc0) == 0x00
+        return (self.address[0] & 0xC0) == 0x00
 
     def is_static_identity(self) -> bool:
-        return (self.address[0] & 0xc0) == 0xc0
+        return (self.address[0] & 0xC0) == 0xC0
 
     def __repr__(self) -> str:
-        return ':'.join([f'{b:02x}' for b in self.address])
+        return ":".join([f"{b:02x}" for b in self.address])
 
     @property
     def size(self) -> int:
@@ -67,16 +67,16 @@ class Address:
 class ClassOfDevice:
     class_of_device: int = 0
 
-    def parse(span: bytes) -> Tuple['Address', bytes]:
+    def parse(span: bytes) -> Tuple["Address", bytes]:
         assert len(span) >= 3
-        return (ClassOfDevice(int.from_bytes(span[:3], byteorder='little')), span[3:])
+        return (ClassOfDevice(int.from_bytes(span[:3], byteorder="little")), span[3:])
 
-    def parse_all(span: bytes) -> 'Address':
+    def parse_all(span: bytes) -> "Address":
         assert len(span) == 3
-        return ClassOfDevice(int.from_bytes(span, byteorder='little'))
+        return ClassOfDevice(int.from_bytes(span, byteorder="little"))
 
     def serialize(self) -> bytes:
-        return int.to_bytes(self.class_of_device, length=3, byteorder='little')
+        return int.to_bytes(self.class_of_device, length=3, byteorder="little")
 
     @property
     def size(self) -> int:

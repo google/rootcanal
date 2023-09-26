@@ -20,8 +20,11 @@ _PLATFORM_TO_OS_NAME_MAP = {
     "darwin": "macos",
 }
 
+
 def get_package_binary_resource_path(name: str) -> str:
     os_name = _PLATFORM_TO_OS_NAME_MAP.get(sys.platform, sys.platform)
-    return str(importlib.resources.files(__package__).joinpath(
-        f"bin/{os_name}-{platform.machine()}/{name}"
-    ))
+    return str(
+        importlib.resources.files(__package__).joinpath(
+            f"bin/{os_name}-{platform.machine()}/{name}"
+        )
+    )
