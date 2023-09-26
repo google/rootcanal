@@ -36,8 +36,9 @@ sources = ["src"]
 include = [
   "src/rootcanal/__init__.py",
   "src/rootcanal/__main__.py",
-  "src/rootcanal/controller.py",
+  "src/rootcanal/binaries.py",
   "src/rootcanal/bluetooth.py",
+  "src/rootcanal/controller.py",
   "src/rootcanal/packets/__init__.py",
   "src/rootcanal/packets/hci.py",
   "src/rootcanal/packets/ll.py",
