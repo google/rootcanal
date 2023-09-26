@@ -14,7 +14,6 @@
 
 import asyncio
 import collections
-import distutils
 import enum
 import os
 from .packets import hci
@@ -22,6 +21,7 @@ from .packets import ll
 from .packets import llcp
 from .packets.hci import ErrorCode
 from . import bluetooth
+from . import binaries
 import sys
 import typing
 import unittest
@@ -29,8 +29,7 @@ from typing import Optional, Tuple, Union
 
 from ctypes import *
 
-librootcanal_ffi_path = os.path.join(
-    os.path.dirname(__file__), "bin", distutils.util.get_platform(), "librootcanal_ffi.so")
+librootcanal_ffi_path = binaries.get_package_binary_resource_path("librootcanal_ffi.so")
 rootcanal = cdll.LoadLibrary(librootcanal_ffi_path)
 rootcanal.ffi_controller_new.restype = c_void_p
 

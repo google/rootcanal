@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import rootcanal.binaries
-import subprocess
+import importlib.resources
+import platform
 import sys
 
+_PLATFORM_TO_OS_NAME_MAP = {
+    "darwin": "macos",
+}
 
-sys.exit(subprocess.call([
-    rootcanal.binaries.get_package_binary_resource_path("rootcanal"),
-    *sys.argv[1:]
-]))
+def get_package_binary_resource_path(name: str) -> str:
+    os_name = _PLATFORM_TO_OS_NAME_MAP.get(sys.platform, sys.platform)
+    return str(importlib.resources.files(__package__).joinpath(
+        f"bin/{os_name}-{platform.machine()}/{name}"
+    ))
