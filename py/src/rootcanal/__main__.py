@@ -17,7 +17,11 @@ import subprocess
 import sys
 
 
-sys.exit(subprocess.call([
-    rootcanal.binaries.get_package_binary_resource_path("rootcanal"),
-    *sys.argv[1:]
-]))
+sys.exit(
+    subprocess.call(
+        [
+            rootcanal.binaries.get_package_binary_resource_path("rootcanal"),
+            *sys.argv[1:],
+        ]
+    )
+)
