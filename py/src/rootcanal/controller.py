@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import asyncio
-import collections
 import enum
 import os
 from .packets import hci
@@ -103,14 +102,10 @@ class Controller:
         )
 
         self.address = address
-        self.evt_queue = collections.deque()
-        self.acl_queue = collections.deque()
-        self.iso_queue = collections.deque()
-        self.ll_queue = collections.deque()
-        self.evt_queue_event = asyncio.Event()
-        self.acl_queue_event = asyncio.Event()
-        self.iso_queue_event = asyncio.Event()
-        self.ll_queue_event = asyncio.Event()
+        self.evt_queue = asyncio.Queue()
+        self.acl_queue = asyncio.Queue()
+        self.iso_queue = asyncio.Queue()
+        self.ll_queue = asyncio.Queue()
 
     def __del__(self):
         rootcanal.ffi_controller_delete(c_void_p(self.instance))
@@ -118,23 +113,19 @@ class Controller:
     def receive_hci_(self, idc: int, packet: bytes):
         if idc == Idc.Evt:
             print(f"<-- received HCI event data={len(packet)}[..]")
-            self.evt_queue.append(packet)
-            self.evt_queue_event.set()
+            self.evt_queue.put_nowait(packet)
         elif idc == Idc.Acl:
             print(f"<-- received HCI ACL packet data={len(packet)}[..]")
-            self.acl_queue.append(packet)
-            self.acl_queue_event.set()
+            self.acl_queue.put_nowait(packet)
         elif idc == Idc.Iso:
             print(f"<-- received HCI ISO packet data={len(packet)}[..]")
-            self.iso_queue.append(packet)
-            self.iso_queue_event.set()
+            self.iso_queue.put_nowait(packet)
         else:
             print(f"ignoring HCI packet typ={idc}")
 
     def receive_ll_(self, packet: bytes, phy: int, tx_power: int):
         print(f"<-- received LL pdu data={len(packet)}[..]")
-        self.ll_queue.append(packet)
-        self.ll_queue_event.set()
+        self.ll_queue.put_nowait(packet)
 
     def send_cmd(self, cmd: hci.Command):
         print(f"--> sending HCI command {cmd.__class__.__name__}")
@@ -199,37 +190,44 @@ class Controller:
         # Cancel the controller timer task.
         del self.timer_task
 
-        if self.evt_queue:
-            print("evt queue not empty at stop():")
-            for packet in self.evt_queue:
-                evt = hci.Event.parse_all(packet)
-                evt.show()
+        if self.evt_queue.qsize() > 0:
+            try:
+                print("evt queue not empty at stop():")
+                while packet := self.evt_queue.get_nowait():
+                    evt = hci.Event.parse_all(packet)
+                    evt.show()
+            except asyncio.QueueEmpty:
+                pass
             raise Exception("evt queue not empty at stop()")
 
-        if self.iso_queue:
-            print("iso queue not empty at stop():")
-            for packet in self.iso_queue:
-                iso = hci.Iso.parse_all(packet)
-                iso.show()
-            raise Exception("ll queue not empty at stop()")
+        if self.iso_queue.qsize() > 0:
+            try:
+                print("iso queue not empty at stop():")
+                while packet := self.iso_queue.get_nowait():
+                    iso = hci.Event.parse_all(packet)
+                    iso.show()
+            except asyncio.QueueEmpty:
+                pass
+            raise Exception("iso queue not empty at stop()")
 
-        if self.ll_queue:
-            for packet, _ in self.ll_queue:
-                pdu = ll.LinkLayerPacket.parse_all(packet)
-                pdu.show()
+        if self.ll_queue.qsize() > 0:
+            try:
+                print("ll queue not empty at stop():")
+                while packet := self.ll_queue.get_nowait():
+                    ll = hci.Event.parse_all(packet)
+                    ll.show()
+            except asyncio.QueueEmpty:
+                pass
             raise Exception("ll queue not empty at stop()")
 
     async def receive_evt(self):
-        while not self.evt_queue:
-            await self.evt_queue_event.wait()
-            self.evt_queue_event.clear()
-        return self.evt_queue.popleft()
+        return await self.evt_queue.get()
 
     async def receive_iso(self):
-        while not self.iso_queue:
-            await self.iso_queue_event.wait()
-            self.iso_queue_event.clear()
-        return self.iso_queue.popleft()
+        return await self.iso_queue.get()
+
+    async def receive_ll(self):
+        return await self.ll_queue.get()
 
     async def expect_evt(self, expected_evt: hci.Event):
         packet = await self.receive_evt()
@@ -241,12 +239,6 @@ class Controller:
             print("received event:")
             evt.show()
             raise Exception(f"unexpected evt {evt.__class__.__name__}")
-
-    async def receive_ll(self):
-        while not self.ll_queue:
-            await self.ll_queue_event.wait()
-            self.ll_queue_event.clear()
-        return self.ll_queue.popleft()
 
 
 class Any:
