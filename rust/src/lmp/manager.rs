@@ -28,8 +28,7 @@ use crate::lmp::procedure;
 use crate::num_hci_command_packets;
 use crate::packets::{hci, lmp};
 
-use hci::Packet as _;
-use lmp::Packet as _;
+use pdl_runtime::Packet as _;
 
 struct Link {
     peer: Cell<hci::Address>,

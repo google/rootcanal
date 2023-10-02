@@ -28,7 +28,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cargo install pdl-compiler
+          cargo install pdl-compiler --version 0.2.0
 
       - name: Build
         run: |
@@ -65,7 +65,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cargo install pdl-compiler
+          cargo install pdl-compiler --version 0.2.0
           python3 -m pip install hatch
 
       - name: Set VERSION

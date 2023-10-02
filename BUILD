@@ -5,6 +5,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_rust//rust:defs.bzl", "rust_static_library")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 
 package(default_visibility = ["//visibility:private"])
@@ -32,6 +33,18 @@ proto_library(
 cc_proto_library(
     name = "rootcanal_config",
     deps = [":rootcanal_proto"],
+)
+
+rust_library(
+    name = "pdl_runtime",
+    srcs = glob(["third_party/pdl/pdl-runtime/**/*.rs"]),
+    crate_root = "third_party/pdl/pdl-runtime/src/lib.rs",
+    edition = "2018",
+    version = "2.0.0",
+    deps = [
+        "//rust/cargo:bytes",
+        "//rust/cargo:thiserror",
+    ],
 )
 
 genrule(
@@ -94,6 +107,7 @@ rust_static_library(
         "//rust/cargo:paste",
     ],
     deps = [
+        ":pdl_runtime",
         "//rust/cargo:bytes",
         "//rust/cargo:num_bigint",
         "//rust/cargo:num_integer",
