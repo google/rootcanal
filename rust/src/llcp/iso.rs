@@ -14,8 +14,7 @@
 
 use crate::ffi;
 use crate::packets::{hci, llcp};
-use hci::Packet as _;
-use llcp::Packet as _;
+use pdl_runtime::Packet as _;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 

@@ -37,7 +37,7 @@ jobs:
           python -m pip install pandora-avatar
       - name: Rootcanal
         run: |
-          cargo install pdl-compiler
+          cargo install pdl-compiler --version 0.2.0
           bazel build :rootcanal
       - name: Test
         run: |
