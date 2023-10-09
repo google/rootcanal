@@ -5134,8 +5134,8 @@ void LinkLayerController::Tick() {
 
 void LinkLayerController::Close() {
   for (auto handle : connections_.GetAclHandles()) {
-    Disconnect(handle, ErrorCode::CONNECTION_TIMEOUT,
-               ErrorCode::CONNECTION_TIMEOUT);
+    Disconnect(handle, ErrorCode::REMOTE_DEVICE_TERMINATED_CONNECTION_POWER_OFF,
+               ErrorCode::REMOTE_DEVICE_TERMINATED_CONNECTION_POWER_OFF);
   }
 }
 
