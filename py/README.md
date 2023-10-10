@@ -104,12 +104,15 @@ async def test():
             status=hci.ErrorCode.SUCCESS, num_hci_command_packets=1
         )
     )
-    page_response = ll.LinkLayerPacket.parse_all(await controller.receive_ll())
-    assert page_response == ll.PageResponse(
-        source_address=Address("11:11:11:11:11:11"),
-        destination_address=Address("22:22:22:22:22:22"),
-        try_role_switch=0,
+
+    _ = await controller.expect_ll(
+        ll.PageResponse(
+            source_address=Address("11:11:11:11:11:11"),
+            destination_address=Address("22:22:22:22:22:22"),
+            try_role_switch=0,
+        )
     )
+
     _ = await controller.expect_evt(
         hci.ConnectionComplete(
             status=hci.ErrorCode.SUCCESS,
@@ -119,6 +122,8 @@ async def test():
             encryption_enabled=hci.Enable.DISABLED,
         )
     )
+
+    controller.stop()
 
 
 asyncio.get_event_loop().run_until_complete(test())
