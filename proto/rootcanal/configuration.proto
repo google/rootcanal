@@ -50,6 +50,11 @@ message ControllerQuirks {
 message VendorFeatures {
   // Enable the support for the CSR vendor command.
   optional bool csr = 1;
+  // Enable the support for Android vendor commands.
+  // Note: not all required vendor commands are necessarily implemented
+  // in RootCanal, unimplemented commands will return a Command Status or
+  // Command Complete HCI event with the status Unsupported Opcode.
+  optional bool android = 2;
 }
 
 message Controller {

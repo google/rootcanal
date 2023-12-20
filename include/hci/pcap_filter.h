@@ -16,7 +16,11 @@
 
 #pragma once
 
-#include <unordered_map>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <utility>
+#include <vector>
 
 #include "packets/hci_packets.h"
 

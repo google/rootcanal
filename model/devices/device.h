@@ -16,10 +16,9 @@
 
 #pragma once
 
-#include <chrono>
 #include <cstdint>
 #include <functional>
-#include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -58,7 +57,7 @@ class Device {
 
   virtual void ReceiveLinkLayerPacket(
       model::packets::LinkLayerPacketView /*packet*/, Phy::Type /*type*/,
-      int8_t /*rssi*/){};
+      int8_t /*rssi*/) {}
 
   void SendLinkLayerPacket(
       std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,

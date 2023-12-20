@@ -25,4 +25,5 @@ class Phy {
     BR_EDR,
   };
 };
+
 }  // namespace rootcanal

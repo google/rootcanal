@@ -16,17 +16,19 @@
 
 #pragma once
 
-#include <chrono>      // for milliseconds
-#include <functional>  // for __base, function
-#include <future>      // for promise
-#include <memory>      // for shared_ptr, make_...
-#include <string>      // for string
+#include <chrono>
+#include <functional>
+#include <future>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include "model/setup/async_manager.h"              // for AsyncTaskId, Asyn...
-#include "model/setup/test_channel_transport.h"     // for TestChannelTransport
-#include "model/setup/test_command_handler.h"       // for TestCommandHandler
-#include "model/setup/test_model.h"                 // for TestModel
-#include "net/async_data_channel_server.h"          // for AsyncDataChannelS...
+#include "model/controller/controller_properties.h"
+#include "model/setup/async_manager.h"
+#include "model/setup/test_channel_transport.h"
+#include "model/setup/test_command_handler.h"
+#include "model/setup/test_model.h"
+#include "net/async_data_channel_server.h"
 
 namespace android::net {
 class AsyncDataChannel;

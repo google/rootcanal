@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "scripted_beacon.h"
+#include "model/devices/scripted_beacon.h"
 
 #include <unistd.h>
 
@@ -97,7 +97,7 @@ bool has_time_elapsed(steady_clock::time_point time_point) {
 
 static void populate_event(PlaybackEvent* event,
                            PlaybackEvent::PlaybackEventType type) {
-  INFO("Adding event: {}", type);
+  INFO("Adding event: {}", PlaybackEvent::PlaybackEventType_Name(type));
   event->set_type(type);
   event->set_secs_since_epoch(system_clock::now().time_since_epoch().count());
 }
@@ -111,7 +111,8 @@ void ScriptedBeacon::set_state(PlaybackEvent::PlaybackEventType state) {
     events_ostream_.open(events_file_,
                          std::ios::out | std::ios::binary | std::ios::trunc);
     if (!events_ostream_.is_open()) {
-      INFO("Events file not opened yet, for event: {}", state);
+      INFO("Events file not opened yet, for event: {}",
+           PlaybackEvent::PlaybackEventType_Name(state));
       return;
     }
   }

@@ -20,6 +20,7 @@
 #include <cstdint>
 
 #include "hci/address_with_type.h"
+#include "packets/hci_packets.h"
 #include "phy.h"
 
 namespace rootcanal {

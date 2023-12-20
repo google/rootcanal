@@ -17,11 +17,14 @@
 #include "log.h"
 
 #include <fmt/color.h>
+#include <fmt/core.h>
 
 #include <array>
+#include <chrono>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <ctime>
-#include <filesystem>
 #include <optional>
 
 namespace rootcanal::log {
@@ -59,7 +62,7 @@ void VLog(Verbosity verb, char const* file, int line,
   auto now = std::chrono::system_clock::now();
   auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
   auto now_t = std::chrono::system_clock::to_time_t(now);
-  char time_str[19];  //"mm-dd_HH:MM:SS.mmm\0" is 19 byte long
+  char time_str[19];  // "mm-dd_HH:MM:SS.mmm\0" is 19 byte long
   auto n = std::strftime(time_str, sizeof(time_str), "%m-%d %H:%M:%S",
                          std::localtime(&now_t));
   snprintf(time_str + n, sizeof(time_str) - n, ".%03u",

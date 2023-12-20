@@ -14,26 +14,44 @@
  * limitations under the License.
  */
 
-#include "link_layer_controller.h"
+#include "model/controller/link_layer_controller.h"
+
+#include <packet_runtime.h>
 
 #include <algorithm>
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
 
 #include "crypto/crypto.h"
+#include "hci/address.h"
+#include "hci/address_with_type.h"
 #include "log.h"
+#include "model/controller/acl_connection.h"
+#include "model/controller/acl_connection_handler.h"
+#include "model/controller/controller_properties.h"
+#include "model/controller/le_advertiser.h"
+#include "model/controller/sco_connection.h"
 #include "packets/hci_packets.h"
-#include "rootcanal_rs.h"
+#include "packets/link_layer_packets.h"
+#include "phy.h"
+#include "rust/include/rootcanal_rs.h"
 
 using namespace std::chrono;
 using bluetooth::hci::Address;
 using bluetooth::hci::AddressType;
 using bluetooth::hci::AddressWithType;
-using bluetooth::hci::DirectAdvertisingAddressType;
-using bluetooth::hci::EventCode;
 using bluetooth::hci::LLFeaturesBits;
 using bluetooth::hci::SubeventCode;
 
 using namespace model::packets;
-using model::packets::PacketType;
 using namespace std::literals;
 
 using TaskId = rootcanal::LinkLayerController::TaskId;
@@ -3360,8 +3378,10 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
 
   if (resolved_advertising_address != advertising_address) {
     DEBUG(id_, "Resolved the advertising address {} to {}", advertising_address,
-          advertising_address.GetAddressType(), resolved_advertising_address,
-          resolved_advertising_address.GetAddressType());
+          bluetooth::hci::AddressTypeText(advertising_address.GetAddressType()),
+          resolved_advertising_address,
+          bluetooth::hci::AddressTypeText(
+              resolved_advertising_address.GetAddressType()));
   }
 
   // Vol 6, Part B § 4.3.3 Scanner filter policy
@@ -5026,6 +5046,20 @@ void LinkLayerController::IncomingPagePacket(
   auto page = model::packets::PageView::Create(incoming);
   ASSERT(page.IsValid());
 
+  // [HCI] 7.3.3 Set Event Filter command
+  // If the Auto_Accept_Flag is off and the Host has masked the
+  // HCI_Connection_Request event, the Controller shall reject the
+  // connection attempt.
+  if (!IsEventUnmasked(EventCode::CONNECTION_REQUEST)) {
+    INFO(id_,
+         "rejecting connection request from {} because the HCI_Connection_Request"
+         " event is masked by the Host", bd_addr);
+    SendLinkLayerPacket(
+        model::packets::PageRejectBuilder::Create(
+            GetAddress(), bd_addr, static_cast<uint8_t>(ErrorCode::CONNECTION_TIMEOUT)));
+    return;
+  }
+
   // Cannot establish two BR-EDR connections with the same peer.
   if (connections_.GetAclConnectionHandle(bd_addr).has_value()) {
     return;
@@ -5041,11 +5075,9 @@ void LinkLayerController::IncomingPagePacket(
     return;
   }
 
-  if (IsEventUnmasked(EventCode::CONNECTION_REQUEST)) {
-    send_event_(bluetooth::hci::ConnectionRequestBuilder::Create(
-        bd_addr, page.GetClassOfDevice(),
-        bluetooth::hci::ConnectionRequestLinkType::ACL));
-  }
+  send_event_(bluetooth::hci::ConnectionRequestBuilder::Create(
+      bd_addr, page.GetClassOfDevice(),
+      bluetooth::hci::ConnectionRequestLinkType::ACL));
 }
 
 void LinkLayerController::IncomingPageRejectPacket(
@@ -5296,15 +5328,9 @@ void LinkLayerController::MakePeripheralConnection(const Address& bd_addr,
   if (page_.has_value() && page_->bd_addr == bd_addr) {
     // TODO: the core specification is very unclear as to what behavior
     // is expected when two connections are established simultaneously.
-    // This implementation considers that an HCI Connection Complete
+    // This implementation considers that a unique HCI Connection Complete
     // event is expected for both the HCI Create Connection and HCI Accept
-    // Connection Request commands. Both events are sent with the status
-    // for success.
-    if (IsEventUnmasked(EventCode::CONNECTION_COMPLETE)) {
-      send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
-          ErrorCode::SUCCESS, connection_handle, bd_addr,
-          bluetooth::hci::LinkType::ACL, bluetooth::hci::Enable::DISABLED));
-    }
+    // Connection Request commands.
     page_ = {};
   }
 

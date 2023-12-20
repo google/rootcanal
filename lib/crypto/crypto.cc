@@ -19,7 +19,6 @@
 #include <openssl/aes.h>
 
 #include <algorithm>
-#include <cstdint>
 
 namespace rootcanal::crypto {
 

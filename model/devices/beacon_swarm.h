@@ -16,10 +16,12 @@
 
 #pragma once
 
-#include <cstdint>
+#include <memory>
+#include <string>
 #include <vector>
 
-#include "beacon.h"
+#include "model/devices/beacon.h"
+#include "model/devices/device.h"
 
 namespace rootcanal {
 

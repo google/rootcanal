@@ -40,6 +40,10 @@ bluetooth::hci::Address PhyDevice::GetAddress() const {
   return device_->GetAddress();
 }
 
+std::shared_ptr<Device> PhyDevice::GetDevice() const {
+  return device_;
+}
+
 void PhyDevice::SetAddress(bluetooth::hci::Address address) {
   device_->SetAddress(std::move(address));
 }

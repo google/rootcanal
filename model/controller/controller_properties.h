@@ -18,11 +18,8 @@
 
 #include <array>
 #include <cstdint>
-#include <optional>
-#include <string>
 #include <vector>
 
-#include "hci/address.h"
 #include "packets/hci_packets.h"
 #include "rootcanal/configuration.pb.h"
 
@@ -67,6 +64,8 @@ struct ControllerProperties {
   ControllerProperties(ControllerProperties&&) = default;
   ~ControllerProperties() = default;
 
+  ControllerProperties& operator=(ControllerProperties const&) = default;
+
   // Perform a bitwise and operation on the supported commands mask;
   // the default bit setting is either loaded from the configuration
   // file or all 1s.
@@ -102,6 +101,8 @@ struct ControllerProperties {
 
   // Vendor Supported Commands.
   bool supports_le_get_vendor_capabilities_command{true};
+  bool supports_csr_vendor_command{true};
+  bool supports_le_apcf_vendor_command{true};
 
   // Local Supported Features (Vol 4, Part E § 7.4.3) and
   // Local Extended Features (Vol 4, Part E § 7.4.3).
@@ -154,12 +155,17 @@ struct ControllerProperties {
   // LE Periodic Advertiser List Size (Vol 4, Part E § 7.8.73).
   uint8_t le_periodic_advertiser_list_size{8};
 
-  // Vendor Information.
-  // Provide parameters returned by vendor specific commands.
-  std::vector<uint8_t> le_vendor_capabilities{};
-
-  // Enable the support for the CSR vendor command.
-  bool vendor_csr{true};
+  // Android Vendor Capabilities.
+  // https://source.android.com/docs/core/connect/bluetooth/hci_requirements#vendor-specific-capabilities
+  uint8_t le_apcf_filter_list_size{16};
+  uint8_t le_apcf_num_of_tracked_advertisers{16};
+  uint8_t le_apcf_broadcaster_address_filter_list_size{16};
+  uint8_t le_apcf_service_uuid_filter_list_size{16};
+  uint8_t le_apcf_service_solicitation_uuid_filter_list_size{16};
+  uint8_t le_apcf_local_name_filter_list_size{16};
+  uint8_t le_apcf_manufacturer_data_filter_list_size{16};
+  uint8_t le_apcf_service_data_filter_list_size{16};
+  uint8_t le_apcf_ad_type_filter_list_size{16};
 
   bool SupportsLMPFeature(bluetooth::hci::LMPFeaturesPage0Bits bit) const {
     return (lmp_features[0] & static_cast<uint64_t>(bit)) != 0;

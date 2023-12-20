@@ -14,9 +14,18 @@
  * limitations under the License.
  */
 
-#include "beacon.h"
+#include "model/devices/beacon.h"
 
+#include <chrono>
+#include <cstdint>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include "hci/address.h"
 #include "model/setup/device_boutique.h"
+#include "packets/link_layer_packets.h"
+#include "phy.h"
 
 namespace rootcanal {
 using namespace model::packets;

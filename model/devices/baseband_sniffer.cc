@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
-#include "baseband_sniffer.h"
+#include "model/devices/baseband_sniffer.h"
+
+#include <cstdint>
+#include <ios>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "log.h"
-#include "pcap.h"
 #include "packets/bredr_bb_packets.h"
-
-using std::vector;
+#include "packets/link_layer_packets.h"
+#include "pcap.h"
+#include "phy.h"
 
 namespace rootcanal {
 

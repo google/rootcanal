@@ -5633,38 +5633,59 @@ test LeGetVendorCapabilities {
   "\x53\xfd\x00",
 }
 
-struct BaseVendorCapabilities {
+packet LeGetVendorCapabilitiesComplete : CommandComplete (command_op_code = LE_GET_VENDOR_CAPABILITIES) {
+  status : ErrorCode,
+  vendor_capabilities : 8[],
+}
+
+struct VendorCapabilities_V_0_96 {
   max_advt_instances: 8,
-  offloaded_resolution_of_private_address : 8,
+  offloaded_resolution_of_private_address: 8,
   total_scan_results_storage: 16,
   max_irk_list_sz: 8,
   filtering_support: 8,
   max_filter: 8,
   activity_energy_info_support: 8,
-}
-
-packet LeGetVendorCapabilitiesComplete : CommandComplete (command_op_code = LE_GET_VENDOR_CAPABILITIES) {
-  status : ErrorCode,
-  base_vendor_capabilities : BaseVendorCapabilities,
-  _payload_,
-}
-
-packet LeGetVendorCapabilitiesComplete095 : LeGetVendorCapabilitiesComplete {
-  version_supported: 16,
+  _fixed_ = 0x6000 : 16, // v0.96
   total_num_of_advt_tracked: 16,
   extended_scan_support: 8,
   debug_logging_supported: 8,
-  _payload_,
-}
-
-packet LeGetVendorCapabilitiesComplete096 : LeGetVendorCapabilitiesComplete095 {
   le_address_generation_offloading_support: 8,
-  _payload_,
 }
 
-packet LeGetVendorCapabilitiesComplete098 : LeGetVendorCapabilitiesComplete096 {
+struct VendorCapabilities_V_0_98 {
+  _reserved_ : 8,
+  _reserved_ : 8,
+  total_scan_results_storage: 16,
+  max_irk_list_sz: 8,
+  filtering_support: 8,
+  max_filter: 8,
+  activity_energy_info_support: 8,
+  _fixed_ = 0x6200 : 16, // v0.98
+  total_num_of_advt_tracked: 16,
+  extended_scan_support: 8,
+  debug_logging_supported: 8,
+  _reserved_ : 8,
   a2dp_source_offload_capability_mask: 32,
-  bluetooth_quality_report_support: 8
+  bluetooth_quality_report_support: 8,
+}
+
+struct VendorCapabilities_V_1_03 {
+  _reserved_ : 8,
+  _reserved_ : 8,
+  total_scan_results_storage: 16,
+  max_irk_list_sz: 8,
+  filtering_support: 8,
+  max_filter: 8,
+  activity_energy_info_support: 8,
+  _fixed_ = 0x0301 : 16, // v1.03
+  total_num_of_advt_tracked: 16,
+  extended_scan_support: 8,
+  debug_logging_supported: 8,
+  _reserved_ : 8,
+  a2dp_source_offload_capability_mask: 32,
+  bluetooth_quality_report_support: 8,
+  dynamic_audio_buffer_support: 32,
 }
 
 // -----------------------------------------------------------------------------
@@ -5844,6 +5865,10 @@ enum ApcfFeatureSelection : 8 {
 
 packet LeApcfSetFilteringParameters : LeApcf (apcf_opcode = SET_FILTERING_PARAMETERS) {
   apcf_action : ApcfAction,
+  _payload_,
+}
+
+packet LeApcfAddFilteringParameters : LeApcfSetFilteringParameters (apcf_action = ADD) {
   apcf_filter_index : 8,
   apcf_feature_selection : 16,
   apcf_list_logic_type : 16,
@@ -5855,6 +5880,13 @@ packet LeApcfSetFilteringParameters : LeApcf (apcf_opcode = SET_FILTERING_PARAME
   rssi_low_thresh : 8,
   onlost_timeout : 16,
   num_of_tracking_entries : 16,
+}
+
+packet LeApcfDeleteFilteringParameters : LeApcfSetFilteringParameters (apcf_action = DELETE) {
+  apcf_filter_index : 8,
+}
+
+packet LeApcfClearFilteringParameters : LeApcfSetFilteringParameters (apcf_action = CLEAR) {
 }
 
 packet LeApcfSetFilteringParametersComplete : LeApcfComplete (apcf_opcode = SET_FILTERING_PARAMETERS) {
@@ -5870,9 +5902,23 @@ enum ApcfApplicationAddressType : 8 {
 
 packet LeApcfBroadcasterAddress : LeApcf (apcf_opcode = BROADCASTER_ADDRESS) {
   apcf_action : ApcfAction,
+  _payload_,
+}
+
+packet LeApcfAddBroadcasterAddress : LeApcfBroadcasterAddress (apcf_action = ADD) {
   apcf_filter_index : 8,
   apcf_broadcaster_address : Address,
   apcf_application_address_type : ApcfApplicationAddressType,
+}
+
+packet LeApcfDeleteBroadcasterAddress : LeApcfBroadcasterAddress (apcf_action = DELETE) {
+  apcf_filter_index : 8,
+  apcf_broadcaster_address : Address,
+  apcf_application_address_type : ApcfApplicationAddressType,
+}
+
+packet LeApcfClearBroadcasterAddress : LeApcfBroadcasterAddress (apcf_action = CLEAR) {
+  apcf_filter_index : 8,
 }
 
 packet LeApcfBroadcasterAddressComplete : LeApcfComplete (apcf_opcode = BROADCASTER_ADDRESS) {
@@ -5891,13 +5937,13 @@ packet LeApcfServiceUuidComplete : LeApcfComplete (apcf_opcode = SERVICE_UUID) {
   apcf_available_spaces : 8,
 }
 
-packet LeApcfSolicitationUuid : LeApcf (apcf_opcode = SERVICE_SOLICITATION_UUID) {
+packet LeApcfServiceSolicitationUuid : LeApcf (apcf_opcode = SERVICE_SOLICITATION_UUID) {
   apcf_action : ApcfAction,
   apcf_filter_index : 8,
   acpf_uuid_data : 8[],
 }
 
-packet LeApcfSolicitationUuidComplete : LeApcfComplete (apcf_opcode = SERVICE_SOLICITATION_UUID) {
+packet LeApcfServiceSolicitationUuidComplete : LeApcfComplete (apcf_opcode = SERVICE_SOLICITATION_UUID) {
   apcf_action : ApcfAction,
   apcf_available_spaces : 8,
 }
@@ -5935,13 +5981,16 @@ packet LeApcfServiceDataComplete : LeApcfComplete (apcf_opcode = SERVICE_DATA) {
   apcf_available_spaces : 8,
 }
 
-packet LeApcfADType : LeApcf (apcf_opcode = AD_TYPE_FILTER) {
+packet LeApcfAdTypeFilter : LeApcf (apcf_opcode = AD_TYPE_FILTER) {
   apcf_action : ApcfAction,
   apcf_filter_index : 8,
-  apcf_ad_type_data : 8[],
+  apcf_ad_type : 8,
+  _size_(apcf_ad_data) : 8,
+  apcf_ad_data : 8[],
+  apcf_ad_data_mask : 8[],
 }
 
-packet LeApcfADTypeComplete : LeApcfComplete (apcf_opcode = AD_TYPE_FILTER) {
+packet LeApcfAdTypeFilterComplete : LeApcfComplete (apcf_opcode = AD_TYPE_FILTER) {
   apcf_action : ApcfAction,
   apcf_available_spaces : 8,
 }

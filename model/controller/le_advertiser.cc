@@ -14,10 +14,21 @@
  * limitations under the License.
  */
 
-#include "le_advertiser.h"
+#include "model/controller/le_advertiser.h"
 
-#include "link_layer_controller.h"
+#include <array>
+#include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <utility>
+#include <vector>
+
+#include "hci/address_with_type.h"
 #include "log.h"
+#include "model/controller/link_layer_controller.h"
+#include "packets/hci_packets.h"
+#include "packets/link_layer_packets.h"
 
 using namespace bluetooth::hci;
 using namespace std::literals;

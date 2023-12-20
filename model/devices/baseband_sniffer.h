@@ -18,8 +18,13 @@
 
 #include <cstdint>
 #include <fstream>
+#include <memory>
+#include <string>
 
-#include "device.h"
+#include "hci/address.h"
+#include "model/devices/device.h"
+#include "packets/link_layer_packets.h"
+#include "phy.h"
 
 namespace bredr_bb {
 class BaseBandPacketBuilder;
