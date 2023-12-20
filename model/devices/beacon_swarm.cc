@@ -14,11 +14,16 @@
  * limitations under the License.
  */
 
-#include "beacon_swarm.h"
+#include "model/devices/beacon_swarm.h"
 
+#include <chrono>
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#include "model/devices/beacon.h"
 #include "model/setup/device_boutique.h"
-
-using std::vector;
+#include "packets/link_layer_packets.h"
 
 namespace rootcanal {
 using namespace model::packets;
@@ -27,7 +32,7 @@ using namespace std::chrono_literals;
 bool BeaconSwarm::registered_ =
     DeviceBoutique::Register("beacon_swarm", &BeaconSwarm::Create);
 
-BeaconSwarm::BeaconSwarm(const vector<std::string>& args) : Beacon(args) {
+BeaconSwarm::BeaconSwarm(const std::vector<std::string>& args) : Beacon(args) {
   advertising_interval_ = 1280ms;
   advertising_type_ = LegacyAdvertisingType::ADV_NONCONN_IND;
   advertising_data_ = {

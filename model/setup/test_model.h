@@ -30,6 +30,7 @@
 #include "model/setup/async_manager.h"         // for AsyncUserId, AsyncTaskId
 #include "phy.h"                               // for Phy, Phy::Type
 #include "phy_layer.h"
+#include "rootcanal/configuration.pb.h"
 
 namespace rootcanal {
 class Device;
@@ -96,6 +97,9 @@ class TestModel {
   // Set the device's Bluetooth address
   void SetDeviceAddress(PhyDevice::Identifier device_id,
                         Address device_address);
+
+  void SetDeviceConfiguration(PhyDevice::Identifier device_id,
+                              rootcanal::configuration::Controller const& configuration);
 
   // Let devices know about the passage of time
   void Tick();

@@ -14,9 +14,17 @@
  * limitations under the License.
  */
 
-#include "hci_device.h"
+#include "model/devices/hci_device.h"
+
+#include <cstdint>
+#include <memory>
+#include <vector>
 
 #include "log.h"
+#include "model/controller/controller_properties.h"
+#include "model/controller/dual_mode_controller.h"
+#include "model/hci/hci_transport.h"
+#include "packets/link_layer_packets.h"
 
 namespace rootcanal {
 

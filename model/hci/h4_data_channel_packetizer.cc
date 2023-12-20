@@ -90,7 +90,8 @@ void H4DataChannelPacketizer::OnDataReady(
         disconnect_cb_();
         return;
       }
-      FATAL("Read error in {}: {}", h4_parser_.CurrentState(), strerror(errno));
+      FATAL("Read error in {}: {}", fmt::underlying(h4_parser_.CurrentState()),
+            strerror(errno));
     }
     h4_parser_.Consume(buffer.data(), bytes_read);
   }

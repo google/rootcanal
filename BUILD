@@ -147,6 +147,8 @@ cc_library(
         "model/controller/sco_connection.cc",
         "model/controller/sco_connection.h",
         "model/controller/vendor_commands/csr.h",
+        "model/controller/vendor_commands/le_apcf.cc",
+        "model/controller/vendor_commands/le_apcf.h",
         "model/devices/baseband_sniffer.cc",
         "model/devices/baseband_sniffer.h",
         "model/devices/beacon.cc",
@@ -214,6 +216,7 @@ cc_library(
     ],
     defines = [
         "NDEBUG",
+        "_GNU_SOURCE",
     ],
     includes = [
         "include",
@@ -261,6 +264,8 @@ cc_binary(
         "model/controller/sco_connection.cc",
         "model/controller/sco_connection.h",
         "model/controller/vendor_commands/csr.h",
+        "model/controller/vendor_commands/le_apcf.cc",
+        "model/controller/vendor_commands/le_apcf.h",
         "model/controller/ffi.cc",
         "model/controller/ffi.h",
         "model/devices/device.cc",
@@ -279,6 +284,7 @@ cc_binary(
     ],
     defines = [
         "NDEBUG",
+        "_GNU_SOURCE",
     ],
     includes = [
         "include",

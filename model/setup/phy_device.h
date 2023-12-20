@@ -44,6 +44,7 @@ class PhyDevice {
             int8_t tx_power);
 
   bluetooth::hci::Address GetAddress() const;
+  std::shared_ptr<Device> GetDevice() const;
   void SetAddress(bluetooth::hci::Address address);
   std::string ToString();
 

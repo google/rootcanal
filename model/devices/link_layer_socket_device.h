@@ -16,17 +16,16 @@
 
 #pragma once
 
-#include <stddef.h>  // for size_t
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include <cstdint>  // for uint8_t, uint32_t
-#include <memory>   // for shared_ptr, make_shared
-#include <string>   // for string
-#include <vector>   // for vector
-
-#include "device.h"                      // for Device
-#include "include/phy.h"                 // for Phy, Phy::Type
-#include "net/async_data_channel.h"      // for AsyncDataChannel
-#include "packets/link_layer_packets.h"  // for LinkLayerPacketView
+#include "model/devices/device.h"
+#include "net/async_data_channel.h"
+#include "packets/link_layer_packets.h"
+#include "phy.h"
 
 namespace rootcanal {
 

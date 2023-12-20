@@ -14,7 +14,19 @@
  * limitations under the License.
  */
 
-#include <hci/pcap_filter.h>
+#include "hci/pcap_filter.h"
+
+#include <packet_runtime.h>
+
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <memory>
+#include <utility>
+#include <vector>
 
 #include "log.h"
 #include "packets/hci_packets.h"

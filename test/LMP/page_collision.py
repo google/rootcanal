@@ -56,10 +56,3 @@ class Test(ControllerTest):
                                    bd_addr=peer_address,
                                    link_type=hci.LinkType.ACL,
                                    encryption_enabled=hci.Enable.DISABLED))
-
-        await self.expect_evt(
-            hci.ConnectionComplete(status=ErrorCode.SUCCESS,
-                                   connection_handle=acl_connection_handle,
-                                   bd_addr=peer_address,
-                                   link_type=hci.LinkType.ACL,
-                                   encryption_enabled=hci.Enable.DISABLED))

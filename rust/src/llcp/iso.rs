@@ -546,12 +546,17 @@ impl IsoManager {
         }
 
         let Some(iso_interval) = iso_interval(
-            sdu_interval_c_to_p, sdu_interval_p_to_c, framed,
+            sdu_interval_c_to_p,
+            sdu_interval_p_to_c,
+            framed,
             max_transport_latency_c_to_p as u32 * 1000,
-            max_transport_latency_p_to_c as u32 * 1000) else {
+            max_transport_latency_p_to_c as u32 * 1000,
+        ) else {
             println!(
                 "ISO_Interval cannot be chosen that fulfills the requirement from the CIG parameters");
-            return self.send_hci_event(command_complete(hci::ErrorCode::UnsupportedFeatureOrParameterValue));
+            return self.send_hci_event(command_complete(
+                hci::ErrorCode::UnsupportedFeatureOrParameterValue,
+            ));
         };
 
         // If the Status return parameter is non-zero, then the state of the CIG

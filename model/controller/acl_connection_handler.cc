@@ -14,11 +14,22 @@
  * limitations under the License.
  */
 
-#include "acl_connection_handler.h"
+#include "model/controller/acl_connection_handler.h"
+
+#include <chrono>
+#include <cstdint>
+#include <functional>
+#include <optional>
+#include <utility>
+#include <vector>
 
 #include "hci/address.h"
+#include "hci/address_with_type.h"
 #include "log.h"
+#include "model/controller/acl_connection.h"
+#include "model/controller/sco_connection.h"
 #include "packets/hci_packets.h"
+#include "phy.h"
 
 namespace rootcanal {
 
@@ -274,7 +285,7 @@ Phy::Type AclConnectionHandler::GetPhyType(uint16_t handle) const {
 
 uint16_t AclConnectionHandler::GetAclLinkPolicySettings(uint16_t handle) const {
   return acl_connections_.at(handle).GetLinkPolicySettings();
-};
+}
 
 void AclConnectionHandler::SetAclLinkPolicySettings(uint16_t handle,
                                                     uint16_t settings) {
@@ -283,7 +294,7 @@ void AclConnectionHandler::SetAclLinkPolicySettings(uint16_t handle,
 
 bluetooth::hci::Role AclConnectionHandler::GetAclRole(uint16_t handle) const {
   return acl_connections_.at(handle).GetRole();
-};
+}
 
 void AclConnectionHandler::SetAclRole(uint16_t handle,
                                       bluetooth::hci::Role role) {
@@ -404,7 +415,7 @@ ScoLinkParameters AclConnectionHandler::GetScoLinkParameters(
 }
 
 std::vector<uint16_t> AclConnectionHandler::GetAclHandles() const {
-  std::vector<uint16_t> keys;
+  std::vector<uint16_t> keys(acl_connections_.size());
 
   for (const auto& pair : acl_connections_) {
     keys.push_back(pair.first);

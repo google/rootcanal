@@ -72,6 +72,9 @@ class TestCommandHandler {
   // Change the device's MAC address
   void SetDeviceAddress(const std::vector<std::string>& args);
 
+  // Change the device's configuration
+  void SetDeviceConfiguration(const std::vector<std::string>& args);
+
   // Timer management functions
   void SetTimerPeriod(const std::vector<std::string>& args);
 

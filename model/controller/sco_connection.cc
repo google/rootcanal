@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-#include "sco_connection.h"
+#include "model/controller/sco_connection.h"
 
-#include <log.h>
-
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <optional>
 #include <vector>
 
+#include "log.h"
 #include "packets/hci_packets.h"
 
 using namespace rootcanal;

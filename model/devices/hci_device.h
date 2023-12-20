@@ -16,11 +16,12 @@
 
 #pragma once
 
-#include <memory>  // for shared_ptr, make_...
-#include <string>  // for string
+#include <memory>
+#include <string>
 
-#include "model/controller/dual_mode_controller.h"  // for DualModeController
-#include "model/hci/hci_transport.h"                // for HciTransport
+#include "model/controller/controller_properties.h"
+#include "model/controller/dual_mode_controller.h"
+#include "model/hci/hci_transport.h"
 
 namespace rootcanal {
 

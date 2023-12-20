@@ -14,14 +14,21 @@
  * limitations under the License.
  */
 
-#include "link_layer_socket_device.h"
+#include "model/devices/link_layer_socket_device.h"
 
 #include <packet_runtime.h>
 
-#include <type_traits>  // for remove_extent_t
+#include <cerrno>
+#include <cstdint>
+#include <cstring>
+#include <memory>
+#include <utility>
+#include <vector>
 
 #include "log.h"
-#include "phy.h"  // for Phy, Phy::Type
+#include "model/devices/device.h"
+#include "packets/link_layer_packets.h"
+#include "phy.h"
 
 using std::vector;
 

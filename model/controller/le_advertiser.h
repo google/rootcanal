@@ -18,13 +18,13 @@
 
 #include <chrono>
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <ratio>
+#include <vector>
 
+#include "hci/address.h"
 #include "hci/address_with_type.h"
 #include "packets/hci_packets.h"
-#include "packets/link_layer_packets.h"
 
 namespace rootcanal {
 

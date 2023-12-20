@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include "controller_properties.h"
+#include "model/controller/controller_properties.h"
 
-#include <google/protobuf/text_format.h>
-#include <inttypes.h>
-
-#include <fstream>
-#include <limits>
-#include <memory>
+#include <array>
+#include <cstdint>
+#include <utility>
+#include <vector>
 
 #include "log.h"
+#include "packets/hci_packets.h"
+#include "rootcanal/configuration.pb.h"
 
 namespace rootcanal {
 using namespace bluetooth::hci;
@@ -477,7 +477,7 @@ bool ControllerProperties::CheckSupportedFeatures() const {
       lmp_page_0_reserved_bits = UINT64_C(0x7884000401000100);
       lmp_page_2_reserved_bits = UINT64_C(0xfffffffffffff080);
       break;
-  };
+  }
 
   if ((lmp_page_0_reserved_bits & lmp_features[0]) != 0) {
     INFO(
@@ -1876,7 +1876,7 @@ ControllerProperties::ControllerProperties(
 
       case ControllerPreset::CSR_RCK_PTS_DONGLE:
         // Configuration extracted with the helper script controller_info.py
-        vendor_csr = true;
+        supports_csr_vendor_command = true;
         br_supported = true;
         le_supported = true;
         hci_version = bluetooth::hci::HciVersion::V_4_2;
@@ -1970,7 +1970,11 @@ ControllerProperties::ControllerProperties(
   // Apply selected vendor features.
   if (config.has_vendor()) {
     if (config.vendor().has_csr()) {
-      vendor_csr = config.vendor().csr();
+      supports_csr_vendor_command = config.vendor().csr();
+    }
+    if (config.vendor().has_android()) {
+      supports_le_get_vendor_capabilities_command = config.vendor().android();
+      supports_le_apcf_vendor_command = config.vendor().android();
     }
   }
 

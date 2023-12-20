@@ -25,8 +25,6 @@
 
 namespace rootcanal {
 
-using ::bluetooth::hci::Address;
-
 class Sniffer : public Device {
  public:
   Sniffer(const std::vector<std::string>& args);

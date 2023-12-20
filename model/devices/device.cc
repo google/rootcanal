@@ -14,11 +14,17 @@
  * limitations under the License.
  */
 
-#include "device.h"
+#include "model/devices/device.h"
 
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include "log.h"
+#include "packets/link_layer_packets.h"
+#include "phy.h"
 
 namespace rootcanal {
 

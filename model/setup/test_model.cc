@@ -241,6 +241,19 @@ void TestModel::SetDeviceAddress(PhyDevice::Identifier device_id,
   }
 }
 
+void TestModel::SetDeviceConfiguration(PhyDevice::Identifier device_id,
+                                       rootcanal::configuration::Controller const& configuration) {
+  if (phy_devices_.find(device_id) != phy_devices_.end()) {
+    if (phy_devices_[device_id]->GetDevice()->GetTypeString() == "hci_device") {
+      std::shared_ptr<DualModeController> device = std::static_pointer_cast<HciDevice>(
+          phy_devices_[device_id]->GetDevice());
+      device->SetProperties(ControllerProperties(configuration));
+    } else {
+      ERROR(device_id, "failed to update the configuration, device is not a controller device");
+    }
+  }
+}
+
 const std::string& TestModel::List() {
   list_string_.clear();
   list_string_ += " Devices: \r\n";

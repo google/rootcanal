@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-#include "sniffer.h"
+#include "model/devices/sniffer.h"
 
+#include <cstdint>
+#include <string>
+#include <vector>
+
+#include "hci/address.h"
 #include "log.h"
 #include "model/setup/device_boutique.h"
-
-using std::vector;
+#include "packets/link_layer_packets.h"
+#include "phy.h"
 
 namespace rootcanal {
 
 bool Sniffer::registered_ =
     DeviceBoutique::Register("sniffer", &Sniffer::Create);
 
-Sniffer::Sniffer(const vector<std::string>& args) {
+Sniffer::Sniffer(const std::vector<std::string>& args) {
   if (args.size() >= 2) {
     Address::FromString(args[1], address_);
   }

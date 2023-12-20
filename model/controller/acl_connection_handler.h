@@ -18,14 +18,17 @@
 
 #include <chrono>
 #include <cstdint>
-#include <set>
+#include <functional>
+#include <optional>
 #include <unordered_map>
+#include <vector>
 
-#include "acl_connection.h"
 #include "hci/address.h"
 #include "hci/address_with_type.h"
+#include "model/controller/acl_connection.h"
+#include "model/controller/sco_connection.h"
+#include "packets/hci_packets.h"
 #include "phy.h"
-#include "sco_connection.h"
 
 namespace rootcanal {
 static constexpr uint16_t kReservedHandle = 0xF00;

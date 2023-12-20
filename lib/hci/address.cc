@@ -16,18 +16,23 @@
 
 #include "hci/address.h"
 
-#include <fmt/core.h>
+#include <packet_runtime.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <initializer_list>
 #include <iomanip>
+#include <ios>
+#include <iterator>
+#include <optional>
 #include <sstream>
+#include <string>
+#include <utility>
 
-#include "hci/address_with_type.h"
-
-namespace bluetooth {
-namespace hci {
+namespace bluetooth::hci {
 
 const Address Address::kAny{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 const Address Address::kEmpty{0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -123,86 +128,10 @@ bool Address::FromString(const std::string& from, Address& to) {
 size_t Address::FromOctets(const uint8_t* from) {
   std::copy(from, from + kLength, data());
   return kLength;
-};
+}
 
 bool Address::IsValidAddress(const std::string& address) {
   return Address::FromString(address).has_value();
 }
 
-}  // namespace hci
-}  // namespace bluetooth
-
-template <>
-struct fmt::formatter<bluetooth::hci::Address> {
-  // Presentation format: 'x' - lowercase, 'X' - uppercase.
-  char presentation = 'x';
-
-  // Parses format specifications of the form ['x' | 'X'].
-  constexpr auto parse(format_parse_context& ctx)
-      -> format_parse_context::iterator {
-    // Parse the presentation format and store it in the formatter:
-    auto it = ctx.begin();
-    auto end = ctx.end();
-    if (it != end && (*it == 'x' || *it == 'X')) {
-      presentation = *it++;
-    }
-
-    // Check if reached the end of the range:
-    if (it != end && *it != '}') {
-      ctx.on_error("invalid format");
-    }
-
-    // Return an iterator past the end of the parsed range:
-    return it;
-  }
-
-  // Formats the address a using the parsed format specification (presentation)
-  // stored in this formatter.
-  auto format(const bluetooth::hci::Address& a, format_context& ctx) const
-      -> format_context::iterator {
-    return presentation == 'x'
-               ? fmt::format_to(ctx.out(),
-                                "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-                                a.address[5], a.address[4], a.address[3],
-                                a.address[2], a.address[1], a.address[0])
-               : fmt::format_to(ctx.out(),
-                                "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-                                a.address[5], a.address[4], a.address[3],
-                                a.address[2], a.address[1], a.address[0]);
-  }
-};
-
-template <>
-struct fmt::formatter<bluetooth::hci::AddressWithType> {
-  // Presentation format: 'x' - lowercase, 'X' - uppercase.
-  char presentation = 'x';
-
-  // Parses format specifications of the form ['x' | 'X'].
-  constexpr auto parse(format_parse_context& ctx)
-      -> format_parse_context::iterator {
-    // Parse the presentation format and store it in the formatter:
-    auto it = ctx.begin();
-    auto end = ctx.end();
-    if (it != end && (*it == 'x' || *it == 'X')) {
-      presentation = *it++;
-    }
-
-    // Check if reached the end of the range:
-    if (it != end && *it != '}') {
-      ctx.on_error("invalid format");
-    }
-
-    // Return an iterator past the end of the parsed range:
-    return it;
-  }
-
-  // Formats the address a using the parsed format specification (presentation)
-  // stored in this formatter.
-  auto format(const bluetooth::hci::AddressWithType& a,
-              format_context& ctx) const -> format_context::iterator {
-    auto out = presentation == 'x'
-                   ? fmt::format_to(ctx.out(), "{:x}", a.GetAddress())
-                   : fmt::format_to(ctx.out(), "{:X}", a.GetAddress());
-    return fmt::format_to(out, "[{}]", AddressTypeText(a.GetAddressType()));
-  }
-};
+}  // namespace bluetooth::hci
