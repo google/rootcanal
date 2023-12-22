@@ -8,14 +8,7 @@ load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 new_local_repository(
     name = "fmtlib",
     path = "third_party/fmtlib",
-    build_file = "third_party/BUILD.fmtlib",
-)
-
-git_repository(
-    name = "boringssl",
-    # branch master-with-bazel
-    commit = "4280d451e661db0c4d800f2c5219f3f4701c7cd0",
-    remote = "https://boringssl.googlesource.com/boringssl",
+    build_file = "//:BUILD.fmtlib",
 )
 
 local_repository(
@@ -26,7 +19,7 @@ local_repository(
 new_local_repository(
     name = "pdl",
     path = "third_party/pdl",
-    build_file = "third_party/BUILD.pdl",
+    build_file = "//:BUILD.pdl",
 )
 
 http_archive(

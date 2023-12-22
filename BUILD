@@ -209,6 +209,9 @@ cc_library(
         "-I.",
         "-fmacro-prefix-map=external/rootcanal/=",
     ],
+    linkopts = [
+        "-lcrypto",
+    ],
     defines = [
         "NDEBUG",
     ],
@@ -223,14 +226,16 @@ cc_library(
         ":rootcanal_rs",
         "//packets:generated",
         "@fmtlib",
-        "@boringssl//:crypto",
         "@pdl//:packet_runtime",
     ],
 )
 
 cc_binary(
     name = "librootcanal_ffi.so",
-    linkopts = ["-shared"],
+    linkopts = [
+        "-shared",
+        "-lcrypto",
+    ],
     srcs = [
         "include/crypto/crypto.h",
         "include/hci/address.h",
@@ -286,7 +291,6 @@ cc_binary(
         ":rootcanal_rs",
         "//packets:generated",
         "@fmtlib",
-        "@boringssl//:crypto",
         "@pdl//:packet_runtime",
     ],
 )
