@@ -228,8 +228,17 @@ class LinkLayerController {
   // resolve the address using the resolving list. If the address cannot
   // be resolved none is returned. If the address is not a Resolvable
   // Private Address, the original address is returned.
-  std::optional<AddressWithType> ResolvePrivateAddress(AddressWithType address,
-                                                       IrkSelection irk);
+  std::optional<AddressWithType> ResolvePrivateAddress(AddressWithType address);
+
+  // Returns true if the input address resolves with the local IRK
+  // associated with the given peer identity address.
+  bool ResolveTargetA(AddressWithType target_a, AddressWithType adv_a);
+
+  // Returns true if either:
+  //  • TargetA is identical to the device address, or
+  //  • TargetA is a resolvable private address, address
+  //    resolution is enabled, and the address is resolved successfully
+  bool ValidateTargetA(AddressWithType target_a, AddressWithType adv_a);
 
   // Generate a Resolvable Private for the selected peer.
   // If the address is not found in the resolving list none is returned.
@@ -1062,6 +1071,8 @@ class LinkLayerController {
     // Save information about the advertising PDU being scanned.
     bool connectable_scan_response;
     std::optional<AddressWithType> pending_scan_request{};
+    std::optional<std::chrono::steady_clock::time_point>
+        pending_scan_request_timeout{};
 
     // Time keeping
     std::optional<std::chrono::steady_clock::time_point> timeout;
