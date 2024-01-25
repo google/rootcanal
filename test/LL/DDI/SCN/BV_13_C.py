@@ -93,7 +93,7 @@ class Test(ControllerTest):
         await self.expect_evt(
             hci.LeAdvertisingReport(responses=[
                 hci.LeAdvertisingResponse(event_type=hci.AdvertisingEventType.ADV_NONCONN_IND,
-                                          address_type=hci.AddressType.PUBLIC_IDENTITY_ADDRESS,
+                                          address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
                                           address=peer_identity_address,
                                           advertising_data=[1, 2, 3],
                                           rssi=0xf0)
