@@ -115,10 +115,6 @@ class Test(ControllerTest):
                                         conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout),
                            rssi=-16)
 
-        # Note: another advertising pdu is received waiting from the connect
-        # complete.
-        await self.expect_ll(ll.LeLegacyAdvertisingPdu)
-
         # Note: Link layer sends LeConnectComplete here.
         await self.expect_ll(
             ll.LeConnectComplete(source_address=controller.address,
