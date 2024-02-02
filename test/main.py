@@ -59,6 +59,7 @@ tests = [
     'LL.DDI.SCN.BV_18_C',
     'LL.DDI.SCN.BV_19_C',
     'LL.DDI.SCN.BV_79_C',
+    'LL.SEC.ADV.BV_11_C',
     'LMP.LIH.BV_01_C',
     'LMP.LIH.BV_02_C',
     'LMP.LIH.BV_78_C',
