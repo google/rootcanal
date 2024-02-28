@@ -1070,6 +1070,7 @@ class LinkLayerController {
 
     // Save information about the advertising PDU being scanned.
     bool connectable_scan_response;
+    bool extended_scan_response;
     std::optional<AddressWithType> pending_scan_request{};
     std::optional<std::chrono::steady_clock::time_point>
         pending_scan_request_timeout{};
