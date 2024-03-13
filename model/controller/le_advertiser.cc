@@ -1841,9 +1841,9 @@ void LinkLayerController::LeAdvertising() {
                 advertiser.advertising_event_properties.scannable_,
                 advertiser.advertising_event_properties.directed_,
                 advertiser.advertising_sid, advertiser.advertising_tx_power,
-                static_cast<model::packets::PrimaryPhyType>(
+                static_cast<model::packets::PhyType>(
                     advertiser.primary_advertising_phy),
-                static_cast<model::packets::SecondaryPhyType>(
+                static_cast<model::packets::PhyType>(
                     advertiser.secondary_advertising_phy),
                 advertiser.periodic_advertising_interval.count(),
                 advertiser.advertising_data),
