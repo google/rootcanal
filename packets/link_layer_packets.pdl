@@ -150,16 +150,16 @@ packet LeLegacyAdvertisingPdu : LinkLayerPacket (type = LE_LEGACY_ADVERTISING_PD
   advertising_data: 8[],
 }
 
-enum PrimaryPhyType : 8 {
-  LE_1M = 0x01,
-  LE_CODED = 0x03,
-}
-
-enum SecondaryPhyType : 8 {
+// PHY type. Matching the primary and secondary PHY types
+// from the following commands and events:
+//  - Vol 4, Part E § 7.7.65.13 LE Extended Advertising Report event
+//  - Vol 4, Part E § 7.8.53 LE Set Extended Advertising Parameters command
+enum PhyType : 8 {
   NO_PACKETS = 0x00,
   LE_1M = 0x01,
   LE_2M = 0x02,
-  LE_CODED = 0x03,
+  LE_CODED_S8 = 0x03,
+  LE_CODED_S2 = 0x04,
 }
 
 packet LeExtendedAdvertisingPdu : LinkLayerPacket (type = LE_EXTENDED_ADVERTISING_PDU) {
@@ -171,8 +171,8 @@ packet LeExtendedAdvertisingPdu : LinkLayerPacket (type = LE_EXTENDED_ADVERTISIN
   _reserved_: 5,
   sid: 8, // 0xff when not provided
   tx_power: 8,
-  primary_phy: PrimaryPhyType,
-  secondary_phy: SecondaryPhyType,
+  primary_phy: PhyType, // LE_1M | LE_CODEC_S8
+  secondary_phy: PhyType,
   periodic_advertising_interval: 16,
   advertising_data: 8[],
 }

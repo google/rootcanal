@@ -144,8 +144,8 @@ class Test(ControllerTest):
                                               directed=not target_address is None,
                                               sid=0,
                                               tx_power=0x7f,
-                                              primary_phy=ll.PrimaryPhyType.LE_1M,
-                                              secondary_phy=ll.SecondaryPhyType.NO_PACKETS,
+                                              primary_phy=ll.PhyType.LE_1M,
+                                              secondary_phy=ll.PhyType.NO_PACKETS,
                                               advertising_data=[])
 
         # 4. For undirected advertisements or advertisements directed at the IUT, the Upper Tester receives

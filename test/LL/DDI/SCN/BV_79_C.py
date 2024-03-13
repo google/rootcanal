@@ -85,8 +85,8 @@ class Test(ControllerTest):
                                                            directed=False,
                                                            sid=advertising_sid,
                                                            tx_power=tx_power,
-                                                           primary_phy=ll.PrimaryPhyType.LE_1M,
-                                                           secondary_phy=ll.SecondaryPhyType.NO_PACKETS,
+                                                           primary_phy=ll.PhyType.LE_1M,
+                                                           secondary_phy=ll.PhyType.NO_PACKETS,
                                                            periodic_advertising_interval=0x100,
                                                            advertising_data=[]),
                                rssi=0x10)

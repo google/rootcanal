@@ -113,8 +113,8 @@ class LeScanningFilterDuplicates : public ::testing::Test {
     return FromBuilder(model::packets::LeExtendedAdvertisingPduBuilder::Create(
         Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC,
         model::packets::AddressType::PUBLIC, 0, 1, 0, 0, 0,
-        model::packets::PrimaryPhyType::LE_1M,
-        model::packets::SecondaryPhyType::LE_1M, 0, data));
+        model::packets::PhyType::LE_1M, model::packets::PhyType::LE_1M, 0,
+        data));
   }
 
   static model::packets::LinkLayerPacketView FromBuilder(

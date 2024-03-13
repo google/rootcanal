@@ -197,8 +197,8 @@ class Test(ControllerTest):
                                             directed=int(advertising_event_properties.directed),
                                             sid=0,
                                             tx_power=0,
-                                            primary_phy=ll.PrimaryPhyType.LE_1M,
-                                            secondary_phy=ll.SecondaryPhyType.NO_PACKETS,
+                                            primary_phy=ll.PhyType.LE_1M,
+                                            secondary_phy=ll.PhyType.NO_PACKETS,
                                             advertising_data=advertising_data))
 
         # 10. If the Max_Extended_Advertising_Events was set to a value different than 0, repeat steps 6–9
