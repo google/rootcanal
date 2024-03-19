@@ -25,6 +25,7 @@
 #include <fstream>
 #include <future>
 #include <optional>
+#include <cstdio>
 
 #include "model/setup/async_manager.h"
 #include "net/posix/posix_async_socket_connector.h"
@@ -54,6 +55,10 @@ DEFINE_uint32(link_port, 6403, "link server tcp port");
 DEFINE_uint32(link_ble_port, 6404, "le link server tcp port");
 
 int main(int argc, char** argv) {
+  // always use line buffer mode so log messages are available when redirected
+  setvbuf(stdout, NULL, _IOLBF, 0);
+  setvbuf(stderr, NULL, _IOLBF, 0);
+
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   rootcanal::log::SetLogColorEnable(FLAGS_enable_log_color);
 
