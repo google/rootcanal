@@ -3166,6 +3166,8 @@ void LinkLayerController::ScanIncomingLeLegacyAdvertisingPdu(
     // is connectable in the scan response report.
     scanner_.connectable_scan_response = connectable_advertising;
     scanner_.extended_scan_response = false;
+    scanner_.primary_scan_response_phy = model::packets::PhyType::LE_1M;
+    scanner_.secondary_scan_response_phy = model::packets::PhyType::NO_PACKETS;
     scanner_.pending_scan_request = advertising_address;
     scanner_.pending_scan_request_timeout =
         std::chrono::steady_clock::now() + kScanRequestTimeout;
@@ -3622,6 +3624,8 @@ void LinkLayerController::ScanIncomingLeExtendedAdvertisingPdu(
     // is connectable in the scan response report.
     scanner_.connectable_scan_response = connectable_advertising;
     scanner_.extended_scan_response = true;
+    scanner_.primary_scan_response_phy = primary_phy;
+    scanner_.secondary_scan_response_phy = secondary_phy;
     scanner_.pending_scan_request = advertising_address;
 
     INFO(id_,
@@ -4999,7 +5003,10 @@ void LinkLayerController::IncomingLeScanResponsePacket(
     response.scannable_ = true;
     response.legacy_ = !scanner_.extended_scan_response;
     response.scan_response_ = true;
-    response.primary_phy_ = bluetooth::hci::PrimaryPhyType::LE_1M;
+    response.primary_phy_ = static_cast<bluetooth::hci::PrimaryPhyType>(
+        scanner_.primary_scan_response_phy);
+    response.secondary_phy_ = static_cast<bluetooth::hci::SecondaryPhyType>(
+        scanner_.secondary_scan_response_phy);
     // TODO: SID should be set in scan response PDU
     response.advertising_sid_ = 0xFF;
     response.tx_power_ = 0x7F;
