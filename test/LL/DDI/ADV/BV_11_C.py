@@ -123,7 +123,8 @@ class Test(ControllerTest):
                                  advertising_address_type=ll.AddressType.PUBLIC,
                                  conn_interval=self.LL_initiator_connInterval,
                                  conn_peripheral_latency=self.LL_initiator_connPeripheralLatency,
-                                 conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout))
+                                 conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout),
+            ignored_pdus=[ll.LeLegacyAdvertisingPdu])
 
         # 11. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT in step 8.
