@@ -26,9 +26,13 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Check Cargo build
+        run: |
+          cargo test
+
       - name: Install dependencies
         run: |
-          cargo install pdl-compiler --version 0.2.2
+          cargo install pdl-compiler --version 0.2.3
 
       - name: Build
         run: |
@@ -65,7 +69,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cargo install pdl-compiler --version 0.2.2
+          cargo install pdl-compiler --version 0.2.3
           python3 -m pip install hatch
 
       - name: Set VERSION
