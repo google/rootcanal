@@ -18,7 +18,7 @@ jobs:
           - os: ubuntu-latest
             release: linux-x86_64
           - os: macos-latest
-            release: macos-x86_64
+            release: macos-arm64
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
@@ -46,7 +46,7 @@ jobs:
           zip -r rootcanal-${{ matrix.release }} rootcanal-${{ matrix.release }}
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: rootcanal-${{ matrix.release }}
           path: rootcanal-${{ matrix.release }}.zip
@@ -85,14 +85,14 @@ jobs:
           prerelease: false
 
       - name: Download rootcanal-linux-x86_64
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: rootcanal-linux-x86_64
 
-      - name: Download rootcanal-macos-x86_64
-        uses: actions/download-artifact@v3
+      - name: Download rootcanal-macos-arm64
+        uses: actions/download-artifact@v4
         with:
-          name: rootcanal-macos-x86_64
+          name: rootcanal-macos-arm64
 
       - name: Build Python Wheel
         run: bash py/make_wheel.sh ${{ env.VERSION }}
@@ -117,12 +117,12 @@ jobs:
           asset_name: rootcanal-${{ env.VERSION }}-linux-x86_64.zip
           asset_content_type: application/zip
 
-      - name: Upload rootcanal-macos-x86_64
+      - name: Upload rootcanal-macos-arm64
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: rootcanal-macos-x86_64.zip
-          asset_name: rootcanal-${{ env.VERSION }}-macos-x86_64.zip
+          asset_path: rootcanal-macos-arm64.zip
+          asset_name: rootcanal-${{ env.VERSION }}-macos-arm64.zip
           asset_content_type: application/zip
