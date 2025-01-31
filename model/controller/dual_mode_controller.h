@@ -59,7 +59,7 @@ enum InvalidPacketReason {
 // corresponding Bluetooth command in the Core Specification with the prefix
 // "Hci" to distinguish it as a controller command.
 class DualModeController : public Device {
- public:
+public:
   DualModeController(ControllerProperties properties = ControllerProperties());
   DualModeController(DualModeController&&) = delete;
   DualModeController(const DualModeController&) = delete;
@@ -73,8 +73,8 @@ class DualModeController : public Device {
   // Device methods.
   std::string GetTypeString() const override;
 
-  void ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView incoming,
-                              Phy::Type type, int8_t rssi) override;
+  void ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView incoming, Phy::Type type,
+                              int8_t rssi) override;
 
   void Tick() override;
   void Close() override;
@@ -89,25 +89,21 @@ class DualModeController : public Device {
   /// to an external tracker. Packets are rejected if they failed to
   /// be parsed, or run into an unimplemented part of the controller.
   void RegisterInvalidPacketHandler(
-      const std::function<void(uint32_t, InvalidPacketReason, std::string,
-                               std::vector<uint8_t> const&)>& handler);
+          const std::function<void(uint32_t, InvalidPacketReason, std::string,
+                                   std::vector<uint8_t> const&)>& handler);
 
   // Set the callbacks for sending packets to the HCI.
   void RegisterEventChannel(
-      const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>&
-          send_event);
+          const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>& send_event);
 
   void RegisterAclChannel(
-      const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>&
-          send_acl);
+          const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>& send_acl);
 
   void RegisterScoChannel(
-      const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>&
-          send_sco);
+          const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>& send_sco);
 
   void RegisterIsoChannel(
-      const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>&
-          send_iso);
+          const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>& send_iso);
 
   // Controller commands. For error codes, see the Bluetooth Core Specification,
   // Version 4.2, Volume 2, Part D (page 370).
@@ -398,7 +394,7 @@ class DualModeController : public Device {
   void LeReadBufferSizeV2(CommandView command);
 
   // 7.8.3
-  void LeReadLocalSupportedFeatures(CommandView command);
+  void LeReadLocalSupportedFeaturesPage0(CommandView command);
 
   // 7.8.4
   void LeSetRandomAddress(CommandView command);
@@ -428,7 +424,7 @@ class DualModeController : public Device {
   void LeConnectionUpdate(CommandView command);
 
   // 7.8.21
-  void LeReadRemoteFeatures(CommandView command);
+  void LeReadRemoteFeaturesPage0(CommandView command);
 
   // 7.8.22
   void LeEncrypt(CommandView command);
@@ -454,6 +450,9 @@ class DualModeController : public Device {
   void LeReadSuggestedDefaultDataLength(CommandView command);
   void LeWriteSuggestedDefaultDataLength(CommandView command);
 
+  // 7.8.36
+  void LeReadLocalP256PublicKey(CommandView command);
+
   // 7.8.38 - 7.8.41
   void LeAddDeviceToResolvingList(CommandView command);
   void LeRemoveDeviceFromResolvingList(CommandView command);
@@ -478,7 +477,7 @@ class DualModeController : public Device {
 
   // 7.8.52 - 7.8.60
   void LeSetAdvertisingSetRandomAddress(CommandView command);
-  void LeSetExtendedAdvertisingParameters(CommandView command);
+  void LeSetExtendedAdvertisingParametersV1(CommandView command);
   void LeSetExtendedAdvertisingData(CommandView command);
   void LeSetExtendedScanResponseData(CommandView command);
   void LeSetExtendedAdvertisingEnable(CommandView command);
@@ -488,7 +487,7 @@ class DualModeController : public Device {
   void LeClearAdvertisingSets(CommandView command);
 
   // 7.8.61 - 7.8.63
-  void LeSetPeriodicAdvertisingParameters(CommandView command);
+  void LeSetPeriodicAdvertisingParametersV1(CommandView command);
   void LeSetPeriodicAdvertisingData(CommandView command);
   void LeSetPeriodicAdvertisingEnable(CommandView command);
 
@@ -508,7 +507,7 @@ class DualModeController : public Device {
   void LeSetExtendedScanEnable(CommandView command);
 
   // 7.8.66
-  void LeExtendedCreateConnection(CommandView command);
+  void LeExtendedCreateConnectionV1(CommandView command);
 
   // 7.8.77
   void LeSetPrivacyMode(CommandView command);
@@ -517,7 +516,7 @@ class DualModeController : public Device {
   void LeRequestPeerSca(CommandView command);
 
   // 7.8.115
-  void LeSetHostFeature(CommandView command);
+  void LeSetHostFeatureV1(CommandView command);
 
   // Vendor-specific Commands
   void LeGetVendorCapabilities(CommandView command);
@@ -526,6 +525,7 @@ class DualModeController : public Device {
   void LeGetControllerActivityEnergyInfo(CommandView command);
   void LeExSetScanParameters(CommandView command);
   void GetControllerDebugInfo(CommandView command);
+  void IntelDdcConfigWrite(CommandView command);
 
   // CSR vendor command.
   // Implement the command specific to the CSR controller
@@ -540,18 +540,17 @@ class DualModeController : public Device {
   void ForwardToLm(CommandView command);
   void ForwardToLl(CommandView command);
 
- protected:
+protected:
   // Controller configuration.
   ControllerProperties properties_;
 
   // Link Layer state.
   LinkLayerController link_layer_controller_{address_, properties_, id_};
 
- private:
+private:
   // Send a HCI_Command_Complete event for the specified op_code with
   // the error code UNKNOWN_OPCODE.
-  void SendCommandCompleteUnknownOpCodeEvent(
-      bluetooth::hci::OpCode op_code) const;
+  void SendCommandCompleteUnknownOpCodeEvent(bluetooth::hci::OpCode op_code) const;
 
   // Validate that a received packet is correctly formatted.
   // If the packet failed to be parsed, the function sends a
@@ -566,22 +565,19 @@ class DualModeController : public Device {
     // Send a hardware error to reset the host, and report the packet
     // for tracing.
     send_event_(bluetooth::hci::HardwareErrorBuilder::Create(0x43));
-    invalid_packet_handler_(id_, InvalidPacketReason::kParseError, reason,
-                            view.bytes().bytes());
+    invalid_packet_handler_(id_, InvalidPacketReason::kParseError, reason, view.bytes().bytes());
     return false;
   }
 
   // Callbacks to send packets back to the HCI.
   std::function<void(std::shared_ptr<bluetooth::hci::AclBuilder>)> send_acl_;
-  std::function<void(std::shared_ptr<bluetooth::hci::EventBuilder>)>
-      send_event_;
+  std::function<void(std::shared_ptr<bluetooth::hci::EventBuilder>)> send_event_;
   std::function<void(std::shared_ptr<bluetooth::hci::ScoBuilder>)> send_sco_;
   std::function<void(std::shared_ptr<bluetooth::hci::IsoBuilder>)> send_iso_;
 
   // Report invalid packets received on this controller instance.
-  std::function<void(uint32_t, InvalidPacketReason, std::string,
-                     std::vector<uint8_t> const&)>
-      invalid_packet_handler_;
+  std::function<void(uint32_t, InvalidPacketReason, std::string, std::vector<uint8_t> const&)>
+          invalid_packet_handler_;
 
   // Loopback mode (Vol 4, Part E § 7.6.1).
   // The local loopback mode is used to pass the android Vendor Test Suite
@@ -597,15 +593,13 @@ class DualModeController : public Device {
 
   // Map command opcodes to the corresponding bit index in the
   // supported command mask.
-  static const std::unordered_map<OpCode, OpCodeIndex>
-      hci_command_op_code_to_index_;
+  static const std::unordered_map<OpCode, OpCodeIndex> hci_command_op_code_to_index_;
 
   // Map all implemented opcodes to the function implementing the handler
   // for the associated command. The map should be a subset of the
   // supported_command field in the properties_ object. Commands
   // that are supported but not implemented will raise a fatal assert.
-  using CommandHandler =
-      std::function<void(DualModeController*, bluetooth::hci::CommandView)>;
+  using CommandHandler = std::function<void(DualModeController*, bluetooth::hci::CommandView)>;
   static const std::unordered_map<OpCode, CommandHandler> hci_command_handlers_;
 };
 

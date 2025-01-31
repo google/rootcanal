@@ -44,12 +44,12 @@ using ClientDisconnectCallback = std::function<void()>;
 // The parser will invoke the proper callbacks once a packet has been parsed.
 // The parser keeps internal state and is not thread safe.
 class H4Parser {
- public:
+public:
   enum State { HCI_TYPE, HCI_PREAMBLE, HCI_PAYLOAD, HCI_RECOVERY };
 
-  H4Parser(PacketReadCallback command_cb, PacketReadCallback event_cb,
-           PacketReadCallback acl_cb, PacketReadCallback sco_cb,
-           PacketReadCallback iso_cb, bool enable_recovery_state = false);
+  H4Parser(PacketReadCallback command_cb, PacketReadCallback event_cb, PacketReadCallback acl_cb,
+           PacketReadCallback sco_cb, PacketReadCallback iso_cb,
+           bool enable_recovery_state = false);
 
   // Consumes the given number of bytes, returns true on success.
   bool Consume(const uint8_t* buffer, int32_t bytes);
@@ -60,12 +60,12 @@ class H4Parser {
   // Resets the parser to the empty, initial state.
   void Reset();
 
-  State CurrentState() { return state_; };
+  State CurrentState() { return state_; }
 
   void EnableRecovery() { enable_recovery_state_ = true; }
   void DisableRecovery() { enable_recovery_state_ = false; }
 
- private:
+private:
   void OnPacketReady();
 
   // 2 bytes for opcode, 1 byte for parameter length (Volume 2, Part E, 5.4.1)
@@ -94,8 +94,7 @@ class H4Parser {
   PacketReadCallback sco_cb_;
   PacketReadCallback iso_cb_;
 
-  static size_t HciGetPacketLengthForType(PacketType type,
-                                          const uint8_t* preamble);
+  static size_t HciGetPacketLengthForType(PacketType type, const uint8_t* preamble);
 
   PacketType hci_packet_type_{PacketType::UNKNOWN};
 
@@ -106,8 +105,7 @@ class H4Parser {
   bool enable_recovery_state_{false};
 };
 
-inline std::ostream& operator<<(std::ostream& os,
-                                H4Parser::State const& state_) {
+inline std::ostream& operator<<(std::ostream& os, H4Parser::State const& state_) {
   switch (state_) {
     case H4Parser::State::HCI_TYPE:
       os << "HCI_TYPE";

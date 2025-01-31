@@ -82,9 +82,9 @@ enum ScoDatapath {
 };
 
 class ScoConnection {
- public:
-  ScoConnection(Address address, ScoConnectionParameters const& parameters,
-                ScoState state, ScoDatapath datapath, bool legacy)
+public:
+  ScoConnection(Address address, ScoConnectionParameters const& parameters, ScoState state,
+                ScoDatapath datapath, bool legacy)
       : address_(address),
         parameters_(parameters),
         link_parameters_(),
@@ -102,13 +102,9 @@ class ScoConnection {
   void StartStream(std::function<TaskId()> startStream);
   void StopStream(std::function<void(TaskId)> stopStream);
 
-  ScoConnectionParameters GetConnectionParameters() const {
-    return parameters_;
-  }
+  ScoConnectionParameters GetConnectionParameters() const { return parameters_; }
   ScoLinkParameters GetLinkParameters() const { return link_parameters_; }
-  void SetLinkParameters(ScoLinkParameters const& parameters) {
-    link_parameters_ = parameters;
-  }
+  void SetLinkParameters(ScoLinkParameters const& parameters) { link_parameters_ = parameters; }
 
   // Negotiate the connection parameters.
   // Update the local connection parameters with negotiated values.
@@ -117,7 +113,7 @@ class ScoConnection {
 
   ScoDatapath GetDatapath() const { return datapath_; }
 
- private:
+private:
   Address address_;
   ScoConnectionParameters parameters_;
   ScoLinkParameters link_parameters_;

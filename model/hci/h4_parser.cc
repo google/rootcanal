@@ -34,17 +34,15 @@ void H4Parser::Reset() {
   packet_type_ = 0;
 }
 
-size_t H4Parser::HciGetPacketLengthForType(PacketType type,
-                                           const uint8_t* preamble) {
-  static const size_t
-      packet_length_offset[static_cast<size_t>(PacketType::ISO) + 1] = {
+size_t H4Parser::HciGetPacketLengthForType(PacketType type, const uint8_t* preamble) {
+  static const size_t packet_length_offset[static_cast<size_t>(PacketType::ISO) + 1] = {
           0,
           H4Parser::COMMAND_LENGTH_OFFSET,
           H4Parser::ACL_LENGTH_OFFSET,
           H4Parser::SCO_LENGTH_OFFSET,
           H4Parser::EVENT_LENGTH_OFFSET,
           H4Parser::ISO_LENGTH_OFFSET,
-      };
+  };
 
   size_t offset = packet_length_offset[static_cast<size_t>(type)];
   size_t size = preamble[offset];
@@ -58,8 +56,8 @@ size_t H4Parser::HciGetPacketLengthForType(PacketType type,
 }
 
 H4Parser::H4Parser(PacketReadCallback command_cb, PacketReadCallback event_cb,
-                   PacketReadCallback acl_cb, PacketReadCallback sco_cb,
-                   PacketReadCallback iso_cb, bool enable_recovery_state)
+                   PacketReadCallback acl_cb, PacketReadCallback sco_cb, PacketReadCallback iso_cb,
+                   bool enable_recovery_state)
     : command_cb_(std::move(command_cb)),
       event_cb_(std::move(event_cb)),
       acl_cb_(std::move(acl_cb)),
@@ -109,19 +107,17 @@ bool H4Parser::Consume(const uint8_t* buffer, int32_t bytes_read) {
     return false;
   }
   if ((uint32_t)bytes_read > BytesRequested()) {
-    FATAL("More bytes read ({}) than expected ({})!", bytes_read,
-          bytes_to_read);
+    FATAL("More bytes read ({}) than expected ({})!", bytes_read, bytes_to_read);
   }
 
-  static const size_t preamble_size[static_cast<size_t>(PacketType::ISO) + 1] =
-      {
+  static const size_t preamble_size[static_cast<size_t>(PacketType::ISO) + 1] = {
           0,
           H4Parser::COMMAND_PREAMBLE_SIZE,
           H4Parser::ACL_PREAMBLE_SIZE,
           H4Parser::SCO_PREAMBLE_SIZE,
           H4Parser::EVENT_PREAMBLE_SIZE,
           H4Parser::ISO_PREAMBLE_SIZE,
-      };
+  };
   switch (state_) {
     case HCI_TYPE:
       // bytes_read >= 1
@@ -167,16 +163,13 @@ bool H4Parser::Consume(const uint8_t* buffer, int32_t bytes_read) {
   switch (state_) {
     case HCI_TYPE:
       hci_packet_type_ = static_cast<PacketType>(packet_type_);
-      if (hci_packet_type_ != PacketType::ACL &&
-          hci_packet_type_ != PacketType::SCO &&
-          hci_packet_type_ != PacketType::COMMAND &&
-          hci_packet_type_ != PacketType::EVENT &&
+      if (hci_packet_type_ != PacketType::ACL && hci_packet_type_ != PacketType::SCO &&
+          hci_packet_type_ != PacketType::COMMAND && hci_packet_type_ != PacketType::EVENT &&
           hci_packet_type_ != PacketType::ISO) {
         if (!enable_recovery_state_) {
           FATAL("Received invalid packet type 0x{:x}", packet_type_);
         }
-        ERROR("Received invalid packet type 0x{:x}, entering recovery state",
-              packet_type_);
+        ERROR("Received invalid packet type 0x{:x}, entering recovery state", packet_type_);
         state_ = HCI_RECOVERY;
         hci_packet_type_ = PacketType::COMMAND;
         bytes_wanted_ = 1;
@@ -187,8 +180,7 @@ bool H4Parser::Consume(const uint8_t* buffer, int32_t bytes_read) {
       break;
     case HCI_PREAMBLE:
       if (bytes_wanted_ == 0) {
-        size_t payload_size =
-            HciGetPacketLengthForType(hci_packet_type_, packet_.data());
+        size_t payload_size = HciGetPacketLengthForType(hci_packet_type_, packet_.data());
         if (payload_size == 0) {
           OnPacketReady();
           state_ = HCI_TYPE;

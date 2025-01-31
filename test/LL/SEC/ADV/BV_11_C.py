@@ -144,7 +144,7 @@ class Test(ControllerTest):
                                  conn_supervision_timeout=0xc80))
 
         connection_complete_evt = await self.expect_evt(
-            hci.LeEnhancedConnectionComplete(
+            hci.LeEnhancedConnectionCompleteV1(
                 status=hci.ErrorCode.SUCCESS,
                 connection_handle=self.Any,
                 role=hci.Role.PERIPHERAL,

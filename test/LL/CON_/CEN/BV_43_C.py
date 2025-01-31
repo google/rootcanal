@@ -38,25 +38,26 @@ class Test(ControllerTest):
 
         # Prelude: Establish an ACL connection as central with the IUT.
         controller.send_cmd(
-            hci.LeExtendedCreateConnection(initiator_filter_policy=hci.InitiatorFilterPolicy.USE_PEER_ADDRESS,
-                                           own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
-                                           peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                           peer_address=peer_address,
-                                           initiating_phys=0x1,
-                                           initiating_phy_parameters=[
-                                               hci.InitiatingPhyParameters(
-                                                   scan_interval=0x200,
-                                                   scan_window=0x100,
-                                                   connection_interval_min=0x200,
-                                                   connection_interval_max=0x200,
-                                                   max_latency=0x6,
-                                                   supervision_timeout=0xc80,
-                                                   min_ce_length=0,
-                                                   max_ce_length=0,
-                                               )
-                                           ]))
+            hci.LeExtendedCreateConnectionV1(initiator_filter_policy=hci.InitiatorFilterPolicy.USE_PEER_ADDRESS,
+                                             own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
+                                             peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                                             peer_address=peer_address,
+                                             initiating_phys=0x1,
+                                             initiating_phy_parameters=[
+                                                 hci.InitiatingPhyParameters(
+                                                     scan_interval=0x200,
+                                                     scan_window=0x100,
+                                                     connection_interval_min=0x200,
+                                                     connection_interval_max=0x200,
+                                                     max_latency=0x6,
+                                                     supervision_timeout=0xc80,
+                                                     min_ce_length=0,
+                                                     max_ce_length=0,
+                                                 )
+                                             ]))
 
-        await self.expect_evt(hci.LeExtendedCreateConnectionStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeExtendedCreateConnectionV1Status(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         controller.send_ll(ll.LeLegacyAdvertisingPdu(source_address=peer_address,
                                                      advertising_address_type=ll.AddressType.PUBLIC,
@@ -83,15 +84,15 @@ class Test(ControllerTest):
                                  conn_supervision_timeout=0xc80))
 
         await self.expect_evt(
-            hci.LeEnhancedConnectionComplete(status=ErrorCode.SUCCESS,
-                                             connection_handle=acl_connection_handle,
-                                             role=hci.Role.CENTRAL,
-                                             peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                             peer_address=peer_address,
-                                             connection_interval=0x200,
-                                             peripheral_latency=0x6,
-                                             supervision_timeout=0xc80,
-                                             central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+            hci.LeEnhancedConnectionCompleteV1(status=ErrorCode.SUCCESS,
+                                               connection_handle=acl_connection_handle,
+                                               role=hci.Role.CENTRAL,
+                                               peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                                               peer_address=peer_address,
+                                               connection_interval=0x200,
+                                               peripheral_latency=0x6,
+                                               supervision_timeout=0xc80,
+                                               central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 
         await self.expect_evt(
             hci.LeChannelSelectionAlgorithm(connection_handle=acl_connection_handle,

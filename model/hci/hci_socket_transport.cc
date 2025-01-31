@@ -27,40 +27,36 @@ void HciSocketTransport::RegisterCallbacks(PacketCallback packet_callback,
                                            CloseCallback close_callback) {
   // TODO: Avoid the copy here by using new buffer in H4DataChannel
   h4_ = H4DataChannelPacketizer(
-      socket_,
-      [packet_callback](const std::vector<uint8_t>& raw_command) {
-        std::shared_ptr<std::vector<uint8_t>> packet_copy =
-            std::make_shared<std::vector<uint8_t>>(raw_command);
-        packet_callback(PacketType::COMMAND, packet_copy);
-      },
-      [](const std::vector<uint8_t>&) {
-        FATAL("Unexpected Event in HciSocketTransport!");
-      },
-      [packet_callback](const std::vector<uint8_t>& raw_acl) {
-        std::shared_ptr<std::vector<uint8_t>> packet_copy =
-            std::make_shared<std::vector<uint8_t>>(raw_acl);
-        packet_callback(PacketType::ACL, packet_copy);
-      },
-      [packet_callback](const std::vector<uint8_t>& raw_sco) {
-        std::shared_ptr<std::vector<uint8_t>> packet_copy =
-            std::make_shared<std::vector<uint8_t>>(raw_sco);
-        packet_callback(PacketType::SCO, packet_copy);
-      },
-      [packet_callback](const std::vector<uint8_t>& raw_iso) {
-        std::shared_ptr<std::vector<uint8_t>> packet_copy =
-            std::make_shared<std::vector<uint8_t>>(raw_iso);
-        packet_callback(PacketType::ISO, packet_copy);
-      },
-      close_callback);
+          socket_,
+          [packet_callback](const std::vector<uint8_t>& raw_command) {
+            std::shared_ptr<std::vector<uint8_t>> packet_copy =
+                    std::make_shared<std::vector<uint8_t>>(raw_command);
+            packet_callback(PacketType::COMMAND, packet_copy);
+          },
+          [](const std::vector<uint8_t>&) { FATAL("Unexpected Event in HciSocketTransport!"); },
+          [packet_callback](const std::vector<uint8_t>& raw_acl) {
+            std::shared_ptr<std::vector<uint8_t>> packet_copy =
+                    std::make_shared<std::vector<uint8_t>>(raw_acl);
+            packet_callback(PacketType::ACL, packet_copy);
+          },
+          [packet_callback](const std::vector<uint8_t>& raw_sco) {
+            std::shared_ptr<std::vector<uint8_t>> packet_copy =
+                    std::make_shared<std::vector<uint8_t>>(raw_sco);
+            packet_callback(PacketType::SCO, packet_copy);
+          },
+          [packet_callback](const std::vector<uint8_t>& raw_iso) {
+            std::shared_ptr<std::vector<uint8_t>> packet_copy =
+                    std::make_shared<std::vector<uint8_t>>(raw_iso);
+            packet_callback(PacketType::ISO, packet_copy);
+          },
+          close_callback);
 }
 
 void HciSocketTransport::Tick() { h4_.OnDataReady(socket_); }
 
-void HciSocketTransport::Send(PacketType packet_type,
-                              const std::vector<uint8_t>& packet) {
+void HciSocketTransport::Send(PacketType packet_type, const std::vector<uint8_t>& packet) {
   if (!socket_ || !socket_->Connected()) {
-    INFO("Closed socket. Dropping packet of type {}",
-         fmt::underlying(packet_type));
+    INFO("Closed socket. Dropping packet of type {}", fmt::underlying(packet_type));
     return;
   }
   uint8_t type = static_cast<uint8_t>(packet_type);

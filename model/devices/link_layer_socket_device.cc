@@ -34,16 +34,15 @@ using std::vector;
 
 namespace rootcanal {
 
-LinkLayerSocketDevice::LinkLayerSocketDevice(
-    std::shared_ptr<AsyncDataChannel> socket_fd, Phy::Type phy_type)
+LinkLayerSocketDevice::LinkLayerSocketDevice(std::shared_ptr<AsyncDataChannel> socket_fd,
+                                             Phy::Type phy_type)
     : socket_(socket_fd),
       phy_type_(phy_type),
       size_bytes_(std::make_shared<std::vector<uint8_t>>(kSizeBytes)) {}
 
 void LinkLayerSocketDevice::Tick() {
   if (receiving_size_) {
-    ssize_t bytes_received =
-        socket_->Recv(size_bytes_->data() + offset_, kSizeBytes);
+    ssize_t bytes_received = socket_->Recv(size_bytes_->data() + offset_, kSizeBytes);
     if (bytes_received <= 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         // Nothing available yet.
@@ -65,8 +64,7 @@ void LinkLayerSocketDevice::Tick() {
     offset_ = 0;
     receiving_size_ = false;
   }
-  ssize_t bytes_received =
-      socket_->Recv(received_->data() + offset_, bytes_left_);
+  ssize_t bytes_received = socket_->Recv(received_->data() + offset_, bytes_left_);
   if (bytes_received <= 0) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       // Nothing available yet.
@@ -95,9 +93,8 @@ void LinkLayerSocketDevice::Close() {
   Device::Close();
 }
 
-void LinkLayerSocketDevice::ReceiveLinkLayerPacket(
-    model::packets::LinkLayerPacketView packet, Phy::Type /*type*/,
-    int8_t /*rssi*/) {
+void LinkLayerSocketDevice::ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView packet,
+                                                   Phy::Type /*type*/, int8_t /*rssi*/) {
   std::vector<uint8_t> packet_bytes = packet.bytes().bytes();
   std::vector<uint8_t> size_bytes;
   pdl::packet::Builder::write_le<uint32_t>(size_bytes, packet_bytes.size());

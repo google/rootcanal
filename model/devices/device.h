@@ -33,7 +33,7 @@ using ::bluetooth::hci::Address;
 // Represent a Bluetooth Device
 //  - Provide Get*() and Set*() functions for device attributes.
 class Device {
- public:
+public:
   // Unique device identifier.
   const uint32_t id_;
 
@@ -55,24 +55,20 @@ class Device {
   virtual void Tick() {}
   virtual void Close();
 
-  virtual void ReceiveLinkLayerPacket(
-      model::packets::LinkLayerPacketView /*packet*/, Phy::Type /*type*/,
-      int8_t /*rssi*/) {}
+  virtual void ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView /*packet*/,
+                                      Phy::Type /*type*/, int8_t /*rssi*/) {}
 
-  void SendLinkLayerPacket(
-      std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
-      Phy::Type type, int8_t tx_power = 0);
+  void SendLinkLayerPacket(std::shared_ptr<model::packets::LinkLayerPacketBuilder> packet,
+                           Phy::Type type, int8_t tx_power = 0);
 
-  void SendLinkLayerPacket(std::vector<uint8_t> const& packet, Phy::Type type,
-                           int8_t tx_power = 0);
+  void SendLinkLayerPacket(std::vector<uint8_t> const& packet, Phy::Type type, int8_t tx_power = 0);
 
   void RegisterLinkLayerChannel(
-      std::function<void(std::vector<uint8_t> const&, Phy::Type, int8_t)>
-          send_ll);
+          std::function<void(std::vector<uint8_t> const&, Phy::Type, int8_t)> send_ll);
 
   void RegisterCloseCallback(std::function<void()> close_callback);
 
- protected:
+protected:
   // Unique device address. Used as public device address for
   // Bluetooth activities.
   Address address_;

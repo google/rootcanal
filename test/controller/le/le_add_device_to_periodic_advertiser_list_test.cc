@@ -24,7 +24,7 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeAddDeviceToPeriodicAdvertiserListTest : public ::testing::Test {
- public:
+public:
   LeAddDeviceToPeriodicAdvertiserListTest() {
     // Reduce the size of the periodic advertiser list to simplify testing.
     properties_.le_periodic_advertiser_list_size = 3;
@@ -32,7 +32,7 @@ class LeAddDeviceToPeriodicAdvertiserListTest : public ::testing::Test {
 
   ~LeAddDeviceToPeriodicAdvertiserListTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -40,65 +40,55 @@ class LeAddDeviceToPeriodicAdvertiserListTest : public ::testing::Test {
 
 TEST_F(LeAddDeviceToPeriodicAdvertiserListTest, Success) {
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 2),
+                    AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 2),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeAddDeviceToPeriodicAdvertiserListTest, ListFull) {
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 2),
+                    AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 2),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 3),
+                    AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 3),
             ErrorCode::MEMORY_CAPACITY_EXCEEDED);
 }
 
 TEST_F(LeAddDeviceToPeriodicAdvertiserListTest, DuplicateEntry) {
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeAddDeviceToPeriodicAdvertiserListTest, CreateSyncPending) {
   ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSync(
-                PeriodicAdvertisingOptions(), 0,
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{5}, false, 0x100, 0),
+                    PeriodicAdvertisingOptions(), 0,
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{5}, false,
+                    0x100, 0),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::COMMAND_DISALLOWED);
 }
 

@@ -24,14 +24,14 @@ namespace net {
 class AsyncDataChannelServer;
 
 // Callback thas is called when a new client connection has been accepted.
-using ConnectCallback = std::function<void(std::shared_ptr<AsyncDataChannel>,
-                                           AsyncDataChannelServer* server)>;
+using ConnectCallback =
+        std::function<void(std::shared_ptr<AsyncDataChannel>, AsyncDataChannelServer* server)>;
 
 // An AsyncDataChannelServer is capable of listening to incoming connections.
 //
 // A Callback will be invoked whenever a new connection has been accepted.
 class AsyncDataChannelServer {
- public:
+public:
   // Destructor.
   virtual ~AsyncDataChannelServer() = default;
 
@@ -62,11 +62,9 @@ class AsyncDataChannelServer {
   // Before the callback the server should have stopped listening for new
   // incoming connections. The callee is responsible for calling StartListening
   // if needed.
-  void SetOnConnectCallback(const ConnectCallback& callback) {
-    callback_ = callback;
-  };
+  void SetOnConnectCallback(const ConnectCallback& callback) { callback_ = callback; }
 
- protected:
+protected:
   ConnectCallback callback_;
 };
 

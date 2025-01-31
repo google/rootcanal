@@ -35,12 +35,9 @@ static size_t ParseIntParam(std::string const& in) {
   return static_cast<size_t>(std::strtoul(in.c_str(), nullptr, 0));
 }
 
-TestCommandHandler::TestCommandHandler(TestModel& test_model)
-    : model_(test_model) {
-#define SET_HANDLER(command_name, method)                                     \
-  active_commands_[command_name] = [this](const vector<std::string>& param) { \
-    method(param);                                                            \
-  };
+TestCommandHandler::TestCommandHandler(TestModel& test_model) : model_(test_model) {
+#define SET_HANDLER(command_name, method) \
+  active_commands_[command_name] = [this](const vector<std::string>& param) { method(param); };
   SET_HANDLER("add", AddDevice);
   SET_HANDLER("add_remote", AddRemote);
   SET_HANDLER("del", RemoveDevice);
@@ -85,8 +82,7 @@ void TestCommandHandler::AddDefaults() {
   StartTimer({});
 }
 
-void TestCommandHandler::HandleCommand(const std::string& name,
-                                       const vector<std::string>& args) {
+void TestCommandHandler::HandleCommand(const std::string& name, const vector<std::string>& args) {
   if (active_commands_.count(name) == 0) {
     response_string_ = "Unhandled command: " + name;
     send_response_(response_string_);
@@ -96,7 +92,7 @@ void TestCommandHandler::HandleCommand(const std::string& name,
 }
 
 void TestCommandHandler::RegisterSendResponse(
-    const std::function<void(const std::string&)> callback) {
+        const std::function<void(const std::string&)> callback) {
   send_response_ = callback;
   send_response_("RegisterSendResponse called");
 }
@@ -118,15 +114,13 @@ void TestCommandHandler::AddDevice(const vector<std::string>& args) {
 
   INFO("Add {}", new_dev->ToString());
   size_t dev_index = model_.AddDevice(new_dev);
-  response_string_ =
-      std::to_string(dev_index) + std::string(":") + new_dev->ToString();
+  response_string_ = std::to_string(dev_index) + std::string(":") + new_dev->ToString();
   send_response_(response_string_);
 }
 
 void TestCommandHandler::AddRemote(const vector<std::string>& args) {
   if (args.size() < 3) {
-    response_string_ =
-        "TestCommandHandler usage: add_remote host port phy_type";
+    response_string_ = "TestCommandHandler usage: add_remote host port phy_type";
     send_response_(response_string_);
     return;
   }
@@ -155,8 +149,8 @@ void TestCommandHandler::RemoveDevice(const vector<std::string>& args) {
   size_t dev_index = ParseIntParam(args[0]);
 
   model_.RemoveDevice(dev_index);
-  response_string_ = "TestCommandHandler 'del' called with device at index " +
-                     std::to_string(dev_index);
+  response_string_ =
+          "TestCommandHandler 'del' called with device at index " + std::to_string(dev_index);
   send_response_(response_string_);
 }
 
@@ -170,8 +164,7 @@ void TestCommandHandler::AddPhy(const vector<std::string>& args) {
     model_.AddPhy(Phy::Type::BR_EDR);
     response_string_ = "TestCommandHandler 'add_phy' called with BR_EDR";
   } else {
-    response_string_ =
-        "TestCommandHandler 'add_phy' with unrecognized type " + args[0];
+    response_string_ = "TestCommandHandler 'add_phy' with unrecognized type " + args[0];
   }
   send_response_(response_string_);
 }
@@ -180,40 +173,36 @@ void TestCommandHandler::RemovePhy(const vector<std::string>& args) {
   size_t phy_index = ParseIntParam(args[0]);
 
   model_.RemovePhy(phy_index);
-  response_string_ = "TestCommandHandler 'del_phy' called with phy at index " +
-                     std::to_string(phy_index);
+  response_string_ =
+          "TestCommandHandler 'del_phy' called with phy at index " + std::to_string(phy_index);
   send_response_(response_string_);
 }
 
 void TestCommandHandler::AddDeviceToPhy(const vector<std::string>& args) {
   if (args.size() != 2) {
-    response_string_ =
-        "TestCommandHandler 'add_device_to_phy' takes two arguments";
+    response_string_ = "TestCommandHandler 'add_device_to_phy' takes two arguments";
     send_response_(response_string_);
     return;
   }
   size_t dev_index = ParseIntParam(args[0]);
   size_t phy_index = ParseIntParam(args[1]);
   model_.AddDeviceToPhy(dev_index, phy_index);
-  response_string_ =
-      "TestCommandHandler 'add_device_to_phy' called with device " +
-      std::to_string(dev_index) + " and phy " + std::to_string(phy_index);
+  response_string_ = "TestCommandHandler 'add_device_to_phy' called with device " +
+                     std::to_string(dev_index) + " and phy " + std::to_string(phy_index);
   send_response_(response_string_);
 }
 
 void TestCommandHandler::RemoveDeviceFromPhy(const vector<std::string>& args) {
   if (args.size() != 2) {
-    response_string_ =
-        "TestCommandHandler 'del_device_from_phy' takes two arguments";
+    response_string_ = "TestCommandHandler 'del_device_from_phy' takes two arguments";
     send_response_(response_string_);
     return;
   }
   size_t dev_index = ParseIntParam(args[0]);
   size_t phy_index = ParseIntParam(args[1]);
   model_.RemoveDeviceFromPhy(dev_index, phy_index);
-  response_string_ =
-      "TestCommandHandler 'del_device_from_phy' called with device " +
-      std::to_string(dev_index) + " and phy " + std::to_string(phy_index);
+  response_string_ = "TestCommandHandler 'del_device_from_phy' called with device " +
+                     std::to_string(dev_index) + " and phy " + std::to_string(phy_index);
   send_response_(response_string_);
 }
 
@@ -227,8 +216,7 @@ void TestCommandHandler::List(const vector<std::string>& args) {
 
 void TestCommandHandler::SetDeviceAddress(const vector<std::string>& args) {
   if (args.size() != 2) {
-    response_string_ =
-        "TestCommandHandler 'set_device_address' takes two arguments";
+    response_string_ = "TestCommandHandler 'set_device_address' takes two arguments";
     send_response_(response_string_);
     return;
   }
@@ -244,14 +232,13 @@ void TestCommandHandler::SetDeviceAddress(const vector<std::string>& args) {
 
 void TestCommandHandler::SetDeviceConfiguration(const vector<std::string>& args) {
   if (args.size() != 2) {
-    response_string_ =
-        "TestCommandHandler 'set_device_configuration' takes two arguments";
+    response_string_ = "TestCommandHandler 'set_device_configuration' takes two arguments";
     send_response_(response_string_);
     return;
   }
   size_t device_id = ParseIntParam(args[0]);
   rootcanal::configuration::ControllerPreset preset =
-      rootcanal::configuration::ControllerPreset::DEFAULT;
+          rootcanal::configuration::ControllerPreset::DEFAULT;
 
   if (args[1] == "default") {
     preset = rootcanal::configuration::ControllerPreset::DEFAULT;
@@ -259,9 +246,10 @@ void TestCommandHandler::SetDeviceConfiguration(const vector<std::string>& args)
     preset = rootcanal::configuration::ControllerPreset::LAIRD_BL654;
   } else if (args[1] == "csr_rck_pts_dongle") {
     preset = rootcanal::configuration::ControllerPreset::CSR_RCK_PTS_DONGLE;
+  } else if (args[1] == "intel_be200") {
+    preset = rootcanal::configuration::ControllerPreset::INTEL_BE200;
   } else {
-    response_string_ =
-        "TestCommandHandler 'set_device_configuration' invalid configuration preset";
+    response_string_ = "TestCommandHandler 'set_device_configuration' invalid configuration preset";
     send_response_(response_string_);
     return;
   }

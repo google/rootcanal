@@ -23,13 +23,12 @@
 #include "model/devices/beacon.h"
 #include "model/devices/scripted_beacon_ble_payload.pb.h"
 
-using android::bluetooth::rootcanal::model::devices::ScriptedBeaconBleAdProto::
-    PlaybackEvent;
+using android::bluetooth::rootcanal::model::devices::ScriptedBeaconBleAdProto::PlaybackEvent;
 
 namespace rootcanal {
 // Pretend to be a lot of beacons by advertising from a file.
 class ScriptedBeacon : public Beacon {
- public:
+public:
   ScriptedBeacon(const std::vector<std::string>& args);
   virtual ~ScriptedBeacon() = default;
 
@@ -38,19 +37,15 @@ class ScriptedBeacon : public Beacon {
   }
 
   // Return a string representation of the type of device.
-  virtual std::string GetTypeString() const override {
-    return "scripted_beacon";
-  }
+  virtual std::string GetTypeString() const override { return "scripted_beacon"; }
 
-  virtual std::string ToString() const override {
-    return "scripted_beacon " + config_file_;
-  }
+  virtual std::string ToString() const override { return "scripted_beacon " + config_file_; }
 
   void Tick() override;
-  void ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView packet_view,
-                              Phy::Type type, int8_t rssi) override;
+  void ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView packet_view, Phy::Type type,
+                              int8_t rssi) override;
 
- private:
+private:
   static bool registered_;
   std::string config_file_{};
   std::string events_file_{};
@@ -69,7 +64,7 @@ class ScriptedBeacon : public Beacon {
   int packet_num_{0};
   PlaybackEvent::PlaybackEventType current_state_{PlaybackEvent::UNKNOWN};
   std::chrono::steady_clock::time_point next_check_time_{};
-  android::bluetooth::rootcanal::model::devices::ScriptedBeaconBleAdProto::
-      BleAdvertisementList ble_ad_list_;
+  android::bluetooth::rootcanal::model::devices::ScriptedBeaconBleAdProto::BleAdvertisementList
+          ble_ad_list_;
 };
 }  // namespace rootcanal

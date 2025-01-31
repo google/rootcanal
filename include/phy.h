@@ -19,7 +19,7 @@
 namespace rootcanal {
 
 class Phy {
- public:
+public:
   enum class Type {
     LOW_ENERGY,
     BR_EDR,

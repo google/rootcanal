@@ -27,7 +27,7 @@ namespace rootcanal {
 
 // Pretend to be a lot of beacons by changing the advertising address.
 class BeaconSwarm : public Beacon {
- public:
+public:
   BeaconSwarm(const std::vector<std::string>& args);
   virtual ~BeaconSwarm() = default;
 
@@ -40,7 +40,7 @@ class BeaconSwarm : public Beacon {
 
   virtual void Tick() override;
 
- private:
+private:
   static bool registered_;
 };
 

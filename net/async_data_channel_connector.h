@@ -25,7 +25,7 @@ using namespace std::chrono_literals;
 
 // An AsyncDataChannelConnector is capable of connecting to a remote server.
 class AsyncDataChannelConnector {
- public:
+public:
   virtual ~AsyncDataChannelConnector() = default;
 
   // Blocks and waits until a connection to the remote server has been
@@ -36,8 +36,7 @@ class AsyncDataChannelConnector {
   // In case of a disconnected DataChannel (socket->Connected() == false)
   // the errno variable can be set with the encountered error.
   virtual std::shared_ptr<AsyncDataChannel> ConnectToRemoteServer(
-      const std::string& server, int port,
-      std::chrono::milliseconds timeout = 5000ms) = 0;
+          const std::string& server, int port, std::chrono::milliseconds timeout = 5000ms) = 0;
 };
 }  // namespace net
 }  // namespace android

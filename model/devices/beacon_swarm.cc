@@ -29,42 +29,40 @@ namespace rootcanal {
 using namespace model::packets;
 using namespace std::chrono_literals;
 
-bool BeaconSwarm::registered_ =
-    DeviceBoutique::Register("beacon_swarm", &BeaconSwarm::Create);
+bool BeaconSwarm::registered_ = DeviceBoutique::Register("beacon_swarm", &BeaconSwarm::Create);
 
 BeaconSwarm::BeaconSwarm(const std::vector<std::string>& args) : Beacon(args) {
   advertising_interval_ = 1280ms;
   advertising_type_ = LegacyAdvertisingType::ADV_NONCONN_IND;
   advertising_data_ = {
-      0x15 /* Length */,
-      0x09 /* TYPE_NAME_COMPLETE */,
-      'g',
-      'D',
-      'e',
-      'v',
-      'i',
-      'c',
-      'e',
-      '-',
-      'b',
-      'e',
-      'a',
-      'c',
-      'o',
-      'n',
-      '_',
-      's',
-      'w',
-      'a',
-      'r',
-      'm',
-      0x02 /* Length */,
-      0x01 /* TYPE_FLAG */,
-      0x4 /* BREDR_NOT_SUPPORTED */ | 0x2 /* GENERAL_DISCOVERABLE */,
+          0x15 /* Length */,
+          0x09 /* TYPE_NAME_COMPLETE */,
+          'g',
+          'D',
+          'e',
+          'v',
+          'i',
+          'c',
+          'e',
+          '-',
+          'b',
+          'e',
+          'a',
+          'c',
+          'o',
+          'n',
+          '_',
+          's',
+          'w',
+          'a',
+          'r',
+          'm',
+          0x02 /* Length */,
+          0x01 /* TYPE_FLAG */,
+          0x4 /* BREDR_NOT_SUPPORTED */ | 0x2 /* GENERAL_DISCOVERABLE */,
   };
 
-  scan_response_data_ = {
-      0x06 /* Length */, 0x08 /* TYPE_NAME_SHORT */, 'c', 'b', 'e', 'a', 'c'};
+  scan_response_data_ = {0x06 /* Length */, 0x08 /* TYPE_NAME_SHORT */, 'c', 'b', 'e', 'a', 'c'};
 }
 
 void BeaconSwarm::Tick() {

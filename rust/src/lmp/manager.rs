@@ -237,7 +237,7 @@ impl LinkManager {
             }
             _ => return Err(LinkManagerError::UnhandledHciPacket),
         };
-        self.ops.send_hci_event(&event.to_vec());
+        self.ops.send_hci_event(&event.encode_to_vec().unwrap());
         Ok(())
     }
 
@@ -318,13 +318,15 @@ impl procedure::Context for LinkContext {
 
     fn send_hci_event<E: Into<hci::Event>>(&self, event: E) {
         if let Some(manager) = self.manager.upgrade() {
-            manager.ops.send_hci_event(&event.into().to_vec())
+            manager.ops.send_hci_event(&event.into().encode_to_vec().unwrap())
         }
     }
 
     fn send_lmp_packet<P: Into<lmp::LmpPacket>>(&self, packet: P) {
         if let Some(manager) = self.manager.upgrade() {
-            manager.ops.send_lmp_packet(self.peer_address(), &packet.into().to_vec())
+            manager
+                .ops
+                .send_lmp_packet(self.peer_address(), &packet.into().encode_to_vec().unwrap())
         }
     }
 

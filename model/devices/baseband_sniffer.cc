@@ -41,8 +41,7 @@ BaseBandSniffer::BaseBandSniffer(const std::string& filename) {
   output_.flush();
 }
 
-void BaseBandSniffer::AppendRecord(
-    std::unique_ptr<bredr_bb::BaseBandPacketBuilder> packet) {
+void BaseBandSniffer::AppendRecord(std::unique_ptr<bredr_bb::BaseBandPacketBuilder> packet) {
   std::vector<uint8_t> bytes = packet->SerializeToBytes();
   pcap::WriteRecordHeader(output_, bytes.size());
   output_.write((char*)bytes.data(), bytes.size());
@@ -51,12 +50,10 @@ void BaseBandSniffer::AppendRecord(
 
 static uint8_t ReverseByte(uint8_t b) {
   static uint8_t lookup[16] = {
-      [0b0000] = 0b0000, [0b0001] = 0b1000, [0b0010] = 0b0100,
-      [0b0011] = 0b1100, [0b0100] = 0b0010, [0b0101] = 0b1010,
-      [0b0110] = 0b0110, [0b0111] = 0b1110, [0b1000] = 0b0001,
-      [0b1001] = 0b1001, [0b1010] = 0b0101, [0b1011] = 0b1101,
-      [0b1100] = 0b0011, [0b1101] = 0b1011, [0b1110] = 0b0111,
-      [0b1111] = 0b1111,
+          [0b0000] = 0b0000, [0b0001] = 0b1000, [0b0010] = 0b0100, [0b0011] = 0b1100,
+          [0b0100] = 0b0010, [0b0101] = 0b1010, [0b0110] = 0b0110, [0b0111] = 0b1110,
+          [0b1000] = 0b0001, [0b1001] = 0b1001, [0b1010] = 0b0101, [0b1011] = 0b1101,
+          [0b1100] = 0b0011, [0b1101] = 0b1011, [0b1110] = 0b0111, [0b1111] = 0b1111,
   };
 
   return (lookup[b & 0xF] << 4) | lookup[b >> 4];
@@ -79,41 +76,38 @@ static uint8_t HeaderErrorCheck(uint8_t uap, uint32_t data) {
   return value;
 }
 
-static uint32_t BuildBtPacketHeader(uint8_t uap, uint8_t lt_addr,
-                                    uint8_t packet_type, bool flow, bool arqn,
-                                    bool seqn) {
+static uint32_t BuildBtPacketHeader(uint8_t uap, uint8_t lt_addr, uint8_t packet_type, bool flow,
+                                    bool arqn, bool seqn) {
   // See Bluetooth Core, Vol2, Part B, 6.4
 
-  uint32_t header = (lt_addr & 0x7) | ((packet_type & 0xF) << 3) | (flow << 7) |
-                    (arqn << 8) | (seqn << 9);
+  uint32_t header =
+          (lt_addr & 0x7) | ((packet_type & 0xF) << 3) | (flow << 7) | (arqn << 8) | (seqn << 9);
 
   header |= (HeaderErrorCheck(uap, header) << 10);
 
   return header;
 }
 
-void BaseBandSniffer::ReceiveLinkLayerPacket(
-    model::packets::LinkLayerPacketView packet, Phy::Type /*type*/,
-    int8_t /*rssi*/) {
+void BaseBandSniffer::ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView packet,
+                                             Phy::Type /*type*/, int8_t /*rssi*/) {
   auto packet_type = packet.GetType();
   auto address = packet.GetSourceAddress();
 
   // Bluetooth Core, Vol2, Part B, 1.2, Figure 1.5
-  uint32_t lap =
-      address.data()[0] | (address.data()[1] << 8) | (address.data()[2] << 16);
+  uint32_t lap = address.data()[0] | (address.data()[1] << 8) | (address.data()[2] << 16);
   uint8_t uap = address.data()[3];
   uint16_t nap = address.data()[4] | (address.data()[5] << 8);
 
   // http://www.whiterocker.com/bt/LINKTYPE_BLUETOOTH_BREDR_BB.html
   uint16_t flags =
-      /* BT Packet Header and BR or EDR Payload are de-whitened */ 0x0001 |
-      /* BR or EDR Payload is decrypted */ 0x0008 |
-      /* Reference LAP is valid and led to this packet being captured */
-      0x0010 |
-      /* BR or EDR Payload is present and follows this field */ 0x0020 |
-      /* Reference UAP field is valid for HEC and CRC checking */ 0x0080 |
-      /* CRC portion of the BR or EDR Payload was checked */ 0x0400 |
-      /* CRC portion of the BR or EDR Payload passed its check */ 0x0800;
+          /* BT Packet Header and BR or EDR Payload are de-whitened */ 0x0001 |
+          /* BR or EDR Payload is decrypted */ 0x0008 |
+          /* Reference LAP is valid and led to this packet being captured */
+          0x0010 |
+          /* BR or EDR Payload is present and follows this field */ 0x0020 |
+          /* Reference UAP field is valid for HEC and CRC checking */ 0x0080 |
+          /* CRC portion of the BR or EDR Payload was checked */ 0x0400 |
+          /* CRC portion of the BR or EDR Payload passed its check */ 0x0800;
 
   uint8_t lt_addr = 0;
 
@@ -134,22 +128,20 @@ void BaseBandSniffer::ReceiveLinkLayerPacket(
     uint8_t bt_packet_type = 0b0010;  // FHS
 
     AppendRecord(bredr_bb::FHSAclPacketBuilder::Create(
-        rf_channel, signal_power, noise_power, access_code_offenses,
-        corrected_header_bits, corrected_payload_bits, lower_address_part,
-        reference_lap, reference_uap,
-        BuildBtPacketHeader(uap, lt_addr, bt_packet_type, true, true, true),
-        flags,
-        0,  // parity_bits
-        lap,
-        0,  // eir
-        0,  // sr
-        0,  // sp
-        uap, nap, page_view.GetClassOfDevice(),
-        1,  // lt_addr
-        0,  // clk
-        0,  // page_scan_mode
-        0   // crc
-        ));
+            rf_channel, signal_power, noise_power, access_code_offenses, corrected_header_bits,
+            corrected_payload_bits, lower_address_part, reference_lap, reference_uap,
+            BuildBtPacketHeader(uap, lt_addr, bt_packet_type, true, true, true), flags,
+            0,  // parity_bits
+            lap,
+            0,  // eir
+            0,  // sr
+            0,  // sp
+            uap, nap, page_view.GetClassOfDevice(),
+            1,  // lt_addr
+            0,  // clk
+            0,  // page_scan_mode
+            0   // crc
+            ));
   } else if (packet_type == model::packets::PacketType::LMP) {
     auto lmp_view = model::packets::LmpView::Create(packet);
     ASSERT(lmp_view.IsValid());
@@ -157,16 +149,14 @@ void BaseBandSniffer::ReceiveLinkLayerPacket(
     uint8_t bt_packet_type = 0b0011;  // DM1
 
     AppendRecord(bredr_bb::DM1AclPacketBuilder::Create(
-        rf_channel, signal_power, noise_power, access_code_offenses,
-        corrected_header_bits, corrected_payload_bits, lower_address_part,
-        reference_lap, reference_uap,
-        BuildBtPacketHeader(uap, lt_addr, bt_packet_type, true, true, true),
-        flags,
-        0x3,  // llid
-        1,    // flow
-        std::move(lmp_bytes),
-        0  // crc
-        ));
+            rf_channel, signal_power, noise_power, access_code_offenses, corrected_header_bits,
+            corrected_payload_bits, lower_address_part, reference_lap, reference_uap,
+            BuildBtPacketHeader(uap, lt_addr, bt_packet_type, true, true, true), flags,
+            0x3,  // llid
+            1,    // flow
+            std::move(lmp_bytes),
+            0  // crc
+            ));
   }
 }
 

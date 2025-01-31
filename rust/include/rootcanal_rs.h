@@ -32,10 +32,8 @@ struct ControllerOps {
   uint64_t (*get_le_features)(void* user);
   uint64_t (*get_le_event_mask)(void* user);
   void (*send_hci_event)(void* user, const uint8_t* data, uintptr_t len);
-  void (*send_lmp_packet)(void* user, const uint8_t (*to)[6],
-                          const uint8_t* data, uintptr_t len);
-  void (*send_llcp_packet)(void* user, uint16_t handle, const uint8_t* data,
-                           uintptr_t len);
+  void (*send_lmp_packet)(void* user, const uint8_t (*to)[6], const uint8_t* data, uintptr_t len);
+  void (*send_llcp_packet)(void* user, uint16_t handle, const uint8_t* data, uintptr_t len);
 };
 
 extern "C" {
@@ -84,8 +82,7 @@ void link_manager_tick(const LinkManager* lm);
 /// - This should be called from the thread of creation
 /// - `lm` must be a valid pointer
 /// - `data` must be valid for reads of len `len`
-bool link_manager_ingest_hci(const LinkManager* lm, const uint8_t* data,
-                             uintptr_t len);
+bool link_manager_ingest_hci(const LinkManager* lm, const uint8_t* data, uintptr_t len);
 
 /// Process an LMP packet from a peer with the link manager
 /// Returns true if successful
@@ -99,8 +96,8 @@ bool link_manager_ingest_hci(const LinkManager* lm, const uint8_t* data,
 /// - `lm` must be a valid pointers
 /// - `from` must be valid pointer for reads for 6 bytes
 /// - `data` must be valid for reads of len `len`
-bool link_manager_ingest_lmp(const LinkManager* lm, const uint8_t (*from)[6],
-                             const uint8_t* data, uintptr_t len);
+bool link_manager_ingest_lmp(const LinkManager* lm, const uint8_t (*from)[6], const uint8_t* data,
+                             uintptr_t len);
 
 /// Deallocate the link manager instance
 /// # Arguments
@@ -126,8 +123,8 @@ const LinkLayer* link_layer_create(ControllerOps ops);
 /// - `ll` must be a valid pointer
 /// - `peer` must be valid for reads for 6 bytes
 /// - `role` must be 0 (central) or 1 (peripheral)
-bool link_layer_add_link(const LinkLayer* ll, uint16_t handle,
-                         const uint8_t (*peer_address)[6], uint8_t role);
+bool link_layer_add_link(const LinkLayer* ll, uint16_t handle, const uint8_t (*peer_address)[6],
+                         uint8_t role);
 
 /// Unregister a link with a peer inside the link layer
 /// Returns true if successful
@@ -158,8 +155,7 @@ void link_layer_tick(const LinkLayer* ll);
 /// - This should be called from the thread of creation
 /// - `ll` must be a valid pointer
 /// - `data` must be valid for reads of len `len`
-bool link_layer_ingest_hci(const LinkLayer* ll, const uint8_t* data,
-                           uintptr_t len);
+bool link_layer_ingest_hci(const LinkLayer* ll, const uint8_t* data, uintptr_t len);
 
 /// Process an LLCP packet from a peer with the link layer
 /// Returns true if successful
@@ -172,8 +168,8 @@ bool link_layer_ingest_hci(const LinkLayer* ll, const uint8_t* data,
 /// - This should be called from the thread of creation
 /// - `ll` must be a valid pointers
 /// - `data` must be valid for reads of len `len`
-bool link_layer_ingest_llcp(const LinkLayer* ll, uint16_t handle,
-                            const uint8_t* data, uintptr_t len);
+bool link_layer_ingest_llcp(const LinkLayer* ll, uint16_t handle, const uint8_t* data,
+                            uintptr_t len);
 
 /// Query the connection handle for a CIS established with
 /// the input CIS and CIG identifiers.
@@ -186,8 +182,7 @@ bool link_layer_ingest_llcp(const LinkLayer* ll, uint16_t handle,
 /// # Safety
 /// - This should be called from the thread of creation
 /// - `ll` must be a valid pointers
-bool link_layer_get_cis_connection_handle(const LinkLayer* ll, uint8_t cig_id,
-                                          uint8_t cis_id,
+bool link_layer_get_cis_connection_handle(const LinkLayer* ll, uint8_t cig_id, uint8_t cis_id,
                                           uint16_t* cis_connection_handle);
 
 /// Query the CIS and CIG identifiers for a CIS established with
@@ -201,11 +196,9 @@ bool link_layer_get_cis_connection_handle(const LinkLayer* ll, uint8_t cig_id,
 /// # Safety
 /// - This should be called from the thread of creation
 /// - `ll` must be a valid pointers
-bool link_layer_get_cis_information(const LinkLayer* ll,
-                                    uint16_t cis_connection_handle,
-                                    uint16_t* acl_connection_handle,
-                                    uint8_t* cig_id, uint8_t* cis_id,
-                                    uint16_t* max_sdu_tx);
+bool link_layer_get_cis_information(const LinkLayer* ll, uint16_t cis_connection_handle,
+                                    uint16_t* acl_connection_handle, uint8_t* cig_id,
+                                    uint8_t* cis_id, uint16_t* max_sdu_tx);
 
 /// Deallocate the link layer instance
 /// # Arguments

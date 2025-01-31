@@ -27,25 +27,22 @@ namespace rootcanal {
 using android::net::AsyncDataChannel;
 
 class HciSocketTransport : public HciTransport {
- public:
+public:
   HciSocketTransport(std::shared_ptr<AsyncDataChannel> socket);
   ~HciSocketTransport() = default;
 
-  static std::shared_ptr<HciTransport> Create(
-      std::shared_ptr<AsyncDataChannel> socket) {
+  static std::shared_ptr<HciTransport> Create(std::shared_ptr<AsyncDataChannel> socket) {
     return std::make_shared<HciSocketTransport>(socket);
   }
 
-  void Send(PacketType packet_type,
-            const std::vector<uint8_t>& packet) override;
+  void Send(PacketType packet_type, const std::vector<uint8_t>& packet) override;
 
-  void RegisterCallbacks(PacketCallback packet_callback,
-                         CloseCallback close_callback) override;
+  void RegisterCallbacks(PacketCallback packet_callback, CloseCallback close_callback) override;
 
   void Tick() override;
   void Close() override;
 
- private:
+private:
   std::shared_ptr<AsyncDataChannel> socket_;
   H4DataChannelPacketizer h4_{socket_,
                               [](const std::vector<uint8_t>&) {},

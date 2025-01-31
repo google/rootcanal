@@ -24,11 +24,11 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeCreateConnectionCancelTest : public ::testing::Test {
- public:
+public:
   LeCreateConnectionCancelTest() = default;
   ~LeCreateConnectionCancelTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -36,29 +36,25 @@ class LeCreateConnectionCancelTest : public ::testing::Test {
 
 TEST_F(LeCreateConnectionCancelTest, CancelLegacyConnection) {
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeCreateConnectionCancel(), ErrorCode::SUCCESS);
 }
 
 TEST_F(LeCreateConnectionCancelTest, CancelExtendedConnection) {
-  ASSERT_EQ(
-      controller_.LeExtendedCreateConnection(
-          InitiatorFilterPolicy::USE_PEER_ADDRESS,
-          OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-          AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS}, 0x1,
-          {MakeInitiatingPhyParameters(0x200, 0x200, 0x100, 0x200, 0x010,
-                                       0x0c80, 0x0, 0x0)}),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeExtendedCreateConnection(
+                    InitiatorFilterPolicy::USE_PEER_ADDRESS, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS}, 0x1,
+                    {MakeInitiatingPhyParameters(0x200, 0x200, 0x100, 0x200, 0x010, 0x0c80, 0x0,
+                                                 0x0)}),
+            ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeCreateConnectionCancel(), ErrorCode::SUCCESS);
 }
 
 TEST_F(LeCreateConnectionCancelTest, NoPendingConnection) {
-  ASSERT_EQ(controller_.LeCreateConnectionCancel(),
-            ErrorCode::COMMAND_DISALLOWED);
+  ASSERT_EQ(controller_.LeCreateConnectionCancel(), ErrorCode::COMMAND_DISALLOWED);
 }
 
 }  // namespace rootcanal

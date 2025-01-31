@@ -24,7 +24,7 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeClearResolvingListTest : public ::testing::Test {
- public:
+public:
   LeClearResolvingListTest() {
     // Reduce the size of the resolving list to simplify testing.
     properties_.le_resolving_list_size = 2;
@@ -32,7 +32,7 @@ class LeClearResolvingListTest : public ::testing::Test {
 
   ~LeClearResolvingListTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -40,8 +40,8 @@ class LeClearResolvingListTest : public ::testing::Test {
 
 TEST_F(LeClearResolvingListTest, Success) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeClearResolvingList(), ErrorCode::SUCCESS);
@@ -49,8 +49,8 @@ TEST_F(LeClearResolvingListTest, Success) {
 
 TEST_F(LeClearResolvingListTest, ScanningActive) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
@@ -61,8 +61,8 @@ TEST_F(LeClearResolvingListTest, ScanningActive) {
 
 TEST_F(LeClearResolvingListTest, LegacyAdvertisingActive) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
@@ -73,20 +73,19 @@ TEST_F(LeClearResolvingListTest, LegacyAdvertisingActive) {
 
 TEST_F(LeClearResolvingListTest, ExtendedAdvertisingActive) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800,
-                0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::LISTED_SCAN, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::LISTED_SCAN, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetExtendedAdvertisingEnable(
-                true, {MakeEnabledSet(0, 0, 0)}),
+  ASSERT_EQ(controller_.LeSetExtendedAdvertisingEnable(true, {MakeEnabledSet(0, 0, 0)}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeClearResolvingList(), ErrorCode::COMMAND_DISALLOWED);

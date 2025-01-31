@@ -39,7 +39,7 @@ using namespace std::chrono_literals;
 //
 // Supports both Darwin (freebsd) and linux.
 class PosixAsyncSocketConnector : public AsyncDataChannelConnector {
- public:
+public:
   PosixAsyncSocketConnector(AsyncManager* am);
   ~PosixAsyncSocketConnector() = default;
 
@@ -50,10 +50,9 @@ class PosixAsyncSocketConnector : public AsyncDataChannelConnector {
   // Note: This does not mean that the socket is fully opened! A server
   // might not (yet?) have called accept on the socket.
   std::shared_ptr<AsyncDataChannel> ConnectToRemoteServer(
-      const std::string& server, int port,
-      std::chrono::milliseconds timeout = 5000ms);
+          const std::string& server, int port, std::chrono::milliseconds timeout = 5000ms);
 
- private:
+private:
   AsyncManager* am_;
 };
 }  // namespace net

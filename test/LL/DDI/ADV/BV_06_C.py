@@ -90,15 +90,15 @@ class Test(ControllerTest):
         # 6. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT in step 4.
         await self.expect_evt(
-            hci.LeEnhancedConnectionComplete(status=ErrorCode.SUCCESS,
-                                             connection_handle=connection_handle,
-                                             role=hci.Role.PERIPHERAL,
-                                             peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                             peer_address=peer_address,
-                                             connection_interval=LL_initiator_connInterval,
-                                             peripheral_latency=LL_initiator_connPeripheralLatency,
-                                             supervision_timeout=LL_initiator_connSupervisionTimeout,
-                                             central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+            hci.LeEnhancedConnectionCompleteV1(status=ErrorCode.SUCCESS,
+                                               connection_handle=connection_handle,
+                                               role=hci.Role.PERIPHERAL,
+                                               peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                                               peer_address=peer_address,
+                                               connection_interval=LL_initiator_connInterval,
+                                               peripheral_latency=LL_initiator_connPeripheralLatency,
+                                               supervision_timeout=LL_initiator_connSupervisionTimeout,
+                                               central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 
         # 7. The Upper Tester sends an HCI_Disconnect command to the IUT with the Connection_Handle
         # and receives a successful HCI_Command_Status event in return.

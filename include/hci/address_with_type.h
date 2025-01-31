@@ -34,13 +34,12 @@
 namespace bluetooth::hci {
 
 class AddressWithType final {
- public:
+public:
   AddressWithType(Address address, AddressType address_type)
       : address_(std::move(address)), address_type_(address_type) {}
 
   explicit AddressWithType()
-      : address_(Address::kEmpty),
-        address_type_(AddressType::PUBLIC_DEVICE_ADDRESS) {}
+      : address_(Address::kEmpty), address_type_(AddressType::PUBLIC_DEVICE_ADDRESS) {}
 
   inline Address GetAddress() const { return address_; }
 
@@ -65,8 +64,7 @@ class AddressWithType final {
     prand[1] = address_.address[4];
     prand[2] = address_.address[5];
     /* generate X = E irk(R0, R1, R2) and R is random address 3 LSO */
-    rootcanal::crypto::Octet16 computed_hash =
-        rootcanal::crypto::aes_128(irk, &prand[0], 3);
+    rootcanal::crypto::Octet16 computed_hash = rootcanal::crypto::aes_128(irk, &prand[0], 3);
     uint8_t hash[3];
     hash[0] = address_.address[0];
     hash[1] = address_.address[1];
@@ -75,13 +73,12 @@ class AddressWithType final {
   }
 
   bool operator<(const AddressWithType& rhs) const {
-    return (address_ != rhs.address_) ? address_ < rhs.address_
-                                      : address_type_ < rhs.address_type_;
+    return (address_ != rhs.address_) ? address_ < rhs.address_ : address_type_ < rhs.address_type_;
   }
   bool operator==(const AddressWithType& rhs) const {
     return address_ == rhs.address_ && address_type_ == rhs.address_type_;
   }
-  bool operator>(const AddressWithType& rhs) const { return (rhs < *this); }
+  bool operator>(const AddressWithType& rhs) const { return rhs < *this; }
   bool operator<=(const AddressWithType& rhs) const { return !(*this > rhs); }
   bool operator>=(const AddressWithType& rhs) const { return !(*this < rhs); }
   bool operator!=(const AddressWithType& rhs) const { return !(*this == rhs); }
@@ -114,7 +111,7 @@ class AddressWithType final {
     return ss.str();
   }
 
- private:
+private:
   Address address_;
   AddressType address_type_;
 };
@@ -146,8 +143,7 @@ struct fmt::formatter<bluetooth::hci::AddressWithType> {
   char presentation = 'x';
 
   // Parses format specifications of the form ['x' | 'X'].
-  constexpr auto parse(format_parse_context& ctx)
-      -> format_parse_context::iterator {
+  constexpr auto parse(format_parse_context& ctx) -> format_parse_context::iterator {
     // Parse the presentation format and store it in the formatter:
     auto it = ctx.begin();
     auto end = ctx.end();
@@ -168,9 +164,8 @@ struct fmt::formatter<bluetooth::hci::AddressWithType> {
   // stored in this formatter.
   auto format(const bluetooth::hci::AddressWithType& a,
               format_context& ctx) const -> format_context::iterator {
-    auto out = presentation == 'x'
-                   ? fmt::format_to(ctx.out(), "{:x}", a.GetAddress())
-                   : fmt::format_to(ctx.out(), "{:X}", a.GetAddress());
+    auto out = presentation == 'x' ? fmt::format_to(ctx.out(), "{:x}", a.GetAddress())
+                                   : fmt::format_to(ctx.out(), "{:X}", a.GetAddress());
     return fmt::format_to(out, "[{}]", AddressTypeText(a.GetAddressType()));
   }
 };

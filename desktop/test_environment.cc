@@ -56,14 +56,11 @@ using rootcanal::LinkLayerSocketDevice;
 using rootcanal::TaskCallback;
 
 TestEnvironment::TestEnvironment(
-    std::function<std::shared_ptr<AsyncDataChannelServer>(AsyncManager*, int)>
-        open_server,
-    std::function<std::shared_ptr<AsyncDataChannelConnector>(AsyncManager*)>
-        open_connector,
-    int test_port, int hci_port, int link_port, int link_ble_port,
-    const std::string& config_str,
-    bool enable_hci_sniffer, bool enable_baseband_sniffer,
-    bool enable_pcap_filter, bool disable_address_reuse)
+        std::function<std::shared_ptr<AsyncDataChannelServer>(AsyncManager*, int)> open_server,
+        std::function<std::shared_ptr<AsyncDataChannelConnector>(AsyncManager*)> open_connector,
+        int test_port, int hci_port, int link_port, int link_ble_port,
+        const std::string& config_str, bool enable_hci_sniffer, bool enable_baseband_sniffer,
+        bool enable_pcap_filter, bool disable_address_reuse)
     : enable_hci_sniffer_(enable_hci_sniffer),
       enable_baseband_sniffer_(enable_baseband_sniffer),
       enable_pcap_filter_(enable_pcap_filter) {
@@ -76,8 +73,7 @@ TestEnvironment::TestEnvironment(
   // Get a user ID for tasks scheduled within the test environment.
   socket_user_id_ = async_manager_.GetNextUserId();
 
-  rootcanal::configuration::Configuration* config =
-      new rootcanal::configuration::Configuration();
+  rootcanal::configuration::Configuration* config = new rootcanal::configuration::Configuration();
   if (!google::protobuf::TextFormat::ParseFromString(config_str, config) ||
       config->tcp_server_size() == 0) {
     // Default configuration with default hci port if the input
@@ -88,8 +84,7 @@ TestEnvironment::TestEnvironment(
     // the caller.
     int num_controllers = config->tcp_server_size();
     for (int index = 0; index < num_controllers; index++) {
-      rootcanal::configuration::TcpServer const& tcp_server =
-          config->tcp_server(index);
+      rootcanal::configuration::TcpServer const& tcp_server = config->tcp_server(index);
       SetUpHciServer(open_server, tcp_server.tcp_port(),
                      rootcanal::ControllerProperties(tcp_server.configuration()));
     }
@@ -99,52 +94,48 @@ TestEnvironment::TestEnvironment(
 // Open an HCI server listening on the port `tcp_port`. Established connections
 // are bound to a controller with the specified `properties`.
 void TestEnvironment::SetUpHciServer(
-    std::function<std::shared_ptr<AsyncDataChannelServer>(AsyncManager*, int)>
-        open_server,
-    int tcp_port, rootcanal::ControllerProperties properties) {
+        std::function<std::shared_ptr<AsyncDataChannelServer>(AsyncManager*, int)> open_server,
+        int tcp_port, rootcanal::ControllerProperties properties) {
   INFO("Opening an HCI with port {}", tcp_port);
 
-  std::shared_ptr<AsyncDataChannelServer> server =
-      open_server(&async_manager_, tcp_port);
-  server->SetOnConnectCallback([this, properties = std::move(properties)](
-                                   std::shared_ptr<AsyncDataChannel> socket,
-                                   AsyncDataChannelServer* server) {
-    // AddHciConnection needs to be executed in task thread to
-    // prevent data races on test model.
-    async_manager_.ExecAsync(socket_user_id_, std::chrono::milliseconds(0),
-                             [=]() {
-      auto transport = HciSocketTransport::Create(socket);
-      if (enable_hci_sniffer_) {
-        transport = HciSniffer::Create(transport);
-      }
-      auto device = HciDevice::Create(transport, properties);
-      auto device_id = test_model_.AddHciConnection(device);
+  std::shared_ptr<AsyncDataChannelServer> server = open_server(&async_manager_, tcp_port);
+  server->SetOnConnectCallback(
+          [this, properties = std::move(properties)](std::shared_ptr<AsyncDataChannel> socket,
+                                                     AsyncDataChannelServer* server) {
+            // AddHciConnection needs to be executed in task thread to
+            // prevent data races on test model.
+            async_manager_.ExecAsync(socket_user_id_, std::chrono::milliseconds(0), [=, this]() {
+              auto transport = HciSocketTransport::Create(socket);
+              if (enable_hci_sniffer_) {
+                transport = HciSniffer::Create(transport);
+              }
+              auto device = HciDevice::Create(transport, properties);
+              auto device_id = test_model_.AddHciConnection(device);
 
-      if (enable_hci_sniffer_) {
-        auto filename = "rootcanal_" + std::to_string(device_id) + "_" +
-                        device->GetAddress().ToString() + ".pcap";
-        for (auto i = 0; std::filesystem::exists(filename); i++) {
-          filename = "rootcanal_" + std::to_string(device_id) + "_" +
-                     device->GetAddress().ToString() + "_" + std::to_string(i) +
-                     ".pcap";
-        }
-        auto file = std::make_shared<std::ofstream>(filename, std::ios::binary);
-        auto sniffer = std::static_pointer_cast<HciSniffer>(transport);
+              if (enable_hci_sniffer_) {
+                auto filename = "rootcanal_" + std::to_string(device_id) + "_" +
+                                device->GetAddress().ToString() + ".pcap";
+                for (auto i = 0; std::filesystem::exists(filename); i++) {
+                  filename = "rootcanal_" + std::to_string(device_id) + "_" +
+                             device->GetAddress().ToString() + "_" + std::to_string(i) + ".pcap";
+                }
+                auto file = std::make_shared<std::ofstream>(filename, std::ios::binary);
+                auto sniffer = std::static_pointer_cast<HciSniffer>(transport);
 
-        // Add PCAP output stream.
-        sniffer->SetOutputStream(file);
+                // Add PCAP output stream.
+                sniffer->SetOutputStream(file);
 
-        // Add a PCAP filter if the option is enabled.
-        // TODO: ideally the filter should be shared between all transport
-        // instances to use the same user information remapping between traces.
-        if (enable_pcap_filter_) {
-          sniffer->SetPcapFilter(std::make_shared<rootcanal::PcapFilter>());
-        }
-      }
-    });
+                // Add a PCAP filter if the option is enabled.
+                // TODO: ideally the filter should be shared between all transport
+                // instances to use the same user information remapping between traces.
+                if (enable_pcap_filter_) {
+                  sniffer->SetPcapFilter(std::make_shared<rootcanal::PcapFilter>());
+                }
+              }
+            });
 
-    server->StartListening();
-  });
+            server->StartListening();
+          });
   hci_socket_servers_.emplace_back(std::move(server));
 }
 
@@ -153,17 +144,16 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
 
   barrier_ = std::move(barrier);
 
-  test_channel_transport_.RegisterCommandHandler(
-      [this](const std::string& name, const std::vector<std::string>& args) {
-        async_manager_.ExecAsync(socket_user_id_, std::chrono::milliseconds(0),
-                                 [this, name, args]() {
-                                   if (name == "END_SIMULATION") {
-                                     barrier_.set_value();
-                                   } else {
-                                     test_channel_.HandleCommand(name, args);
-                                   }
-                                 });
-      });
+  test_channel_transport_.RegisterCommandHandler([this](const std::string& name,
+                                                        const std::vector<std::string>& args) {
+    async_manager_.ExecAsync(socket_user_id_, std::chrono::milliseconds(0), [this, name, args]() {
+      if (name == "END_SIMULATION") {
+        barrier_.set_value();
+      } else {
+        test_channel_.HandleCommand(name, args);
+      }
+    });
+  });
 
   SetUpTestChannel();
   SetUpLinkLayerServer();
@@ -179,8 +169,7 @@ void TestEnvironment::initialize(std::promise<void> barrier) {
       filename = "baseband_" + std::to_string(i) + ".pcap";
     }
 
-    test_model_.AddLinkLayerConnection(BaseBandSniffer::Create(filename),
-                                       Phy::Type::BR_EDR);
+    test_model_.AddLinkLayerConnection(BaseBandSniffer::Create(filename), Phy::Type::BR_EDR);
   }
 
   INFO("{}: Finished", __func__);
@@ -192,31 +181,27 @@ void TestEnvironment::close() {
 }
 
 void TestEnvironment::SetUpLinkBleLayerServer() {
-  link_ble_socket_server_->SetOnConnectCallback(
-      [this](std::shared_ptr<AsyncDataChannel> socket,
-             AsyncDataChannelServer* srv) {
-        auto phy_type = Phy::Type::LOW_ENERGY;
-        test_model_.AddLinkLayerConnection(
-            LinkLayerSocketDevice::Create(socket, phy_type), phy_type);
-        srv->StartListening();
-      });
+  link_ble_socket_server_->SetOnConnectCallback([this](std::shared_ptr<AsyncDataChannel> socket,
+                                                       AsyncDataChannelServer* srv) {
+    auto phy_type = Phy::Type::LOW_ENERGY;
+    test_model_.AddLinkLayerConnection(LinkLayerSocketDevice::Create(socket, phy_type), phy_type);
+    srv->StartListening();
+  });
   link_ble_socket_server_->StartListening();
 }
 
 void TestEnvironment::SetUpLinkLayerServer() {
-  link_socket_server_->SetOnConnectCallback(
-      [this](std::shared_ptr<AsyncDataChannel> socket,
-             AsyncDataChannelServer* srv) {
-        auto phy_type = Phy::Type::BR_EDR;
-        test_model_.AddLinkLayerConnection(
-            LinkLayerSocketDevice::Create(socket, phy_type), phy_type);
-        srv->StartListening();
-      });
+  link_socket_server_->SetOnConnectCallback([this](std::shared_ptr<AsyncDataChannel> socket,
+                                                   AsyncDataChannelServer* srv) {
+    auto phy_type = Phy::Type::BR_EDR;
+    test_model_.AddLinkLayerConnection(LinkLayerSocketDevice::Create(socket, phy_type), phy_type);
+    srv->StartListening();
+  });
   link_socket_server_->StartListening();
 }
 
-std::shared_ptr<Device> TestEnvironment::ConnectToRemoteServer(
-    const std::string& server, int port, Phy::Type phy_type) {
+std::shared_ptr<Device> TestEnvironment::ConnectToRemoteServer(const std::string& server, int port,
+                                                               Phy::Type phy_type) {
   auto socket = connector_->ConnectToRemoteServer(server, port);
   if (!socket->Connected()) {
     return nullptr;
@@ -226,28 +211,26 @@ std::shared_ptr<Device> TestEnvironment::ConnectToRemoteServer(
 
 void TestEnvironment::SetUpTestChannel() {
   bool transport_configured = test_channel_transport_.SetUp(
-      test_socket_server_, [this](std::shared_ptr<AsyncDataChannel> conn_fd,
-                                  AsyncDataChannelServer* server) {
-        INFO("Test channel connection accepted.");
-        server->StartListening();
-        if (test_channel_open_) {
-          WARNING("Only one connection at a time is supported");
-          rootcanal::TestChannelTransport::SendResponse(
-              conn_fd, "The connection is broken");
-          return false;
-        }
-        test_channel_open_ = true;
-        test_channel_.RegisterSendResponse(
-            [conn_fd](const std::string& response) {
+          test_socket_server_,
+          [this](std::shared_ptr<AsyncDataChannel> conn_fd, AsyncDataChannelServer* server) {
+            INFO("Test channel connection accepted.");
+            server->StartListening();
+            if (test_channel_open_) {
+              WARNING("Only one connection at a time is supported");
+              rootcanal::TestChannelTransport::SendResponse(conn_fd, "The connection is broken");
+              return false;
+            }
+            test_channel_open_ = true;
+            test_channel_.RegisterSendResponse([conn_fd](const std::string& response) {
               rootcanal::TestChannelTransport::SendResponse(conn_fd, response);
             });
 
-        conn_fd->WatchForNonBlockingRead([this](AsyncDataChannel* conn_fd) {
-          test_channel_transport_.OnCommandReady(
-              conn_fd, [this]() { test_channel_open_ = false; });
-        });
-        return false;
-      });
+            conn_fd->WatchForNonBlockingRead([this](AsyncDataChannel* conn_fd) {
+              test_channel_transport_.OnCommandReady(conn_fd,
+                                                     [this]() { test_channel_open_ = false; });
+            });
+            return false;
+          });
 
   test_channel_.AddPhy({"BR_EDR"});
   test_channel_.AddPhy({"LOW_ENERGY"});

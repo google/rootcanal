@@ -23,18 +23,17 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeSetExtendedScanEnableTest : public ::testing::Test {
- public:
+public:
   LeSetExtendedScanEnableTest() = default;
   ~LeSetExtendedScanEnableTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
 };
 
-static ScanningPhyParameters MakeScanningPhyParameters(LeScanType scan_type,
-                                                       uint16_t scan_interval,
+static ScanningPhyParameters MakeScanningPhyParameters(LeScanType scan_type, uint16_t scan_interval,
                                                        uint16_t scan_window) {
   ScanningPhyParameters parameters;
   parameters.le_scan_type_ = scan_type;
@@ -44,109 +43,86 @@ static ScanningPhyParameters MakeScanningPhyParameters(LeScanType scan_type,
 }
 
 TEST_F(LeSetExtendedScanEnableTest, EnableUsingPublicAddress) {
-  ASSERT_EQ(
-      controller_.LeSetExtendedScanParameters(
-          OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-          LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
-      ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                true, FilterDuplicates::DISABLED, 0, 0),
+  ASSERT_EQ(controller_.LeSetExtendedScanParameters(
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
+                    {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
+            ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetExtendedScanEnable(true, FilterDuplicates::DISABLED, 0, 0),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetExtendedScanEnableTest, EnableUsingRandomAddress) {
-  ASSERT_EQ(
-      controller_.LeSetExtendedScanParameters(
-          OwnAddressType::RANDOM_DEVICE_ADDRESS,
-          LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetExtendedScanParameters(
+                    OwnAddressType::RANDOM_DEVICE_ADDRESS, LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
+                    {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
+            ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                true, FilterDuplicates::DISABLED, 0, 0),
+  ASSERT_EQ(controller_.LeSetExtendedScanEnable(true, FilterDuplicates::DISABLED, 0, 0),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetExtendedScanEnableTest, EnableUsingResolvableAddress) {
   ASSERT_EQ(
-      controller_.LeSetExtendedScanParameters(
-          OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS,
-          LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
-      ErrorCode::SUCCESS);
+          controller_.LeSetExtendedScanParameters(
+                  OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS, LeScanningFilterPolicy::ACCEPT_ALL,
+                  0x1, {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
+          ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                true, FilterDuplicates::DISABLED, 0, 0),
+  ASSERT_EQ(controller_.LeSetExtendedScanEnable(true, FilterDuplicates::DISABLED, 0, 0),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetExtendedScanEnableTest, ResetEachPeriod) {
-  ASSERT_EQ(
-      controller_.LeSetExtendedScanParameters(
-          OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-          LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
-      ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                true, FilterDuplicates::RESET_EACH_PERIOD, 100, 1000),
+  ASSERT_EQ(controller_.LeSetExtendedScanParameters(
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
+                    {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
             ErrorCode::SUCCESS);
+  ASSERT_EQ(
+          controller_.LeSetExtendedScanEnable(true, FilterDuplicates::RESET_EACH_PERIOD, 100, 1000),
+          ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetExtendedScanEnableTest, Disable) {
-  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                false, FilterDuplicates::DISABLED, 0, 0),
+  ASSERT_EQ(controller_.LeSetExtendedScanEnable(false, FilterDuplicates::DISABLED, 0, 0),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetExtendedScanEnableTest, ValidDuration) {
-  ASSERT_EQ(
-      controller_.LeSetExtendedScanParameters(
-          OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-          LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetExtendedScanParameters(
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
+                    {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
+            ErrorCode::SUCCESS);
 
-  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                true, FilterDuplicates::DISABLED, 127, 1),
+  ASSERT_EQ(controller_.LeSetExtendedScanEnable(true, FilterDuplicates::DISABLED, 127, 1),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetExtendedScanEnableTest, InvalidDuration) {
-  ASSERT_EQ(
-      controller_.LeSetExtendedScanParameters(
-          OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-          LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetExtendedScanParameters(
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
+                    {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
+            ErrorCode::SUCCESS);
 
-  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                true, FilterDuplicates::RESET_EACH_PERIOD, 0, 0),
+  ASSERT_EQ(controller_.LeSetExtendedScanEnable(true, FilterDuplicates::RESET_EACH_PERIOD, 0, 0),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
-  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                true, FilterDuplicates::DISABLED, 128, 1),
+  ASSERT_EQ(controller_.LeSetExtendedScanEnable(true, FilterDuplicates::DISABLED, 128, 1),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeSetExtendedScanEnableTest, NoRandomAddress) {
-  ASSERT_EQ(
-      controller_.LeSetExtendedScanParameters(
-          OwnAddressType::RANDOM_DEVICE_ADDRESS,
-          LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
-      ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                true, FilterDuplicates::DISABLED, 0, 0),
+  ASSERT_EQ(controller_.LeSetExtendedScanParameters(
+                    OwnAddressType::RANDOM_DEVICE_ADDRESS, LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
+                    {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
+            ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetExtendedScanEnable(true, FilterDuplicates::DISABLED, 0, 0),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 
   ASSERT_EQ(
-      controller_.LeSetExtendedScanParameters(
-          OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS,
-          LeScanningFilterPolicy::ACCEPT_ALL, 0x1,
-          {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
-      ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetExtendedScanEnable(
-                true, FilterDuplicates::DISABLED, 0, 0),
+          controller_.LeSetExtendedScanParameters(
+                  OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS, LeScanningFilterPolicy::ACCEPT_ALL,
+                  0x1, {MakeScanningPhyParameters(LeScanType::PASSIVE, 0x2000, 0x200)}),
+          ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetExtendedScanEnable(true, FilterDuplicates::DISABLED, 0, 0),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 

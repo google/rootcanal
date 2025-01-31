@@ -32,7 +32,7 @@ namespace rootcanal {
 // Simple device that advertises with non-connectable advertising in general
 // discoverable mode, and responds to LE scan requests.
 class Beacon : public Device {
- public:
+public:
   Beacon();
   Beacon(const std::vector<std::string>& args);
   virtual ~Beacon() = default;
@@ -44,18 +44,17 @@ class Beacon : public Device {
   virtual std::string GetTypeString() const override { return "beacon"; }
 
   virtual void Tick() override;
-  virtual void ReceiveLinkLayerPacket(
-      model::packets::LinkLayerPacketView packet, Phy::Type type,
-      int8_t rssi) override;
+  virtual void ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView packet, Phy::Type type,
+                                      int8_t rssi) override;
 
- protected:
+protected:
   model::packets::LegacyAdvertisingType advertising_type_{};
   std::array<uint8_t, 31> advertising_data_{};
   std::array<uint8_t, 31> scan_response_data_{};
   std::chrono::steady_clock::duration advertising_interval_{};
   std::chrono::steady_clock::time_point advertising_last_{};
 
- private:
+private:
   static bool registered_;
 };
 

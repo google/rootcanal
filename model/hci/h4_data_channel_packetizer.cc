@@ -33,16 +33,14 @@
 namespace rootcanal {
 
 H4DataChannelPacketizer::H4DataChannelPacketizer(
-    std::shared_ptr<AsyncDataChannel> socket, PacketReadCallback command_cb,
-    PacketReadCallback event_cb, PacketReadCallback acl_cb,
-    PacketReadCallback sco_cb, PacketReadCallback iso_cb,
-    ClientDisconnectCallback disconnect_cb)
+        std::shared_ptr<AsyncDataChannel> socket, PacketReadCallback command_cb,
+        PacketReadCallback event_cb, PacketReadCallback acl_cb, PacketReadCallback sco_cb,
+        PacketReadCallback iso_cb, ClientDisconnectCallback disconnect_cb)
     : uart_socket_(socket),
       h4_parser_(command_cb, event_cb, acl_cb, sco_cb, iso_cb, true),
       disconnect_cb_(std::move(disconnect_cb)) {}
 
-size_t H4DataChannelPacketizer::Send(uint8_t type, const uint8_t* data,
-                                     size_t length) {
+size_t H4DataChannelPacketizer::Send(uint8_t type, const uint8_t* data, size_t length) {
   ssize_t ret = uart_socket_->Send(&type, sizeof(type));
   if (ret == -1) {
     ERROR("Error writing to UART ({})", strerror(errno));
@@ -56,15 +54,12 @@ size_t H4DataChannelPacketizer::Send(uint8_t type, const uint8_t* data,
   to_be_written += ret;
 
   if (to_be_written != length + sizeof(type)) {
-    ERROR("{} / {} bytes written - something went wrong...", to_be_written,
-          length + sizeof(type));
+    ERROR("{} / {} bytes written - something went wrong...", to_be_written, length + sizeof(type));
   }
   return to_be_written;
 }
 
-void H4DataChannelPacketizer::OnDataReady(
-   std::shared_ptr<AsyncDataChannel> socket) {
-
+void H4DataChannelPacketizer::OnDataReady(std::shared_ptr<AsyncDataChannel> socket) {
   // Continue reading from the async data channel as long as bytes
   // are available to read. Otherwise this limits the number of HCI
   // packets parsed to one every 3 ticks.
@@ -90,8 +85,7 @@ void H4DataChannelPacketizer::OnDataReady(
         disconnect_cb_();
         return;
       }
-      FATAL("Read error in {}: {}", fmt::underlying(h4_parser_.CurrentState()),
-            strerror(errno));
+      FATAL("Read error in {}: {}", fmt::underlying(h4_parser_.CurrentState()), strerror(errno));
     }
     h4_parser_.Consume(buffer.data(), bytes_read);
   }

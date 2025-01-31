@@ -303,7 +303,7 @@ class Test(ControllerTest):
         # 13. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT.
         await self.expect_evt(
-            hci.LeEnhancedConnectionComplete(
+            hci.LeEnhancedConnectionCompleteV1(
                 status=ErrorCode.SUCCESS,
                 connection_handle=connection_handle,
                 role=hci.Role.PERIPHERAL,
@@ -373,7 +373,7 @@ class Test(ControllerTest):
         # parameters sent to the IUT in step 25 and as postamble: Peripheral Connection Terminated
         # (connection interval, Peripheral latency, timeout, channel map, un-encrypted, connection handle).
         await self.expect_evt(
-            hci.LeEnhancedConnectionComplete(
+            hci.LeEnhancedConnectionCompleteV1(
                 status=ErrorCode.SUCCESS,
                 connection_handle=connection_handle,
                 role=hci.Role.PERIPHERAL,

@@ -28,7 +28,7 @@ namespace rootcanal {
 using rootcanal::PhyDevice;
 
 class PhyLayer {
- public:
+public:
   using Identifier = uint32_t;
 
   PhyLayer(Identifier id, Phy::Type type);
@@ -40,8 +40,7 @@ class PhyLayer {
 
   // Compute the RSSI for a packet sent from one device to the other
   // with the specified TX power.
-  virtual int8_t ComputeRssi(PhyDevice::Identifier sender_id,
-                             PhyDevice::Identifier receiver_id,
+  virtual int8_t ComputeRssi(PhyDevice::Identifier sender_id, PhyDevice::Identifier receiver_id,
                              int8_t tx_power);
 
   void Register(std::shared_ptr<PhyDevice> device);
@@ -54,7 +53,7 @@ class PhyLayer {
   const Identifier id;
   const Phy::Type type;
 
- protected:
+protected:
   // List of devices currently connected to the phy.
   std::list<std::shared_ptr<rootcanal::PhyDevice>> phy_devices_;
 };

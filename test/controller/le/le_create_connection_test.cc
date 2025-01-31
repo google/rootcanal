@@ -23,11 +23,11 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeCreateConnectionTest : public ::testing::Test {
- public:
+public:
   LeCreateConnectionTest() = default;
   ~LeCreateConnectionTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -35,170 +35,151 @@ class LeCreateConnectionTest : public ::testing::Test {
 
 TEST_F(LeCreateConnectionTest, ConnectUsingPublicAddress) {
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeCreateConnectionTest, ConnectUsingRandomAddress) {
   ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::RANDOM_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::RANDOM_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeCreateConnectionTest, ConnectUsingResolvableAddress) {
   ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS, 0x100, 0x200,
-                0x010, 0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0,
+                    0x0),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeCreateConnectionTest, InitiatingActive) {
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{2}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{2}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeCreateConnectionTest, InvalidScanInterval) {
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x3, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x3, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x4001, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x4001, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 }
 
 TEST_F(LeCreateConnectionTest, InvalidScanWindow) {
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x3, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x3, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x4001, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x4001, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x100, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x100, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeCreateConnectionTest, InvalidConnectionInterval) {
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x5, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x5, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x0c81, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x0c81, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x200, 0x5, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x200, 0x5, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x200, 0x0c81, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x200, 0x0c81, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x4001, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x200, 0x100, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x4001, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x200, 0x100, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 }
 
 TEST_F(LeCreateConnectionTest, InvalidMaxLatency) {
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x01f4,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x01f4, 0x0c80, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 }
 
 TEST_F(LeCreateConnectionTest, InvalidSupervisionTimeout) {
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x9,
-                0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x9, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c81, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c81, 0x0, 0x0),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x1f3,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS, 0x100, 0x200, 0x1f3, 0x0c80, 0x0, 0x0),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeCreateConnectionTest, NoRandomAddress) {
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::RANDOM_DEVICE_ADDRESS, 0x100, 0x200, 0x010,
-                0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::RANDOM_DEVICE_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0, 0x0),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 
   ASSERT_EQ(controller_.LeCreateConnection(
-                0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
-                AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
-                OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS, 0x100, 0x200,
-                0x010, 0x0c80, 0x0, 0x0),
+                    0x200, 0x200, InitiatorFilterPolicy::USE_PEER_ADDRESS,
+                    AddressWithType{Address{1}, AddressType::PUBLIC_DEVICE_ADDRESS},
+                    OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS, 0x100, 0x200, 0x010, 0x0c80, 0x0,
+                    0x0),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 

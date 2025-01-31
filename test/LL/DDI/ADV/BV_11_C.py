@@ -116,28 +116,27 @@ class Test(ControllerTest):
                            rssi=-16)
 
         # Note: Link layer sends LeConnectComplete here.
-        await self.expect_ll(
-            ll.LeConnectComplete(source_address=controller.address,
-                                 destination_address=peer_address,
-                                 initiating_address_type=ll.AddressType.PUBLIC,
-                                 advertising_address_type=ll.AddressType.PUBLIC,
-                                 conn_interval=self.LL_initiator_connInterval,
-                                 conn_peripheral_latency=self.LL_initiator_connPeripheralLatency,
-                                 conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout),
-            ignored_pdus=[ll.LeLegacyAdvertisingPdu])
+        await self.expect_ll(ll.LeConnectComplete(source_address=controller.address,
+                                                  destination_address=peer_address,
+                                                  initiating_address_type=ll.AddressType.PUBLIC,
+                                                  advertising_address_type=ll.AddressType.PUBLIC,
+                                                  conn_interval=self.LL_initiator_connInterval,
+                                                  conn_peripheral_latency=self.LL_initiator_connPeripheralLatency,
+                                                  conn_supervision_timeout=self.LL_initiator_connSupervisionTimeout),
+                             ignored_pdus=[ll.LeLegacyAdvertisingPdu])
 
         # 11. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT in step 8.
         await self.expect_evt(
-            hci.LeEnhancedConnectionComplete(status=ErrorCode.SUCCESS,
-                                             connection_handle=connection_handle,
-                                             role=hci.Role.PERIPHERAL,
-                                             peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                             peer_address=peer_address,
-                                             connection_interval=self.LL_initiator_connInterval,
-                                             peripheral_latency=self.LL_initiator_connPeripheralLatency,
-                                             supervision_timeout=self.LL_initiator_connSupervisionTimeout,
-                                             central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+            hci.LeEnhancedConnectionCompleteV1(status=ErrorCode.SUCCESS,
+                                               connection_handle=connection_handle,
+                                               role=hci.Role.PERIPHERAL,
+                                               peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                                               peer_address=peer_address,
+                                               connection_interval=self.LL_initiator_connInterval,
+                                               peripheral_latency=self.LL_initiator_connPeripheralLatency,
+                                               supervision_timeout=self.LL_initiator_connSupervisionTimeout,
+                                               central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 
         # 12. Upper Tester receives an HCI_LE_Disconnection_Complete event from the IUT with the reason
         # parameter indicating ‘connection failed to be established’, with the connection handle parameter

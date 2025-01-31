@@ -72,15 +72,15 @@ class Test(ControllerTest):
                                  conn_supervision_timeout=0x200))
 
         await self.expect_evt(
-            hci.LeEnhancedConnectionComplete(status=ErrorCode.SUCCESS,
-                                             connection_handle=acl_connection_handle,
-                                             role=hci.Role.PERIPHERAL,
-                                             peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                             peer_address=peer_address,
-                                             connection_interval=0x200,
-                                             peripheral_latency=0x200,
-                                             supervision_timeout=0x200,
-                                             central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+            hci.LeEnhancedConnectionCompleteV1(status=ErrorCode.SUCCESS,
+                                               connection_handle=acl_connection_handle,
+                                               role=hci.Role.PERIPHERAL,
+                                               peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                                               peer_address=peer_address,
+                                               connection_interval=0x200,
+                                               peripheral_latency=0x200,
+                                               supervision_timeout=0x200,
+                                               central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 
         # 1. Upper Tester sends an HCI_LE_Set_PHY command to the IUT with the ALL_PHYS fields set to a
         # value of 0x03. Upper Tester receives an HCI_Command_Status event indicating success in

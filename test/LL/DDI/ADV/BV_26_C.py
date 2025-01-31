@@ -83,29 +83,30 @@ class Test(ControllerTest):
         # shall be set to 0x0000. The Primary_Advertising_PHY and Secondary_Advertising_PHY shall be
         # set to the values specified in Table 4.9.
         controller.send_cmd(
-            hci.LeSetExtendedAdvertisingParameters(advertising_handle=0,
-                                                   advertising_event_properties=hci.AdvertisingEventProperties(),
-                                                   primary_advertising_interval_min=self.LL_advertiser_advInterval_MIN,
-                                                   primary_advertising_interval_max=self.LL_advertiser_advInterval_MAX,
-                                                   primary_advertising_channel_map=self.LL_advertiser_Adv_Channel_Map,
-                                                   own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
-                                                   advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES,
-                                                   primary_advertising_phy=hci.PrimaryPhyType.LE_1M))
+            hci.LeSetExtendedAdvertisingParametersV1(
+                advertising_handle=0,
+                advertising_event_properties=hci.AdvertisingEventProperties(),
+                primary_advertising_interval_min=self.LL_advertiser_advInterval_MIN,
+                primary_advertising_interval_max=self.LL_advertiser_advInterval_MAX,
+                primary_advertising_channel_map=self.LL_advertiser_Adv_Channel_Map,
+                own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES,
+                primary_advertising_phy=hci.PrimaryPhyType.LE_1M))
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingParametersV1Complete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 4. The Upper Tester sends an HCI_LE_Set_Periodic_Advertising_Parameters command to the IUT
         # using all supported advertising channels and selected periodic interval.
         # Periodic_Advertising_Properties parameter shall be set to 0x0000.
         controller.send_cmd(
-            hci.LeSetPeriodicAdvertisingParameters(advertising_handle=0,
-                                                   periodic_advertising_interval_min=0x100,
-                                                   periodic_advertising_interval_max=0x100,
-                                                   include_tx_power=False))
+            hci.LeSetPeriodicAdvertisingParametersV1(advertising_handle=0,
+                                                     periodic_advertising_interval_min=0x100,
+                                                     periodic_advertising_interval_max=0x100,
+                                                     include_tx_power=False))
 
         await self.expect_evt(
-            hci.LeSetPeriodicAdvertisingParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetPeriodicAdvertisingParametersV1Complete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 5. The Upper Tester sends one or more HCI_LE_Set_Periodic_Advertising_Data commands to the
         # IUT with values according to Table 4.10 and using random octets from 1 to 254 as the payload. If

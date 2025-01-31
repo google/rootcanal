@@ -136,5 +136,5 @@ class Test(ControllerTest):
         # 5. The Upper Tester receives an HCI_LE_CIS_Established event from the IUT with a status failure.
         # The Status field has the same value as the LL_REJECT_EXT_IND PDU in step 4.
         await self.expect_evt(
-            hci.LeCisEstablished(status=ErrorCode.REMOTE_USER_TERMINATED_CONNECTION,
-                                 connection_handle=cis_connection_handle))
+            hci.LeCisEstablishedV1(status=ErrorCode.REMOTE_USER_TERMINATED_CONNECTION,
+                                   connection_handle=cis_connection_handle))

@@ -24,7 +24,7 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeAddDeviceToResolvingListTest : public ::testing::Test {
- public:
+public:
   LeAddDeviceToResolvingListTest() {
     // Reduce the size of the resolving list to simplify testing.
     properties_.le_resolving_list_size = 2;
@@ -32,7 +32,7 @@ class LeAddDeviceToResolvingListTest : public ::testing::Test {
 
   ~LeAddDeviceToResolvingListTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -40,30 +40,30 @@ class LeAddDeviceToResolvingListTest : public ::testing::Test {
 
 TEST_F(LeAddDeviceToResolvingListTest, Success) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{2}, std::array<uint8_t, 16>{2}),
+                    PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{2}, std::array<uint8_t, 16>{2}),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeAddDeviceToResolvingListTest, ListFull) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{2},
-                std::array<uint8_t, 16>{2}, std::array<uint8_t, 16>{2}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{2},
+                    std::array<uint8_t, 16>{2}, std::array<uint8_t, 16>{2}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{3},
-                std::array<uint8_t, 16>{3}, std::array<uint8_t, 16>{3}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{3},
+                    std::array<uint8_t, 16>{3}, std::array<uint8_t, 16>{3}),
             ErrorCode::MEMORY_CAPACITY_EXCEEDED);
 }
 
@@ -72,8 +72,8 @@ TEST_F(LeAddDeviceToResolvingListTest, ScanningActive) {
   controller_.LeSetScanEnable(true, false);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
@@ -82,63 +82,62 @@ TEST_F(LeAddDeviceToResolvingListTest, LegacyAdvertisingActive) {
   ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeAddDeviceToResolvingListTest, ExtendedAdvertisingActive) {
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800,
-                0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::LISTED_SCAN, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::LISTED_SCAN, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetExtendedAdvertisingEnable(
-                true, {MakeEnabledSet(0, 0, 0)}),
+  ASSERT_EQ(controller_.LeSetExtendedAdvertisingEnable(true, {MakeEnabledSet(0, 0, 0)}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeAddDeviceToResolvingListTest, PeerAddressDuplicate) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{2}, std::array<uint8_t, 16>{2}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{2}, std::array<uint8_t, 16>{2}),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeAddDeviceToResolvingListTest, PeerIrkDuplicate) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeAddDeviceToResolvingListTest, EmptyPeerIrkDuplicate) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{0}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{0}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{0}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{0}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 }
 

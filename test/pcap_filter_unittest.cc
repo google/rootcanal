@@ -25,68 +25,60 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class PcapFilterTest : public ::testing::Test {
- public:
+public:
   PcapFilterTest() = default;
   ~PcapFilterTest() override = default;
 
- protected:
+protected:
   PcapFilter pcap_filter_;
 };
 
 TEST_F(PcapFilterTest, UnchangedIfNotDeviceName) {
   // Leaves gap data entries that do not contain a name unchanged.
-  std::vector<uint8_t> input_gap_data{
-      0x2, static_cast<uint8_t>(GapDataType::FLAGS), 0x0};
-  std::vector<uint8_t> output_gap_data{input_gap_data.begin(),
-                                       input_gap_data.end()};
+  std::vector<uint8_t> input_gap_data{0x2, static_cast<uint8_t>(GapDataType::FLAGS), 0x0};
+  std::vector<uint8_t> output_gap_data{input_gap_data.begin(), input_gap_data.end()};
   pcap_filter_.FilterGapData(output_gap_data);
   ASSERT_EQ(input_gap_data, output_gap_data);
 }
 
 TEST_F(PcapFilterTest, ReplacesShortenedDeviceName) {
   // Replaces the input gap data once, with a name of equal length.
-  std::vector<uint8_t> input_gap_data{
-      0x2,
-      static_cast<uint8_t>(GapDataType::FLAGS),
-      0x0,
-      0x4,
-      static_cast<uint8_t>(GapDataType::SHORTENED_LOCAL_NAME),
-      0xa,
-      0xb,
-      0xc};
-  std::vector<uint8_t> output_gap_data_1{input_gap_data.begin(),
-                                         input_gap_data.end()};
+  std::vector<uint8_t> input_gap_data{0x2,
+                                      static_cast<uint8_t>(GapDataType::FLAGS),
+                                      0x0,
+                                      0x4,
+                                      static_cast<uint8_t>(GapDataType::SHORTENED_LOCAL_NAME),
+                                      0xa,
+                                      0xb,
+                                      0xc};
+  std::vector<uint8_t> output_gap_data_1{input_gap_data.begin(), input_gap_data.end()};
   pcap_filter_.FilterGapData(output_gap_data_1);
   ASSERT_EQ(input_gap_data.size(), output_gap_data_1.size());
   ASSERT_NE(input_gap_data, output_gap_data_1);
 
   // Replaces the input gap data a second time with the same name.
-  std::vector<uint8_t> output_gap_data_2{input_gap_data.begin(),
-                                         input_gap_data.end()};
+  std::vector<uint8_t> output_gap_data_2{input_gap_data.begin(), input_gap_data.end()};
   pcap_filter_.FilterGapData(output_gap_data_2);
   ASSERT_EQ(output_gap_data_1, output_gap_data_2);
 }
 
 TEST_F(PcapFilterTest, ReplacesCompleteDeviceName) {
   // Replaces the input gap data once, with a name of equal length.
-  std::vector<uint8_t> input_gap_data{
-      0x2,
-      static_cast<uint8_t>(GapDataType::FLAGS),
-      0x0,
-      0x4,
-      static_cast<uint8_t>(GapDataType::COMPLETE_LOCAL_NAME),
-      0xa,
-      0xb,
-      0xc};
-  std::vector<uint8_t> output_gap_data_1{input_gap_data.begin(),
-                                         input_gap_data.end()};
+  std::vector<uint8_t> input_gap_data{0x2,
+                                      static_cast<uint8_t>(GapDataType::FLAGS),
+                                      0x0,
+                                      0x4,
+                                      static_cast<uint8_t>(GapDataType::COMPLETE_LOCAL_NAME),
+                                      0xa,
+                                      0xb,
+                                      0xc};
+  std::vector<uint8_t> output_gap_data_1{input_gap_data.begin(), input_gap_data.end()};
   pcap_filter_.FilterGapData(output_gap_data_1);
   ASSERT_EQ(input_gap_data.size(), output_gap_data_1.size());
   ASSERT_NE(input_gap_data, output_gap_data_1);
 
   // Replaces the input gap data a second time with the same name.
-  std::vector<uint8_t> output_gap_data_2{input_gap_data.begin(),
-                                         input_gap_data.end()};
+  std::vector<uint8_t> output_gap_data_2{input_gap_data.begin(), input_gap_data.end()};
   pcap_filter_.FilterGapData(output_gap_data_2);
   ASSERT_EQ(output_gap_data_1, output_gap_data_2);
 }

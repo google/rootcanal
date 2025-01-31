@@ -24,11 +24,11 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeSetRandomAddressTest : public ::testing::Test {
- public:
+public:
   LeSetRandomAddressTest() = default;
   ~LeSetRandomAddressTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -40,26 +40,23 @@ TEST_F(LeSetRandomAddressTest, Success) {
 
 TEST_F(LeSetRandomAddressTest, ScanningActive) {
   controller_.LeSetScanEnable(true, false);
-  ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}),
-            ErrorCode::COMMAND_DISALLOWED);
+  ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeSetRandomAddressTest, LegacyAdvertisingActive) {
   ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}),
-            ErrorCode::COMMAND_DISALLOWED);
+  ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeSetRandomAddressTest, ExtendedAdvertisingActive) {
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800,
-                0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::LISTED_SCAN, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::LISTED_SCAN, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetExtendedAdvertisingEnable(
-                true, {MakeEnabledSet(0, 0, 0)}),
+  ASSERT_EQ(controller_.LeSetExtendedAdvertisingEnable(true, {MakeEnabledSet(0, 0, 0)}),
             ErrorCode::SUCCESS);
 
   // The Random Address is not used for extended advertising,

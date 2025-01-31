@@ -39,8 +39,7 @@ const Address Address::kEmpty{0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 // Address cannot initialize member variables as it is a POD type
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-constexpr Address::Address(std::array<uint8_t, kLength> const& address)
-    : address(address) {}
+constexpr Address::Address(std::array<uint8_t, kLength> const& address) : address(address) {}
 
 Address::Address(const uint8_t (&address)[kLength]) {
   std::copy(address, address + kLength, this->address.begin());
@@ -56,9 +55,8 @@ bool Address::Parse(pdl::packet::slice& input, Address* output) {
   }
 
   std::array<uint8_t, kLength> address{
-      input.read_le<uint8_t>(), input.read_le<uint8_t>(),
-      input.read_le<uint8_t>(), input.read_le<uint8_t>(),
-      input.read_le<uint8_t>(), input.read_le<uint8_t>(),
+          input.read_le<uint8_t>(), input.read_le<uint8_t>(), input.read_le<uint8_t>(),
+          input.read_le<uint8_t>(), input.read_le<uint8_t>(), input.read_le<uint8_t>(),
   };
   *output = Address(address);
   return true;
@@ -67,8 +65,7 @@ bool Address::Parse(pdl::packet::slice& input, Address* output) {
 std::string Address::ToString() const {
   std::stringstream ss;
   for (auto it = address.rbegin(); it != address.rend(); it++) {
-    ss << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
-       << +*it;
+    ss << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << +*it;
     if (std::next(it) != address.rend()) {
       ss << ':';
     }

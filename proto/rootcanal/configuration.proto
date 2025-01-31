@@ -24,6 +24,8 @@ enum ControllerPreset {
   LAIRD_BL654 = 1;
   // Official PTS dongle, CSR rck.
   CSR_RCK_PTS_DONGLE = 2;
+  // Official PTS dongle, Intel BE200.
+  INTEL_BE200 = 3;
 }
 
 message ControllerFeatures {

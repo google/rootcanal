@@ -41,7 +41,7 @@ using ReadCallback = std::function<void(AsyncDataChannel*)>;
 // data. Async Sockets are usually non-blocking posix/win sockets, but could be
 // other types of datachannels (gRPC, qemu pipe)
 class AsyncDataChannel {
- public:
+public:
   virtual ~AsyncDataChannel() = default;
 
   // Receive data in the given buffer. Properly handling EINTR where
@@ -84,8 +84,7 @@ class AsyncDataChannel {
   // not return EAGAIN. Returns false if registration of the watcher failed.
   //
   // Only one callback can be registered per socket.
-  virtual bool WatchForNonBlockingRead(
-      const ReadCallback& on_read_ready_callback) = 0;
+  virtual bool WatchForNonBlockingRead(const ReadCallback& on_read_ready_callback) = 0;
 
   // Stops watching this socket, you will not receive any callbacks any longer.
   virtual void StopWatching() = 0;
