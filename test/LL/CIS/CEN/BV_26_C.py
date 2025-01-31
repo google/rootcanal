@@ -146,22 +146,22 @@ class Test(ControllerTest):
         # CIS packet sent by the Lower Tester. The Connection_Handle parameter is set to the value
         # provided in the HCI_LE_Create_CIS command.
         await self.expect_evt(
-            hci.LeCisEstablished(status=ErrorCode.SUCCESS,
-                                 connection_handle=cis_connection_handle,
-                                 cig_sync_delay=cis_ind.cig_sync_delay,
-                                 cis_sync_delay=cis_ind.cis_sync_delay,
-                                 transport_latency_c_to_p=self.Any,
-                                 transport_latency_p_to_c=self.Any,
-                                 phy_c_to_p=hci.SecondaryPhyType.LE_1M,
-                                 phy_p_to_c=hci.SecondaryPhyType.LE_1M,
-                                 nse=cis_req.nse,
-                                 bn_c_to_p=cis_req.bn_c_to_p,
-                                 bn_p_to_c=cis_req.bn_p_to_c,
-                                 ft_c_to_p=cis_req.ft_c_to_p,
-                                 ft_p_to_c=cis_req.ft_p_to_c,
-                                 max_pdu_c_to_p=cis_req.max_pdu_c_to_p,
-                                 max_pdu_p_to_c=cis_req.max_pdu_p_to_c,
-                                 iso_interval=cis_req.iso_interval))
+            hci.LeCisEstablishedV1(status=ErrorCode.SUCCESS,
+                                   connection_handle=cis_connection_handle,
+                                   cig_sync_delay=cis_ind.cig_sync_delay,
+                                   cis_sync_delay=cis_ind.cis_sync_delay,
+                                   transport_latency_c_to_p=self.Any,
+                                   transport_latency_p_to_c=self.Any,
+                                   phy_c_to_p=hci.SecondaryPhyType.LE_1M,
+                                   phy_p_to_c=hci.SecondaryPhyType.LE_1M,
+                                   nse=cis_req.nse,
+                                   bn_c_to_p=cis_req.bn_c_to_p,
+                                   bn_p_to_c=cis_req.bn_p_to_c,
+                                   ft_c_to_p=cis_req.ft_c_to_p,
+                                   ft_p_to_c=cis_req.ft_p_to_c,
+                                   max_pdu_c_to_p=cis_req.max_pdu_c_to_p,
+                                   max_pdu_p_to_c=cis_req.max_pdu_p_to_c,
+                                   iso_interval=cis_req.iso_interval))
 
         # 7. The Upper Tester sends an HCI_LE_Setup_ISO_Data_Path command and receives a success
         # response from the IUT.
@@ -318,22 +318,22 @@ class Test(ControllerTest):
         # 23. The IUT sends an HCI_LE_CIS_Established event to the Upper Tester. The Connection_Handle
         # parameter is set to the value provided in step 16.
         await self.expect_evt(
-            hci.LeCisEstablished(status=ErrorCode.SUCCESS,
-                                 connection_handle=cis_connection_handle,
-                                 cig_sync_delay=cis_ind.cig_sync_delay,
-                                 cis_sync_delay=cis_ind.cis_sync_delay,
-                                 transport_latency_c_to_p=self.Any,
-                                 transport_latency_p_to_c=self.Any,
-                                 phy_c_to_p=hci.SecondaryPhyType.LE_1M,
-                                 phy_p_to_c=hci.SecondaryPhyType.LE_1M,
-                                 nse=cis_req.nse,
-                                 bn_c_to_p=cis_req.bn_c_to_p,
-                                 bn_p_to_c=cis_req.bn_p_to_c,
-                                 ft_c_to_p=cis_req.ft_c_to_p,
-                                 ft_p_to_c=cis_req.ft_p_to_c,
-                                 max_pdu_c_to_p=cis_req.max_pdu_c_to_p,
-                                 max_pdu_p_to_c=cis_req.max_pdu_p_to_c,
-                                 iso_interval=cis_req.iso_interval))
+            hci.LeCisEstablishedV1(status=ErrorCode.SUCCESS,
+                                   connection_handle=cis_connection_handle,
+                                   cig_sync_delay=cis_ind.cig_sync_delay,
+                                   cis_sync_delay=cis_ind.cis_sync_delay,
+                                   transport_latency_c_to_p=self.Any,
+                                   transport_latency_p_to_c=self.Any,
+                                   phy_c_to_p=hci.SecondaryPhyType.LE_1M,
+                                   phy_p_to_c=hci.SecondaryPhyType.LE_1M,
+                                   nse=cis_req.nse,
+                                   bn_c_to_p=cis_req.bn_c_to_p,
+                                   bn_p_to_c=cis_req.bn_p_to_c,
+                                   ft_c_to_p=cis_req.ft_c_to_p,
+                                   ft_p_to_c=cis_req.ft_p_to_c,
+                                   max_pdu_c_to_p=cis_req.max_pdu_c_to_p,
+                                   max_pdu_p_to_c=cis_req.max_pdu_p_to_c,
+                                   iso_interval=cis_req.iso_interval))
 
         # 24. The Upper Tester sends an HCI_LE_Setup_ISO_Data_Path command to the IUT with
         # Connection_Handle set to the value provided in step 16 and Data_Path_Direction set to Output.

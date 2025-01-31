@@ -14,8 +14,8 @@
 
 use std::env;
 use std::fs::File;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 
 fn main() {
     install_generated_module(
@@ -53,35 +53,20 @@ fn install_generated_module(module_name: &str, prebuilt_var: &str, pdl_name: &Pa
     }
 }
 
-fn generate_module(in_file: &PathBuf) {
+fn generate_module(in_file: &Path) {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let out_file =
+    let mut out_file =
         File::create(out_dir.join(in_file.file_name().unwrap()).with_extension("rs")).unwrap();
 
-    // Find the pdl tool. Expecting it at CARGO_HOME/bin
-    let pdl = match env::var("CARGO_HOME") {
-        Ok(dir) => PathBuf::from(dir).join("bin").join("pdlc"),
-        Err(_) => PathBuf::from("pdlc"),
-    };
-
-    if !Path::new(pdl.as_os_str()).exists() {
-        panic!("pdl not found in the current environment: {:?}", pdl.as_os_str().to_str().unwrap());
-    }
-
     println!("cargo:rerun-if-changed={}", in_file.display());
-    let output = Command::new(pdl.as_os_str().to_str().unwrap())
-        .arg("--output-format")
-        .arg("rust")
-        .arg(in_file)
-        .stdout(Stdio::from(out_file))
-        .output()
-        .unwrap();
 
-    println!(
-        "Status: {}, stderr: {}",
-        output.status,
-        String::from_utf8_lossy(output.stderr.as_slice())
-    );
-
-    assert!(output.status.success());
+    let mut sources = pdl_compiler::ast::SourceDatabase::new();
+    let parsed_file = pdl_compiler::parser::parse_file(
+        &mut sources,
+        in_file.to_str().expect("Filename is not UTF-8"),
+    )
+    .expect("PDL parse failed");
+    let analyzed_file = pdl_compiler::analyzer::analyze(&parsed_file).expect("PDL analysis failed");
+    let rust_source = pdl_compiler::backends::rust_legacy::generate(&sources, &analyzed_file);
+    out_file.write_all(rust_source.as_bytes()).expect("Could not write to output file");
 }

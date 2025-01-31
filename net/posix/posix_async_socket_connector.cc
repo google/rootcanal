@@ -30,17 +30,13 @@
 namespace android {
 namespace net {
 
-PosixAsyncSocketConnector::PosixAsyncSocketConnector(AsyncManager* am)
-    : am_(am) {}
+PosixAsyncSocketConnector::PosixAsyncSocketConnector(AsyncManager* am) : am_(am) {}
 
-std::shared_ptr<AsyncDataChannel>
-PosixAsyncSocketConnector::ConnectToRemoteServer(
-    const std::string& server, int port,
-    const std::chrono::milliseconds timeout) {
+std::shared_ptr<AsyncDataChannel> PosixAsyncSocketConnector::ConnectToRemoteServer(
+        const std::string& server, int port, const std::chrono::milliseconds timeout) {
   INFO("Connecting to {}:{} in {} ms", server, port, timeout.count());
   int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-  std::shared_ptr<PosixAsyncSocket> pas =
-      std::make_shared<PosixAsyncSocket>(socket_fd, am_);
+  std::shared_ptr<PosixAsyncSocket> pas = std::make_shared<PosixAsyncSocket>(socket_fd, am_);
 
   if (socket_fd < 1) {
     INFO("socket() call failed: {}", strerror(errno));
@@ -61,32 +57,28 @@ PosixAsyncSocketConnector::ConnectToRemoteServer(
   serv_addr.sin_addr.s_addr = inet_addr(inet_ntoa(*addr_list[0]));
   serv_addr.sin_port = htons(port);
 
-  int result =
-      connect(socket_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+  int result = connect(socket_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 
-  if (result != 0 && errno != EWOULDBLOCK && errno != EAGAIN &&
-      errno != EINPROGRESS) {
-    INFO("Failed to connect to {}:{}, error: {}", server, port,
-         strerror(errno));
+  if (result != 0 && errno != EWOULDBLOCK && errno != EAGAIN && errno != EINPROGRESS) {
+    INFO("Failed to connect to {}:{}, error: {}", server, port, strerror(errno));
     pas->Close();
     return pas;
   }
 
   // wait for the connection.
   struct pollfd fds[] = {
-      {
-          .fd = socket_fd,
-          .events = POLLIN | POLLOUT | POLLHUP,
-          .revents = 0,
-      },
+          {
+                  .fd = socket_fd,
+                  .events = POLLIN | POLLOUT | POLLHUP,
+                  .revents = 0,
+          },
   };
 
   int numFdsReady = 0;
   REPEAT_UNTIL_NO_INTR(numFdsReady = ::poll(fds, 1, timeout.count()));
 
   if (numFdsReady <= 0) {
-    INFO("Failed to connect to {}:{}, error: {}", server, port,
-         strerror(errno));
+    INFO("Failed to connect to {}:{}, error: {}", server, port, strerror(errno));
     pas->Close();
     return pas;
   }
@@ -97,17 +89,14 @@ PosixAsyncSocketConnector::ConnectToRemoteServer(
   socklen_t sslen = sizeof(ss);
 
   if (getpeername(socket_fd, (struct sockaddr*)&ss, &sslen) < 0) {
-    INFO("Failed to connect to {}:{}, error: {}", server, port,
-         strerror(errno));
+    INFO("Failed to connect to {}:{}, error: {}", server, port, strerror(errno));
     pas->Close();
     return pas;
   }
 
   int err = 0;
   socklen_t optLen = sizeof(err);
-  if (getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&err),
-                 &optLen) ||
-      err) {
+  if (getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&err), &optLen) || err) {
     // Either getsockopt failed or there was an error associated
     // with the socket. The connection did not succeed.
     INFO("Failed to connect to {}:{}, error:  {}", server, port, strerror(err));

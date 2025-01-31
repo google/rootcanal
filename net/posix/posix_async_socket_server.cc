@@ -30,8 +30,7 @@ namespace android {
 namespace net {
 class AsyncDataChannel;
 
-PosixAsyncSocketServer::PosixAsyncSocketServer(int port, AsyncManager* am)
-    : port_(port), am_(am) {
+PosixAsyncSocketServer::PosixAsyncSocketServer(int port, AsyncManager* am) : port_(port), am_(am) {
   int listen_fd = 0;
   struct sockaddr_in listen_address {};
   socklen_t sockaddr_in_size = sizeof(struct sockaddr_in);
@@ -46,8 +45,7 @@ PosixAsyncSocketServer::PosixAsyncSocketServer(int port, AsyncManager* am)
   }
 
   int enable = 1;
-  if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) <
-      0) {
+  if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
     ERROR("setsockopt(SO_REUSEADDR) failed: {}", strerror(errno));
   }
 
@@ -55,10 +53,8 @@ PosixAsyncSocketServer::PosixAsyncSocketServer(int port, AsyncManager* am)
   listen_address.sin_port = htons(port_);
   listen_address.sin_addr.s_addr = htonl(INADDR_ANY);
 
-  if (bind(listen_fd, reinterpret_cast<sockaddr*>(&listen_address),
-           sockaddr_in_size) < 0) {
-    INFO("Error binding test channel listener socket to port: {}, {}", port,
-         strerror(errno));
+  if (bind(listen_fd, reinterpret_cast<sockaddr*>(&listen_address), sockaddr_in_size) < 0) {
+    INFO("Error binding test channel listener socket to port: {}, {}", port, strerror(errno));
     close(listen_fd);
     return;
   }
@@ -86,7 +82,7 @@ bool PosixAsyncSocketServer::StartListening() {
   }
 
   server_socket_->WatchForNonBlockingRead(
-      [this](AsyncDataChannel* /* socket */) { AcceptSocket(); });
+          [this](AsyncDataChannel* /* socket */) { AcceptSocket(); });
   return true;
 }
 
@@ -96,17 +92,14 @@ void PosixAsyncSocketServer::Close() {
   }
 }
 
-bool PosixAsyncSocketServer::Connected() {
-  return server_socket_ && server_socket_->Connected();
-}
+bool PosixAsyncSocketServer::Connected() { return server_socket_ && server_socket_->Connected(); }
 
 void PosixAsyncSocketServer::AcceptSocket() {
   int accept_fd = 0;
   REPEAT_UNTIL_NO_INTR(accept_fd = accept(server_socket_->fd(), NULL, NULL));
 
   if (accept_fd < 0) {
-    INFO("Error accepting test channel connection errno={} ({}).", errno,
-         strerror(errno));
+    INFO("Error accepting test channel connection errno={} ({}).", errno, strerror(errno));
     return;
   }
 

@@ -55,6 +55,7 @@ pub trait Context {
         SendAcceptedLmpPacketFuture(self, opcode)
     }
 
+    #[allow(dead_code)]
     fn get_private_key(&self) -> Option<PrivateKey> {
         None
     }
@@ -65,7 +66,7 @@ pub trait Context {
 /// Future for Context::receive_hci_command and Context::receive_lmp_packet
 pub struct ReceiveFuture<'a, C: ?Sized, P>(fn(&'a C) -> Poll<P>, &'a C);
 
-impl<'a, C, O> Future for ReceiveFuture<'a, C, O>
+impl<C, O> Future for ReceiveFuture<'_, C, O>
 where
     C: Context,
 {
@@ -79,7 +80,7 @@ where
 /// Future for Context::receive_hci_command and Context::receive_lmp_packet
 pub struct SendAcceptedLmpPacketFuture<'a, C: ?Sized>(&'a C, lmp::Opcode);
 
-impl<'a, C> Future for SendAcceptedLmpPacketFuture<'a, C>
+impl<C> Future for SendAcceptedLmpPacketFuture<'_, C>
 where
     C: Context,
 {

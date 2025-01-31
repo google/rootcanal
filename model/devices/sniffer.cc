@@ -28,8 +28,7 @@
 
 namespace rootcanal {
 
-bool Sniffer::registered_ =
-    DeviceBoutique::Register("sniffer", &Sniffer::Create);
+bool Sniffer::registered_ = DeviceBoutique::Register("sniffer", &Sniffer::Create);
 
 Sniffer::Sniffer(const std::vector<std::string>& args) {
   if (args.size() >= 2) {
@@ -37,8 +36,8 @@ Sniffer::Sniffer(const std::vector<std::string>& args) {
   }
 }
 
-void Sniffer::ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView packet,
-                                     Phy::Type /*type*/, int8_t /*rssi*/) {
+void Sniffer::ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView packet, Phy::Type /*type*/,
+                                     int8_t /*rssi*/) {
   Address source = packet.GetSourceAddress();
   Address dest = packet.GetDestinationAddress();
   model::packets::PacketType packet_type = packet.GetType();
@@ -49,8 +48,7 @@ void Sniffer::ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView packet,
     return;
   }
 
-  INFO("{} {} -> {} (Type {})",
-       (match_source ? (match_dest ? "<->" : "<--") : "-->"), source, dest,
+  INFO("{} {} -> {} (Type {})", (match_source ? (match_dest ? "<->" : "<--") : "-->"), source, dest,
        model::packets::PacketTypeText(packet_type));
 }
 

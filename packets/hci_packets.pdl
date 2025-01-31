@@ -236,14 +236,14 @@ enum OpCode : 16 {
   // TESTING
   READ_LOOPBACK_MODE = 0x1801,
   WRITE_LOOPBACK_MODE = 0x1802,
-  ENABLE_DEVICE_UNDER_TEST_MODE = 0x1803,
+  ENABLE_IMPLEMENTATION_UNDER_TEST_MODE = 0x1803,
   WRITE_SIMPLE_PAIRING_DEBUG_MODE = 0x1804,
   WRITE_SECURE_CONNECTIONS_TEST_MODE = 0x180A,
 
   // LE_CONTROLLER
   LE_SET_EVENT_MASK = 0x2001,
   LE_READ_BUFFER_SIZE_V1 = 0x2002,
-  LE_READ_LOCAL_SUPPORTED_FEATURES = 0x2003,
+  LE_READ_LOCAL_SUPPORTED_FEATURES_PAGE_0 = 0x2003,
   LE_SET_RANDOM_ADDRESS = 0x2005,
   LE_SET_ADVERTISING_PARAMETERS = 0x2006,
   LE_READ_ADVERTISING_PHYSICAL_CHANNEL_TX_POWER = 0x2007,
@@ -261,7 +261,7 @@ enum OpCode : 16 {
   LE_CONNECTION_UPDATE = 0x2013,
   LE_SET_HOST_CHANNEL_CLASSIFICATION = 0x2014,
   LE_READ_CHANNEL_MAP = 0x2015,
-  LE_READ_REMOTE_FEATURES = 0x2016,
+  LE_READ_REMOTE_FEATURES_PAGE_0 = 0x2016,
   LE_ENCRYPT = 0x2017,
   LE_RAND = 0x2018,
   LE_START_ENCRYPTION = 0x2019,
@@ -293,7 +293,7 @@ enum OpCode : 16 {
   LE_RECEIVER_TEST_V2 = 0x2033,
   LE_TRANSMITTER_TEST_V2 = 0x2034,
   LE_SET_ADVERTISING_SET_RANDOM_ADDRESS = 0x2035,
-  LE_SET_EXTENDED_ADVERTISING_PARAMETERS = 0x2036,
+  LE_SET_EXTENDED_ADVERTISING_PARAMETERS_V1 = 0x2036,
   LE_SET_EXTENDED_ADVERTISING_DATA = 0x2037,
   LE_SET_EXTENDED_SCAN_RESPONSE_DATA = 0x2038,
   LE_SET_EXTENDED_ADVERTISING_ENABLE = 0x2039,
@@ -301,12 +301,12 @@ enum OpCode : 16 {
   LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS = 0x203B,
   LE_REMOVE_ADVERTISING_SET = 0x203C,
   LE_CLEAR_ADVERTISING_SETS = 0x203D,
-  LE_SET_PERIODIC_ADVERTISING_PARAMETERS = 0x203E,
+  LE_SET_PERIODIC_ADVERTISING_PARAMETERS_V1 = 0x203E,
   LE_SET_PERIODIC_ADVERTISING_DATA = 0x203F,
   LE_SET_PERIODIC_ADVERTISING_ENABLE = 0x2040,
   LE_SET_EXTENDED_SCAN_PARAMETERS = 0x2041,
   LE_SET_EXTENDED_SCAN_ENABLE = 0x2042,
-  LE_EXTENDED_CREATE_CONNECTION = 0x2043,
+  LE_EXTENDED_CREATE_CONNECTION_V1 = 0x2043,
   LE_PERIODIC_ADVERTISING_CREATE_SYNC = 0x2044,
   LE_PERIODIC_ADVERTISING_CREATE_SYNC_CANCEL = 0x2045,
   LE_PERIODIC_ADVERTISING_TERMINATE_SYNC = 0x2046,
@@ -355,7 +355,7 @@ enum OpCode : 16 {
   LE_ISO_RECEIVE_TEST = 0x2071,
   LE_ISO_READ_TEST_COUNTERS = 0x2072,
   LE_ISO_TEST_END = 0x2073,
-  LE_SET_HOST_FEATURE = 0x2074,
+  LE_SET_HOST_FEATURE_V1 = 0x2074,
   LE_READ_ISO_LINK_QUALITY = 0x2075,
   LE_ENHANCED_READ_TRANSMIT_POWER_LEVEL = 0x2076,
   LE_READ_REMOTE_TRANSMIT_POWER_LEVEL = 0x2077,
@@ -366,10 +366,41 @@ enum OpCode : 16 {
   LE_SET_DATA_RELATED_ADDRESS_CHANGES = 0x207C,
   LE_SET_DEFAULT_SUBRATE = 0x207D,
   LE_SUBRATE_REQUEST = 0x207E,
+  LE_SET_EXTENDED_ADVERTISING_PARAMETERS_V2 = 0x207F,
+  LE_SET_DECISION_DATA = 0x2080,
+  LE_SET_DECISION_INSTRUCTIONS = 0x2081,
+  LE_SET_PERIODIC_ADVERTISING_SUBEVENT_DATA = 0x2082,
+  LE_SET_PERIODIC_ADVERTISING_RESPONSE_DATA = 0x2083,
+  LE_SET_PERIODIC_SYNC_SUBEVENT = 0x2084,
+  LE_EXTENDED_CREATE_CONNECTION_V2 = 0x2085,
+  LE_SET_PERIODIC_ADVERTISING_PARAMETERS_V2 = 0x2086,
+  LE_READ_ALL_LOCAL_SUPPORTED_FEATURES = 0x2087,
+  LE_READ_ALL_REMOTE_FEATURES = 0x2088,
+  LE_CS_READ_LOCAL_SUPPORTED_CAPABILITIES = 0x2089,
+  LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES = 0x208A,
+  LE_CS_WRITE_CACHED_REMOTE_SUPPORTED_CAPABILITIES = 0x208B,
+  LE_CS_SECURITY_ENABLE = 0x208C,
+  LE_CS_SET_DEFAULT_SETTINGS = 0x208D,
+  LE_CS_READ_REMOTE_FAE_TABLE = 0x208E,
+  LE_CS_WRITE_CACHED_REMOTE_FAE_TABLE = 0x208F,
+  LE_CS_CREATE_CONFIG = 0x2090,
+  LE_CS_REMOVE_CONFIG = 0x0291,
+  LE_CS_SET_CHANNEL_CLASSIFICATION = 0x2092,
+  LE_CS_SET_PROCEDURE_PARAMETERS = 0x2093,
+  LE_CS_PROCEDURE_ENABLE = 0x2094,
+  LE_CS_TEST = 0x2095,
+  LE_CS_TEST_END = 0x2096,
+  LE_ADD_DEVICE_TO_MONITORED_ADVERTISERS_LIST = 0x2098,
+  LE_REMOVE_DEVICE_FROM_MONITORED_ADVERTISERS_LIST = 0x2099,
+  LE_CLEAR_MONITORED_ADVERTISERS_LIST = 0x209A,
+  LE_READ_MONITORED_ADVERTISERS_LIST_SIZE = 0x209B,
+  LE_ENABLE_MONITORING_ADVERTISERS = 0x209C,
+  LE_FRAME_SPACE_UPDATE = 0x209D,
 
   // VENDOR_SPECIFIC
   // MSFT_OPCODE_xxxx below is needed for the tests.
   MSFT_OPCODE_INTEL = 0xFC1E,
+  INTEL_DDC_CONFIG_WRITE = 0xFC8B,
   LE_GET_VENDOR_CAPABILITIES = 0xFD53,
   LE_BATCH_SCAN = 0xFD56,
   LE_APCF = 0xFD57,
@@ -466,6 +497,8 @@ enum OpCodeIndex : 16 {
   READ_CURRENT_IAC_LAP = 113,
   WRITE_CURRENT_IAC_LAP = 114,
   SET_AFH_HOST_CHANNEL_CLASSIFICATION = 121,
+  LE_CS_READ_REMOTE_FAE_TABLE = 122,
+  LE_CS_WRITE_CACHED_REMOTE_FAE_TABLE = 123,
   READ_INQUIRY_SCAN_TYPE = 124,
   WRITE_INQUIRY_SCAN_TYPE = 125,
   READ_INQUIRY_MODE = 126,
@@ -487,10 +520,12 @@ enum OpCodeIndex : 16 {
   READ_CLOCK = 157,
   READ_LOOPBACK_MODE = 160,
   WRITE_LOOPBACK_MODE = 161,
-  ENABLE_DEVICE_UNDER_TEST_MODE = 162,
+  ENABLE_IMPLEMENTATION_UNDER_TEST_MODE = 162,
   SETUP_SYNCHRONOUS_CONNECTION = 163,
   ACCEPT_SYNCHRONOUS_CONNECTION = 164,
   REJECT_SYNCHRONOUS_CONNECTION = 165,
+  LE_CS_CREATE_CONFIG = 166,
+  LE_CS_REMOVE_CONFIG = 167,
   READ_EXTENDED_INQUIRY_RESPONSE = 170,
   WRITE_EXTENDED_INQUIRY_RESPONSE = 171,
   REFRESH_ENCRYPTION_KEY = 172,
@@ -514,16 +549,23 @@ enum OpCodeIndex : 16 {
   SEND_KEYPRESS_NOTIFICATION = 202,
   IO_CAPABILITY_REQUEST_NEGATIVE_REPLY = 203,
   READ_ENCRYPTION_KEY_SIZE = 204,
+  LE_CS_READ_LOCAL_SUPPORTED_CAPABILITIES = 205,
+  LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES = 206,
+  LE_CS_WRITE_CACHED_REMOTE_SUPPORTED_CAPABILITIES = 207,
   SET_EVENT_MASK_PAGE_2 = 222,
   READ_FLOW_CONTROL_MODE = 230,
   WRITE_FLOW_CONTROL_MODE = 231,
   READ_DATA_BLOCK_SIZE = 232,
+  LE_CS_TEST = 233,
+  LE_CS_TEST_END = 234,
   READ_ENHANCED_TRANSMIT_POWER_LEVEL = 240,
+  LE_CS_SECURITY_ENABLE = 241,
   READ_LE_HOST_SUPPORT = 245,
   WRITE_LE_HOST_SUPPORT = 246,
+  LE_CS_SET_DEFAULT_SETTINGS = 247,
   LE_SET_EVENT_MASK = 250,
   LE_READ_BUFFER_SIZE_V1 = 251,
-  LE_READ_LOCAL_SUPPORTED_FEATURES = 252,
+  LE_READ_LOCAL_SUPPORTED_FEATURES_PAGE_0 = 252,
   LE_SET_RANDOM_ADDRESS = 254,
   LE_SET_ADVERTISING_PARAMETERS = 255,
   LE_READ_ADVERTISING_PHYSICAL_CHANNEL_TX_POWER = 256,
@@ -541,7 +583,7 @@ enum OpCodeIndex : 16 {
   LE_CONNECTION_UPDATE = 272,
   LE_SET_HOST_CHANNEL_CLASSIFICATION = 273,
   LE_READ_CHANNEL_MAP = 274,
-  LE_READ_REMOTE_FEATURES = 275,
+  LE_READ_REMOTE_FEATURES_PAGE_0 = 275,
   LE_ENCRYPT = 276,
   LE_RAND = 277,
   LE_START_ENCRYPTION = 280,
@@ -551,6 +593,10 @@ enum OpCodeIndex : 16 {
   LE_RECEIVER_TEST_V1 = 284,
   LE_TRANSMITTER_TEST_V1 = 285,
   LE_TEST_END = 286,
+  LE_ENABLE_MONITORING_ADVERTISERS = 287,
+  LE_CS_SET_CHANNEL_CLASSIFICATION = 290,
+  LE_CS_SET_PROCEDURE_PARAMETERS = 291,
+  LE_CS_PROCEDURE_ENABLE = 292,
   ENHANCED_SETUP_SYNCHRONOUS_CONNECTION = 293,
   ENHANCED_ACCEPT_SYNCHRONOUS_CONNECTION = 294,
   READ_LOCAL_SUPPORTED_CODECS_V1 = 295,
@@ -606,7 +652,7 @@ enum OpCodeIndex : 16 {
   LE_RECEIVER_TEST_V2 = 357,
   LE_TRANSMITTER_TEST_V2 = 360,
   LE_SET_ADVERTISING_SET_RANDOM_ADDRESS = 361,
-  LE_SET_EXTENDED_ADVERTISING_PARAMETERS = 362,
+  LE_SET_EXTENDED_ADVERTISING_PARAMETERS_V1 = 362,
   LE_SET_EXTENDED_ADVERTISING_DATA = 363,
   LE_SET_EXTENDED_SCAN_RESPONSE_DATA = 364,
   LE_SET_EXTENDED_ADVERTISING_ENABLE = 365,
@@ -614,12 +660,12 @@ enum OpCodeIndex : 16 {
   LE_READ_NUMBER_OF_SUPPORTED_ADVERTISING_SETS = 367,
   LE_REMOVE_ADVERTISING_SET = 370,
   LE_CLEAR_ADVERTISING_SETS = 371,
-  LE_SET_PERIODIC_ADVERTISING_PARAMETERS = 372,
+  LE_SET_PERIODIC_ADVERTISING_PARAMETERS_V1 = 372,
   LE_SET_PERIODIC_ADVERTISING_DATA = 373,
   LE_SET_PERIODIC_ADVERTISING_ENABLE = 374,
   LE_SET_EXTENDED_SCAN_PARAMETERS = 375,
   LE_SET_EXTENDED_SCAN_ENABLE = 376,
-  LE_EXTENDED_CREATE_CONNECTION = 377,
+  LE_EXTENDED_CREATE_CONNECTION_V1 = 377,
   LE_PERIODIC_ADVERTISING_CREATE_SYNC = 380,
   LE_PERIODIC_ADVERTISING_CREATE_SYNC_CANCEL = 381,
   LE_PERIODIC_ADVERTISING_TERMINATE_SYNC = 382,
@@ -669,7 +715,7 @@ enum OpCodeIndex : 16 {
   LE_ISO_RECEIVE_TEST = 436,
   LE_ISO_READ_TEST_COUNTERS = 437,
   LE_ISO_TEST_END = 440,
-  LE_SET_HOST_FEATURE = 441,
+  LE_SET_HOST_FEATURE_V1 = 441,
   LE_READ_ISO_LINK_QUALITY = 442,
   LE_ENHANCED_READ_TRANSMIT_POWER_LEVEL = 443,
   LE_READ_REMOTE_TRANSMIT_POWER_LEVEL = 444,
@@ -686,6 +732,22 @@ enum OpCodeIndex : 16 {
   SET_MIN_ENCRYPTION_KEY_SIZE = 457,
   LE_SET_DEFAULT_SUBRATE = 460,
   LE_SUBRATE_REQUEST = 461,
+  LE_SET_EXTENDED_ADVERTISING_PARAMETERS_V2 = 462,
+  LE_SET_DECISION_DATA = 463,
+  LE_SET_DECISION_INSTRUCTIONS = 464,
+  LE_SET_PERIODIC_ADVERTISING_SUBEVENT_DATA = 465,
+  LE_SET_PERIODIC_ADVERTISING_RESPONSE_DATA = 466,
+  LE_SET_PERIODIC_SYNC_SUBEVENT = 467,
+  LE_EXTENDED_CREATE_CONNECTION_V2 = 470,
+  LE_SET_PERIODIC_ADVERTISING_PARAMETERS_V2 = 471,
+  LE_READ_ALL_LOCAL_SUPPORTED_FEATURES = 472,
+  LE_READ_ALL_REMOTE_FEATURES = 473,
+  LE_SET_HOST_FEATURE_V2 = 474,
+  LE_ADD_DEVICE_TO_MONITORED_ADVERTISERS_LIST = 475,
+  LE_REMOVE_DEVICE_FROM_MONITORED_ADVERTISERS_LIST = 476,
+  LE_CLEAR_MONITORED_ADVERTISERS_LIST = 477,
+  LE_READ_MONITORED_ADVERTISERS_LIST_SIZE = 480,
+  LE_FRAME_SPACE_UPDATE = 481,
 }
 
 packet Command {
@@ -749,46 +811,66 @@ enum EventCode : 8 {
   REMOTE_HOST_SUPPORTED_FEATURES_NOTIFICATION = 0x3D,
   LE_META_EVENT = 0x3e,
   NUMBER_OF_COMPLETED_DATA_BLOCKS = 0x48,
+  AUTHENTICATED_PAYLOAD_TIMEOUT_EXPIRED = 0x57,
+  ENCRYPTION_CHANGE_V2 = 0x59,
   VENDOR_SPECIFIC = 0xFF,
 }
 
 // LE events
 enum SubeventCode : 8 {
-  CONNECTION_COMPLETE = 0x01,
-  ADVERTISING_REPORT = 0x02,
-  CONNECTION_UPDATE_COMPLETE = 0x03,
-  READ_REMOTE_FEATURES_COMPLETE = 0x04,
-  LONG_TERM_KEY_REQUEST = 0x05,
-  REMOTE_CONNECTION_PARAMETER_REQUEST = 0x06,
-  DATA_LENGTH_CHANGE = 0x07,
-  READ_LOCAL_P256_PUBLIC_KEY_COMPLETE = 0x08,
-  GENERATE_DHKEY_COMPLETE = 0x09,
-  ENHANCED_CONNECTION_COMPLETE = 0x0a,
-  DIRECTED_ADVERTISING_REPORT = 0x0b,
-  PHY_UPDATE_COMPLETE = 0x0c,
-  EXTENDED_ADVERTISING_REPORT = 0x0D,
-  PERIODIC_ADVERTISING_SYNC_ESTABLISHED = 0x0E,
-  PERIODIC_ADVERTISING_REPORT = 0x0F,
-  PERIODIC_ADVERTISING_SYNC_LOST = 0x10,
-  SCAN_TIMEOUT = 0x11,
-  ADVERTISING_SET_TERMINATED = 0x12,
-  SCAN_REQUEST_RECEIVED = 0x13,
-  CHANNEL_SELECTION_ALGORITHM = 0x14,
-  CONNECTIONLESS_IQ_REPORT = 0x15,
-  CONNECTION_IQ_REPORT = 0x16,
-  CTE_REQUEST_FAILED = 0x17,
-  PERIODIC_ADVERTISING_SYNC_TRANSFER_RECEIVED = 0x18,
-  CIS_ESTABLISHED = 0x19,
-  CIS_REQUEST = 0x1A,
-  CREATE_BIG_COMPLETE = 0x1B,
-  TERMINATE_BIG_COMPLETE = 0x1C,
-  BIG_SYNC_ESTABLISHED = 0x1D,
-  BIG_SYNC_LOST = 0x1E,
-  REQUEST_PEER_SCA_COMPLETE = 0x1F,
-  PATH_LOSS_THRESHOLD = 0x20,
-  TRANSMIT_POWER_REPORTING = 0x21,
-  BIG_INFO_ADVERTISING_REPORT = 0x22,
+  LE_CONNECTION_COMPLETE = 0x01,
+  LE_ADVERTISING_REPORT = 0x02,
+  LE_CONNECTION_UPDATE_COMPLETE = 0x03,
+  LE_READ_REMOTE_FEATURES_PAGE_0_COMPLETE = 0x04,
+  LE_LONG_TERM_KEY_REQUEST = 0x05,
+  LE_REMOTE_CONNECTION_PARAMETER_REQUEST = 0x06,
+  LE_DATA_LENGTH_CHANGE = 0x07,
+  LE_READ_LOCAL_P256_PUBLIC_KEY_COMPLETE = 0x08,
+  LE_GENERATE_DHKEY_COMPLETE = 0x09,
+  LE_ENHANCED_CONNECTION_COMPLETE_V1 = 0x0a,
+  LE_DIRECTED_ADVERTISING_REPORT = 0x0b,
+  LE_PHY_UPDATE_COMPLETE = 0x0c,
+  LE_EXTENDED_ADVERTISING_REPORT = 0x0D,
+  LE_PERIODIC_ADVERTISING_SYNC_ESTABLISHED_V1 = 0x0E,
+  LE_PERIODIC_ADVERTISING_REPORT_V1 = 0x0F,
+  LE_PERIODIC_ADVERTISING_SYNC_LOST = 0x10,
+  LE_SCAN_TIMEOUT = 0x11,
+  LE_ADVERTISING_SET_TERMINATED = 0x12,
+  LE_SCAN_REQUEST_RECEIVED = 0x13,
+  LE_CHANNEL_SELECTION_ALGORITHM = 0x14,
+  LE_CONNECTIONLESS_IQ_REPORT = 0x15,
+  LE_CONNECTION_IQ_REPORT = 0x16,
+  LE_CTE_REQUEST_FAILED = 0x17,
+  LE_PERIODIC_ADVERTISING_SYNC_TRANSFER_RECEIVED_V1 = 0x18,
+  LE_CIS_ESTABLISHED_V1 = 0x19,
+  LE_CIS_REQUEST = 0x1A,
+  LE_CREATE_BIG_COMPLETE = 0x1B,
+  LE_TERMINATE_BIG_COMPLETE = 0x1C,
+  LE_BIG_SYNC_ESTABLISHED = 0x1D,
+  LE_BIG_SYNC_LOST = 0x1E,
+  LE_REQUEST_PEER_SCA_COMPLETE = 0x1F,
+  LE_PATH_LOSS_THRESHOLD = 0x20,
+  LE_TRANSMIT_POWER_REPORTING = 0x21,
+  LE_BIG_INFO_ADVERTISING_REPORT = 0x22,
   LE_SUBRATE_CHANGE = 0x23,
+  LE_PERIODIC_ADVERTISING_SYNC_ESTABLISHED_V2 = 0x24,
+  LE_PERIODIC_ADVERTISING_REPORT_V2 = 0x25,
+  LE_PERIODIC_ADVERTISING_SYNC_TRANSFER_RECEIVED_V2 = 0x26,
+  LE_PERIODIC_ADVERTISING_SUBEVENT_DATA_REQUEST = 0x27,
+  LE_PERIODIC_ADVERTISING_RESPONSE_REPORT = 0x28,
+  LE_ENHANCED_CONNECTION_COMPLETE_V2 = 0x29,
+  LE_CIS_ESTABLISHED_V2 = 0x2A,
+  LE_READ_ALL_REMOTE_FEATURES_COMPLETE = 0x2B,
+  LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES_COMPLETE = 0x2C,
+  LE_CS_READ_REMOTE_FAE_TABLE_COMPLETE = 0x2D,
+  LE_CS_SECURITY_ENABLE_COMPLETE = 0x2E,
+  LE_CS_CONFIG_COMPLETE = 0x2F,
+  LE_CS_PROCEDURE_ENABLE_COMPLETE = 0x30,
+  LE_CS_SUBEVENT_RESULT = 0x31,
+  LE_CS_SUBEVENT_RESULT_CONTINUE = 0x32,
+  LE_CS_TEST_END_COMPLETE = 0x33,
+  LE_MONITORED_ADVERTISERS_REPORT = 0x34,
+  LE_FRAME_SPACE_UPDATE_COMPLETE = 0x35,
 }
 
 // Vendor specific events
@@ -804,6 +886,11 @@ packet Event {
   event_code : EventCode,
   _size_(_payload_) : 8,
   _payload_,
+}
+
+packet LeMetaEvent : Event (event_code = LE_META_EVENT) {
+  subevent_code : SubeventCode,
+  _body_,
 }
 
 // Common definitions for commands and events
@@ -2588,6 +2675,7 @@ enum HciVersion : 8 {
   V_5_2 = 0x0b,
   V_5_3 = 0x0c,
   V_5_4 = 0x0d,
+  V_6_0 = 0x0e,
 }
 
 enum LmpVersion : 8 {
@@ -2605,6 +2693,7 @@ enum LmpVersion : 8 {
   V_5_2 = 0x0b,
   V_5_3 = 0x0c,
   V_5_4 = 0x0d,
+  V_6_0 = 0x0e,
 }
 
 struct LocalVersionInformation {
@@ -3013,10 +3102,10 @@ packet WriteLoopbackModeComplete : CommandComplete (command_op_code = WRITE_LOOP
   status : ErrorCode,
 }
 
-packet EnableDeviceUnderTestMode : Command (op_code = ENABLE_DEVICE_UNDER_TEST_MODE) {
+packet EnableImplementationUnderTestMode : Command (op_code = ENABLE_IMPLEMENTATION_UNDER_TEST_MODE) {
 }
 
-packet EnableDeviceUnderTestModeComplete : CommandComplete (command_op_code = ENABLE_DEVICE_UNDER_TEST_MODE) {
+packet EnableImplementationUnderTestModeComplete : CommandComplete (command_op_code = ENABLE_IMPLEMENTATION_UNDER_TEST_MODE) {
   status : ErrorCode,
 }
 
@@ -3069,64 +3158,84 @@ test LeReadBufferSizeV1Complete {
   "\x0e\x07\x01\x02\x20\x00\xfb\x00\x10",
 }
 
+/// Core Specification Vol 6, Part B 4.6 § Feature support
 enum LLFeaturesBits : 64 {
   // Byte 0
-  LE_ENCRYPTION                                 = 0x0000000000000001,
-  CONNECTION_PARAMETERS_REQUEST_PROCEDURE       = 0x0000000000000002,
-  EXTENDED_REJECT_INDICATION                    = 0x0000000000000004,
-  PERIPHERAL_INITIATED_FEATURES_EXCHANGE        = 0x0000000000000008,
-  LE_PING                                       = 0x0000000000000010,
-  LE_DATA_PACKET_LENGTH_EXTENSION               = 0x0000000000000020,
-  LL_PRIVACY                                    = 0x0000000000000040,
-  EXTENDED_SCANNER_FILTER_POLICIES              = 0x0000000000000080,
+  LE_ENCRYPTION                                            = 0x0000000000000001,
+  CONNECTION_PARAMETERS_REQUEST_PROCEDURE                  = 0x0000000000000002,
+  EXTENDED_REJECT_INDICATION                               = 0x0000000000000004,
+  PERIPHERAL_INITIATED_FEATURES_EXCHANGE                   = 0x0000000000000008,
+  LE_PING                                                  = 0x0000000000000010,
+  LE_DATA_PACKET_LENGTH_EXTENSION                          = 0x0000000000000020,
+  LL_PRIVACY                                               = 0x0000000000000040,
+  EXTENDED_SCANNER_FILTER_POLICIES                         = 0x0000000000000080,
 
   // Byte 1
-  LE_2M_PHY                                     = 0x0000000000000100,
-  STABLE_MODULATION_INDEX_TRANSMITTER           = 0x0000000000000200,
-  STABLE_MODULATION_INDEX_RECEIVER              = 0x0000000000000400,
-  LE_CODED_PHY                                  = 0x0000000000000800,
-  LE_EXTENDED_ADVERTISING                       = 0x0000000000001000,
-  LE_PERIODIC_ADVERTISING                       = 0x0000000000002000,
-  CHANNEL_SELECTION_ALGORITHM_2                 = 0x0000000000004000,
-  LE_POWER_CLASS_1                              = 0x0000000000008000,
+  LE_2M_PHY                                                = 0x0000000000000100,
+  STABLE_MODULATION_INDEX_TRANSMITTER                      = 0x0000000000000200,
+  STABLE_MODULATION_INDEX_RECEIVER                         = 0x0000000000000400,
+  LE_CODED_PHY                                             = 0x0000000000000800,
+  LE_EXTENDED_ADVERTISING                                  = 0x0000000000001000,
+  LE_PERIODIC_ADVERTISING                                  = 0x0000000000002000,
+  CHANNEL_SELECTION_ALGORITHM_2                            = 0x0000000000004000,
+  LE_POWER_CLASS_1                                         = 0x0000000000008000,
 
   // Byte 2
-  MINIMUM_NUMBER_OF_USED_CHANNELS_PROCEDURE     = 0x0000000000010000,
-  CONNECTION_CTE_REQUEST                        = 0x0000000000020000,
-  CONNECTION_CTE_RESPONSE                       = 0x0000000000040000,
-  CONNECTIONLESS_CTE_TRANSMITTER                = 0x0000000000080000,
-  CONNECTIONLESS_CTE_RECEIVER                   = 0x0000000000100000,
-  ANTENNA_SWITCHING_DURING_CTE_TRANSMISSION     = 0x0000000000200000,
-  ANTENNA_SWITCHING_DURING_CTE_RECEPTION        = 0x0000000000400000,
-  RECEIVING_CONSTANT_TONE_EXTENSIONS            = 0x0000000000800000,
+  MINIMUM_NUMBER_OF_USED_CHANNELS_PROCEDURE                = 0x0000000000010000,
+  CONNECTION_CTE_REQUEST                                   = 0x0000000000020000,
+  CONNECTION_CTE_RESPONSE                                  = 0x0000000000040000,
+  CONNECTIONLESS_CTE_TRANSMITTER                           = 0x0000000000080000,
+  CONNECTIONLESS_CTE_RECEIVER                              = 0x0000000000100000,
+  ANTENNA_SWITCHING_DURING_CTE_TRANSMISSION                = 0x0000000000200000,
+  ANTENNA_SWITCHING_DURING_CTE_RECEPTION                   = 0x0000000000400000,
+  RECEIVING_CONSTANT_TONE_EXTENSIONS                       = 0x0000000000800000,
 
   // Byte 3
-  PERIODIC_ADVERTISING_SYNC_TRANSFER_SENDER     = 0x0000000001000000,
-  PERIODIC_ADVERTISING_SYNC_TRANSFER_RECIPIENT  = 0x0000000002000000,
-  SLEEP_CLOCK_ACCURACY_UPDATES                  = 0x0000000004000000,
-  REMOTE_PUBLIC_KEY_VALIDATION                  = 0x0000000008000000,
-  CONNECTED_ISOCHRONOUS_STREAM_CENTRAL          = 0x0000000010000000,
-  CONNECTED_ISOCHRONOUS_STREAM_PERIPHERAL       = 0x0000000020000000,
-  ISOCHRONOUS_BROADCASTER                       = 0x0000000040000000,
-  SYNCHRONIZED_RECEIVER                         = 0x0000000080000000,
+  PERIODIC_ADVERTISING_SYNC_TRANSFER_SENDER                = 0x0000000001000000,
+  PERIODIC_ADVERTISING_SYNC_TRANSFER_RECIPIENT             = 0x0000000002000000,
+  SLEEP_CLOCK_ACCURACY_UPDATES                             = 0x0000000004000000,
+  REMOTE_PUBLIC_KEY_VALIDATION                             = 0x0000000008000000,
+  CONNECTED_ISOCHRONOUS_STREAM_CENTRAL                     = 0x0000000010000000,
+  CONNECTED_ISOCHRONOUS_STREAM_PERIPHERAL                  = 0x0000000020000000,
+  ISOCHRONOUS_BROADCASTER                                  = 0x0000000040000000,
+  SYNCHRONIZED_RECEIVER                                    = 0x0000000080000000,
 
   // Byte 4
-  CONNECTED_ISOCHRONOUS_STREAM_HOST_SUPPORT     = 0x0000000100000000,
-  LE_POWER_CONTROL_REQUEST                      = 0x0000000200000000,
-  LE_POWER_CONTROL_REQUEST_BIS                  = 0x0000000400000000,
-  LE_PATH_LOSS_MONITORING                       = 0x0000000800000000,
-  PERIODIC_ADVERTISING_ADI_SUPPORT              = 0x0000001000000000,
-  CONNECTION_SUBRATING                          = 0x0000002000000000,
-  CONNECTION_SUBRATING_HOST_SUPPORT             = 0x0000004000000000,
-  CHANNEL_CLASSIFICATION                        = 0x0000008000000000,
+  CONNECTED_ISOCHRONOUS_STREAM_HOST_SUPPORT                = 0x0000000100000000,
+  LE_POWER_CONTROL_REQUEST                                 = 0x0000000200000000,
+  LE_POWER_CONTROL_REQUEST_BIS                             = 0x0000000400000000,
+  LE_PATH_LOSS_MONITORING                                  = 0x0000000800000000,
+  PERIODIC_ADVERTISING_ADI_SUPPORT                         = 0x0000001000000000,
+  CONNECTION_SUBRATING                                     = 0x0000002000000000,
+  CONNECTION_SUBRATING_HOST_SUPPORT                        = 0x0000004000000000,
+  CHANNEL_CLASSIFICATION                                   = 0x0000008000000000,
+
+  // Byte 5
+  ADVERTISING_CODING_SELECTION                             = 0x0000010000000000,
+  ADVERTISING_CODING_SELECTION_HOST_SUPPORT                = 0x0000020000000000,
+  DECISION_BASED_ADVERTISING_FILTERING                     = 0x0000040000000000,
+  PERIODIC_ADVERTISING_WITH_RESPONSES_ADVERTISER           = 0x0000080000000000,
+  PERIODIC_ADVERTISING_WITH_RESPONSES_SCANNER              = 0x0000100000000000,
+  UNSEGMENTED_FRAMED_MODE                                  = 0x0000200000000000,
+  CHANNEL_SOUNDING                                         = 0x0000400000000000,
+  CHANNEL_SOUNDING_HOST_SUPPORT                            = 0x0000800000000000,
 }
 
-packet LeReadLocalSupportedFeatures : Command (op_code = LE_READ_LOCAL_SUPPORTED_FEATURES) {
+packet LeReadLocalSupportedFeaturesPage0 : Command (op_code = LE_READ_LOCAL_SUPPORTED_FEATURES_PAGE_0) {
 }
 
-packet LeReadLocalSupportedFeaturesComplete : CommandComplete (command_op_code = LE_READ_LOCAL_SUPPORTED_FEATURES) {
+packet LeReadLocalSupportedFeaturesPage0Complete : CommandComplete (command_op_code = LE_READ_LOCAL_SUPPORTED_FEATURES_PAGE_0) {
   status : ErrorCode,
   le_features : 64,
+}
+
+packet LeReadAllLocalSupportedFeatures : Command (op_code = LE_READ_ALL_LOCAL_SUPPORTED_FEATURES) {
+}
+
+packet LeReadAllLocalSupportedFeaturesComplete : CommandComplete (command_op_code = LE_READ_ALL_LOCAL_SUPPORTED_FEATURES) {
+  status : ErrorCode,
+  max_page : 8,
+  le_features : 8[248],
 }
 
 packet LeSetRandomAddress : Command (op_code = LE_SET_RANDOM_ADDRESS) {
@@ -3266,7 +3375,9 @@ packet LeSetScanEnableComplete : CommandComplete (command_op_code = LE_SET_SCAN_
 
 enum InitiatorFilterPolicy : 8 {
   USE_PEER_ADDRESS = 0x00,
-  USE_FILTER_ACCEPT_LIST = 0x01,
+  USE_FILTER_ACCEPT_LIST_WITH_PEER_ADDRESS = 0x01,
+  USE_DECISION_PDUS = 0x02,
+  USE_FILTER_ACCEPT_LIST_WITH_DECISION_PDUS = 0x03,
 }
 
 packet LeCreateConnection : Command (op_code = LE_CREATE_CONNECTION) {
@@ -3373,12 +3484,37 @@ packet LeReadChannelMapComplete : CommandComplete (command_op_code = LE_READ_CHA
   channel_map : 8[5],
 }
 
-packet LeReadRemoteFeatures : Command (op_code = LE_READ_REMOTE_FEATURES) {
+packet LeReadRemoteFeaturesPage0 : Command (op_code = LE_READ_REMOTE_FEATURES_PAGE_0) {
   connection_handle : 12,
   _reserved_ : 4,
 }
 
-packet LeReadRemoteFeaturesStatus : CommandStatus (command_op_code = LE_READ_REMOTE_FEATURES) {
+packet LeReadRemoteFeaturesPage0Status : CommandStatus (command_op_code = LE_READ_REMOTE_FEATURES_PAGE_0) {
+}
+
+packet LeReadRemoteFeaturesPage0Complete : LeMetaEvent (subevent_code = LE_READ_REMOTE_FEATURES_PAGE_0_COMPLETE) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+  le_features : 64,
+}
+
+packet LeReadAllRemoteFeatures : Command (op_code = LE_READ_ALL_REMOTE_FEATURES) {
+  connection_handle : 12,
+  _reserved_ : 4,
+  pages_requested : 8,
+}
+
+packet LeReadAllRemoteFeaturesStatus : CommandStatus (command_op_code = LE_READ_ALL_REMOTE_FEATURES) {
+}
+
+packet LeReadAllRemoteFeaturesComplete : LeMetaEvent (subevent_code = LE_READ_ALL_REMOTE_FEATURES_COMPLETE) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+  max_remote_page : 8,
+  max_valid_page : 8,
+  le_features : 8[248],
 }
 
 packet LeEncrypt : Command (op_code = LE_ENCRYPT) {
@@ -3535,17 +3671,17 @@ packet LeWriteSuggestedDefaultDataLengthComplete : CommandComplete (command_op_c
   status : ErrorCode,
 }
 
-packet LeReadLocalP256PublicKeyCommand : Command (op_code = LE_READ_LOCAL_P_256_PUBLIC_KEY) {
+packet LeReadLocalP256PublicKey : Command (op_code = LE_READ_LOCAL_P_256_PUBLIC_KEY) {
 }
 
-packet LeReadLocalP256PublicKeyCommandStatus : CommandStatus (command_op_code = LE_READ_LOCAL_P_256_PUBLIC_KEY) {
+packet LeReadLocalP256PublicKeyStatus : CommandStatus (command_op_code = LE_READ_LOCAL_P_256_PUBLIC_KEY) {
 }
 
-packet LeGenerateDhkeyV1Command : Command (op_code = LE_GENERATE_DHKEY_V1) {
+packet LeGenerateDhkeyV1 : Command (op_code = LE_GENERATE_DHKEY_V1) {
   remote_p_256_public_key : 8[64],
 }
 
-packet LeGenerateDhkeyV1CommandStatus : CommandStatus (command_op_code = LE_GENERATE_DHKEY_V1) {
+packet LeGenerateDhkeyV1Status : CommandStatus (command_op_code = LE_GENERATE_DHKEY_V1) {
 }
 
 packet LeAddDeviceToResolvingList : Command (op_code = LE_ADD_DEVICE_TO_RESOLVING_LIST) {
@@ -3741,6 +3877,20 @@ enum LegacyAdvertisingEventProperties : 4 {
   ADV_NONCONN_IND = 0,
 }
 
+struct AdvertisingEventProperties {
+  connectable : 1,
+  scannable : 1,
+  directed : 1,
+  high_duty_cycle : 1,
+  legacy : 1,
+  anonymous : 1,
+  include_tx_power : 1,
+  decision : 1,
+  include_adva : 1,
+  include_adi : 1,
+  _reserved_ : 6,
+}
+
 enum PrimaryPhyType : 8 {
   LE_1M = 0x01,
   LE_CODED = 0x03,
@@ -3753,45 +3903,15 @@ enum SecondaryPhyType : 8 {
   LE_CODED = 0x03,
 }
 
-packet LeSetExtendedAdvertisingParametersLegacy : Command (op_code = LE_SET_EXTENDED_ADVERTISING_PARAMETERS) {
-  advertising_handle : 8,
-  legacy_advertising_event_properties : LegacyAdvertisingEventProperties,
-  _fixed_ = 0x1 : 1, // legacy bit set
-  _reserved_ : 11, // advertising_event_properties reserved bits
-  primary_advertising_interval_min : 24, // 0x20 - 0xFFFFFF N * 0.625 ms
-  primary_advertising_interval_max : 24, // 0x20 - 0xFFFFFF N * 0.625 ms
-  primary_advertising_channel_map : 3,  // bit 0 - Channel 37, bit 1 - 38, bit 2 - 39
-  _reserved_ : 5,
-  own_address_type : OwnAddressType,
-  peer_address_type : PeerAddressType,
-  peer_address : Address,
-  advertising_filter_policy : AdvertisingFilterPolicy,
-  _reserved_ : 6,
-  advertising_tx_power : 8, // -127 to +20, 0x7F - no preference
-  _fixed_ = 0x1 : 8, // PrimaryPhyType LE_1M
-  _reserved_ : 8, // secondary_advertising_max_skip
-  _fixed_ = 0x1 : 8, // secondary_advertising_phy LE_1M
-  advertising_sid : 8, // SID subfield from the ADI field of the PDU
-  scan_request_notification_enable : Enable,
+enum AdvertisingPhyOptions : 8 {
+  NO_PREFERENCE = 0x00,
+  S2_CODING_PREFERRED = 0x01,
+  S8_CODING_PREFERRED = 0x02,
+  S2_CODING_REQUIRED = 0x03,
+  S8_CODING_REQUIRED = 0x04,
 }
 
-test LeSetExtendedAdvertisingParametersLegacy {
-  "\x36\x20\x19\x00\x13\x00\x90\x01\x00\xc2\x01\x00\x07\x01\x00\x00\x00\x00\x00\x00\x00\x00\xf9\x01\x00\x01\x01\x00",
-  "\x36\x20\x19\x01\x13\x00\x90\x01\x00\xc2\x01\x00\x07\x01\x00\x00\x00\x00\x00\x00\x00\x00\xf9\x01\x00\x01\x01\x00",
-}
-
-struct AdvertisingEventProperties {
-  connectable : 1,
-  scannable : 1,
-  directed : 1,
-  high_duty_cycle : 1,
-  legacy : 1,
-  anonymous : 1,
-  tx_power : 1,
-  _reserved_ : 9,
-}
-
-packet LeSetExtendedAdvertisingParameters : Command (op_code = LE_SET_EXTENDED_ADVERTISING_PARAMETERS) {
+packet LeSetExtendedAdvertisingParametersV1 : Command (op_code = LE_SET_EXTENDED_ADVERTISING_PARAMETERS_V1) {
   advertising_handle : 8,
   advertising_event_properties : AdvertisingEventProperties,
   primary_advertising_interval_min : 24, // 0x20 - 0xFFFFFF N * 0.625 ms
@@ -3811,7 +3931,39 @@ packet LeSetExtendedAdvertisingParameters : Command (op_code = LE_SET_EXTENDED_A
   scan_request_notification_enable : Enable,
 }
 
-packet LeSetExtendedAdvertisingParametersComplete : CommandComplete (command_op_code = LE_SET_EXTENDED_ADVERTISING_PARAMETERS) {
+packet LeSetExtendedAdvertisingParametersV1Complete : CommandComplete (command_op_code = LE_SET_EXTENDED_ADVERTISING_PARAMETERS_V1) {
+  status : ErrorCode,
+  selected_tx_power : 8, // -127 to +20
+}
+
+test LeSetExtendedAdvertisingParametersV1 {
+  "\x36\x20\x19\x00\x13\x00\x90\x01\x00\xc2\x01\x00\x07\x01\x00\x00\x00\x00\x00\x00\x00\x00\xf9\x01\x00\x01\x01\x00",
+  "\x36\x20\x19\x01\x13\x00\x90\x01\x00\xc2\x01\x00\x07\x01\x00\x00\x00\x00\x00\x00\x00\x00\xf9\x01\x00\x01\x01\x00",
+}
+
+packet LeSetExtendedAdvertisingParametersV2 : Command (op_code = LE_SET_EXTENDED_ADVERTISING_PARAMETERS_V2) {
+  advertising_handle : 8,
+  advertising_event_properties : AdvertisingEventProperties,
+  primary_advertising_interval_min : 24, // 0x20 - 0xFFFFFF N * 0.625 ms
+  primary_advertising_interval_max : 24, // 0x20 - 0xFFFFFF N * 0.625 ms
+  primary_advertising_channel_map : 3,  // bit 0 - Channel 37, bit 1 - 38, bit 2 - 39
+  _reserved_ : 5,
+  own_address_type : OwnAddressType,
+  peer_address_type : PeerAddressType,
+  peer_address : Address,
+  advertising_filter_policy : AdvertisingFilterPolicy,
+  _reserved_ : 6,
+  advertising_tx_power : 8, // -127 to +20, 0x7F - no preference
+  primary_advertising_phy : PrimaryPhyType,
+  secondary_advertising_max_skip : 8, // 1 to 255, 0x00 - AUX_ADV_IND sent before next advertising event
+  secondary_advertising_phy : SecondaryPhyType,
+  advertising_sid : 8, // SID subfield from the ADI field of the PDU
+  scan_request_notification_enable : Enable,
+  primary_advertising_phy_options : AdvertisingPhyOptions,
+  secondary_advertising_phy_options : AdvertisingPhyOptions,
+}
+
+packet LeSetExtendedAdvertisingParametersV2Complete : CommandComplete (command_op_code = LE_SET_EXTENDED_ADVERTISING_PARAMETERS_V2) {
   status : ErrorCode,
   selected_tx_power : 8, // -127 to +20
 }
@@ -3949,7 +4101,7 @@ packet LeClearAdvertisingSetsComplete : CommandComplete (command_op_code = LE_CL
   status : ErrorCode,
 }
 
-packet LeSetPeriodicAdvertisingParameters : Command (op_code = LE_SET_PERIODIC_ADVERTISING_PARAMETERS) {
+packet LeSetPeriodicAdvertisingParametersV1 : Command (op_code = LE_SET_PERIODIC_ADVERTISING_PARAMETERS_V1) {
   advertising_handle : 8,
   periodic_advertising_interval_min : 16, // 0x006 to 0xFFFF (7.5 ms to 82s)
   periodic_advertising_interval_max : 16, // 0x006 to 0xFFFF (7.5 ms to 82s)
@@ -3958,7 +4110,26 @@ packet LeSetPeriodicAdvertisingParameters : Command (op_code = LE_SET_PERIODIC_A
   _reserved_ : 9,
 }
 
-packet LeSetPeriodicAdvertisingParametersComplete : CommandComplete (command_op_code = LE_SET_PERIODIC_ADVERTISING_PARAMETERS) {
+packet LeSetPeriodicAdvertisingParametersV1Complete : CommandComplete (command_op_code = LE_SET_PERIODIC_ADVERTISING_PARAMETERS_V1) {
+  status : ErrorCode,
+}
+
+packet LeSetPeriodicAdvertisingParametersV2 : Command (op_code = LE_SET_PERIODIC_ADVERTISING_PARAMETERS_V2) {
+  advertising_handle : 8,
+  periodic_advertising_interval_min : 16, // 0x006 to 0xFFFF (7.5 ms to 82s)
+  periodic_advertising_interval_max : 16, // 0x006 to 0xFFFF (7.5 ms to 82s)
+  _reserved_ : 6,
+  include_tx_power : 1,
+  _reserved_ : 9,
+  num_subevents : 8, // 0x00 disabled, 0x01 to 0x80
+  subevent_interval : 8, // 0x06 to 0xFF × 1.25 ms
+  response_slot_delay : 8, // 0x01 to 0xFE × 1.25 ms
+  response_slot_spacing : 8, // 0x02 to 0xFF × 1.25 ms
+  num_response_slots : 8,
+}
+
+packet LeSetPeriodicAdvertisingParametersV2Complete : CommandComplete (command_op_code = LE_SET_PERIODIC_ADVERTISING_PARAMETERS_V2) {
+  advertising_handle : 8,
   status : ErrorCode,
 }
 
@@ -4048,7 +4219,7 @@ struct InitiatingPhyParameters {
   max_ce_length : 16, // 0.625ms
 }
 
-packet LeExtendedCreateConnection : Command (op_code = LE_EXTENDED_CREATE_CONNECTION) {
+packet LeExtendedCreateConnectionV1 : Command (op_code = LE_EXTENDED_CREATE_CONNECTION_V1) {
   initiator_filter_policy : InitiatorFilterPolicy,
   own_address_type : OwnAddressType,
   peer_address_type : PeerAddressType,
@@ -4061,7 +4232,21 @@ test LeExtendedCreateConnection {
   "\x43\x20\x2a\x01\x01\x00\x00\x00\x00\x00\x00\x00\x03\x00\x08\x30\x00\x18\x00\x28\x00\x00\x00\xf4\x01\x00\x00\x00\x00\x00\x08\x30\x00\x18\x00\x28\x00\x00\x00\xf4\x01\x00\x00\x00\x00",
 }
 
-packet LeExtendedCreateConnectionStatus : CommandStatus (command_op_code = LE_EXTENDED_CREATE_CONNECTION) {
+packet LeExtendedCreateConnectionV1Status : CommandStatus (command_op_code = LE_EXTENDED_CREATE_CONNECTION_V1) {
+}
+
+packet LeExtendedCreateConnectionV2 : Command (op_code = LE_EXTENDED_CREATE_CONNECTION_V2) {
+  advertising_handle : 8,
+  subevent : 8,
+  initiator_filter_policy : InitiatorFilterPolicy,
+  own_address_type : OwnAddressType,
+  peer_address_type : PeerAddressType,
+  peer_address : Address,
+  initiating_phys : 8,
+  initiating_phy_parameters : InitiatingPhyParameters[],
+}
+
+packet LeExtendedCreateConnectionV2Status : CommandStatus (command_op_code = LE_EXTENDED_CREATE_CONNECTION_V2) {
 }
 
 enum PeriodicSyncCteType : 8 {
@@ -4544,12 +4729,12 @@ enum LeHostFeatureBits : 8 {
   CONNECTION_SUBRATING_HOST_SUPPORT = 38,
 }
 
-packet LeSetHostFeature : Command (op_code = LE_SET_HOST_FEATURE) {
+packet LeSetHostFeatureV1 : Command (op_code = LE_SET_HOST_FEATURE_V1) {
   bit_number : LeHostFeatureBits,
   bit_value:  Enable,
 }
 
-packet LeSetHostFeatureComplete : CommandComplete (command_op_code = LE_SET_HOST_FEATURE) {
+packet LeSetHostFeatureV1Complete : CommandComplete (command_op_code = LE_SET_HOST_FEATURE_V1) {
   status : ErrorCode,
 }
 
@@ -4687,6 +4872,501 @@ packet LeSubrateRequest : Command (op_code = LE_SUBRATE_REQUEST) {
 packet LeSubrateRequestStatus : CommandStatus (command_op_code = LE_SUBRATE_REQUEST) {
 }
 
+packet LeCsReadLocalSupportedCapabilities : Command (op_code = LE_CS_READ_LOCAL_SUPPORTED_CAPABILITIES) {
+}
+
+struct CsRolesSupported {
+  initiator : 1,
+  reflector : 1,
+  _reserved_ : 6,
+}
+
+struct CsModesSupported {
+  mode_3 : 1,
+  _reserved_ : 7,
+}
+
+struct CsRttCapability {
+  rtt_aa_only_n : 1,
+  rtt_sounding_n : 1,
+  rtt_random_payload_n : 1,
+  _reserved_ : 5,
+}
+
+struct CsNadmSoundingCapability {
+  normalized_attack_detector_metric : 1,
+  _reserved_ : 15,
+}
+
+struct CsNadmRandomCapability {
+  normalized_attack_detector_metric : 1,
+  _reserved_ : 15,
+}
+
+struct CsSyncPhysSupported {
+  le_2m_phy : 1,
+  le_2m_2bt_phy : 1,
+  _reserved_ : 6,
+}
+
+struct CsSubfeaturesSupported {
+  companion_signal : 1,
+  frequency_actuation_error : 1,
+  channel_selection_algorithm : 1,
+  phase_based_ranging : 1,
+  _reserved_ : 12,
+}
+
+struct CsTIp1TimesSupported {
+  support_10_microsecond : 1,
+  support_20_microsecond : 1,
+  support_30_microsecond : 1,
+  support_40_microsecond : 1,
+  support_50_microsecond : 1,
+  support_60_microsecond : 1,
+  support_80_microsecond : 1,
+  _reserved_ : 9,
+}
+
+struct CsTIp2TimesSupported {
+  support_10_microsecond : 1,
+  support_20_microsecond : 1,
+  support_30_microsecond : 1,
+  support_40_microsecond : 1,
+  support_50_microsecond : 1,
+  support_60_microsecond : 1,
+  support_80_microsecond : 1,
+  _reserved_ : 9,
+}
+
+struct CsTFcsTimesSupported {
+  support_15_microsecond : 1,
+  support_20_microsecond : 1,
+  support_30_microsecond : 1,
+  support_40_microsecond : 1,
+  support_50_microsecond : 1,
+  support_60_microsecond : 1,
+  support_80_microsecond : 1,
+  support_100_microsecond : 1,
+  support_120_microsecond : 1,
+  _reserved_ : 7,
+}
+
+struct CsTPmTimesSupported {
+  support_10_microsecond : 1,
+  support_20_microsecond : 1,
+  _reserved_ : 14,
+}
+
+struct CsTxSnrCapability {
+  support_18db : 1,
+  support_21db : 1,
+  support_24db : 1,
+  support_27db : 1,
+  support_30db : 1,
+  _reserved_ : 3,
+}
+
+packet LeCsReadLocalSupportedCapabilitiesComplete : CommandComplete (command_op_code = LE_CS_READ_LOCAL_SUPPORTED_CAPABILITIES) {
+  status : ErrorCode,
+  num_config_supported : 8,
+  max_consecutive_procedures_supported : 16,
+  num_antennas_supported : 8,
+  max_antenna_paths_supported : 8,
+  roles_supported : CsRolesSupported,
+  modes_supported : CsModesSupported,
+  rtt_capability : CsRttCapability,
+  rtt_aa_only_n : 8,
+  rtt_sounding_n : 8,
+  rtt_random_payload_n : 8,
+  nadm_sounding_capability : CsNadmSoundingCapability,
+  nadm_random_capability : CsNadmRandomCapability,
+  cs_sync_phys_supported : CsSyncPhysSupported,
+  subfeatures_supported : CsSubfeaturesSupported,
+  t_ip1_times_supported : CsTIp1TimesSupported,
+  t_ip2_times_supported : CsTIp2TimesSupported,
+  t_fcs_times_supported : CsTFcsTimesSupported,
+  t_pm_times_supported : CsTPmTimesSupported,
+  t_sw_time_supported : 8,
+  tx_snr_capability : CsTxSnrCapability,
+}
+
+packet LeCsReadRemoteSupportedCapabilities : Command (op_code = LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES) {
+  connection_handle: 12,
+  _reserved_ : 4,
+}
+
+packet LeCsReadRemoteSupportedCapabilitiesStatus : CommandStatus (command_op_code = LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES) {
+}
+
+packet LeCsReadRemoteSupportedCapabilitiesComplete : LeMetaEvent (subevent_code = LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES_COMPLETE) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+  num_config_supported : 8,
+  max_consecutive_procedures_supported : 16,
+  num_antennas_supported : 8,
+  max_antenna_paths_supported : 8,
+  roles_supported : CsRolesSupported,
+  modes_supported : CsModesSupported,
+  rtt_capability : CsRttCapability,
+  rtt_aa_only_n : 8,
+  rtt_sounding_n : 8,
+  rtt_random_payload_n : 8,
+  nadm_sounding_capability : CsNadmSoundingCapability,
+  nadm_random_capability : CsNadmRandomCapability,
+  cs_sync_phys_supported : CsSyncPhysSupported,
+  subfeatures_supported : CsSubfeaturesSupported,
+  t_ip1_times_supported : CsTIp1TimesSupported,
+  t_ip2_times_supported : CsTIp2TimesSupported,
+  t_fcs_times_supported : CsTFcsTimesSupported,
+  t_pm_times_supported : CsTPmTimesSupported,
+  t_sw_time_supported : 8,
+  tx_snr_capability : CsTxSnrCapability,
+}
+
+packet LeCsWriteCachedRemoteSupportedCapabilities : Command (op_code = LE_CS_WRITE_CACHED_REMOTE_SUPPORTED_CAPABILITIES) {
+  connection_handle: 12,
+  _reserved_ : 4,
+  num_config_supported : 8,
+  max_consecutive_procedures_supported : 16,
+  num_antennas_supported : 8,
+  max_antenna_paths_supported : 8,
+  roles_supported : CsRolesSupported,
+  modes_supported : CsModesSupported,
+  rtt_capability : CsRttCapability,
+  rtt_aa_only_n : 8,
+  rtt_sounding_n : 8,
+  rtt_random_payload_n : 8,
+  nadm_sounding_capability : CsNadmSoundingCapability,
+  nadm_random_capability : CsNadmRandomCapability,
+  cs_sync_phys_supported : CsSyncPhysSupported,
+  subfeatures_supported : CsSubfeaturesSupported,
+  t_ip1_times_supported : CsTIp1TimesSupported,
+  t_ip2_times_supported : CsTIp2TimesSupported,
+  t_fcs_times_supported : CsTFcsTimesSupported,
+  t_pm_times_supported : CsTPmTimesSupported,
+  t_sw_time_supported : 8,
+  tx_snr_capability : CsTxSnrCapability,
+}
+
+packet LeCsWriteCachedRemoteSupportedCapabilitiesComplete : CommandComplete (command_op_code = LE_CS_WRITE_CACHED_REMOTE_SUPPORTED_CAPABILITIES) {
+  status : ErrorCode,
+  connection_handle: 12,
+  _reserved_ : 4,
+}
+
+packet LeCsSecurityEnable : Command (op_code = LE_CS_SECURITY_ENABLE) {
+  connection_handle: 12,
+  _reserved_ : 4,
+}
+
+packet LeCsSecurityEnableStatus : CommandStatus (command_op_code = LE_CS_SECURITY_ENABLE) {
+}
+
+packet LeCsSecurityEnableComplete : LeMetaEvent (subevent_code = LE_CS_SECURITY_ENABLE_COMPLETE) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+}
+
+struct CsRoleEnable {
+  initiator : 1,
+  reflector : 1,
+  _reserved_ : 6,
+}
+
+enum CsSyncAntennaSelection : 8 {
+  ANTENNA_1 = 0x01,
+  ANTENNA_2 = 0x02,
+  ANTENNA_3 = 0x03,
+  ANTENNA_4 = 0x04,
+  ANTENNAS_IN_ORDER = 0xFE,
+  NO_RECOMMENDATION = 0xFF,
+}
+
+packet LeCsSetDefaultSettings : Command (op_code = LE_CS_SET_DEFAULT_SETTINGS) {
+  connection_handle: 12,
+  _reserved_ : 4,
+  role_enable : CsRoleEnable,
+  cs_sync_antenna_selection : CsSyncAntennaSelection,
+  max_tx_power : 8,
+}
+
+packet LeCsSetDefaultSettingsComplete : CommandComplete (command_op_code = LE_CS_SET_DEFAULT_SETTINGS) {
+  status : ErrorCode,
+  connection_handle: 12,
+  _reserved_ : 4,
+}
+
+packet LeCsReadRemoteFaeTable : Command (op_code = LE_CS_READ_REMOTE_FAE_TABLE) {
+  connection_handle: 12,
+  _reserved_ : 4,
+}
+
+packet LeCsReadRemoteFaeTableStatus : CommandStatus (command_op_code = LE_CS_READ_REMOTE_FAE_TABLE) {
+}
+
+packet LeCsReadRemoteFaeTableComplete : LeMetaEvent (subevent_code = LE_CS_READ_REMOTE_FAE_TABLE_COMPLETE) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+  remote_fae_table : 8[72],
+}
+
+packet LeCsWriteCachedRemoteFaeTable : Command (op_code = LE_CS_WRITE_CACHED_REMOTE_FAE_TABLE) {
+  connection_handle: 12,
+  _reserved_ : 4,
+  remote_fae_table : 8[72],
+}
+
+packet LeCsWriteCachedRemoteFaeTableComplete : CommandComplete (command_op_code = LE_CS_WRITE_CACHED_REMOTE_FAE_TABLE) {
+  status : ErrorCode,
+  connection_handle: 12,
+  _reserved_ : 4,
+}
+
+enum CsCreateContext: 8 {
+  LOCAL_CONTROLLER_ONLY = 0x00,
+  BOTH_LOCAL_AND_REMOTE_CONTROLLER = 0x01,
+}
+
+enum CsMainModeType: 8 {
+  MODE_1 = 0x01,
+  MODE_2 = 0x02,
+  MODE_3 = 0x03,
+}
+
+enum CsSubModeType: 8 {
+  MODE_1 = 0x01,
+  MODE_2 = 0x02,
+  MODE_3 = 0x03,
+  UNUSED = 0xff,
+}
+
+enum CsRole : 8 {
+  INITIATOR = 0x00,
+  REFLECTOR = 0x01,
+}
+
+enum CsRttType : 8 {
+  RTT_AA_ONLY = 0x00,
+  RTT_WITH_32_BIT_SOUNDING_SEQUENCE = 0x01,
+  RTT_WITH_96_BIT_SOUNDING_SEQUENCE = 0x02,
+  RTT_WITH_32_BIT_RANDOM_SEQUENCE = 0x03,
+  RTT_WITH_64_BIT_RANDOM_SEQUENCE = 0x04,
+  RTT_WITH_96_BIT_RANDOM_SEQUENCE = 0x05,
+  RTT_WITH_128_BIT_RANDOM_SEQUENCE = 0x06,
+}
+
+enum CsSyncPhy : 8 {
+  LE_1M_PHY = 0x01,
+  LE_2M_PHY = 0x02,
+  LE_2M_2BT_PHY = 0x03,
+}
+
+enum CsChannelSelectionType : 8 {
+  TYPE_3B = 0x00,
+  TYPE_3C = 0x01,
+}
+
+enum CsCh3cShape : 8 {
+  HAT_SHAPE = 0x00,
+  X_SHAPE = 0x01,
+}
+
+enum CsAction : 8 {
+  CONFIG_REMOVED = 0x00,
+  CONFIG_CREATED = 0x01,
+}
+
+packet LeCsConfigComplete : LeMetaEvent (subevent_code = LE_CS_CONFIG_COMPLETE) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+  config_id : 8,
+  action : CsAction,
+  main_mode_type : CsMainModeType,
+  sub_mode_type : CsSubModeType,
+  min_main_mode_steps : 8,
+  max_main_mode_steps : 8,
+  main_mode_repetition : 8,
+  mode_0_steps : 8,
+  role : CsRole,
+  rtt_type : CsRttType,
+  cs_sync_phy : CsSyncPhy,
+  channel_map : 8[10],
+  channel_map_repetition : 8,
+  channel_selection_type : CsChannelSelectionType,
+  ch3c_shape : CsCh3cShape,
+  ch3c_jump : 8,
+  _reserved_ : 8,
+  t_ip1_time : 8,
+  t_ip2_time : 8,
+  t_fcs_time : 8,
+  t_pm_time : 8,
+}
+
+packet LeCsCreateConfig : Command (op_code = LE_CS_CREATE_CONFIG) {
+  connection_handle: 12,
+  _reserved_ : 4,
+  config_id : 8,
+  create_context : CsCreateContext,
+  main_mode_type : CsMainModeType,
+  sub_mode_type : CsSubModeType,
+  min_main_mode_steps : 8,
+  max_main_mode_steps : 8,
+  main_mode_repetition : 8,
+  mode_0_steps : 8,
+  role : CsRole,
+  rtt_type : CsRttType,
+  cs_sync_phy : CsSyncPhy,
+  channel_map : 8[10],
+  channel_map_repetition : 8,
+  channel_selection_type : CsChannelSelectionType,
+  ch3c_shape : CsCh3cShape,
+  ch3c_jump : 8,
+  _reserved_ : 8,
+}
+
+packet LeCsCreateConfigStatus : CommandStatus (command_op_code = LE_CS_CREATE_CONFIG) {
+}
+
+
+packet LeCsRemoveConfig : Command (op_code = LE_CS_REMOVE_CONFIG) {
+  connection_handle: 12,
+  _reserved_ : 4,
+  config_id : 8,
+}
+
+packet LeCsRemoveConfigStatus : CommandStatus (command_op_code = LE_CS_REMOVE_CONFIG) {
+}
+
+packet LeCsSetChannelClassification : Command (op_code = LE_CS_SET_CHANNEL_CLASSIFICATION) {
+  channel_classification : 8[10],
+}
+
+packet LeCsSetChannelClassificationComplete : CommandComplete (command_op_code = LE_CS_SET_CHANNEL_CLASSIFICATION) {
+}
+
+enum CsPhy : 8 {
+  LE_1M_PHY = 0x01,
+  LE_2M_PHY = 0x02,
+  LE_CODED_PHY_S2 = 0x03,
+  LE_CODED_PHY_S8 = 0x04,
+}
+
+struct CsPreferredPeerAntenna {
+  use_first_ordered_antenna_element : 1,
+  use_second_ordered_antenna_element : 1,
+  use_third_ordered_antenna_element : 1,
+  use_fourth_ordered_antenna_element : 1,
+  _reserved_ : 4,
+}
+
+enum CsSnrControl : 8 {
+  ADJUST_18_DB = 0x00,
+  ADJUST_21_DB = 0x01,
+  ADJUST_24_DB = 0x02,
+  ADJUST_27_DB = 0x03,
+  ADJUST_30_DB = 0x04,
+  NOT_APPLIED = 0xFF,
+}
+
+packet LeCsSetProcedureParameters  : Command (op_code = LE_CS_SET_PROCEDURE_PARAMETERS) {
+  connection_handle: 12,
+  _reserved_ : 4,
+  config_id : 8,
+  max_procedure_len : 16,
+  min_procedure_interval : 16,
+  max_procedure_interval : 16,
+  max_procedure_count : 16,
+  min_subevent_len : 24,
+  max_subevent_len : 24,
+  tone_antenna_config_selection : 8,
+  phy : CsPhy,
+  tx_power_delta : 8,
+  preferred_peer_antenna : CsPreferredPeerAntenna,
+  snr_control_initiator: CsSnrControl,
+  snr_control_reflector: CsSnrControl,
+}
+
+packet LeCsSetProcedureParametersComplete : CommandComplete (command_op_code = LE_CS_SET_PROCEDURE_PARAMETERS) {
+  status : ErrorCode,
+  connection_handle: 12,
+  _reserved_ : 4,
+}
+
+packet LeCsProcedureEnable : Command (op_code = LE_CS_PROCEDURE_ENABLE) {
+  connection_handle: 12,
+  _reserved_ : 4,
+  config_id : 8,
+  procedure_enable : Enable,
+}
+
+packet LeCsProcedureEnableStatus : CommandStatus (command_op_code = LE_CS_PROCEDURE_ENABLE) {
+}
+
+packet LeCsProcedureEnableComplete : LeMetaEvent (subevent_code = LE_CS_PROCEDURE_ENABLE_COMPLETE) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+  config_id : 8,
+  state : Enable,
+  tone_antenna_config_selection : 8,
+  selected_tx_power : 8,
+  subevent_len : 24,
+  subevents_per_event : 8,
+  subevent_interval : 16,
+  event_interval : 16,
+  procedure_interval : 16,
+  procedure_count : 16,
+  max_procedure_len : 16,
+}
+
+packet LeCsTest : Command (op_code = LE_CS_TEST) {
+  main_mode_type : CsMainModeType,
+  sub_mode_type : CsSubModeType,
+  main_mode_repetition : 8,
+  mode_0_steps : 8,
+  role : CsRole,
+  rtt_type : CsRttType,
+  cs_sync_phy : CsSyncPhy,
+  cs_sync_antenna_selection : 8,
+  subevent_len : 24,
+  subevent_interval : 16,
+  max_num_subevents : 8,
+  transmit_power_level : 8,
+  t_ip1_time : 8,
+  t_ip2_time : 8,
+  t_fcs_time : 8,
+  t_pm_time : 8,
+  t_sw_time : 8,
+  tone_antenna_config_selection : 8,
+  _reserved_ : 8,
+  snr_control_initiator: CsSnrControl,
+  snr_control_reflector: CsSnrControl,
+  drbg_nonce : 16,
+  channel_map_repetition : 8,
+  override_config : 16,
+  _size_(override_parameters_data) : 8,
+  override_parameters_data : 8[],
+}
+
+packet LeCsTestComplete : CommandComplete (command_op_code = LE_CS_TEST) {
+  status : ErrorCode,
+}
+
+packet LeCsTestEnd : Command (op_code = LE_CS_TEST_END) {
+}
+
+packet LeCsTestEndStatus : CommandStatus (command_op_code = LE_CS_TEST_END) {
+}
+
+packet LeCsTestEndComplete : LeMetaEvent (subevent_code = LE_CS_TEST_END_COMPLETE) {
+  status : ErrorCode,
+}
+
 // HCI Event Packets
 
 packet InquiryComplete : Event (event_code = INQUIRY_COMPLETE) {
@@ -4767,6 +5447,13 @@ packet EncryptionChange : Event (event_code = ENCRYPTION_CHANGE) {
   encryption_enabled : EncryptionEnabled,
 }
 
+packet EncryptionChangeV2 : Event (event_code = ENCRYPTION_CHANGE_V2) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+  encryption_enabled : EncryptionEnabled,
+  key_size : 8,
+}
 packet ChangeConnectionLinkKeyComplete : Event (event_code = CHANGE_CONNECTION_LINK_KEY_COMPLETE) {
   status : ErrorCode,
   connection_handle : 12,
@@ -5116,18 +5803,18 @@ packet RemoteHostSupportedFeaturesNotification : Event (event_code = REMOTE_HOST
   host_supported_features : 64,
 }
 
-packet LeMetaEvent : Event (event_code = LE_META_EVENT) {
-  subevent_code : SubeventCode,
-  _body_,
-}
-
 packet NumberOfCompletedDataBlocks : Event (event_code = NUMBER_OF_COMPLETED_DATA_BLOCKS) {
   total_num_data_blocks : 16,
   _payload_, // placeholder (unimplemented)
 }
 
+packet AuthenticatedPayloadTimeoutExpired : Event (event_code = AUTHENTICATED_PAYLOAD_TIMEOUT_EXPIRED) {
+  connection_handle : 12,
+  _reserved_ : 4,
+}
+
 // LE Events
-packet LeConnectionComplete : LeMetaEvent (subevent_code = CONNECTION_COMPLETE) {
+packet LeConnectionComplete : LeMetaEvent (subevent_code = LE_CONNECTION_COMPLETE) {
   status : ErrorCode,
   connection_handle : 12,
   _reserved_ : 4,
@@ -5157,12 +5844,12 @@ struct LeAdvertisingResponse {
   rssi : 8,
 }
 
-packet LeAdvertisingReport : LeMetaEvent (subevent_code = ADVERTISING_REPORT) {
+packet LeAdvertisingReport : LeMetaEvent (subevent_code = LE_ADVERTISING_REPORT) {
   _count_(responses) : 8,
   responses : LeAdvertisingResponse[],
 }
 
-packet LeConnectionUpdateComplete : LeMetaEvent (subevent_code = CONNECTION_UPDATE_COMPLETE) {
+packet LeConnectionUpdateComplete : LeMetaEvent (subevent_code = LE_CONNECTION_UPDATE_COMPLETE) {
   status : ErrorCode,
   connection_handle : 12,
   _reserved_ : 4,
@@ -5171,21 +5858,14 @@ packet LeConnectionUpdateComplete : LeMetaEvent (subevent_code = CONNECTION_UPDA
   supervision_timeout : 16,  // 0x000A to 0x0C80 (100ms to 32s)
 }
 
-packet LeReadRemoteFeaturesComplete : LeMetaEvent (subevent_code = READ_REMOTE_FEATURES_COMPLETE) {
-  status : ErrorCode,
-  connection_handle : 12,
-  _reserved_ : 4,
-  le_features : 64,
-}
-
-packet LeLongTermKeyRequest : LeMetaEvent (subevent_code = LONG_TERM_KEY_REQUEST) {
+packet LeLongTermKeyRequest : LeMetaEvent (subevent_code = LE_LONG_TERM_KEY_REQUEST) {
   connection_handle : 12,
   _reserved_ : 4,
   random_number : 8[8],
   encrypted_diversifier : 16,
 }
 
-packet LeRemoteConnectionParameterRequest : LeMetaEvent (subevent_code = REMOTE_CONNECTION_PARAMETER_REQUEST) {
+packet LeRemoteConnectionParameterRequest : LeMetaEvent (subevent_code = LE_REMOTE_CONNECTION_PARAMETER_REQUEST) {
   connection_handle : 12,
   _reserved_ : 4,
   interval_min : 16, // 0x006 - 0x0C80 (7.5ms - 4s)
@@ -5194,7 +5874,7 @@ packet LeRemoteConnectionParameterRequest : LeMetaEvent (subevent_code = REMOTE_
   timeout : 16,  // 0x000A to 0x0C80 (100ms to 32s)
 }
 
-packet LeDataLengthChange : LeMetaEvent (subevent_code = DATA_LENGTH_CHANGE) {
+packet LeDataLengthChange : LeMetaEvent (subevent_code = LE_DATA_LENGTH_CHANGE) {
   connection_handle : 12,
   _reserved_ : 4,
   max_tx_octets : 16, // 0x001B - 0x00FB
@@ -5203,17 +5883,18 @@ packet LeDataLengthChange : LeMetaEvent (subevent_code = DATA_LENGTH_CHANGE) {
   max_rx_time : 16, // 0x0148 - 0x4290
 }
 
-packet ReadLocalP256PublicKeyComplete : LeMetaEvent (subevent_code = READ_LOCAL_P256_PUBLIC_KEY_COMPLETE) {
+packet LeReadLocalP256PublicKeyComplete : LeMetaEvent (subevent_code = LE_READ_LOCAL_P256_PUBLIC_KEY_COMPLETE) {
   status : ErrorCode,
-  local_p_256_public_key : 8[64],
+  key_x_coordinate : 8[32],
+  key_y_coordinate : 8[32],
 }
 
-packet GenerateDhKeyComplete : LeMetaEvent (subevent_code = GENERATE_DHKEY_COMPLETE) {
+packet LeGenerateDhKeyComplete : LeMetaEvent (subevent_code = LE_GENERATE_DHKEY_COMPLETE) {
   status : ErrorCode,
   dh_key : 8[32],
 }
 
-packet LeEnhancedConnectionComplete : LeMetaEvent (subevent_code = ENHANCED_CONNECTION_COMPLETE) {
+packet LeEnhancedConnectionCompleteV1 : LeMetaEvent (subevent_code = LE_ENHANCED_CONNECTION_COMPLETE_V1) {
   status : ErrorCode,
   connection_handle : 12,
   _reserved_ : 4,
@@ -5226,6 +5907,23 @@ packet LeEnhancedConnectionComplete : LeMetaEvent (subevent_code = ENHANCED_CONN
   peripheral_latency : 16,
   supervision_timeout : 16,  // 0x000A to 0x0C80 (100ms to 32s)
   central_clock_accuracy : ClockAccuracy,
+}
+
+packet LeEnhancedConnectionCompleteV2 : LeMetaEvent (subevent_code = LE_ENHANCED_CONNECTION_COMPLETE_V2) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+  role : Role,
+  peer_address_type : AddressType,
+  peer_address : Address,
+  local_resolvable_private_address : Address,
+  peer_resolvable_private_address : Address,
+  connection_interval : 16, // 0x006 - 0x0C80 (7.5ms - 4000ms)
+  peripheral_latency : 16,
+  supervision_timeout : 16,  // 0x000A to 0x0C80 (100ms to 32s)
+  central_clock_accuracy : ClockAccuracy,
+  advertising_handle : 8,
+  sync_handle : 16,
 }
 
 enum DirectAdvertisingAddressType : 8 {
@@ -5254,12 +5952,12 @@ struct LeDirectedAdvertisingResponse {
   rssi : 8,
 }
 
-packet LeDirectedAdvertisingReport : LeMetaEvent (subevent_code = DIRECTED_ADVERTISING_REPORT) {
+packet LeDirectedAdvertisingReport : LeMetaEvent (subevent_code = LE_DIRECTED_ADVERTISING_REPORT) {
   _count_(responses) : 8,
   responses : LeDirectedAdvertisingResponse[],
 }
 
-packet LePhyUpdateComplete : LeMetaEvent (subevent_code = PHY_UPDATE_COMPLETE) {
+packet LePhyUpdateComplete : LeMetaEvent (subevent_code = LE_PHY_UPDATE_COMPLETE) {
     status : ErrorCode,
     connection_handle : 12,
     _reserved_ : 4,
@@ -5296,12 +5994,12 @@ struct LeExtendedAdvertisingResponse {
   advertising_data: 8[],
 }
 
-packet LeExtendedAdvertisingReport : LeMetaEvent (subevent_code = EXTENDED_ADVERTISING_REPORT) {
+packet LeExtendedAdvertisingReport : LeMetaEvent (subevent_code = LE_EXTENDED_ADVERTISING_REPORT) {
   _count_(responses) : 8,
   responses : LeExtendedAdvertisingResponse[],
 }
 
-packet LePeriodicAdvertisingSyncEstablished : LeMetaEvent (subevent_code = PERIODIC_ADVERTISING_SYNC_ESTABLISHED) {
+packet LePeriodicAdvertisingSyncEstablishedV1 : LeMetaEvent (subevent_code = LE_PERIODIC_ADVERTISING_SYNC_ESTABLISHED_V1) {
   status : ErrorCode,
   sync_handle : 12,
   _reserved_ : 4,
@@ -5313,7 +6011,23 @@ packet LePeriodicAdvertisingSyncEstablished : LeMetaEvent (subevent_code = PERIO
   advertiser_clock_accuracy : ClockAccuracy,
 }
 
-packet LePeriodicAdvertisingReport : LeMetaEvent (subevent_code = PERIODIC_ADVERTISING_REPORT) {
+packet LePeriodicAdvertisingSyncEstablishedV2 : LeMetaEvent (subevent_code = LE_PERIODIC_ADVERTISING_SYNC_ESTABLISHED_V2) {
+  status : ErrorCode,
+  sync_handle : 12,
+  _reserved_ : 4,
+  advertising_sid : 8,
+  advertiser_address_type : AddressType,
+  advertiser_address : Address,
+  advertiser_phy : SecondaryPhyType,
+  periodic_advertising_interval : 16,
+  advertiser_clock_accuracy : ClockAccuracy,
+  num_subevents : 8,
+  subevent_interval : 8,
+  response_slot_delay : 8,
+  response_slot_spacing : 8,
+}
+
+packet LePeriodicAdvertisingReportV1 : LeMetaEvent (subevent_code = LE_PERIODIC_ADVERTISING_REPORT_V1) {
   sync_handle : 12,
   _reserved_ : 4,
   tx_power : 8,
@@ -5325,15 +6039,29 @@ packet LePeriodicAdvertisingReport : LeMetaEvent (subevent_code = PERIODIC_ADVER
   data : 8[],
 }
 
-packet LePeriodicAdvertisingSyncLost : LeMetaEvent (subevent_code = PERIODIC_ADVERTISING_SYNC_LOST) {
+packet LePeriodicAdvertisingReportV2 : LeMetaEvent (subevent_code = LE_PERIODIC_ADVERTISING_REPORT_V2) {
+  sync_handle : 12,
+  _reserved_ : 4,
+  tx_power : 8,
+  rssi : 8,
+  cte_type : CteType,
+  periodic_event_counter : 16,
+  subevent : 8,
+  data_status : DataStatus,
+  _reserved_: 6,
+  _size_(data) : 8,
+  data : 8[],
+}
+
+packet LePeriodicAdvertisingSyncLost : LeMetaEvent (subevent_code = LE_PERIODIC_ADVERTISING_SYNC_LOST) {
   sync_handle : 12,
   _reserved_ : 4,
 }
 
-packet LeScanTimeout : LeMetaEvent (subevent_code = SCAN_TIMEOUT) {
+packet LeScanTimeout : LeMetaEvent (subevent_code = LE_SCAN_TIMEOUT) {
 }
 
-packet LeAdvertisingSetTerminated : LeMetaEvent (subevent_code = ADVERTISING_SET_TERMINATED) {
+packet LeAdvertisingSetTerminated : LeMetaEvent (subevent_code = LE_ADVERTISING_SET_TERMINATED) {
   status : ErrorCode,
   advertising_handle : 8,
   connection_handle : 12,
@@ -5341,7 +6069,7 @@ packet LeAdvertisingSetTerminated : LeMetaEvent (subevent_code = ADVERTISING_SET
   num_completed_extended_advertising_events : 8,
 }
 
-packet LeScanRequestReceived : LeMetaEvent (subevent_code = SCAN_REQUEST_RECEIVED) {
+packet LeScanRequestReceived : LeMetaEvent (subevent_code = LE_SCAN_REQUEST_RECEIVED) {
   advertising_handle : 8,
   scanner_address_type : AddressType,
   scanner_address : Address,
@@ -5352,25 +6080,25 @@ enum ChannelSelectionAlgorithm : 8 {
   ALGORITHM_2 = 1,
 }
 
-packet LeChannelSelectionAlgorithm : LeMetaEvent (subevent_code = CHANNEL_SELECTION_ALGORITHM) {
+packet LeChannelSelectionAlgorithm : LeMetaEvent (subevent_code = LE_CHANNEL_SELECTION_ALGORITHM) {
   connection_handle : 12,
   _reserved_ : 4,
   channel_selection_algorithm : ChannelSelectionAlgorithm,
 }
 
-packet LeConnectionlessIqReport : LeMetaEvent (subevent_code = CONNECTIONLESS_IQ_REPORT) {
+packet LeConnectionlessIqReport : LeMetaEvent (subevent_code = LE_CONNECTIONLESS_IQ_REPORT) {
   _payload_, // placeholder (unimplemented)
 }
 
-packet LeConnectionIqReport : LeMetaEvent (subevent_code = CONNECTION_IQ_REPORT) {
+packet LeConnectionIqReport : LeMetaEvent (subevent_code = LE_CONNECTION_IQ_REPORT) {
   _payload_, // placeholder (unimplemented)
 }
 
-packet LeCteRequestFailed : LeMetaEvent (subevent_code = CTE_REQUEST_FAILED) {
+packet LeCteRequestFailed : LeMetaEvent (subevent_code = LE_CTE_REQUEST_FAILED) {
   _payload_, // placeholder (unimplemented)
 }
 
-packet LePeriodicAdvertisingSyncTransferReceived : LeMetaEvent (subevent_code = PERIODIC_ADVERTISING_SYNC_TRANSFER_RECEIVED) {
+packet LePeriodicAdvertisingSyncTransferReceivedV1 : LeMetaEvent (subevent_code = LE_PERIODIC_ADVERTISING_SYNC_TRANSFER_RECEIVED_V1) {
   status : ErrorCode,
   connection_handle : 12,
   _reserved_ : 4,
@@ -5386,7 +6114,27 @@ packet LePeriodicAdvertisingSyncTransferReceived : LeMetaEvent (subevent_code = 
   advertiser_clock_accuracy : ClockAccuracy,
 }
 
-packet LeCisEstablished : LeMetaEvent (subevent_code = CIS_ESTABLISHED) {
+packet LePeriodicAdvertisingSyncTransferReceivedV2 : LeMetaEvent (subevent_code = LE_PERIODIC_ADVERTISING_SYNC_TRANSFER_RECEIVED_V2) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+  service_data : 16,
+  sync_handle : 12,
+  _reserved_ : 4,
+  advertising_sid : 4,
+  _reserved_ : 4,
+  advertiser_address_type : AddressType,
+  advertiser_address : Address,
+  advertiser_phy : SecondaryPhyType,
+  periodic_advertising_interval : 16,
+  advertiser_clock_accuracy : ClockAccuracy,
+  num_subevents : 8,
+  subevent_interval : 8,
+  response_slot_delay : 8,
+  response_slot_spacing : 8,
+}
+
+packet LeCisEstablishedV1 : LeMetaEvent (subevent_code = LE_CIS_ESTABLISHED_V1) {
   status : ErrorCode,
   connection_handle : 12,
   _reserved_ : 4,
@@ -5410,7 +6158,37 @@ packet LeCisEstablished : LeMetaEvent (subevent_code = CIS_ESTABLISHED) {
   iso_interval : 16,
 }
 
-packet LeCisRequest : LeMetaEvent (subevent_code = CIS_REQUEST) {
+packet LeCisEstablishedV2 : LeMetaEvent (subevent_code = LE_CIS_ESTABLISHED_V2) {
+  status : ErrorCode,
+  connection_handle : 12,
+  _reserved_ : 4,
+  cig_sync_delay : 24,
+  cis_sync_delay : 24,
+  transport_latency_c_to_p : 24,
+  transport_latency_p_to_c : 24,
+  phy_c_to_p : SecondaryPhyType,
+  phy_p_to_c : SecondaryPhyType,
+  nse : 8,
+  bn_c_to_p : 4,
+  _reserved_ : 4,
+  bn_p_to_c : 4,
+  _reserved_ : 4,
+  ft_c_to_p : 8,
+  ft_p_to_c : 8,
+  max_pdu_c_to_p : 8,
+  _reserved_ : 8,
+  max_pdu_p_to_c : 8,
+  _reserved_ : 8,
+  iso_interval : 16,
+  sub_interval : 24,
+  max_sdu_c_to_p : 16,
+  max_sdu_p_to_c : 16,
+  sdu_interval_c_to_p : 24,
+  sdu_interval_p_to_c : 24,
+  framing : Enable,
+}
+
+packet LeCisRequest : LeMetaEvent (subevent_code = LE_CIS_REQUEST) {
   acl_connection_handle : 12,
   _reserved_ : 4,
   cis_connection_handle : 12,
@@ -5419,7 +6197,7 @@ packet LeCisRequest : LeMetaEvent (subevent_code = CIS_REQUEST) {
   cis_id : 8,
 }
 
-packet LeCreateBigComplete : LeMetaEvent (subevent_code = CREATE_BIG_COMPLETE) {
+packet LeCreateBigComplete : LeMetaEvent (subevent_code = LE_CREATE_BIG_COMPLETE) {
   status : ErrorCode,
   big_handle : 8,
   big_sync_delay : 24,
@@ -5435,12 +6213,12 @@ packet LeCreateBigComplete : LeMetaEvent (subevent_code = CREATE_BIG_COMPLETE) {
   connection_handle : 16[],
 }
 
-packet LeTerminateBigComplete : LeMetaEvent (subevent_code = TERMINATE_BIG_COMPLETE) {
+packet LeTerminateBigComplete : LeMetaEvent (subevent_code = LE_TERMINATE_BIG_COMPLETE) {
   big_handle : 8,
   reason : ErrorCode,
 }
 
-packet LeBigSyncEstablished : LeMetaEvent (subevent_code = BIG_SYNC_ESTABLISHED) {
+packet LeBigSyncEstablished : LeMetaEvent (subevent_code = LE_BIG_SYNC_ESTABLISHED) {
   status : ErrorCode,
   big_handle : 8,
   transport_latency_big : 24,
@@ -5454,12 +6232,12 @@ packet LeBigSyncEstablished : LeMetaEvent (subevent_code = BIG_SYNC_ESTABLISHED)
   connection_handle : 16[],
 }
 
-packet LeBigSyncLost : LeMetaEvent (subevent_code = BIG_SYNC_LOST) {
+packet LeBigSyncLost : LeMetaEvent (subevent_code = LE_BIG_SYNC_LOST) {
   big_handle : 8,
   reason : ErrorCode,
 }
 
-packet LeRequestPeerScaComplete : LeMetaEvent (subevent_code = REQUEST_PEER_SCA_COMPLETE) {
+packet LeRequestPeerScaComplete : LeMetaEvent (subevent_code = LE_REQUEST_PEER_SCA_COMPLETE) {
   status : ErrorCode,
   connection_handle : 12,
   _reserved_ : 4,
@@ -5472,7 +6250,7 @@ enum PathLossZone : 8 {
   HIGH = 2,
 }
 
-packet LePathLossThreshold : LeMetaEvent (subevent_code = PATH_LOSS_THRESHOLD) {
+packet LePathLossThreshold : LeMetaEvent (subevent_code = LE_PATH_LOSS_THRESHOLD) {
   connection_handle : 12,
   _reserved_ : 4,
   current_path_loss : 8,
@@ -5485,7 +6263,7 @@ enum ReportingReason : 8 {
   READ_COMMAND_COMPLETE = 0x02,
 }
 
-packet LeTransmitPowerReporting : LeMetaEvent (subevent_code = TRANSMIT_POWER_REPORTING) {
+packet LeTransmitPowerReporting : LeMetaEvent (subevent_code = LE_TRANSMIT_POWER_REPORTING) {
   status : ErrorCode,
   connection_handle : 12,
   _reserved_ : 4,
@@ -5496,7 +6274,7 @@ packet LeTransmitPowerReporting : LeMetaEvent (subevent_code = TRANSMIT_POWER_RE
   delta : 8,
 }
 
-packet LeBigInfoAdvertisingReport : LeMetaEvent (subevent_code = BIG_INFO_ADVERTISING_REPORT) {
+packet LeBigInfoAdvertisingReport : LeMetaEvent (subevent_code = LE_BIG_INFO_ADVERTISING_REPORT) {
   sync_handle : 12,
   _reserved_ : 4,
   num_bis : 8,
@@ -5991,6 +6769,17 @@ packet LeApcfAdTypeFilter : LeApcf (apcf_opcode = AD_TYPE_FILTER) {
 }
 
 packet LeApcfAdTypeFilterComplete : LeApcfComplete (apcf_opcode = AD_TYPE_FILTER) {
+  apcf_action : ApcfAction,
+  apcf_available_spaces : 8,
+}
+
+packet LeApcfTransportDiscoveryService : LeApcf (apcf_opcode = TRANSPORT_DISCOVERY_SERVICE) {
+  apcf_action : ApcfAction,
+  apcf_filter_index : 8,
+  apcf_transport_discovery_data : 8[],
+}
+
+packet LeApcfTransportDiscoveryServiceComplete : LeApcfComplete (apcf_opcode = TRANSPORT_DISCOVERY_SERVICE) {
   apcf_action : ApcfAction,
   apcf_available_spaces : 8,
 }

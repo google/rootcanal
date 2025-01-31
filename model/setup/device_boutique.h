@@ -28,22 +28,21 @@ namespace rootcanal {
 
 // Create customized devices from a centralized shop.
 class DeviceBoutique {
- public:
+public:
   DeviceBoutique();
   virtual ~DeviceBoutique() = default;
 
   // Register a constructor for a device type.
   static bool Register(
-      std::string const& device_type,
-      std::function<std::shared_ptr<Device>(const std::vector<std::string>&)>
-          method);
+          std::string const& device_type,
+          std::function<std::shared_ptr<Device>(const std::vector<std::string>&)> method);
 
   // Call the function that matches arg[0] with args
   static std::shared_ptr<Device> Create(const std::vector<std::string>& args);
 
- private:
-  static std::unordered_map<std::string, std::function<std::shared_ptr<Device>(
-                                             const std::vector<std::string>&)>>&
+private:
+  static std::unordered_map<
+          std::string, std::function<std::shared_ptr<Device>(const std::vector<std::string>&)>>&
   GetMap();
 };
 

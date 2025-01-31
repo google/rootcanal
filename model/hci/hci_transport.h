@@ -24,22 +24,19 @@
 
 namespace rootcanal {
 
-using PacketCallback = std::function<void(
-    PacketType, const std::shared_ptr<std::vector<uint8_t>>)>;
+using PacketCallback = std::function<void(PacketType, const std::shared_ptr<std::vector<uint8_t>>)>;
 using CloseCallback = std::function<void()>;
 
 class HciTransport {
- public:
+public:
   virtual ~HciTransport() = default;
 
   /// Send the input HCI packet with the selected H4 packet type.
   /// The packet data contains the H4 header but not the IDC byte.
-  virtual void Send(PacketType packet_type,
-                    std::vector<uint8_t> const& packet) = 0;
+  virtual void Send(PacketType packet_type, std::vector<uint8_t> const& packet) = 0;
 
   /// Register the handler for received HCI packets.
-  virtual void RegisterCallbacks(PacketCallback packet_callback,
-                                 CloseCallback close_callback) = 0;
+  virtual void RegisterCallbacks(PacketCallback packet_callback, CloseCallback close_callback) = 0;
 
   virtual void Tick() = 0;
   virtual void Close() = 0;

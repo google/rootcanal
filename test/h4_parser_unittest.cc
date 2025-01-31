@@ -24,8 +24,8 @@ namespace rootcanal {
 using PacketData = std::vector<uint8_t>;
 
 class H4ParserTest : public ::testing::Test {
- public:
- protected:
+public:
+protected:
   void SetUp() override {
     packet_.clear();
     parser_.Reset();
@@ -33,41 +33,37 @@ class H4ParserTest : public ::testing::Test {
 
   void TearDown() override { parser_.Reset(); }
 
-  void PacketReadCallback(const std::vector<uint8_t>& packet) {
-    packet_ = std::move(packet);
-  }
+  void PacketReadCallback(const std::vector<uint8_t>& packet) { packet_ = std::move(packet); }
 
- protected:
+protected:
   H4Parser parser_{
-      [&](auto p) {
-        type_ = PacketType::COMMAND;
-        PacketReadCallback(p);
-      },
-      [&](auto p) {
-        type_ = PacketType::EVENT;
-        PacketReadCallback(p);
-      },
-      [&](auto p) {
-        type_ = PacketType::ACL;
-        PacketReadCallback(p);
-      },
-      [&](auto p) {
-        type_ = PacketType::SCO;
-        PacketReadCallback(p);
-      },
-      [&](auto p) {
-        type_ = PacketType::ISO;
-        PacketReadCallback(p);
-      },
-      true,
+          [&](auto p) {
+            type_ = PacketType::COMMAND;
+            PacketReadCallback(p);
+          },
+          [&](auto p) {
+            type_ = PacketType::EVENT;
+            PacketReadCallback(p);
+          },
+          [&](auto p) {
+            type_ = PacketType::ACL;
+            PacketReadCallback(p);
+          },
+          [&](auto p) {
+            type_ = PacketType::SCO;
+            PacketReadCallback(p);
+          },
+          [&](auto p) {
+            type_ = PacketType::ISO;
+            PacketReadCallback(p);
+          },
+          true,
   };
   PacketData packet_;
   PacketType type_;
 };
 
-TEST_F(H4ParserTest, InitiallyExpectOneByte) {
-  ASSERT_EQ(1, (int)parser_.BytesRequested());
-}
+TEST_F(H4ParserTest, InitiallyExpectOneByte) { ASSERT_EQ(1, (int)parser_.BytesRequested()); }
 
 TEST_F(H4ParserTest, SwitchStateAfterType) {
   uint8_t typ = (uint8_t)PacketType::ACL;
@@ -114,15 +110,13 @@ TEST_F(H4ParserTest, TooMuchIsDeath) {
 TEST_F(H4ParserTest, WrongTypeIsDeath) {
   parser_.DisableRecovery();
   PacketData bad_bit({0xfd});
-  ASSERT_DEATH(parser_.Consume(bad_bit.data(), bad_bit.size()),
-               "Received invalid packet type.*");
+  ASSERT_DEATH(parser_.Consume(bad_bit.data(), bad_bit.size()), "Received invalid packet type.*");
 }
 
 TEST_F(H4ParserTest, CallsTheRightCallbacks) {
   // Make sure that the proper type of callback is invoked.
-  std::vector<PacketType> types({PacketType::ACL, PacketType::SCO,
-                                 PacketType::COMMAND, PacketType::EVENT,
-                                 PacketType::ISO});
+  std::vector<PacketType> types({PacketType::ACL, PacketType::SCO, PacketType::COMMAND,
+                                 PacketType::EVENT, PacketType::ISO});
   for (auto packetType : types) {
     // Configure the incoming packet.
     uint8_t typ = (uint8_t)packetType;

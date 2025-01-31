@@ -24,11 +24,11 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeSetPeriodicAdvertisingParametersTest : public ::testing::Test {
- public:
+public:
   LeSetPeriodicAdvertisingParametersTest() = default;
   ~LeSetPeriodicAdvertisingParametersTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -36,124 +36,110 @@ class LeSetPeriodicAdvertisingParametersTest : public ::testing::Test {
 
 TEST_F(LeSetPeriodicAdvertisingParametersTest, Success) {
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
+            ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetPeriodicAdvertisingParametersTest, UnknownAdvertisingHandle) {
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
-      ErrorCode::UNKNOWN_ADVERTISING_IDENTIFIER);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
+            ErrorCode::UNKNOWN_ADVERTISING_IDENTIFIER);
 }
 
 TEST_F(LeSetPeriodicAdvertisingParametersTest, InvalidAdvertisingInterval) {
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0x0, 0xffff, false),
-      ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0x0, 0xffff, false),
+            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0xffff, 0x6, false),
-      ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0xffff, 0x6, false),
+            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
-TEST_F(LeSetPeriodicAdvertisingParametersTest,
-       InvalidLegacyAdvertisingEventProperties) {
-  ASSERT_EQ(
-      controller_.LeSetExtendedAdvertisingParameters(
-          0, MakeAdvertisingEventProperties(LEGACY | DIRECTED | SCANNABLE),
-          0x0800, 0x0800, 0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-          PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
-          AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
-          SecondaryPhyType::LE_2M, 0x0, false),
-      ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+TEST_F(LeSetPeriodicAdvertisingParametersTest, InvalidLegacyAdvertisingEventProperties) {
+  ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
+                    0, MakeAdvertisingEventProperties(LEGACY | DIRECTED | SCANNABLE), 0x0800,
+                    0x0800, 0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
+            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
-TEST_F(LeSetPeriodicAdvertisingParametersTest,
-       InvalidAdvertisingEventProperties) {
+TEST_F(LeSetPeriodicAdvertisingParametersTest, InvalidAdvertisingEventProperties) {
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800,
-                0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
-      ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
+            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                1, MakeAdvertisingEventProperties(SCANNABLE), 0x0800, 0x0800,
-                0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    1, MakeAdvertisingEventProperties(SCANNABLE), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(1, 0x6, 0xffff, false),
-      ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(1, 0x6, 0xffff, false),
+            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                2, MakeAdvertisingEventProperties(ANONYMOUS), 0x0800, 0x0800,
-                0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    2, MakeAdvertisingEventProperties(ANONYMOUS), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(2, 0x6, 0xffff, false),
-      ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(2, 0x6, 0xffff, false),
+            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                3, MakeAdvertisingEventProperties(LEGACY), 0x0800, 0x0800, 0x7,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    3, MakeAdvertisingEventProperties(LEGACY), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(3, 0x6, 0xffff, false),
-      ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(3, 0x6, 0xffff, false),
+            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeSetPeriodicAdvertisingParametersTest, PeriodicAdvertisingEnabled) {
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
-      ErrorCode::SUCCESS);
-
-  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingEnable(true, false, 0),
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
-      ErrorCode::COMMAND_DISALLOWED);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingEnable(true, false, 0), ErrorCode::SUCCESS);
+
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
+            ErrorCode::COMMAND_DISALLOWED);
 }
 
 }  // namespace rootcanal

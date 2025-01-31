@@ -38,8 +38,7 @@
 namespace android {
 namespace net {
 
-PosixAsyncSocket::PosixAsyncSocket(int fd, AsyncManager* am)
-    : fd_(fd), am_(am), watching_(false) {
+PosixAsyncSocket::PosixAsyncSocket(int fd, AsyncManager* am) : fd_(fd), am_(am), watching_(false) {
   int flags = fcntl(fd, F_GETFL);
   fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
@@ -80,7 +79,7 @@ ssize_t PosixAsyncSocket::Recv(uint8_t* buffer, uint64_t bufferSize) {
   }
   DD("{} bytes ({})", res, fd_);
   return res;
-};
+}
 
 ssize_t PosixAsyncSocket::Send(const uint8_t* buffer, uint64_t bufferSize) {
   errno = 0;
@@ -125,8 +124,7 @@ void PosixAsyncSocket::Close() {
   // Clear out error
   int error_code = 0;
   socklen_t error_code_size = sizeof(error_code);
-  getsockopt(fd_, SOL_SOCKET, SO_ERROR, reinterpret_cast<void*>(&error_code),
-             &error_code_size);
+  getsockopt(fd_, SOL_SOCKET, SO_ERROR, reinterpret_cast<void*>(&error_code), &error_code_size);
 
   // shutdown sockets if possible,
   REPEAT_UNTIL_NO_INTR(shutdown(fd_, SHUT_RDWR));
@@ -139,14 +137,12 @@ void PosixAsyncSocket::Close() {
   fd_ = -1;
 }
 
-bool PosixAsyncSocket::WatchForNonBlockingRead(
-    const ReadCallback& on_read_ready_callback) {
+bool PosixAsyncSocket::WatchForNonBlockingRead(const ReadCallback& on_read_ready_callback) {
   bool expected = false;
   if (watching_.compare_exchange_strong(expected, true)) {
-    return am_->WatchFdForNonBlockingReads(
-               fd_, [on_read_ready_callback, this](int /* fd */) {
-                 on_read_ready_callback(this);
-               }) == 0;
+    return am_->WatchFdForNonBlockingReads(fd_, [on_read_ready_callback, this](int /* fd */) {
+      on_read_ready_callback(this);
+    }) == 0;
   }
   return false;
 }

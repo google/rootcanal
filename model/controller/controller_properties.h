@@ -57,7 +57,7 @@ struct ControllerQuirks {
 // and the capabilities of the Link Manager and Baseband in the BR/EDR
 // Controller. The Host device cannot modify any of these parameters.
 struct ControllerProperties {
- public:
+public:
   ControllerProperties();
   ControllerProperties(rootcanal::configuration::Controller const&);
   ControllerProperties(ControllerProperties const&) = default;
@@ -112,7 +112,9 @@ struct ControllerProperties {
   uint64_t le_features{0};
 
   // Buffer Size (Vol 4, Part E § 7.4.5).
-  uint16_t acl_data_packet_length{1024};
+  // Note: The blueZ HCI user socket limits the ACL Data Packet length to 1023
+  // bytes (see HCI_MAX_FRAME_SIZE).
+  uint16_t acl_data_packet_length{1023};
   uint8_t sco_data_packet_length{255};
   uint16_t total_num_acl_data_packets{10};
   uint16_t total_num_sco_data_packets{10};
@@ -181,8 +183,7 @@ struct ControllerProperties {
 
   bool SupportsCommand(bluetooth::hci::OpCodeIndex op_code) const {
     int index = static_cast<int>(op_code);
-    return (supported_commands[index / 10] & (UINT64_C(1) << (index % 10))) !=
-           0;
+    return (supported_commands[index / 10] & (UINT64_C(1) << (index % 10))) != 0;
   }
 
   /// Return a bit mask with all supported PHYs

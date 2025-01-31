@@ -41,7 +41,7 @@ namespace net {
 using clock = std::chrono::system_clock;
 
 class SigPipeSignalHandler {
- public:
+public:
   SigPipeSignalHandler() {
     sSignal = -1;
     struct sigaction act = {};
@@ -53,7 +53,7 @@ class SigPipeSignalHandler {
 
   int signaled() const { return sSignal; }
 
- private:
+private:
   struct sigaction mOldAction;
 
   static int sSignal;
@@ -67,13 +67,12 @@ int SigPipeSignalHandler::sSignal = 0;
 using SocketCon = std::shared_ptr<AsyncDataChannel>;
 
 class PosixSocketTest : public testing::Test {
- public:
+public:
   PosixSocketTest() : pasc_(&async_manager_), pass_(0, &async_manager_) {}
 
   ~PosixSocketTest() { pass_.Close(); }
 
-  std::tuple<SocketCon, SocketCon> connectPair(
-      std::chrono::milliseconds timeout = 500ms) {
+  std::tuple<SocketCon, SocketCon> connectPair(std::chrono::milliseconds timeout = 500ms) {
     std::mutex m;
     std::condition_variable cv;
 
@@ -81,11 +80,11 @@ class PosixSocketTest : public testing::Test {
     std::shared_ptr<AsyncDataChannel> sock2;
 
     pass_.SetOnConnectCallback(
-        [&](std::shared_ptr<AsyncDataChannel> sock, AsyncDataChannelServer*) {
-          std::unique_lock<std::mutex> guard(m);
-          sock1 = std::move(sock);
-          cv.notify_all();
-        });
+            [&](std::shared_ptr<AsyncDataChannel> sock, AsyncDataChannelServer*) {
+              std::unique_lock<std::mutex> guard(m);
+              sock1 = std::move(sock);
+              cv.notify_all();
+            });
     EXPECT_TRUE(pass_.StartListening());
 
     sock2 = pasc_.ConnectToRemoteServer("localhost", pass_.port(), 1000ms);
@@ -93,15 +92,14 @@ class PosixSocketTest : public testing::Test {
     EXPECT_TRUE(sock2->Connected());
 
     std::unique_lock<std::mutex> lk(m);
-    EXPECT_TRUE(
-        cv.wait_for(lk, timeout, [&] { return sock1.get() != nullptr; }));
+    EXPECT_TRUE(cv.wait_for(lk, timeout, [&] { return sock1.get() != nullptr; }));
     EXPECT_TRUE(sock1);
     EXPECT_TRUE(sock1->Connected());
 
     return {sock1, sock2};
   }
 
- protected:
+protected:
   AsyncManager async_manager_;
   PosixAsyncSocketConnector pasc_;
   PosixAsyncSocketServer pass_;
@@ -242,14 +240,14 @@ TEST_F(PosixSocketTest, canConnectMultiple) {
   std::vector<std::shared_ptr<AsyncDataChannel>> connections;
   bool connected = false;
 
-  pass_.SetOnConnectCallback([&](std::shared_ptr<AsyncDataChannel> const& sock,
-                                 AsyncDataChannelServer*) {
-    std::unique_lock<std::mutex> guard(m);
-    connections.push_back(sock);
-    connected = true;
-    ASSERT_TRUE(pass_.StartListening());
-    cv.notify_all();
-  });
+  pass_.SetOnConnectCallback(
+          [&](std::shared_ptr<AsyncDataChannel> const& sock, AsyncDataChannelServer*) {
+            std::unique_lock<std::mutex> guard(m);
+            connections.push_back(sock);
+            connected = true;
+            ASSERT_TRUE(pass_.StartListening());
+            cv.notify_all();
+          });
   ASSERT_TRUE(pass_.StartListening());
 
   for (int i = 0; i < CONNECTION_COUNT; i++) {
@@ -271,13 +269,12 @@ TEST_F(PosixSocketTest, noConnectWhenNotCallingStart) {
   std::vector<std::shared_ptr<AsyncDataChannel>> connections;
   bool connected = false;
 
-  pass_.SetOnConnectCallback(
-      [&](std::shared_ptr<AsyncDataChannel> sock, AsyncDataChannelServer*) {
-        std::unique_lock<std::mutex> guard(m);
-        connections.push_back(sock);
-        connected = true;
-        cv.notify_all();
-      });
+  pass_.SetOnConnectCallback([&](std::shared_ptr<AsyncDataChannel> sock, AsyncDataChannelServer*) {
+    std::unique_lock<std::mutex> guard(m);
+    connections.push_back(sock);
+    connected = true;
+    cv.notify_all();
+  });
   ASSERT_TRUE(pass_.StartListening());
 
   {

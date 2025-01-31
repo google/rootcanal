@@ -47,21 +47,19 @@ using rootcanal::Device;
 using rootcanal::Phy;
 
 class TestEnvironment {
- public:
+public:
   TestEnvironment(
-      std::function<std::shared_ptr<AsyncDataChannelServer>(AsyncManager*, int)>
-          open_server,
-      std::function<std::shared_ptr<AsyncDataChannelConnector>(AsyncManager*)>
-          open_connector,
-      int test_port, int hci_port, int link_port, int link_ble_port,
-      std::string const& config_str,
-      bool enable_hci_sniffer = false, bool enable_baseband_sniffer = false,
-      bool enable_pcap_filter = false, bool disable_address_reuse = false);
+          std::function<std::shared_ptr<AsyncDataChannelServer>(AsyncManager*, int)> open_server,
+          std::function<std::shared_ptr<AsyncDataChannelConnector>(AsyncManager*)> open_connector,
+          int test_port, int hci_port, int link_port, int link_ble_port,
+          std::string const& config_str, bool enable_hci_sniffer = false,
+          bool enable_baseband_sniffer = false, bool enable_pcap_filter = false,
+          bool disable_address_reuse = false);
 
   void initialize(std::promise<void> barrier);
   void close();
 
- private:
+private:
   rootcanal::AsyncManager async_manager_;
   rootcanal::TestChannelTransport test_channel_transport_;
   std::shared_ptr<AsyncDataChannelServer> test_socket_server_;
@@ -78,40 +76,33 @@ class TestEnvironment {
 
   void SetUpTestChannel();
   void SetUpHciServer(
-      std::function<std::shared_ptr<AsyncDataChannelServer>(AsyncManager*, int)>
-          open_server,
-      int tcp_port, rootcanal::ControllerProperties properties);
+          std::function<std::shared_ptr<AsyncDataChannelServer>(AsyncManager*, int)> open_server,
+          int tcp_port, rootcanal::ControllerProperties properties);
   void SetUpLinkLayerServer();
   void SetUpLinkBleLayerServer();
 
-  std::shared_ptr<Device> ConnectToRemoteServer(const std::string& server,
-                                                int port, Phy::Type phy_type);
+  std::shared_ptr<Device> ConnectToRemoteServer(const std::string& server, int port,
+                                                Phy::Type phy_type);
 
   rootcanal::TestModel test_model_{
-      [this]() { return async_manager_.GetNextUserId(); },
-      [this](rootcanal::AsyncUserId user_id, std::chrono::milliseconds delay,
-             const rootcanal::TaskCallback& task) {
-        return async_manager_.ExecAsync(user_id, delay, task);
-      },
+          [this]() { return async_manager_.GetNextUserId(); },
+          [this](rootcanal::AsyncUserId user_id, std::chrono::milliseconds delay,
+                 const rootcanal::TaskCallback& task) {
+            return async_manager_.ExecAsync(user_id, delay, task);
+          },
 
-      [this](rootcanal::AsyncUserId user_id, std::chrono::milliseconds delay,
-             std::chrono::milliseconds period,
-             const rootcanal::TaskCallback& task) {
-        return async_manager_.ExecAsyncPeriodically(user_id, delay, period,
-                                                    task);
-      },
+          [this](rootcanal::AsyncUserId user_id, std::chrono::milliseconds delay,
+                 std::chrono::milliseconds period, const rootcanal::TaskCallback& task) {
+            return async_manager_.ExecAsyncPeriodically(user_id, delay, period, task);
+          },
 
-      [this](rootcanal::AsyncUserId user) {
-        async_manager_.CancelAsyncTasksFromUser(user);
-      },
+          [this](rootcanal::AsyncUserId user) { async_manager_.CancelAsyncTasksFromUser(user); },
 
-      [this](rootcanal::AsyncTaskId task) {
-        async_manager_.CancelAsyncTask(task);
-      },
+          [this](rootcanal::AsyncTaskId task) { async_manager_.CancelAsyncTask(task); },
 
-      [this](const std::string& server, int port, Phy::Type phy_type) {
-        return ConnectToRemoteServer(server, port, phy_type);
-      }};
+          [this](const std::string& server, int port, Phy::Type phy_type) {
+            return ConnectToRemoteServer(server, port, phy_type);
+          }};
 
   rootcanal::TestCommandHandler test_channel_{test_model_};
 };

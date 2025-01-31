@@ -38,50 +38,42 @@ enum Idc {
 extern "C" {
 
 __attribute__((visibility("default"))) void* ffi_controller_new(
-    uint8_t const address[6],
-    void (*send_hci)(int idc, uint8_t const* data, size_t data_len),
-    void (*send_ll)(uint8_t const* data, size_t data_len, int phy,
-                    int tx_power)) {
+        uint8_t const address[6], void (*send_hci)(int idc, uint8_t const* data, size_t data_len),
+        void (*send_ll)(uint8_t const* data, size_t data_len, int phy, int tx_power)) {
   DualModeController* controller = new DualModeController();
-  controller->SetAddress(Address({address[0], address[1], address[2],
-                                  address[3], address[4], address[5]}));
-  controller->RegisterEventChannel(
-      [=](std::shared_ptr<std::vector<uint8_t>> data) {
-        send_hci(hci::Idc::EVT, data->data(), data->size());
-      });
-  controller->RegisterAclChannel(
-      [=](std::shared_ptr<std::vector<uint8_t>> data) {
-        send_hci(hci::Idc::ACL, data->data(), data->size());
-      });
-  controller->RegisterScoChannel(
-      [=](std::shared_ptr<std::vector<uint8_t>> data) {
-        send_hci(hci::Idc::SCO, data->data(), data->size());
-      });
-  controller->RegisterIsoChannel(
-      [=](std::shared_ptr<std::vector<uint8_t>> data) {
-        send_hci(hci::Idc::ISO, data->data(), data->size());
-      });
+  controller->SetAddress(
+          Address({address[0], address[1], address[2], address[3], address[4], address[5]}));
+  controller->RegisterEventChannel([=](std::shared_ptr<std::vector<uint8_t>> data) {
+    send_hci(hci::Idc::EVT, data->data(), data->size());
+  });
+  controller->RegisterAclChannel([=](std::shared_ptr<std::vector<uint8_t>> data) {
+    send_hci(hci::Idc::ACL, data->data(), data->size());
+  });
+  controller->RegisterScoChannel([=](std::shared_ptr<std::vector<uint8_t>> data) {
+    send_hci(hci::Idc::SCO, data->data(), data->size());
+  });
+  controller->RegisterIsoChannel([=](std::shared_ptr<std::vector<uint8_t>> data) {
+    send_hci(hci::Idc::ISO, data->data(), data->size());
+  });
   controller->RegisterLinkLayerChannel(
-      [=](std::vector<uint8_t> const& data, Phy::Type phy, int8_t tx_power) {
-        send_ll(data.data(), data.size(), static_cast<int>(phy), tx_power);
-      });
+          [=](std::vector<uint8_t> const& data, Phy::Type phy, int8_t tx_power) {
+            send_ll(data.data(), data.size(), static_cast<int>(phy), tx_power);
+          });
 
   return controller;
 }
 
-__attribute__((visibility("default"))) void ffi_controller_delete(
-    void* controller_) {
-  DualModeController* controller =
-      reinterpret_cast<DualModeController*>(controller_);
+__attribute__((visibility("default"))) void ffi_controller_delete(void* controller_) {
+  DualModeController* controller = reinterpret_cast<DualModeController*>(controller_);
   delete controller;
 }
 
-__attribute__((visibility("default"))) void ffi_controller_receive_hci(
-    void* controller_, int idc, uint8_t const* data, size_t data_len) {
-  DualModeController* controller =
-      reinterpret_cast<DualModeController*>(controller_);
+__attribute__((visibility("default"))) void ffi_controller_receive_hci(void* controller_, int idc,
+                                                                       uint8_t const* data,
+                                                                       size_t data_len) {
+  DualModeController* controller = reinterpret_cast<DualModeController*>(controller_);
   std::shared_ptr<std::vector<uint8_t>> bytes =
-      std::make_shared<std::vector<uint8_t>>(data, data + data_len);
+          std::make_shared<std::vector<uint8_t>>(data, data + data_len);
 
   switch (idc) {
     case hci::Idc::CMD:
@@ -97,21 +89,20 @@ __attribute__((visibility("default"))) void ffi_controller_receive_hci(
       controller->HandleIso(bytes);
       break;
     default:
-      std::cerr << "Dropping HCI packet with unknown type " << (int)idc
-                << std::endl;
+      std::cerr << "Dropping HCI packet with unknown type " << (int)idc << std::endl;
       break;
   }
 }
 
-__attribute__((visibility("default"))) void ffi_controller_receive_ll(
-    void* controller_, uint8_t const* data, size_t data_len, int phy,
-    int rssi) {
-  DualModeController* controller =
-      reinterpret_cast<DualModeController*>(controller_);
+__attribute__((visibility("default"))) void ffi_controller_receive_ll(void* controller_,
+                                                                      uint8_t const* data,
+                                                                      size_t data_len, int phy,
+                                                                      int rssi) {
+  DualModeController* controller = reinterpret_cast<DualModeController*>(controller_);
   std::shared_ptr<std::vector<uint8_t>> bytes =
-      std::make_shared<std::vector<uint8_t>>(data, data + data_len);
+          std::make_shared<std::vector<uint8_t>>(data, data + data_len);
   model::packets::LinkLayerPacketView packet =
-      model::packets::LinkLayerPacketView::Create(pdl::packet::slice(bytes));
+          model::packets::LinkLayerPacketView::Create(pdl::packet::slice(bytes));
   if (!packet.IsValid()) {
     std::cerr << "Dropping malformed LL packet" << std::endl;
     return;
@@ -119,15 +110,13 @@ __attribute__((visibility("default"))) void ffi_controller_receive_ll(
   controller->ReceiveLinkLayerPacket(packet, Phy::Type(phy), rssi);
 }
 
-__attribute__((visibility("default"))) void ffi_controller_tick(
-    void* controller_) {
-  DualModeController* controller =
-      reinterpret_cast<DualModeController*>(controller_);
+__attribute__((visibility("default"))) void ffi_controller_tick(void* controller_) {
+  DualModeController* controller = reinterpret_cast<DualModeController*>(controller_);
   controller->Tick();
 }
 
-__attribute__((visibility("default"))) void ffi_generate_rpa(
-    uint8_t const irk_[16], uint8_t rpa[6]) {
+__attribute__((visibility("default"))) void ffi_generate_rpa(uint8_t const irk_[16],
+                                                             uint8_t rpa[6]) {
   std::array<uint8_t, LinkLayerController::kIrkSize> irk;
   memcpy(irk.data(), irk_, LinkLayerController::kIrkSize);
   Address address = LinkLayerController::generate_rpa(irk);

@@ -27,6 +27,14 @@ class Test(ControllerTest):
     LL_advertiser_advInterval_MAX = 0x200
     LL_advertiser_Adv_Channel_Map = 0x7
 
+    ADV_IND = hci.AdvertisingEventProperties(
+        connectable=1,
+        scannable=1,
+        directed=0,
+        high_duty_cycle=0,
+        legacy=1,
+    )
+
     # LL/DDI/ADV/BV-22-C [Extended Advertising, Legacy PDUs, Undirected, CSA #2]
     async def test(self):
         controller = self.controller
@@ -36,9 +44,9 @@ class Test(ControllerTest):
         # IUT using all supported advertising channels and minimum advertising interval. The
         # Advertising_Event_Properties parameter shall be set to 00010011b (ADV_IND legacy PDU).
         controller.send_cmd(
-            hci.LeSetExtendedAdvertisingParametersLegacy(
+            hci.LeSetExtendedAdvertisingParametersV1(
                 advertising_handle=0,
-                legacy_advertising_event_properties=hci.LegacyAdvertisingEventProperties.ADV_IND,
+                advertising_event_properties=self.ADV_IND,
                 primary_advertising_interval_min=self.LL_advertiser_advInterval_MIN,
                 primary_advertising_interval_max=self.LL_advertiser_advInterval_MAX,
                 primary_advertising_channel_map=self.LL_advertiser_Adv_Channel_Map,
@@ -46,7 +54,7 @@ class Test(ControllerTest):
                 advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES))
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingParametersV1Complete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 8. Repeat steps 3–7 for each Round shown in Table 4.4.
         await self.steps_3_7(advertising_data=[1])

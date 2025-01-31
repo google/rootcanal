@@ -36,13 +36,11 @@ bool Beacon::registered_ = DeviceBoutique::Register("beacon", &Beacon::Create);
 Beacon::Beacon()
     : advertising_type_(LegacyAdvertisingType::ADV_NONCONN_IND),
       advertising_data_({
-          0x0F /* Length */, 0x09 /* TYPE_NAME_COMPLETE */, 'g', 'D', 'e', 'v',
-          'i', 'c', 'e', '-', 'b', 'e', 'a', 'c', 'o', 'n', 0x02 /* Length */,
-          0x01 /* TYPE_FLAG */,
-          0x4 /* BREDR_NOT_SUPPORTED */ | 0x2 /* GENERAL_DISCOVERABLE */
+              0x0F /* Length */, 0x09 /* TYPE_NAME_COMPLETE */, 'g', 'D', 'e', 'v', 'i', 'c', 'e',
+              '-', 'b', 'e', 'a', 'c', 'o', 'n', 0x02 /* Length */, 0x01 /* TYPE_FLAG */,
+              0x4 /* BREDR_NOT_SUPPORTED */ | 0x2 /* GENERAL_DISCOVERABLE */
       }),
-      scan_response_data_(
-          {0x05 /* Length */, 0x08 /* TYPE_NAME_SHORT */, 'b', 'e', 'a', 'c'}),
+      scan_response_data_({0x05 /* Length */, 0x08 /* TYPE_NAME_SHORT */, 'b', 'e', 'a', 'c'}),
       advertising_interval_(1280ms) {}
 
 Beacon::Beacon(const std::vector<std::string>& args) : Beacon() {
@@ -59,27 +57,24 @@ void Beacon::Tick() {
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
   if ((now - advertising_last_) >= advertising_interval_) {
     advertising_last_ = now;
-    SendLinkLayerPacket(
-        std::move(LeLegacyAdvertisingPduBuilder::Create(
-            address_, Address::kEmpty, AddressType::PUBLIC, AddressType::PUBLIC,
-            advertising_type_,
-            std::vector(advertising_data_.begin(), advertising_data_.end()))),
-        Phy::Type::LOW_ENERGY);
+    SendLinkLayerPacket(LeLegacyAdvertisingPduBuilder::Create(
+                                address_, Address::kEmpty, AddressType::PUBLIC, AddressType::PUBLIC,
+                                advertising_type_,
+                                std::vector(advertising_data_.begin(), advertising_data_.end())),
+                        Phy::Type::LOW_ENERGY);
   }
 }
 
-void Beacon::ReceiveLinkLayerPacket(LinkLayerPacketView packet,
-                                    Phy::Type /*type*/, int8_t /*rssi*/) {
-  if (packet.GetDestinationAddress() == address_ &&
-      packet.GetType() == PacketType::LE_SCAN &&
+void Beacon::ReceiveLinkLayerPacket(LinkLayerPacketView packet, Phy::Type /*type*/,
+                                    int8_t /*rssi*/) {
+  if (packet.GetDestinationAddress() == address_ && packet.GetType() == PacketType::LE_SCAN &&
       (advertising_type_ == LegacyAdvertisingType::ADV_IND ||
        advertising_type_ == LegacyAdvertisingType::ADV_SCAN_IND)) {
     SendLinkLayerPacket(
-        std::move(LeScanResponseBuilder::Create(
-            address_, packet.GetSourceAddress(), AddressType::PUBLIC,
-            std::vector(scan_response_data_.begin(),
-                        scan_response_data_.end()))),
-        Phy::Type::LOW_ENERGY);
+            LeScanResponseBuilder::Create(
+                    address_, packet.GetSourceAddress(), AddressType::PUBLIC,
+                    std::vector(scan_response_data_.begin(), scan_response_data_.end())),
+            Phy::Type::LOW_ENERGY);
   }
 }
 

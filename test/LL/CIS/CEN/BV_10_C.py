@@ -154,22 +154,22 @@ class Test(ControllerTest):
                                                                     conn_event_count=0))
 
         await self.expect_evt(
-            hci.LeCisEstablished(status=ErrorCode.SUCCESS,
-                                 connection_handle=cis_connection_handle_1,
-                                 cig_sync_delay=cis_ind_1.cig_sync_delay,
-                                 cis_sync_delay=cis_ind_1.cis_sync_delay,
-                                 transport_latency_c_to_p=self.Any,
-                                 transport_latency_p_to_c=self.Any,
-                                 phy_c_to_p=hci.SecondaryPhyType.LE_1M,
-                                 phy_p_to_c=hci.SecondaryPhyType.LE_1M,
-                                 nse=self.NSE,
-                                 bn_c_to_p=self.BN_C_TO_P,
-                                 bn_p_to_c=self.BN_P_TO_C,
-                                 ft_c_to_p=self.FT_C_TO_P,
-                                 ft_p_to_c=self.FT_P_TO_C,
-                                 max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                 max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                 iso_interval=self.ISO_Interval))
+            hci.LeCisEstablishedV1(status=ErrorCode.SUCCESS,
+                                   connection_handle=cis_connection_handle_1,
+                                   cig_sync_delay=cis_ind_1.cig_sync_delay,
+                                   cis_sync_delay=cis_ind_1.cis_sync_delay,
+                                   transport_latency_c_to_p=self.Any,
+                                   transport_latency_p_to_c=self.Any,
+                                   phy_c_to_p=hci.SecondaryPhyType.LE_1M,
+                                   phy_p_to_c=hci.SecondaryPhyType.LE_1M,
+                                   nse=self.NSE,
+                                   bn_c_to_p=self.BN_C_TO_P,
+                                   bn_p_to_c=self.BN_P_TO_C,
+                                   ft_c_to_p=self.FT_C_TO_P,
+                                   ft_p_to_c=self.FT_P_TO_C,
+                                   max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                                   max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                                   iso_interval=self.ISO_Interval))
 
         cis_req_2 = await self.expect_llcp(source_address=controller.address,
                                            destination_address=peer_address_2,
@@ -210,22 +210,22 @@ class Test(ControllerTest):
                                                                     conn_event_count=0))
 
         await self.expect_evt(
-            hci.LeCisEstablished(status=ErrorCode.SUCCESS,
-                                 connection_handle=cis_connection_handle_2,
-                                 cig_sync_delay=cis_ind_2.cig_sync_delay,
-                                 cis_sync_delay=cis_ind_2.cis_sync_delay,
-                                 transport_latency_c_to_p=self.Any,
-                                 transport_latency_p_to_c=self.Any,
-                                 phy_c_to_p=hci.SecondaryPhyType.LE_1M,
-                                 phy_p_to_c=hci.SecondaryPhyType.LE_1M,
-                                 nse=self.NSE,
-                                 bn_c_to_p=self.BN_C_TO_P,
-                                 bn_p_to_c=self.BN_P_TO_C,
-                                 ft_c_to_p=self.FT_C_TO_P,
-                                 ft_p_to_c=self.FT_P_TO_C,
-                                 max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                 max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                 iso_interval=self.ISO_Interval))
+            hci.LeCisEstablishedV1(status=ErrorCode.SUCCESS,
+                                   connection_handle=cis_connection_handle_2,
+                                   cig_sync_delay=cis_ind_2.cig_sync_delay,
+                                   cis_sync_delay=cis_ind_2.cis_sync_delay,
+                                   transport_latency_c_to_p=self.Any,
+                                   transport_latency_p_to_c=self.Any,
+                                   phy_c_to_p=hci.SecondaryPhyType.LE_1M,
+                                   phy_p_to_c=hci.SecondaryPhyType.LE_1M,
+                                   nse=self.NSE,
+                                   bn_c_to_p=self.BN_C_TO_P,
+                                   bn_p_to_c=self.BN_P_TO_C,
+                                   ft_c_to_p=self.FT_C_TO_P,
+                                   ft_p_to_c=self.FT_P_TO_C,
+                                   max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                                   max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                                   iso_interval=self.ISO_Interval))
 
         # 1. The Upper Tester orders the IUT to send a payload of the specified length to the Lower Testers.
         iso_sdu = [random.randint(1, 251) for n in range(self.Max_SDU_C_TO_P)]

@@ -34,13 +34,12 @@ enum Verbosity {
 
 void SetLogColorEnable(bool);
 
-void VLog(Verbosity verb, char const* file, int line,
-          std::optional<int> instance, char const* format,
-          fmt::format_args args);
+void VLog(Verbosity verb, char const* file, int line, std::optional<int> instance,
+          char const* format, fmt::format_args args);
 
 template <typename... Args>
-static void Log(Verbosity verb, char const* file, int line, int instance,
-                char const* format, const Args&... args) {
+static void Log(Verbosity verb, char const* file, int line, int instance, char const* format,
+                const Args&... args) {
   VLog(verb, file, line, instance, format, fmt::make_format_args(args...));
 }
 
@@ -50,37 +49,31 @@ static void Log(Verbosity verb, char const* file, int line, char const* format,
   VLog(verb, file, line, {}, format, fmt::make_format_args(args...));
 }
 
-#define DEBUG(...)                                                           \
-  rootcanal::log::Log(rootcanal::log::Verbosity::kDebug, __FILE__, __LINE__, \
-                      __VA_ARGS__)
+#define DEBUG(...) \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kDebug, __FILE__, __LINE__, __VA_ARGS__)
 
-#define INFO(...)                                                           \
-  rootcanal::log::Log(rootcanal::log::Verbosity::kInfo, __FILE__, __LINE__, \
-                      __VA_ARGS__)
+#define INFO(...) \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kInfo, __FILE__, __LINE__, __VA_ARGS__)
 
-#define WARNING(...)                                                           \
-  rootcanal::log::Log(rootcanal::log::Verbosity::kWarning, __FILE__, __LINE__, \
-                      __VA_ARGS__)
+#define WARNING(...) \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kWarning, __FILE__, __LINE__, __VA_ARGS__)
 
-#define ERROR(...)                                                           \
-  rootcanal::log::Log(rootcanal::log::Verbosity::kError, __FILE__, __LINE__, \
-                      __VA_ARGS__)
+#define ERROR(...) \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kError, __FILE__, __LINE__, __VA_ARGS__)
 
-#define FATAL(...)                                                           \
-  rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, __LINE__, \
-                      __VA_ARGS__)
+#define FATAL(...) \
+  rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, __LINE__, __VA_ARGS__)
 
-#define ASSERT(x)                                                       \
-  __builtin_expect((x) != 0, true) ||                                   \
-      (rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, \
-                           __LINE__, "Check failed: {}", #x),           \
-       false)
+#define ASSERT(x)                                                                     \
+  __builtin_expect((x) != 0, true) ||                                                 \
+          (rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, __LINE__, \
+                               "Check failed: {}", #x),                               \
+           false)
 
-#define ASSERT_LOG(x, ...)                                              \
-  __builtin_expect((x) != 0, true) ||                                   \
-      (rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, \
-                           __LINE__, "Check failed: {}, {}", #x,        \
-                           fmt::sprintf(__VA_ARGS__)),                  \
-       false)
+#define ASSERT_LOG(x, ...)                                                             \
+  __builtin_expect((x) != 0, true) ||                                                  \
+          (rootcanal::log::Log(rootcanal::log::Verbosity::kFatal, __FILE__, __LINE__,  \
+                               "Check failed: {}, {}", #x, fmt::sprintf(__VA_ARGS__)), \
+           false)
 
 }  // namespace rootcanal::log

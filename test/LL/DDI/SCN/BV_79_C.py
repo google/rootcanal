@@ -153,7 +153,7 @@ class Test(ControllerTest):
         # Tester containing a Status of 0x00 (Success), Sync_Handle set to a valid value, and the
         # Advertising_SID received in step 3.
         await self.expect_evt(
-            hci.LePeriodicAdvertisingSyncEstablished(
+            hci.LePeriodicAdvertisingSyncEstablishedV1(
                 status=ErrorCode.SUCCESS,
                 sync_handle=0,
                 advertising_sid=advertising_sid,
@@ -193,10 +193,10 @@ class Test(ControllerTest):
                 fragment_length = min(max_fragment_length, remaining_length)
                 data_status = hci.DataStatus.CONTINUING if remaining_length > max_fragment_length else hci.DataStatus.COMPLETE
                 await self.expect_evt(
-                    hci.LePeriodicAdvertisingReport(sync_handle=0,
-                                                    tx_power=tx_power,
-                                                    rssi=0x10,
-                                                    cte_type=hci.CteType.NO_CONSTANT_TONE_EXTENSION,
-                                                    data_status=data_status,
-                                                    data=advertising_data[offset:offset + fragment_length]))
+                    hci.LePeriodicAdvertisingReportV1(sync_handle=0,
+                                                      tx_power=tx_power,
+                                                      rssi=0x10,
+                                                      cte_type=hci.CteType.NO_CONSTANT_TONE_EXTENSION,
+                                                      data_status=data_status,
+                                                      data=advertising_data[offset:offset + fragment_length]))
                 offset += fragment_length

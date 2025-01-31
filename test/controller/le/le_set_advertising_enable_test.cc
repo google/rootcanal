@@ -23,11 +23,11 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeSetAdvertisingEnableTest : public ::testing::Test {
- public:
+public:
   LeSetAdvertisingEnableTest() = default;
   ~LeSetAdvertisingEnableTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -35,20 +35,18 @@ class LeSetAdvertisingEnableTest : public ::testing::Test {
 
 TEST_F(LeSetAdvertisingEnableTest, EnableUsingPublicAddress) {
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0800, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0800, 0x0800, AdvertisingType::ADV_IND, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetAdvertisingEnableTest, EnableUsingRandomAddress) {
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0800, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::RANDOM_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0800, 0x0800, AdvertisingType::ADV_IND, OwnAddressType::RANDOM_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
@@ -56,14 +54,14 @@ TEST_F(LeSetAdvertisingEnableTest, EnableUsingRandomAddress) {
 
 TEST_F(LeSetAdvertisingEnableTest, EnableUsingResolvableAddress) {
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0800, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0800, 0x0800, AdvertisingType::ADV_IND,
+                    OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
   // Note: the command will fail if the peer address is not in the resolvable
@@ -78,27 +76,24 @@ TEST_F(LeSetAdvertisingEnableTest, Disable) {
 
 TEST_F(LeSetAdvertisingEnableTest, NoRandomAddress) {
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0800, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::RANDOM_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0800, 0x0800, AdvertisingType::ADV_IND, OwnAddressType::RANDOM_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(controller_.LeSetAdvertisingEnable(true),
-            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeSetAdvertisingEnableTest, NoResolvableOrRandomAddress) {
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0800, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0800, 0x0800, AdvertisingType::ADV_IND,
+                    OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(controller_.LeSetAdvertisingEnable(true),
-            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 }  // namespace rootcanal

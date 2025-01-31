@@ -24,11 +24,11 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeSetPeriodicAdvertisingEnableTest : public ::testing::Test {
- public:
+public:
   LeSetPeriodicAdvertisingEnableTest() {}
   ~LeSetPeriodicAdvertisingEnableTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -36,41 +36,37 @@ class LeSetPeriodicAdvertisingEnableTest : public ::testing::Test {
 
 TEST_F(LeSetPeriodicAdvertisingEnableTest, Enable) {
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
+            ErrorCode::SUCCESS);
 
   std::vector<uint8_t> advertising_data = {1, 2, 3};
-  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingData(
-                0, Operation::COMPLETE_ADVERTISEMENT, advertising_data),
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingData(0, Operation::COMPLETE_ADVERTISEMENT,
+                                                     advertising_data),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingEnable(true, false, 0),
-            ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingEnable(true, false, 0), ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetPeriodicAdvertisingEnableTest, Disable) {
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
-      ErrorCode::SUCCESS);
-
-  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingEnable(false, false, 0),
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
             ErrorCode::SUCCESS);
+
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingEnable(false, false, 0), ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetPeriodicAdvertisingEnableTest, UnknownAdvertisingHandle) {
@@ -83,20 +79,19 @@ TEST_F(LeSetPeriodicAdvertisingEnableTest, UnknownAdvertisingHandle) {
 
 TEST_F(LeSetPeriodicAdvertisingEnableTest, PartialAdvertisingData) {
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
+            ErrorCode::SUCCESS);
 
   std::vector<uint8_t> first_advertising_data_fragment = {1, 2, 3};
-  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingData(
-                0, Operation::FIRST_FRAGMENT, first_advertising_data_fragment),
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingData(0, Operation::FIRST_FRAGMENT,
+                                                     first_advertising_data_fragment),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetPeriodicAdvertisingEnable(true, false, 0),
@@ -105,11 +100,11 @@ TEST_F(LeSetPeriodicAdvertisingEnableTest, PartialAdvertisingData) {
 
 TEST_F(LeSetPeriodicAdvertisingEnableTest, PeriodicAdvertisingNotConfigured) {
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetPeriodicAdvertisingEnable(true, false, 0),
@@ -118,23 +113,22 @@ TEST_F(LeSetPeriodicAdvertisingEnableTest, PeriodicAdvertisingNotConfigured) {
 
 TEST_F(LeSetPeriodicAdvertisingEnableTest, InvalidAdvertisingEventProperties) {
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetPeriodicAdvertisingParameters(0, 0x6, 0xffff, false),
+            ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800,
-                0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::ALL_DEVICES, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::ALL_DEVICES, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetPeriodicAdvertisingEnable(true, false, 0),

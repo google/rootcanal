@@ -23,40 +23,37 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeSetScanEnableTest : public ::testing::Test {
- public:
+public:
   LeSetScanEnableTest() = default;
   ~LeSetScanEnableTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
 };
 
 TEST_F(LeSetScanEnableTest, EnableUsingPublicAddress) {
-  ASSERT_EQ(
-      controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
-                                      OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
+                                            OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
+            ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetScanEnable(true, false), ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetScanEnableTest, EnableUsingRandomAddress) {
-  ASSERT_EQ(
-      controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
-                                      OwnAddressType::RANDOM_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
+                                            OwnAddressType::RANDOM_DEVICE_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
+            ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetScanEnable(true, false), ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetScanEnableTest, EnableUsingResolvableAddress) {
-  ASSERT_EQ(controller_.LeSetScanParameters(
-                LeScanType::PASSIVE, 0x2000, 0x200,
-                OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS,
-                LeScanningFilterPolicy::ACCEPT_ALL),
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
+                                            OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
             ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetRandomAddress(Address{1}), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetScanEnable(true, false), ErrorCode::SUCCESS);
@@ -67,21 +64,17 @@ TEST_F(LeSetScanEnableTest, Disable) {
 }
 
 TEST_F(LeSetScanEnableTest, NoRandomAddress) {
-  ASSERT_EQ(
-      controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
-                                      OwnAddressType::RANDOM_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL),
-      ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetScanEnable(true, false),
-            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
-
-  ASSERT_EQ(controller_.LeSetScanParameters(
-                LeScanType::PASSIVE, 0x2000, 0x200,
-                OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS,
-                LeScanningFilterPolicy::ACCEPT_ALL),
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
+                                            OwnAddressType::RANDOM_DEVICE_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
             ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetScanEnable(true, false),
-            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(controller_.LeSetScanEnable(true, false), ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
+                                            OwnAddressType::RESOLVABLE_OR_RANDOM_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
+            ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetScanEnable(true, false), ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 }  // namespace rootcanal

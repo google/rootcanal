@@ -28,11 +28,11 @@ class PhyLayer;
 class Device;
 
 class PhyDevice {
- public:
+public:
   using Identifier = uint32_t;
 
   PhyDevice(std::string type, std::shared_ptr<Device> device);
-  PhyDevice(PhyDevice &&) = delete;
+  PhyDevice(PhyDevice&&) = delete;
   ~PhyDevice() = default;
 
   void Register(PhyLayer* phy);
@@ -40,8 +40,7 @@ class PhyDevice {
 
   void Tick();
   void Receive(std::vector<uint8_t> const& packet, Phy::Type type, int8_t rssi);
-  void Send(std::vector<uint8_t> const& packet, Phy::Type type,
-            int8_t tx_power);
+  void Send(std::vector<uint8_t> const& packet, Phy::Type type, int8_t tx_power);
 
   bluetooth::hci::Address GetAddress() const;
   std::shared_ptr<Device> GetDevice() const;
@@ -52,7 +51,7 @@ class PhyDevice {
   const Identifier id;
   const std::string type;
 
- private:
+private:
   const std::shared_ptr<Device> device_;
   std::unordered_set<PhyLayer*> phy_layers_;
 };

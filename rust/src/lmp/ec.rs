@@ -78,7 +78,7 @@ impl PublicKey {
     }
 
     fn to_point<Curve: EllipticCurve>(&self) -> Point<Curve> {
-        Point::new(&self.get_x(), &self.get_y())
+        Point::from_affine(self.get_x(), self.get_y())
     }
 }
 
@@ -251,10 +251,11 @@ impl EllipticCurve for P256r1 {
     const PUBLIC_KEY_SIZE: usize = 64;
 }
 
+// https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates
 #[derive(Debug, PartialEq)]
 enum Point<Curve> {
     Infinite(PhantomData<Curve>),
-    Finite { x: BigInt, y: BigInt, _curve: PhantomData<Curve> },
+    Finite { x: BigInt, y: BigInt, z: BigInt, _curve: PhantomData<Curve> },
 }
 
 impl<Curve> Point<Curve>
@@ -269,35 +270,61 @@ where
         &Self::g() * private_key
     }
 
-    fn new(x: &BigInt, y: &BigInt) -> Self {
-        Point::Finite { x: x.clone(), y: y.clone(), _curve: PhantomData }
+    fn new(x: BigInt, y: BigInt, z: BigInt) -> Self {
+        Point::Finite { x, y, z, _curve: PhantomData }
+    }
+
+    fn from_affine(x: BigInt, y: BigInt) -> Self {
+        Self::new(x, y, BigInt::from(1))
     }
 
     fn g() -> Self {
-        Self::new(
-            &BigInt::from_bytes_be(Sign::Plus, Curve::G_X.as_ref()),
-            &BigInt::from_bytes_be(Sign::Plus, Curve::G_Y.as_ref()),
+        Self::from_affine(
+            BigInt::from_bytes_be(Sign::Plus, Curve::G_X.as_ref()),
+            BigInt::from_bytes_be(Sign::Plus, Curve::G_Y.as_ref()),
         )
     }
 
-    #[cfg(test)]
-    fn get_x(&self) -> Option<BigInt> {
+    fn to_affine(&self) -> Option<(BigInt, BigInt)> {
         match self {
             Point::Infinite(_) => None,
-            Point::Finite { x, .. } => Some(x.clone()),
+            Point::Finite { x, y, z, _curve } => {
+                let p = &Curve::p();
+                let inv_z = mod_inv(z, p).unwrap();
+                let affine_x = (x * inv_z.pow(2)) % p;
+                let affine_y = (y * inv_z.pow(3)) % p;
+                Some((affine_x, affine_y))
+            }
         }
     }
 
     fn to_bytes(&self) -> Option<Vec<u8>> {
+        self.to_affine().map(|(x, y)| {
+            let mut x = x.to_signed_bytes_le();
+            x.resize(Curve::PRIVATE_KEY_SIZE, 0);
+            let mut y = y.to_signed_bytes_le();
+            y.resize(Curve::PRIVATE_KEY_SIZE, 0);
+            x.append(&mut y);
+            x
+        })
+    }
+
+    fn double(&self) -> Self {
+        // https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates#Point_Doubling_(4M_+_6S_or_4M_+_4S)
         match self {
-            Point::Infinite(_) => None,
-            Point::Finite { x, y, _curve: _ } => {
-                let mut x = x.to_signed_bytes_le();
-                x.resize(Curve::PRIVATE_KEY_SIZE, 0);
-                let mut y = y.to_signed_bytes_le();
-                y.resize(Curve::PRIVATE_KEY_SIZE, 0);
-                x.append(&mut y);
-                Some(x)
+            Point::Infinite(_) => Point::o(),
+            Point::Finite { y, .. } if y.is_zero() => Point::o(),
+            Point::Finite { x, y, z, _curve } => {
+                let s = 4 * x * y.pow(2);
+                let m: BigInt = 3 * x.pow(2) + Curve::A * z.pow(4);
+
+                let rx = m.pow(2) - 2 * &s;
+                let ry = m * (s - &rx) - 8 * y.pow(4);
+                let rz = 2 * y * z;
+
+                let p = &Curve::p();
+
+                Point::new(rx % p, ry % p, rz % p)
             }
         }
     }
@@ -310,7 +337,7 @@ where
     fn clone(&self) -> Self {
         match self {
             Point::Infinite(_) => Point::o(),
-            Point::Finite { x, y, .. } => Point::new(x, y),
+            Point::Finite { x, y, z, _curve } => Point::new(x.clone(), y.clone(), z.clone()),
         }
     }
 }
@@ -326,30 +353,38 @@ where
     fn add(self, rhs: &Point<Curve>) -> Self::Output {
         // P + O = O + P = P
         match (self, rhs) {
-            (Point::Infinite(_), Point::Infinite(_)) => Self::Output::o(),
+            (Point::Infinite(_), Point::Infinite(_)) => Point::o(),
             (Point::Infinite(_), Point::Finite { .. }) => rhs.clone(),
             (Point::Finite { .. }, Point::Infinite(_)) => self.clone(),
             (
-                Point::Finite { _curve: _, x: x1, y: y1 },
-                Point::Finite { _curve: _, x: x2, y: y2 },
+                Point::Finite { _curve: _, x: x1, y: y1, z: z1 },
+                Point::Finite { _curve: _, x: x2, y: y2, z: z2 },
             ) => {
-                // P + (-P) = O
-                if x1 == x2 && y1 == &(-y2) {
-                    return Self::Output::o();
-                }
+                // https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates#Point_Addition_(12M_+_4S)
                 let p = &Curve::p();
-                // d(x^3 + ax + b) / dx = (3x^2 + a) / 2y
-                let slope = if x1 == x2 {
-                    (&(3 * x1.pow(2) + Curve::A) * &mod_inv(&(2 * y1), p).unwrap()) % p
+                let u1 = (x1 * z2.pow(2)) % p;
+                let u2 = (x2 * z1.pow(2)) % p;
+                let s1 = (y1 * z2.pow(3)) % p;
+                let s2 = (y2 * z1.pow(3)) % p;
+
+                if u1 == u2 {
+                    if s1 != s2 {
+                        Point::o()
+                    } else {
+                        self.double()
+                    }
                 } else {
-                    // dy/dx = (y2 - y1) / (x2 - x1)
-                    (&(y2 - y1) * &mod_inv(&(x2 - x1), p).unwrap()) % p
-                };
-                // Solving (x-p)(x-q)(x-r) = x^3 + ax + b
-                // => x = d^2 - x1 - x2
-                let x = (slope.pow(2) - x1 - x2) % p;
-                let y = (slope * (x1 - &x) - y1) % p;
-                Point::new(&x, &y)
+                    let h = &u2 - &u1;
+                    let r = &s2 - &s1;
+
+                    let h3 = h.pow(3) % p;
+                    let u1h2 = (u1 * h.pow(2)) % p;
+                    let x3 = r.pow(2) - &h3 - 2 * &u1h2;
+                    let y3 = r * (u1h2 - &x3) - s1 * h3;
+                    let z3 = h * z1 * z2;
+
+                    Point::new(x3 % p, y3 % p, z3 % p)
+                }
             }
         }
     }
@@ -371,7 +406,7 @@ where
             if i.is_odd() {
                 result = &result + &addend;
             }
-            addend = &addend + &addend;
+            addend = addend.double();
             i /= 2;
         }
         result
@@ -441,10 +476,19 @@ mod tests {
             let priv_b = BigInt::parse_bytes(&test_case.priv_b, 16).unwrap();
             let pub_a = Point::<P192r1>::generate_public_key(&priv_a);
             let pub_b = Point::<P192r1>::generate_public_key(&priv_b);
-            assert_eq!(pub_a.get_x().unwrap(), BigInt::parse_bytes(&test_case.pub_a, 16).unwrap());
+            assert_eq!(
+                pub_a.to_affine().unwrap().0,
+                BigInt::parse_bytes(&test_case.pub_a, 16).unwrap()
+            );
             let shared = &pub_a * &priv_b;
-            assert_eq!(shared.get_x().unwrap(), BigInt::parse_bytes(&test_case.dh_x, 16).unwrap());
-            assert_eq!((&pub_a * &priv_b).get_x().unwrap(), (&pub_b * &priv_a).get_x().unwrap());
+            assert_eq!(
+                shared.to_affine().unwrap().0,
+                BigInt::parse_bytes(&test_case.dh_x, 16).unwrap()
+            );
+            assert_eq!(
+                (&pub_a * &priv_b).to_affine().unwrap().0,
+                (&pub_b * &priv_a).to_affine().unwrap().0
+            );
         }
     }
 
@@ -455,10 +499,19 @@ mod tests {
             let priv_b = BigInt::parse_bytes(&test_case.priv_b, 16).unwrap();
             let pub_a = Point::<P256r1>::generate_public_key(&priv_a);
             let pub_b = Point::<P256r1>::generate_public_key(&priv_b);
-            assert_eq!(pub_a.get_x().unwrap(), BigInt::parse_bytes(&test_case.pub_a, 16).unwrap());
+            assert_eq!(
+                pub_a.to_affine().unwrap().0,
+                BigInt::parse_bytes(&test_case.pub_a, 16).unwrap()
+            );
             let shared = &pub_a * &priv_b;
-            assert_eq!(shared.get_x().unwrap(), BigInt::parse_bytes(&test_case.dh_x, 16).unwrap());
-            assert_eq!((&pub_a * &priv_b).get_x().unwrap(), (&pub_b * &priv_a).get_x().unwrap());
+            assert_eq!(
+                shared.to_affine().unwrap().0,
+                BigInt::parse_bytes(&test_case.dh_x, 16).unwrap()
+            );
+            assert_eq!(
+                (&pub_a * &priv_b).to_affine().unwrap().0,
+                (&pub_b * &priv_a).to_affine().unwrap().0
+            );
         }
     }
 }

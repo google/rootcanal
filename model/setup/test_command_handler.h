@@ -30,15 +30,14 @@
 namespace rootcanal {
 
 class TestCommandHandler {
- public:
+public:
   // Sets all of the methods to be used as callbacks in the HciHandler.
   TestCommandHandler(TestModel& test_model);
 
   ~TestCommandHandler() = default;
 
   // Dispatches the action corresponding to the command specified by |name|.
-  void HandleCommand(const std::string& name,
-                     const std::vector<std::string>& args);
+  void HandleCommand(const std::string& name, const std::vector<std::string>& args);
 
   // Dispatches the action corresponding to the command specified by |name|.
   void RegisterSendResponse(std::function<void(const std::string&)> callback);
@@ -87,14 +86,13 @@ class TestCommandHandler {
   // For manual testing
   void AddDefaults();
 
- private:
+private:
   TestModel& model_;
 
   std::string response_string_;
 
-  std::unordered_map<std::string,
-                     std::function<void(const std::vector<std::string>&)>>
-      active_commands_;
+  std::unordered_map<std::string, std::function<void(const std::vector<std::string>&)>>
+          active_commands_;
 
   std::function<void(const std::string&)> send_response_;
 

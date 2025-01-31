@@ -23,11 +23,11 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeSetAdvertisingParametersTest : public ::testing::Test {
- public:
+public:
   LeSetAdvertisingParametersTest() = default;
   ~LeSetAdvertisingParametersTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -35,10 +35,9 @@ class LeSetAdvertisingParametersTest : public ::testing::Test {
 
 TEST_F(LeSetAdvertisingParametersTest, Success) {
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0800, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0800, 0x0800, AdvertisingType::ADV_IND, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::SUCCESS);
 }
 
@@ -46,56 +45,49 @@ TEST_F(LeSetAdvertisingParametersTest, AdvertisingActive) {
   ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0800, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0800, 0x0800, AdvertisingType::ADV_IND, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeSetAdvertisingParametersTest, InvalidChannelMap) {
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0800, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x0, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0800, 0x0800, AdvertisingType::ADV_IND, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x0,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 TEST_F(LeSetAdvertisingParametersTest, InvalidAdvertisingInterval) {
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0, 0x0800, AdvertisingType::ADV_IND, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0800, 0x0, AdvertisingType::ADV_IND,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0800, 0x0, AdvertisingType::ADV_IND, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x4001, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x4001, 0x0800, AdvertisingType::ADV_IND, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0800, 0x4001, AdvertisingType::ADV_IND,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0800, 0x4001, AdvertisingType::ADV_IND, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
   ASSERT_EQ(controller_.LeSetAdvertisingParameters(
-                0x0900, 0x0800, AdvertisingType::ADV_IND,
-                OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0x7, AdvertisingFilterPolicy::ALL_DEVICES),
+                    0x0900, 0x0800, AdvertisingType::ADV_IND, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0x7,
+                    AdvertisingFilterPolicy::ALL_DEVICES),
             ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 

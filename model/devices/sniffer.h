@@ -26,7 +26,7 @@
 namespace rootcanal {
 
 class Sniffer : public Device {
- public:
+public:
   Sniffer(const std::vector<std::string>& args);
   ~Sniffer() = default;
 
@@ -36,11 +36,10 @@ class Sniffer : public Device {
 
   virtual std::string GetTypeString() const override { return "sniffer"; }
 
-  virtual void ReceiveLinkLayerPacket(
-      model::packets::LinkLayerPacketView packet, Phy::Type type,
-      int8_t rssi) override;
+  virtual void ReceiveLinkLayerPacket(model::packets::LinkLayerPacketView packet, Phy::Type type,
+                                      int8_t rssi) override;
 
- private:
+private:
   static bool registered_;
 };
 

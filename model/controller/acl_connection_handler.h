@@ -36,7 +36,7 @@ static constexpr uint16_t kCisHandleRangeStart = 0xE00;
 static constexpr uint16_t kCisHandleRangeEnd = 0xEFE;
 
 class AclConnectionHandler {
- public:
+public:
   AclConnectionHandler() = default;
   virtual ~AclConnectionHandler() = default;
 
@@ -46,8 +46,7 @@ class AclConnectionHandler {
   // SCO connections.
   void Reset(std::function<void(TaskId)> stopStream);
 
-  bool CreatePendingConnection(bluetooth::hci::Address addr,
-                               bool authenticate_on_connect,
+  bool CreatePendingConnection(bluetooth::hci::Address addr, bool authenticate_on_connect,
                                bool allow_role_switch);
   bool HasPendingConnection(bluetooth::hci::Address addr) const;
   bool CancelPendingConnection(bluetooth::hci::Address addr);
@@ -56,20 +55,16 @@ class AclConnectionHandler {
   bool HasPendingScoConnection(bluetooth::hci::Address addr) const;
   ScoState GetScoConnectionState(bluetooth::hci::Address addr) const;
   bool IsLegacyScoConnection(bluetooth::hci::Address addr) const;
-  void CreateScoConnection(bluetooth::hci::Address addr,
-                           ScoConnectionParameters const& parameters,
-                           ScoState state, ScoDatapath datapath,
-                           bool legacy = false);
+  void CreateScoConnection(bluetooth::hci::Address addr, ScoConnectionParameters const& parameters,
+                           ScoState state, ScoDatapath datapath, bool legacy = false);
   void CancelPendingScoConnection(bluetooth::hci::Address addr);
-  bool AcceptPendingScoConnection(bluetooth::hci::Address addr,
-                                  ScoLinkParameters const& parameters,
+  bool AcceptPendingScoConnection(bluetooth::hci::Address addr, ScoLinkParameters const& parameters,
                                   std::function<TaskId()> startStream);
   bool AcceptPendingScoConnection(bluetooth::hci::Address addr,
                                   ScoConnectionParameters const& parameters,
                                   std::function<TaskId()> startStream);
   uint16_t GetScoHandle(bluetooth::hci::Address addr) const;
-  ScoConnectionParameters GetScoConnectionParameters(
-      bluetooth::hci::Address addr) const;
+  ScoConnectionParameters GetScoConnectionParameters(bluetooth::hci::Address addr) const;
   ScoLinkParameters GetScoLinkParameters(bluetooth::hci::Address addr) const;
 
   bool CreatePendingLeConnection(bluetooth::hci::AddressWithType peer,
@@ -80,20 +75,17 @@ class AclConnectionHandler {
 
   // \p pending is true if the connection is expected to be
   // in pending state.
-  uint16_t CreateConnection(bluetooth::hci::Address addr,
-                            bluetooth::hci::Address own_addr,
+  uint16_t CreateConnection(bluetooth::hci::Address addr, bluetooth::hci::Address own_addr,
                             bool pending = true);
   uint16_t CreateLeConnection(bluetooth::hci::AddressWithType addr,
-                              bluetooth::hci::AddressWithType own_addr,
-                              bluetooth::hci::Role role);
+                              bluetooth::hci::AddressWithType own_addr, bluetooth::hci::Role role);
   bool Disconnect(uint16_t handle, std::function<void(TaskId)> stopStream);
   bool HasHandle(uint16_t handle) const;
   bool HasScoHandle(uint16_t handle) const;
 
   // Return the connection handle for a classic ACL connection only.
   // \p bd_addr is the peer address.
-  std::optional<uint16_t> GetAclConnectionHandle(
-      bluetooth::hci::Address bd_addr) const;
+  std::optional<uint16_t> GetAclConnectionHandle(bluetooth::hci::Address bd_addr) const;
 
   uint16_t GetHandle(bluetooth::hci::AddressWithType addr) const;
   uint16_t GetHandleOnlyAddress(bluetooth::hci::Address addr) const;
@@ -124,33 +116,27 @@ class AclConnectionHandler {
   std::vector<uint16_t> GetAclHandles() const;
 
   void ResetLinkTimer(uint16_t handle);
-  std::chrono::steady_clock::duration TimeUntilLinkNearExpiring(
-      uint16_t handle) const;
+  std::chrono::steady_clock::duration TimeUntilLinkNearExpiring(uint16_t handle) const;
   bool IsLinkNearExpiring(uint16_t handle) const;
-  std::chrono::steady_clock::duration TimeUntilLinkExpired(
-      uint16_t handle) const;
+  std::chrono::steady_clock::duration TimeUntilLinkExpired(uint16_t handle) const;
   bool HasLinkExpired(uint16_t handle) const;
   bool IsRoleSwitchAllowedForPendingConnection() const;
 
- private:
+private:
   std::unordered_map<uint16_t, AclConnection> acl_connections_;
   std::unordered_map<uint16_t, ScoConnection> sco_connections_;
 
   bool classic_connection_pending_{false};
-  bluetooth::hci::Address pending_connection_address_{
-      bluetooth::hci::Address::kEmpty};
+  bluetooth::hci::Address pending_connection_address_{bluetooth::hci::Address::kEmpty};
   bool authenticate_pending_classic_connection_{false};
   bool pending_classic_connection_allow_role_switch_{false};
   bool le_connection_pending_{false};
   bluetooth::hci::AddressWithType pending_le_connection_address_{
-      bluetooth::hci::Address::kEmpty,
-      bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS};
+          bluetooth::hci::Address::kEmpty, bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS};
   bluetooth::hci::AddressWithType pending_le_connection_own_address_{
-      bluetooth::hci::Address::kEmpty,
-      bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS};
+          bluetooth::hci::Address::kEmpty, bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS};
   bluetooth::hci::AddressWithType pending_le_connection_resolved_address_{
-      bluetooth::hci::Address::kEmpty,
-      bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS};
+          bluetooth::hci::Address::kEmpty, bluetooth::hci::AddressType::PUBLIC_DEVICE_ADDRESS};
 
   uint16_t GetUnusedHandle();
   uint16_t last_handle_{kReservedHandle - 2};

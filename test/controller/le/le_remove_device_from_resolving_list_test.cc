@@ -24,7 +24,7 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeRemoveDeviceFromResolvingListTest : public ::testing::Test {
- public:
+public:
   LeRemoveDeviceFromResolvingListTest() {
     // Reduce the size of the resolving list to simplify testing.
     properties_.le_resolving_list_size = 2;
@@ -32,7 +32,7 @@ class LeRemoveDeviceFromResolvingListTest : public ::testing::Test {
 
   ~LeRemoveDeviceFromResolvingListTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -40,74 +40,73 @@ class LeRemoveDeviceFromResolvingListTest : public ::testing::Test {
 
 TEST_F(LeRemoveDeviceFromResolvingListTest, Success) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeRemoveDeviceFromResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeRemoveDeviceFromResolvingListTest, NotFound) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeRemoveDeviceFromResolvingList(
-                PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
+                    PeerAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
             ErrorCode::UNKNOWN_CONNECTION);
 }
 
 TEST_F(LeRemoveDeviceFromResolvingListTest, ScanningActive) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
   controller_.LeSetScanEnable(true, false);
 
   ASSERT_EQ(controller_.LeRemoveDeviceFromResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeRemoveDeviceFromResolvingListTest, LegacyAdvertisingActive) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetAdvertisingEnable(true), ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeRemoveDeviceFromResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeRemoveDeviceFromResolvingListTest, ExtendedAdvertisingActive) {
   ASSERT_EQ(controller_.LeAddDeviceToResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-                std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
+                    std::array<uint8_t, 16>{1}, std::array<uint8_t, 16>{1}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeSetAddressResolutionEnable(true), ErrorCode::SUCCESS);
   ASSERT_EQ(controller_.LeSetExtendedAdvertisingParameters(
-                0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800,
-                0x7, OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, AdvertisingFilterPolicy::LISTED_SCAN, 0x70,
-                PrimaryPhyType::LE_1M, 0, SecondaryPhyType::LE_2M, 0x0, false),
+                    0, MakeAdvertisingEventProperties(CONNECTABLE), 0x0800, 0x0800, 0x7,
+                    OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty,
+                    AdvertisingFilterPolicy::LISTED_SCAN, 0x70, PrimaryPhyType::LE_1M, 0,
+                    SecondaryPhyType::LE_2M, 0x0, false),
             ErrorCode::SUCCESS);
-  ASSERT_EQ(controller_.LeSetExtendedAdvertisingEnable(
-                true, {MakeEnabledSet(0, 0, 0)}),
+  ASSERT_EQ(controller_.LeSetExtendedAdvertisingEnable(true, {MakeEnabledSet(0, 0, 0)}),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeRemoveDeviceFromResolvingList(
-                PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
+                    PeerAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}),
             ErrorCode::COMMAND_DISALLOWED);
 }
 

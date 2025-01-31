@@ -38,7 +38,7 @@
 namespace rootcanal {
 
 class Event {
- public:
+public:
   void set(bool set = true) {
     std::unique_lock<std::mutex> lk(m_);
     set_ = set;
@@ -54,22 +54,20 @@ class Event {
 
   bool operator*() { return set_; }
 
- private:
+private:
   std::mutex m_;
   std::condition_variable cv_;
   bool set_{false};
 };
 
 class AsyncManagerSocketTest : public ::testing::Test {
- public:
+public:
   static const uint16_t kPort = 6111;
   static const size_t kBufferSize = 16;
 
-  bool CheckBufferEquals() {
-    return strcmp(server_buffer_, client_buffer_) == 0;
-  }
+  bool CheckBufferEquals() { return strcmp(server_buffer_, client_buffer_) == 0; }
 
- protected:
+protected:
   int StartServer() {
     struct sockaddr_in serv_addr = {};
     int fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -79,8 +77,7 @@ class AsyncManagerSocketTest : public ::testing::Test {
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(kPort);
     int reuse_flag = 1;
-    EXPECT_FALSE(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse_flag,
-                            sizeof(reuse_flag)) < 0);
+    EXPECT_FALSE(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse_flag, sizeof(reuse_flag)) < 0);
     EXPECT_FALSE(bind(fd, (sockaddr*)&serv_addr, sizeof(serv_addr)) < 0);
 
     listen(fd, 1);
@@ -134,8 +131,8 @@ class AsyncManagerSocketTest : public ::testing::Test {
     async_manager_.WatchFdForNonBlockingReads(socket_fd_, [this](int fd) {
       connection_fd_ = AcceptConnection(fd);
 
-      async_manager_.WatchFdForNonBlockingReads(
-          connection_fd_, [this](int fd) { ReadIncomingMessage(fd); });
+      async_manager_.WatchFdForNonBlockingReads(connection_fd_,
+                                                [this](int fd) { ReadIncomingMessage(fd); });
     });
   }
 
@@ -161,8 +158,7 @@ class AsyncManagerSocketTest : public ::testing::Test {
     serv_addr.sin_addr.s_addr = *(reinterpret_cast<in_addr_t*>(server->h_addr));
     serv_addr.sin_port = htons(kPort);
 
-    int result =
-        connect(socket_cli_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
+    int result = connect(socket_cli_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
     EXPECT_GE(result, 0) << strerror(errno);
 
     return socket_cli_fd;
@@ -179,7 +175,7 @@ class AsyncManagerSocketTest : public ::testing::Test {
     ASSERT_GT(n, 0) << strerror(errno);
   }
 
- protected:
+protected:
   AsyncManager async_manager_;
   int socket_fd_;
   int connection_fd_;
@@ -230,9 +226,9 @@ TEST_F(AsyncManagerSocketTest, CanUnsubscribeTaskFromWithinTask) {
   using namespace std::chrono_literals;
   async_manager_.ExecAsyncPeriodically(1, 1ms, 2ms, [&running, this]() {
     EXPECT_TRUE(async_manager_.CancelAsyncTask(1))
-        << "We were scheduled, so cancel should return true";
+            << "We were scheduled, so cancel should return true";
     EXPECT_FALSE(async_manager_.CancelAsyncTask(1))
-        << "We were not scheduled, so cancel should return false";
+            << "We were not scheduled, so cancel should return false";
     running.set(true);
   });
 
@@ -245,28 +241,26 @@ TEST_F(AsyncManagerSocketTest, UnsubScribeWaitsUntilCompletion) {
   std::atomic<bool> cancel_done = false;
   std::atomic<bool> task_complete = false;
   AsyncTaskId task_id = async_manager_.ExecAsyncPeriodically(
-      1, 1ms, 2ms, [&running, &cancel_done, &task_complete]() {
-        // Let the other thread now we are in the callback..
-        running.set(true);
-        // Wee bit of a hack that relies on timing..
-        std::this_thread::sleep_for(20ms);
-        EXPECT_FALSE(cancel_done.load())
-            << "Task cancellation did not wait for us to complete!";
-        task_complete.store(true);
-      });
+          1, 1ms, 2ms, [&running, &cancel_done, &task_complete]() {
+            // Let the other thread now we are in the callback..
+            running.set(true);
+            // Wee bit of a hack that relies on timing..
+            std::this_thread::sleep_for(20ms);
+            EXPECT_FALSE(cancel_done.load())
+                    << "Task cancellation did not wait for us to complete!";
+            task_complete.store(true);
+          });
 
   EXPECT_TRUE(running.wait_for(100ms));
   auto start = std::chrono::system_clock::now();
 
   // There is a 20ms wait.. so we know that this should take some time.
   EXPECT_TRUE(async_manager_.CancelAsyncTask(task_id))
-      << "We were scheduled, so cancel should return true";
+          << "We were scheduled, so cancel should return true";
   cancel_done.store(true);
-  EXPECT_TRUE(task_complete.load())
-      << "We managed to cancel a task while it was not yet finished.";
+  EXPECT_TRUE(task_complete.load()) << "We managed to cancel a task while it was not yet finished.";
   auto end = std::chrono::system_clock::now();
-  auto passed_ms =
-      std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  auto passed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
   EXPECT_GT(passed_ms.count(), 10);
 }
 
@@ -336,19 +330,21 @@ TEST_F(AsyncManagerSocketTest, NoEventsAfterUnsubscribe) {
 
     // Register fd events
     async_manager_.WatchFdForNonBlockingReads(slow_s_fd, [&](int /*fd*/) {
-      if (*inslow) return;
+      if (*inslow) {
+        return;
+      }
       time_slow_called = clock::now();
-      printf("slow: %lld\n",
-             time_slow_called.time_since_epoch().count() % 10000);
+      printf("slow: %lld\n", time_slow_called.time_since_epoch().count() % 10000);
       inslow.set();
       unblock_slow.wait_for(25ms);
     });
 
     async_manager_.WatchFdForNonBlockingReads(fast_s_fd, [&](int /*fd*/) {
-      if (*infast) return;
+      if (*infast) {
+        return;
+      }
       time_fast_called = clock::now();
-      printf("fast: %lld\n",
-             time_fast_called.time_since_epoch().count() % 10000);
+      printf("fast: %lld\n", time_fast_called.time_since_epoch().count() % 10000);
       infast.set();
     });
 
@@ -360,8 +356,7 @@ TEST_F(AsyncManagerSocketTest, NoEventsAfterUnsubscribe) {
     if (inslow.wait_for(25ms)) {
       async_manager_.StopWatchingFileDescriptor(fast_s_fd);
       time_stopped_listening = clock::now();
-      printf("stop: %lld\n",
-             time_stopped_listening.time_since_epoch().count() % 10000);
+      printf("stop: %lld\n", time_stopped_listening.time_since_epoch().count() % 10000);
       unblock_slow.set();
     }
 
@@ -408,7 +403,7 @@ TEST_F(AsyncManagerSocketTest, TestMultipleConnections) {
 }
 
 class AsyncManagerTest : public ::testing::Test {
- public:
+public:
   AsyncManager async_manager_;
 };
 
@@ -418,9 +413,8 @@ TEST_F(AsyncManagerTest, TestCancelTask) {
   AsyncUserId user1 = async_manager_.GetNextUserId();
   bool task1_ran = false;
   bool* task1_ran_ptr = &task1_ran;
-  AsyncTaskId task1_id =
-      async_manager_.ExecAsync(user1, std::chrono::milliseconds(2),
-                               [task1_ran_ptr]() { *task1_ran_ptr = true; });
+  AsyncTaskId task1_id = async_manager_.ExecAsync(user1, std::chrono::milliseconds(2),
+                                                  [task1_ran_ptr]() { *task1_ran_ptr = true; });
   ASSERT_TRUE(async_manager_.CancelAsyncTask(task1_id));
   ASSERT_FALSE(task1_ran);
 }
@@ -429,14 +423,12 @@ TEST_F(AsyncManagerTest, TestCancelLongTask) {
   AsyncUserId user1 = async_manager_.GetNextUserId();
   bool task1_ran = false;
   bool* task1_ran_ptr = &task1_ran;
-  AsyncTaskId task1_id =
-      async_manager_.ExecAsync(user1, std::chrono::milliseconds(2),
-                               [task1_ran_ptr]() { *task1_ran_ptr = true; });
+  AsyncTaskId task1_id = async_manager_.ExecAsync(user1, std::chrono::milliseconds(2),
+                                                  [task1_ran_ptr]() { *task1_ran_ptr = true; });
   bool task2_ran = false;
   bool* task2_ran_ptr = &task2_ran;
-  AsyncTaskId task2_id =
-      async_manager_.ExecAsync(user1, std::chrono::seconds(2),
-                               [task2_ran_ptr]() { *task2_ran_ptr = true; });
+  AsyncTaskId task2_id = async_manager_.ExecAsync(user1, std::chrono::seconds(2),
+                                                  [task2_ran_ptr]() { *task2_ran_ptr = true; });
   ASSERT_FALSE(task1_ran);
   ASSERT_FALSE(task2_ran);
   while (!task1_ran)
@@ -459,21 +451,16 @@ TEST_F(AsyncManagerTest, TestCancelAsyncTasksFromUser) {
   bool* task4_ran_ptr = &task4_ran;
   bool task5_ran = false;
   bool* task5_ran_ptr = &task5_ran;
-  AsyncTaskId task1_id =
-      async_manager_.ExecAsync(user1, std::chrono::milliseconds(2),
-                               [task1_ran_ptr]() { *task1_ran_ptr = true; });
-  AsyncTaskId task2_id =
-      async_manager_.ExecAsync(user1, std::chrono::seconds(2),
-                               [task2_ran_ptr]() { *task2_ran_ptr = true; });
-  AsyncTaskId task3_id =
-      async_manager_.ExecAsync(user1, std::chrono::milliseconds(2),
-                               [task3_ran_ptr]() { *task3_ran_ptr = true; });
-  AsyncTaskId task4_id =
-      async_manager_.ExecAsync(user1, std::chrono::seconds(2),
-                               [task4_ran_ptr]() { *task4_ran_ptr = true; });
-  AsyncTaskId task5_id =
-      async_manager_.ExecAsync(user2, std::chrono::milliseconds(2),
-                               [task5_ran_ptr]() { *task5_ran_ptr = true; });
+  AsyncTaskId task1_id = async_manager_.ExecAsync(user1, std::chrono::milliseconds(2),
+                                                  [task1_ran_ptr]() { *task1_ran_ptr = true; });
+  AsyncTaskId task2_id = async_manager_.ExecAsync(user1, std::chrono::seconds(2),
+                                                  [task2_ran_ptr]() { *task2_ran_ptr = true; });
+  AsyncTaskId task3_id = async_manager_.ExecAsync(user1, std::chrono::milliseconds(2),
+                                                  [task3_ran_ptr]() { *task3_ran_ptr = true; });
+  AsyncTaskId task4_id = async_manager_.ExecAsync(user1, std::chrono::seconds(2),
+                                                  [task4_ran_ptr]() { *task4_ran_ptr = true; });
+  AsyncTaskId task5_id = async_manager_.ExecAsync(user2, std::chrono::milliseconds(2),
+                                                  [task5_ran_ptr]() { *task5_ran_ptr = true; });
   ASSERT_FALSE(task1_ran);
   while (!task1_ran || !task3_ran || !task5_ran)
     ;

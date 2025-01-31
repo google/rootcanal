@@ -40,15 +40,13 @@ using namespace rootcanal;
 
 DEFINE_string(controller_properties_file, "", "deprecated");
 DEFINE_string(configuration, "", "controller configuration (see config.proto)");
-DEFINE_string(configuration_file, "",
-              "controller configuration file path (see config.proto)");
+DEFINE_string(configuration_file, "", "controller configuration file path (see config.proto)");
 DEFINE_string(default_commands_file, "", "deprecated");
 DEFINE_bool(enable_log_color, false, "enable log colors");
 DEFINE_bool(enable_hci_sniffer, false, "enable hci sniffer");
 DEFINE_bool(enable_baseband_sniffer, false, "enable baseband sniffer");
 DEFINE_bool(enable_pcap_filter, false, "enable PCAP filter");
-DEFINE_bool(disable_address_reuse, false,
-            "prevent rootcanal from reusing device addresses");
+DEFINE_bool(disable_address_reuse, false, "prevent rootcanal from reusing device addresses");
 DEFINE_uint32(test_port, 6401, "test tcp port");
 DEFINE_uint32(hci_port, 6402, "hci server tcp port");
 DEFINE_uint32(link_port, 6403, "link server tcp port");
@@ -95,17 +93,14 @@ int main(int argc, char** argv) {
   }
 
   TestEnvironment root_canal(
-      [](AsyncManager* am, int port) {
-        return std::make_shared<PosixAsyncSocketServer>(port, am);
-      },
-      [](AsyncManager* am) {
-        return std::make_shared<PosixAsyncSocketConnector>(am);
-      },
-      static_cast<int>(FLAGS_test_port), static_cast<int>(FLAGS_hci_port),
-      static_cast<int>(FLAGS_link_port), static_cast<int>(FLAGS_link_ble_port),
-      configuration_str, FLAGS_enable_hci_sniffer,
-      FLAGS_enable_baseband_sniffer, FLAGS_enable_pcap_filter,
-      FLAGS_disable_address_reuse);
+          [](AsyncManager* am, int port) {
+            return std::make_shared<PosixAsyncSocketServer>(port, am);
+          },
+          [](AsyncManager* am) { return std::make_shared<PosixAsyncSocketConnector>(am); },
+          static_cast<int>(FLAGS_test_port), static_cast<int>(FLAGS_hci_port),
+          static_cast<int>(FLAGS_link_port), static_cast<int>(FLAGS_link_ble_port),
+          configuration_str, FLAGS_enable_hci_sniffer, FLAGS_enable_baseband_sniffer,
+          FLAGS_enable_pcap_filter, FLAGS_disable_address_reuse);
 
   std::promise<void> barrier;
   std::future<void> barrier_future = barrier.get_future();

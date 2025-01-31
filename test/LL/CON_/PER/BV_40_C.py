@@ -72,15 +72,15 @@ class Test(ControllerTest):
                                  conn_supervision_timeout=0x200))
 
         await self.expect_evt(
-            hci.LeEnhancedConnectionComplete(status=ErrorCode.SUCCESS,
-                                             connection_handle=acl_connection_handle,
-                                             role=hci.Role.PERIPHERAL,
-                                             peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                             peer_address=peer_address,
-                                             connection_interval=0x200,
-                                             peripheral_latency=0x200,
-                                             supervision_timeout=0x200,
-                                             central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+            hci.LeEnhancedConnectionCompleteV1(status=ErrorCode.SUCCESS,
+                                               connection_handle=acl_connection_handle,
+                                               role=hci.Role.PERIPHERAL,
+                                               peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                                               peer_address=peer_address,
+                                               connection_interval=0x200,
+                                               peripheral_latency=0x200,
+                                               supervision_timeout=0x200,
+                                               central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 
         test_rounds = [
             TestRound(0x00, 0x01, 0x03, 0x02, 0x00),

@@ -32,7 +32,7 @@ using rootcanal::AsyncManager;
 //
 // Supports both Darwin and Linux.
 class PosixAsyncSocket : public AsyncDataChannel {
- public:
+public:
   // The AsyncManager must support the following:
   //
   // - If a callback happens on thread t, and
@@ -69,14 +69,13 @@ class PosixAsyncSocket : public AsyncDataChannel {
   // Registers the given callback to be invoked when a recv call can be made
   // to read data from this socket.
   // Only one callback can be registered per socket.
-  bool WatchForNonBlockingRead(
-      const ReadCallback& on_read_ready_callback) override;
+  bool WatchForNonBlockingRead(const ReadCallback& on_read_ready_callback) override;
 
   void StopWatching() override;
 
   int fd() const { return fd_; }
 
- private:
+private:
   void OnReadCallback();
 
   int fd_;

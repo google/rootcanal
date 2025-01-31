@@ -23,11 +23,11 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LePeriodicAdvertisingCreateSyncTest : public ::testing::Test {
- public:
+public:
   LePeriodicAdvertisingCreateSyncTest() = default;
   ~LePeriodicAdvertisingCreateSyncTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -35,54 +35,50 @@ class LePeriodicAdvertisingCreateSyncTest : public ::testing::Test {
 
 TEST_F(LePeriodicAdvertisingCreateSyncTest, CreateUsingPublicAddress) {
   ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSync(
-                PeriodicAdvertisingOptions(false, false, false), 0,
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 0, 0x100, 0),
+                    PeriodicAdvertisingOptions(false, false, false), 0,
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 0, 0x100,
+                    0),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LePeriodicAdvertisingCreateSyncTest, CreateUsingPeriodicAdvertiserList) {
   ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSync(
-                PeriodicAdvertisingOptions(true, false, false), 0,
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0, 0x100, 0),
+                    PeriodicAdvertisingOptions(true, false, false), 0,
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0,
+                    0x100, 0),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LePeriodicAdvertisingCreateSyncTest, CreateSyncPending) {
   ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSync(
-                PeriodicAdvertisingOptions(false, false, false), 0,
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 0, 0x100, 0),
+                    PeriodicAdvertisingOptions(false, false, false), 0,
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 0, 0x100,
+                    0),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSync(
-                PeriodicAdvertisingOptions(true, false, false), 0,
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address::kEmpty, 0, 0x100, 0),
+                    PeriodicAdvertisingOptions(true, false, false), 0,
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address::kEmpty, 0,
+                    0x100, 0),
             ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LePeriodicAdvertisingCreateSyncTest, InvalidSyncCteMask) {
-  ASSERT_EQ(
-      controller_.LePeriodicAdvertisingCreateSync(
-          PeriodicAdvertisingOptions(false, false, false), 0,
-          AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1},
-          0, 0x100,
-          static_cast<uint8_t>(
-              PeriodicSyncCteType::AVOID_AOA_CONSTANT_TONE_EXTENSION) |
-              static_cast<uint8_t>(
-                  PeriodicSyncCteType::
-                      AVOID_AOD_CONSTANT_TONE_EXTENSION_WITH_ONE_US_SLOTS) |
-              static_cast<uint8_t>(
-                  PeriodicSyncCteType::
-                      AVOID_AOD_CONSTANT_TONE_EXTENSION_WITH_TWO_US_SLOTS) |
-              static_cast<uint8_t>(
-                  PeriodicSyncCteType::
-                      AVOID_TYPE_THREE_CONSTANT_TONE_EXTENSION) |
-              static_cast<uint8_t>(
-                  PeriodicSyncCteType::AVOID_NO_CONSTANT_TONE_EXTENSION)),
-      ErrorCode::COMMAND_DISALLOWED);
+  ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSync(
+                    PeriodicAdvertisingOptions(false, false, false), 0,
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 0, 0x100,
+                    static_cast<uint8_t>(PeriodicSyncCteType::AVOID_AOA_CONSTANT_TONE_EXTENSION) |
+                            static_cast<uint8_t>(
+                                    PeriodicSyncCteType::
+                                            AVOID_AOD_CONSTANT_TONE_EXTENSION_WITH_ONE_US_SLOTS) |
+                            static_cast<uint8_t>(
+                                    PeriodicSyncCteType::
+                                            AVOID_AOD_CONSTANT_TONE_EXTENSION_WITH_TWO_US_SLOTS) |
+                            static_cast<uint8_t>(
+                                    PeriodicSyncCteType::AVOID_TYPE_THREE_CONSTANT_TONE_EXTENSION) |
+                            static_cast<uint8_t>(
+                                    PeriodicSyncCteType::AVOID_NO_CONSTANT_TONE_EXTENSION)),
+            ErrorCode::COMMAND_DISALLOWED);
 }
 
 }  // namespace rootcanal

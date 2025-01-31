@@ -20,15 +20,13 @@
 extern "C" {
 
 void* ffi_controller_new(uint8_t const address[6],
-                         void (*send_hci)(int idc, uint8_t const* data,
-                                          size_t data_len),
-                         void (*send_ll)(uint8_t const* data, size_t data_len,
-                                         int phy, int tx_power));
+                         void (*send_hci)(int idc, uint8_t const* data, size_t data_len),
+                         void (*send_ll)(uint8_t const* data, size_t data_len, int phy,
+                                         int tx_power));
 void ffi_controller_delete(void* controller);
-void ffi_controller_receive_hci(void* controller, int idc, uint8_t const* data,
-                                size_t data_len);
-void ffi_controller_receive_ll(void* controller, uint8_t const* data,
-                               size_t data_len, int phy, int rssi);
+void ffi_controller_receive_hci(void* controller, int idc, uint8_t const* data, size_t data_len);
+void ffi_controller_receive_ll(void* controller, uint8_t const* data, size_t data_len, int phy,
+                               int rssi);
 void ffi_controller_tick(void* controller);
 void ffi_generate_rpa(uint8_t const irk[16], uint8_t rpa[6]);
 

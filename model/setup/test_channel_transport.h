@@ -21,7 +21,7 @@
 #include <string>      // for string
 #include <vector>      // for vector
 
-#include "net/async_data_channel.h"  // for AsyncDataChannel
+#include "net/async_data_channel.h"         // for AsyncDataChannel
 #include "net/async_data_channel_server.h"  // for AsyncDataChannelServer (ptr only), Con...
 
 namespace rootcanal {
@@ -33,33 +33,28 @@ using android::net::ConnectCallback;
 // Manages communications between test channel and the controller. Mirrors the
 // HciTransport for the test channel.
 class TestChannelTransport {
- public:
+public:
   TestChannelTransport() {}
 
   ~TestChannelTransport() {}
 
   // Opens a port and returns and starts listening for incoming connections.
-  bool SetUp(std::shared_ptr<AsyncDataChannelServer> server,
-             ConnectCallback connection_callback);
+  bool SetUp(std::shared_ptr<AsyncDataChannelServer> server, ConnectCallback connection_callback);
 
   // Closes the port (if succesfully opened in SetUp).
   void CleanUp();
 
   // Sets the callback that fires when data is read in WatchFd().
   void RegisterCommandHandler(
-      const std::function<void(const std::string&,
-                               const std::vector<std::string>&)>& callback);
+          const std::function<void(const std::string&, const std::vector<std::string>&)>& callback);
 
   // Send data back to the test channel.
-  static void SendResponse(std::shared_ptr<AsyncDataChannel> socket,
-                           const std::string& response);
+  static void SendResponse(std::shared_ptr<AsyncDataChannel> socket, const std::string& response);
 
-  void OnCommandReady(AsyncDataChannel* socket,
-                      std::function<void(void)> unwatch);
+  void OnCommandReady(AsyncDataChannel* socket, std::function<void(void)> unwatch);
 
- private:
-  std::function<void(const std::string&, const std::vector<std::string>&)>
-      command_handler_;
+private:
+  std::function<void(const std::string&, const std::vector<std::string>&)> command_handler_;
   std::function<void(std::shared_ptr<AsyncDataChannel>)> connection_callback_;
   std::shared_ptr<AsyncDataChannelServer> socket_server_;
 

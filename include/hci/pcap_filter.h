@@ -42,45 +42,33 @@ namespace rootcanal {
 //     RootCanal issues, and can be safely removed.
 
 class PcapFilter final {
- public:
+public:
   PcapFilter() = default;
 
   // Main function to filter out user data in HCI packets.
-  std::vector<uint8_t> FilterHciPacket(std::vector<uint8_t> const& packet,
-                                       uint8_t idc);
+  std::vector<uint8_t> FilterHciPacket(std::vector<uint8_t> const& packet, uint8_t idc);
 
   std::vector<uint8_t> FilterHciCommand(std::vector<uint8_t> const& packet);
   std::vector<uint8_t> FilterHciEvent(std::vector<uint8_t> const& packet);
 
   // Specific filters for HCI commands.
-  std::vector<uint8_t> FilterWriteLocalName(
-      bluetooth::hci::CommandView& command);
-  std::vector<uint8_t> FilterWriteExtendedInquiryResponse(
-      bluetooth::hci::CommandView& command);
-  std::vector<uint8_t> FilterLeSetAdvertisingData(
-      bluetooth::hci::CommandView& command);
-  std::vector<uint8_t> FilterLeSetScanResponseData(
-      bluetooth::hci::CommandView& command);
-  std::vector<uint8_t> FilterLeSetExtendedAdvertisingData(
-      bluetooth::hci::CommandView& command);
-  std::vector<uint8_t> FilterLeSetExtendedScanResponseData(
-      bluetooth::hci::CommandView& command);
-  std::vector<uint8_t> FilterLeSetPeriodicAdvertisingData(
-      bluetooth::hci::CommandView& command);
+  std::vector<uint8_t> FilterWriteLocalName(bluetooth::hci::CommandView& command);
+  std::vector<uint8_t> FilterWriteExtendedInquiryResponse(bluetooth::hci::CommandView& command);
+  std::vector<uint8_t> FilterLeSetAdvertisingData(bluetooth::hci::CommandView& command);
+  std::vector<uint8_t> FilterLeSetScanResponseData(bluetooth::hci::CommandView& command);
+  std::vector<uint8_t> FilterLeSetExtendedAdvertisingData(bluetooth::hci::CommandView& command);
+  std::vector<uint8_t> FilterLeSetExtendedScanResponseData(bluetooth::hci::CommandView& command);
+  std::vector<uint8_t> FilterLeSetPeriodicAdvertisingData(bluetooth::hci::CommandView& command);
 
   // Specific filters for HCI events.
   std::vector<uint8_t> FilterReadLocalNameComplete(
-      bluetooth::hci::CommandCompleteView& command_complete);
+          bluetooth::hci::CommandCompleteView& command_complete);
   std::vector<uint8_t> FilterReadExtendedInquiryResponseComplete(
-      bluetooth::hci::CommandCompleteView& command_complete);
-  std::vector<uint8_t> FilterRemoteNameRequestComplete(
-      bluetooth::hci::EventView& event);
-  std::vector<uint8_t> FilterExtendedInquiryResult(
-      bluetooth::hci::EventView& event);
-  std::vector<uint8_t> FilterLeAdvertisingReport(
-      bluetooth::hci::LeMetaEventView& event);
-  std::vector<uint8_t> FilterLeExtendedAdvertisingReport(
-      bluetooth::hci::LeMetaEventView& event);
+          bluetooth::hci::CommandCompleteView& command_complete);
+  std::vector<uint8_t> FilterRemoteNameRequestComplete(bluetooth::hci::EventView& event);
+  std::vector<uint8_t> FilterExtendedInquiryResult(bluetooth::hci::EventView& event);
+  std::vector<uint8_t> FilterLeAdvertisingReport(bluetooth::hci::LeMetaEventView& event);
+  std::vector<uint8_t> FilterLeExtendedAdvertisingReport(bluetooth::hci::LeMetaEventView& event);
 
   // Specific filter for any Gap data array.
   // The Gap data entries are modified in place.
@@ -88,15 +76,12 @@ class PcapFilter final {
   void FilterGapData(std::vector<uint8_t>& gap_data);
 
   // Helpers to replace local names.
-  std::array<uint8_t, 248> ChangeDeviceName(
-      std::array<uint8_t, 248> const& device_name);
-  std::vector<uint8_t> ChangeDeviceName(
-      std::vector<uint8_t> const& device_name);
+  std::array<uint8_t, 248> ChangeDeviceName(std::array<uint8_t, 248> const& device_name);
+  std::vector<uint8_t> ChangeDeviceName(std::vector<uint8_t> const& device_name);
 
- private:
+private:
   // Map device names to anonymous replacements.
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
-      device_name_map{};
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> device_name_map{};
 };
 
 }  // namespace rootcanal

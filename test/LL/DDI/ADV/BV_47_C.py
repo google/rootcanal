@@ -32,7 +32,7 @@ def make_advertising_event_properties(properties: int) -> hci.AdvertisingEventPr
                                           high_duty_cycle=(properties & 0x8) != 0,
                                           legacy=(properties & 0x10) != 0,
                                           anonymous=(properties & 0x20) != 0,
-                                          tx_power=(properties & 0x40) != 0)
+                                          include_tx_power=(properties & 0x40) != 0)
 
 
 @dataclass
@@ -107,17 +107,18 @@ class Test(ControllerTest):
         # Peer_Address_Type shall be set to 0x00 (Public Device Address), and the Peer_Address shall be
         # set to the Lower Tester’s address.
         controller.send_cmd(
-            hci.LeSetExtendedAdvertisingParameters(advertising_handle=0,
-                                                   advertising_event_properties=advertising_event_properties,
-                                                   primary_advertising_interval_min=self.LL_advertiser_advInterval_MIN,
-                                                   primary_advertising_interval_max=self.LL_advertiser_advInterval_MAX,
-                                                   primary_advertising_channel_map=self.LL_advertiser_Adv_Channel_Map,
-                                                   own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
-                                                   advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES,
-                                                   primary_advertising_phy=hci.PrimaryPhyType.LE_1M))
+            hci.LeSetExtendedAdvertisingParametersV1(
+                advertising_handle=0,
+                advertising_event_properties=advertising_event_properties,
+                primary_advertising_interval_min=self.LL_advertiser_advInterval_MIN,
+                primary_advertising_interval_max=self.LL_advertiser_advInterval_MAX,
+                primary_advertising_channel_map=self.LL_advertiser_Adv_Channel_Map,
+                own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES,
+                primary_advertising_phy=hci.PrimaryPhyType.LE_1M))
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingParametersV1Complete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 4. The Upper Tester sends one or more HCI_LE_Set_Extended_Advertising_Data commands to the
         # IUT with values according to Table 4.6 and using random octets from 1 to 254 as the payload. If

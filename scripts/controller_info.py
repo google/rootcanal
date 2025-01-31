@@ -98,66 +98,74 @@ async def br_edr_properties(host: Host):
     page2 = await host.expect_evt(hci.ReadLocalExtendedFeaturesComplete)
 
     print(
-        f"lmp_features: {{ 0x{page0.lmp_features:x}, 0x{page1.extended_lmp_features:x}, 0x{page2.extended_lmp_features:x} }}"
+        f"lmp_features = {{ 0x{page0.lmp_features:x}, 0x{page1.extended_lmp_features:x}, 0x{page2.extended_lmp_features:x} }};"
     )
 
     await host.send_cmd(hci.ReadBufferSize())
     evt = await host.expect_evt(hci.ReadBufferSizeComplete)
 
-    print(f"acl_data_packet_length: {evt.acl_data_packet_length}")
-    print(f"total_num_acl_data_packets: {evt.total_num_acl_data_packets}")
-    print(f"sco_data_packet_length: {evt.synchronous_data_packet_length}")
-    print(f"total_num_sco_data_packets: {evt.total_num_synchronous_data_packets}")
+    print(f"acl_data_packet_length = {evt.acl_data_packet_length};")
+    print(f"total_num_acl_data_packets = {evt.total_num_acl_data_packets};")
+    print(f"sco_data_packet_length = {evt.synchronous_data_packet_length};")
+    print(f"total_num_sco_data_packets = {evt.total_num_synchronous_data_packets};")
 
     await host.send_cmd(hci.ReadNumberOfSupportedIac())
     evt = await host.expect_evt(hci.ReadNumberOfSupportedIacComplete)
 
-    print(f"num_supported_iac: {evt.num_support_iac}")
+    print(f"num_supported_iac = {evt.num_support_iac};")
 
 
 async def le_properties(host: Host):
-    await host.send_cmd(hci.LeReadLocalSupportedFeatures())
-    evt = await host.expect_evt(hci.LeReadLocalSupportedFeaturesComplete)
+    await host.send_cmd(hci.LeReadLocalSupportedFeaturesPage0())
+    evt = await host.expect_evt(hci.LeReadLocalSupportedFeaturesPage0Complete)
 
-    print(f"le_features: 0x{evt.le_features:x}")
+    print(f"le_features = 0x{evt.le_features:x};")
 
-    await host.send_cmd(hci.LeReadBufferSizeV2())
-    evt = await host.expect_evt(hci.LeReadBufferSizeV2Complete)
+    try:
+        await host.send_cmd(hci.LeReadBufferSizeV2())
+        evt = await host.expect_evt(hci.LeReadBufferSizeV2Complete)
 
-    print(f"le_acl_data_packet_length: {evt.le_buffer_size.le_data_packet_length}")
-    print(f"total_num_le_acl_data_packets: {evt.le_buffer_size.total_num_le_packets}")
-    print(f"iso_data_packet_length: {evt.iso_buffer_size.le_data_packet_length}")
-    print(f"total_num_iso_data_packets: {evt.iso_buffer_size.total_num_le_packets}")
+        print(f"le_acl_data_packet_length = {evt.le_buffer_size.le_data_packet_length};")
+        print(f"total_num_le_acl_data_packets = {evt.le_buffer_size.total_num_le_packets};")
+        print(f"iso_data_packet_length = {evt.iso_buffer_size.le_data_packet_length};")
+        print(f"total_num_iso_data_packets = {evt.iso_buffer_size.total_num_le_packets};")
+
+    except Exception:
+        await host.send_cmd(hci.LeReadBufferSizeV1())
+        evt = await host.expect_evt(hci.LeReadBufferSizeV1Complete)
+
+        print(f"le_acl_data_packet_length = {evt.le_buffer_size.le_data_packet_length};")
+        print(f"total_num_le_acl_data_packets = {evt.le_buffer_size.total_num_le_packets};")
 
     await host.send_cmd(hci.LeReadFilterAcceptListSize())
     evt = await host.expect_evt(hci.LeReadFilterAcceptListSizeComplete)
 
-    print(f"le_filter_accept_list_size: {evt.filter_accept_list_size}")
+    print(f"le_filter_accept_list_size = {evt.filter_accept_list_size};")
 
     await host.send_cmd(hci.LeReadResolvingListSize())
     evt = await host.expect_evt(hci.LeReadResolvingListSizeComplete)
 
-    print(f"le_resolving_list_size: {evt.resolving_list_size}")
+    print(f"le_resolving_list_size = {evt.resolving_list_size};")
 
     await host.send_cmd(hci.LeReadSupportedStates())
     evt = await host.expect_evt(hci.LeReadSupportedStatesComplete)
 
-    print(f"le_supported_states: 0x{evt.le_states:x}")
+    print(f"le_supported_states: 0x{evt.le_states:x};")
 
     await host.send_cmd(hci.LeReadMaximumAdvertisingDataLength())
     evt = await host.expect_evt(hci.LeReadMaximumAdvertisingDataLengthComplete)
 
-    print(f"le_max_advertising_data_length: {evt.maximum_advertising_data_length}")
+    print(f"le_max_advertising_data_length = {evt.maximum_advertising_data_length};")
 
     await host.send_cmd(hci.LeReadNumberOfSupportedAdvertisingSets())
     evt = await host.expect_evt(hci.LeReadNumberOfSupportedAdvertisingSetsComplete)
 
-    print(f"le_num_supported_advertising_sets: {evt.number_supported_advertising_sets}")
+    print(f"le_num_supported_advertising_sets = {evt.number_supported_advertising_sets};")
 
     await host.send_cmd(hci.LeReadPeriodicAdvertiserListSize())
     evt = await host.expect_evt(hci.LeReadPeriodicAdvertiserListSizeComplete)
 
-    print(f"le_periodic_advertiser_list_size: {evt.periodic_advertiser_list_size}")
+    print(f"le_periodic_advertiser_list_size = {evt.periodic_advertiser_list_size};")
 
 
 async def run(tcp_port: int):
@@ -170,16 +178,16 @@ async def run(tcp_port: int):
     await host.send_cmd(hci.ReadLocalVersionInformation())
     evt = await host.expect_evt(hci.ReadLocalVersionInformationComplete)
 
-    print(f"hci_version: {evt.local_version_information.hci_version}")
-    print(f"hci_subversion: 0x{evt.local_version_information.hci_revision:x}")
-    print(f"lmp_version: {evt.local_version_information.lmp_version}")
-    print(f"lmp_subversion: 0x{evt.local_version_information.lmp_subversion:x}")
-    print(f"company_identifier: 0x{evt.local_version_information.manufacturer_name:x}")
+    print(f"hci_version = {evt.local_version_information.hci_version};")
+    print(f"hci_subversion = 0x{evt.local_version_information.hci_revision:x};")
+    print(f"lmp_version = {evt.local_version_information.lmp_version};")
+    print(f"lmp_subversion = 0x{evt.local_version_information.lmp_subversion:x};")
+    print(f"company_identifier = 0x{evt.local_version_information.manufacturer_name:x};")
 
     await host.send_cmd(hci.ReadLocalSupportedCommands())
     evt = await host.expect_evt(hci.ReadLocalSupportedCommandsComplete)
 
-    print(f"supported_commands: {{ {', '.join([f'0x{b:x}' for b in evt.supported_commands])} }}")
+    print(f"supported_commands = {{ {', '.join([f'0x{b:02x}' for b in evt.supported_commands])} }};")
 
     try:
         await br_edr_properties(host)

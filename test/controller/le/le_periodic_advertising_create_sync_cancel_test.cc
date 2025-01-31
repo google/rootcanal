@@ -23,11 +23,11 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LePeriodicAdvertisingCreateSyncCancelTest : public ::testing::Test {
- public:
+public:
   LePeriodicAdvertisingCreateSyncCancelTest() = default;
   ~LePeriodicAdvertisingCreateSyncCancelTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -35,18 +35,16 @@ class LePeriodicAdvertisingCreateSyncCancelTest : public ::testing::Test {
 
 TEST_F(LePeriodicAdvertisingCreateSyncCancelTest, Success) {
   ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSync(
-                PeriodicAdvertisingOptions(false, false, false), 0,
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 0, 0x100, 0),
+                    PeriodicAdvertisingOptions(false, false, false), 0,
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 0, 0x100,
+                    0),
             ErrorCode::SUCCESS);
 
-  ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSyncCancel(),
-            ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSyncCancel(), ErrorCode::SUCCESS);
 }
 
 TEST_F(LePeriodicAdvertisingCreateSyncCancelTest, CreateSyncNotPending) {
-  ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSyncCancel(),
-            ErrorCode::COMMAND_DISALLOWED);
+  ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSyncCancel(), ErrorCode::COMMAND_DISALLOWED);
 }
 
 }  // namespace rootcanal

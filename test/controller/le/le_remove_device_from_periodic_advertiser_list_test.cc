@@ -24,7 +24,7 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeRemoveDeviceFromPeriodicAdvertiserListTest : public ::testing::Test {
- public:
+public:
   LeRemoveDeviceFromPeriodicAdvertiserListTest() {
     // Reduce the size of the periodic advertiser list to simplify testing.
     properties_.le_periodic_advertiser_list_size = 3;
@@ -32,7 +32,7 @@ class LeRemoveDeviceFromPeriodicAdvertiserListTest : public ::testing::Test {
 
   ~LeRemoveDeviceFromPeriodicAdvertiserListTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
@@ -40,43 +40,37 @@ class LeRemoveDeviceFromPeriodicAdvertiserListTest : public ::testing::Test {
 
 TEST_F(LeRemoveDeviceFromPeriodicAdvertiserListTest, Success) {
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeRemoveDeviceFromPeriodicAdvertiserList(
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::SUCCESS);
 }
 
 TEST_F(LeRemoveDeviceFromPeriodicAdvertiserListTest, NotFound) {
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeRemoveDeviceFromPeriodicAdvertiserList(
-                AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::RANDOM_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::UNKNOWN_ADVERTISING_IDENTIFIER);
 }
 
 TEST_F(LeRemoveDeviceFromPeriodicAdvertiserListTest, CreateSyncPending) {
   ASSERT_EQ(controller_.LeAddDeviceToPeriodicAdvertiserList(
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LePeriodicAdvertisingCreateSync(
-                PeriodicAdvertisingOptions(), 0,
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{5}, false, 0x100, 0),
+                    PeriodicAdvertisingOptions(), 0,
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{5}, false,
+                    0x100, 0),
             ErrorCode::SUCCESS);
 
   ASSERT_EQ(controller_.LeRemoveDeviceFromPeriodicAdvertiserList(
-                AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                Address{1}, 1),
+                    AdvertiserAddressType::PUBLIC_DEVICE_OR_IDENTITY_ADDRESS, Address{1}, 1),
             ErrorCode::COMMAND_DISALLOWED);
 }
 

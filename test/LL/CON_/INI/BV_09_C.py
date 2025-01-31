@@ -144,17 +144,17 @@ class Test(ControllerTest):
         # 10. Upper Tester receives an HCI_LE_Enhanced_Connection_Complete event from the IUT
         # including the Lower Tester’s RPA and Identity address and connection interval selected.
         connect_complete = await self.expect_evt(
-            hci.LeEnhancedConnectionComplete(status=ErrorCode.SUCCESS,
-                                             connection_handle=self.Any,
-                                             role=hci.Role.CENTRAL,
-                                             peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                             peer_address=peer_address,
-                                             peer_resolvable_private_address=peer_resolvable_address,
-                                             local_resolvable_private_address=connect_ind.source_address,
-                                             connection_interval=0x200,
-                                             peripheral_latency=0x6,
-                                             supervision_timeout=0xc80,
-                                             central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+            hci.LeEnhancedConnectionCompleteV1(status=ErrorCode.SUCCESS,
+                                               connection_handle=self.Any,
+                                               role=hci.Role.CENTRAL,
+                                               peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                                               peer_address=peer_address,
+                                               peer_resolvable_private_address=peer_resolvable_address,
+                                               local_resolvable_private_address=connect_ind.source_address,
+                                               connection_interval=0x200,
+                                               peripheral_latency=0x6,
+                                               supervision_timeout=0xc80,
+                                               central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 
         # 11. After the CONNECT_IND has been received, the Lower Tester receives the first correctly
         # formatted LL Data Channel PDU on the data channel.

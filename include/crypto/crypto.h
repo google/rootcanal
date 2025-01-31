@@ -30,8 +30,7 @@ Octet16 aes_128(const Octet16& key, const Octet16& message);
 /* This function computes AES_128(key, message). |key| must be 128bit.
  * |message| can be at most 16 bytes long, its length in bytes is given in
  * |length| */
-inline Octet16 aes_128(const Octet16& key, const uint8_t* message,
-                       const uint8_t length) {
+inline Octet16 aes_128(const Octet16& key, const uint8_t* message, const uint8_t length) {
   Octet16 padded_message{0};
   std::copy(message, message + length, padded_message.begin());
   return aes_128(key, padded_message);

@@ -32,7 +32,7 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeScanningFilterDuplicates : public ::testing::Test {
- public:
+public:
   LeScanningFilterDuplicates() {}
 
   ~LeScanningFilterDuplicates() override = default;
@@ -49,80 +49,69 @@ class LeScanningFilterDuplicates : public ::testing::Test {
     // Set event mask to receive (extended) Advertising Reports
     controller_.SetEventMask(to_mask(EventCode::LE_META_EVENT));
 
-    controller_.SetLeEventMask(
-        to_mask(SubeventCode::ADVERTISING_REPORT) |
-        to_mask(SubeventCode::EXTENDED_ADVERTISING_REPORT) |
-        to_mask(SubeventCode::DIRECTED_ADVERTISING_REPORT));
+    controller_.SetLeEventMask(to_mask(SubeventCode::LE_ADVERTISING_REPORT) |
+                               to_mask(SubeventCode::LE_EXTENDED_ADVERTISING_REPORT) |
+                               to_mask(SubeventCode::LE_DIRECTED_ADVERTISING_REPORT));
   }
 
   void StartScan(FilterDuplicates filter_duplicates) {
-    ASSERT_EQ(ErrorCode::SUCCESS, controller_.LeSetScanParameters(
-                                      LeScanType::ACTIVE, 0x4, 0x4,
-                                      OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL));
     ASSERT_EQ(ErrorCode::SUCCESS,
-              controller_.LeSetScanEnable(
-                  true, filter_duplicates == FilterDuplicates::ENABLED));
+              controller_.LeSetScanParameters(LeScanType::ACTIVE, 0x4, 0x4,
+                                              OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                                              LeScanningFilterPolicy::ACCEPT_ALL));
+    ASSERT_EQ(ErrorCode::SUCCESS,
+              controller_.LeSetScanEnable(true, filter_duplicates == FilterDuplicates::ENABLED));
   }
 
-  void StopScan(void) {
-    ASSERT_EQ(ErrorCode::SUCCESS, controller_.LeSetScanEnable(false, false));
-  }
+  void StopScan(void) { ASSERT_EQ(ErrorCode::SUCCESS, controller_.LeSetScanEnable(false, false)); }
 
-  void StartExtendedScan(FilterDuplicates filter_duplicates,
-                         uint16_t duration = 0, uint16_t period = 0) {
+  void StartExtendedScan(FilterDuplicates filter_duplicates, uint16_t duration = 0,
+                         uint16_t period = 0) {
     bluetooth::hci::ScanningPhyParameters param;
     param.le_scan_type_ = LeScanType::ACTIVE;
     param.le_scan_interval_ = 0x4;
     param.le_scan_window_ = 0x4;
 
+    ASSERT_EQ(ErrorCode::SUCCESS, controller_.LeSetExtendedScanParameters(
+                                          OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                                          LeScanningFilterPolicy::ACCEPT_ALL, 0x1, {param}));
     ASSERT_EQ(ErrorCode::SUCCESS,
-              controller_.LeSetExtendedScanParameters(
-                  OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                  LeScanningFilterPolicy::ACCEPT_ALL, 0x1, {param}));
-    ASSERT_EQ(ErrorCode::SUCCESS,
-              controller_.LeSetExtendedScanEnable(true, filter_duplicates,
-                                                  duration, period));
+              controller_.LeSetExtendedScanEnable(true, filter_duplicates, duration, period));
   }
 
   void StopExtendedScan(void) {
-    ASSERT_EQ(ErrorCode::SUCCESS, controller_.LeSetExtendedScanEnable(
-                                      false, FilterDuplicates::DISABLED, 0, 0));
+    ASSERT_EQ(ErrorCode::SUCCESS,
+              controller_.LeSetExtendedScanEnable(false, FilterDuplicates::DISABLED, 0, 0));
   }
 
   /// Helper for building ScanResponse packets
-  static model::packets::LinkLayerPacketView LeScanResponse(
-      std::vector<uint8_t> const data = {}) {
+  static model::packets::LinkLayerPacketView LeScanResponse(std::vector<uint8_t> const data = {}) {
     return FromBuilder(model::packets::LeScanResponseBuilder::Create(
-        Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC,
-        data));
+            Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC, data));
   }
 
   /// Helper for building LeLegacyAdvertisingPdu packets
   static model::packets::LinkLayerPacketView LeLegacyAdvertisingPdu(
-      std::vector<uint8_t> const data = {}) {
+          std::vector<uint8_t> const data = {}) {
     return FromBuilder(model::packets::LeLegacyAdvertisingPduBuilder::Create(
-        Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC,
-        model::packets::AddressType::PUBLIC,
-        model::packets::LegacyAdvertisingType::ADV_IND, data));
+            Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC,
+            model::packets::AddressType::PUBLIC, model::packets::LegacyAdvertisingType::ADV_IND,
+            data));
   }
 
   /// Helper for building LeExtendedAdvertisingPdu packets
   static model::packets::LinkLayerPacketView LeExtendedAdvertisingPdu(
-      std::vector<uint8_t> const data = {}) {
+          std::vector<uint8_t> const data = {}) {
     return FromBuilder(model::packets::LeExtendedAdvertisingPduBuilder::Create(
-        Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC,
-        model::packets::AddressType::PUBLIC, 0, 1, 0, 0, 0,
-        model::packets::PhyType::LE_1M, model::packets::PhyType::LE_1M, 0,
-        data));
+            Address::kEmpty, Address::kEmpty, model::packets::AddressType::PUBLIC,
+            model::packets::AddressType::PUBLIC, 0, 1, 0, 0, 0, model::packets::PhyType::LE_1M,
+            model::packets::PhyType::LE_1M, 0, data));
   }
 
   static model::packets::LinkLayerPacketView FromBuilder(
-      std::unique_ptr<pdl::packet::Builder> builder) {
-    auto data =
-        std::make_shared<std::vector<uint8_t>>(builder->SerializeToBytes());
-    return model::packets::LinkLayerPacketView::Create(
-        pdl::packet::slice(data));
+          std::unique_ptr<pdl::packet::Builder> builder) {
+    auto data = std::make_shared<std::vector<uint8_t>>(builder->SerializeToBytes());
+    return model::packets::LinkLayerPacketView::Create(pdl::packet::slice(data));
   }
 
   enum Filtered {
@@ -146,20 +135,19 @@ class LeScanningFilterDuplicates : public ::testing::Test {
     return kReported;
   }
 
- protected:
+protected:
   Address address_{};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
   static unsigned event_listener_called_;
 
- private:
+private:
   static void event_listener_(std::shared_ptr<EventBuilder> /* event */) {
     event_listener_called_++;
   }
 
-  static void remote_listener_(
-      std::shared_ptr<model::packets::LinkLayerPacketBuilder> /* packet */,
-      Phy::Type /* phy */, int8_t /* tx_power */) {}
+  static void remote_listener_(std::shared_ptr<model::packets::LinkLayerPacketBuilder> /* packet */,
+                               Phy::Type /* phy */, int8_t /* tx_power */) {}
 };
 
 unsigned LeScanningFilterDuplicates::event_listener_called_ = 0;
@@ -226,8 +214,7 @@ TEST_F(LeScanningFilterDuplicates, ExtendedAdvertisingPduDuringExtendedScan) {
   ASSERT_EQ(kFiltered, SendPacketAndCheck(LeExtendedAdvertisingPdu({0, 1})));
 }
 
-TEST_F(LeScanningFilterDuplicates,
-       LeScanResponseToLegacyAdvertisingDuringLegacyScan) {
+TEST_F(LeScanningFilterDuplicates, LeScanResponseToLegacyAdvertisingDuringLegacyScan) {
   StopScan();
   SendPacket(LeLegacyAdvertisingPdu());
   ASSERT_EQ(kFiltered, SendPacketAndCheck(LeScanResponse()));
@@ -256,8 +243,7 @@ TEST_F(LeScanningFilterDuplicates,
   ASSERT_EQ(kFiltered, SendPacketAndCheck(LeScanResponse({0, 1})));
 }
 
-TEST_F(LeScanningFilterDuplicates,
-       LeScanResponseToLegacyAdvertisingDuringExtendedScan) {
+TEST_F(LeScanningFilterDuplicates, LeScanResponseToLegacyAdvertisingDuringExtendedScan) {
   StopExtendedScan();
   SendPacket(LeLegacyAdvertisingPdu());
   ASSERT_EQ(kFiltered, SendPacketAndCheck(LeScanResponse()));
@@ -286,8 +272,7 @@ TEST_F(LeScanningFilterDuplicates,
   ASSERT_EQ(kFiltered, SendPacketAndCheck(LeScanResponse({0, 1})));
 }
 
-TEST_F(LeScanningFilterDuplicates,
-       LeScanResponseToExtendedAdvertisingDuringLegacyScan) {
+TEST_F(LeScanningFilterDuplicates, LeScanResponseToExtendedAdvertisingDuringLegacyScan) {
   StopScan();
   SendPacket(LeExtendedAdvertisingPdu());
   ASSERT_EQ(kFiltered, SendPacketAndCheck(LeScanResponse()));
@@ -299,8 +284,7 @@ TEST_F(LeScanningFilterDuplicates,
   ASSERT_EQ(kFiltered, SendPacketAndCheck(LeScanResponse()));
 }
 
-TEST_F(LeScanningFilterDuplicates,
-       LeScanResponseToExtendedAdvertisingDuringExtendedScan) {
+TEST_F(LeScanningFilterDuplicates, LeScanResponseToExtendedAdvertisingDuringExtendedScan) {
   StopExtendedScan();
   SendPacket(LeExtendedAdvertisingPdu());
   ASSERT_EQ(kFiltered, SendPacketAndCheck(LeScanResponse()));

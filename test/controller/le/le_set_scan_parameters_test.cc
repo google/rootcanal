@@ -23,66 +23,59 @@ namespace rootcanal {
 using namespace bluetooth::hci;
 
 class LeSetScanParametersTest : public ::testing::Test {
- public:
+public:
   LeSetScanParametersTest() = default;
   ~LeSetScanParametersTest() override = default;
 
- protected:
+protected:
   Address address_{0};
   ControllerProperties properties_{};
   LinkLayerController controller_{address_, properties_};
 };
 
 TEST_F(LeSetScanParametersTest, Success) {
-  ASSERT_EQ(
-      controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
-                                      OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL),
-      ErrorCode::SUCCESS);
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
+                                            OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
+            ErrorCode::SUCCESS);
 }
 
 TEST_F(LeSetScanParametersTest, ScanningActive) {
   ASSERT_EQ(controller_.LeSetScanEnable(true, false), ErrorCode::SUCCESS);
 
-  ASSERT_EQ(
-      controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
-                                      OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL),
-      ErrorCode::COMMAND_DISALLOWED);
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x200,
+                                            OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
+            ErrorCode::COMMAND_DISALLOWED);
 }
 
 TEST_F(LeSetScanParametersTest, InvalidScanInterval) {
-  ASSERT_EQ(
-      controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x0, 0x200,
-                                      OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL),
-      ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x0, 0x200,
+                                            OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
+            ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
-  ASSERT_EQ(
-      controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x4001, 0x200,
-                                      OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL),
-      ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x4001, 0x200,
+                                            OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
+            ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 }
 
 TEST_F(LeSetScanParametersTest, InvalidScanWindow) {
-  ASSERT_EQ(
-      controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x0,
-                                      OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL),
-      ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x0,
+                                            OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
+            ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
-  ASSERT_EQ(
-      controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x4001,
-                                      OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL),
-      ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x4001,
+                                            OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
+            ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE);
 
-  ASSERT_EQ(
-      controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x2001,
-                                      OwnAddressType::PUBLIC_DEVICE_ADDRESS,
-                                      LeScanningFilterPolicy::ACCEPT_ALL),
-      ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
+  ASSERT_EQ(controller_.LeSetScanParameters(LeScanType::PASSIVE, 0x2000, 0x2001,
+                                            OwnAddressType::PUBLIC_DEVICE_ADDRESS,
+                                            LeScanningFilterPolicy::ACCEPT_ALL),
+            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS);
 }
 
 }  // namespace rootcanal
