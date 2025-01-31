@@ -12,10 +12,10 @@ mkdir -p py/src/rootcanal/bin/linux-x86_64
 cp rootcanal-linux-x86_64/bin/rootcanal py/src/rootcanal/bin/linux-x86_64/rootcanal
 cp rootcanal-linux-x86_64/lib/librootcanal_ffi.so py/src/rootcanal/bin/linux-x86_64/librootcanal_ffi.so
 
-unzip rootcanal-macos-x86_64.zip
-mkdir -p py/src/rootcanal/bin/macos-x86_64
-cp rootcanal-macos-x86_64/bin/rootcanal py/src/rootcanal/bin/macos-x86_64/rootcanal
-cp rootcanal-macos-x86_64/lib/librootcanal_ffi.so py/src/rootcanal/bin/macos-x86_64/librootcanal_ffi.so
+unzip rootcanal-macos-arm64.zip
+mkdir -p py/src/rootcanal/bin/macos-arm64
+cp rootcanal-macos-arm64/bin/rootcanal py/src/rootcanal/bin/macos-arm64/rootcanal
+cp rootcanal-macos-arm64/lib/librootcanal_ffi.so py/src/rootcanal/bin/macos-arm64/librootcanal_ffi.so
 
 # 1. Generate the python backends for packet parsing.
 mkdir -p py/src/rootcanal/packets
