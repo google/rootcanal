@@ -1,0 +1,47 @@
+# Copyright 2025 Google Inc. All Rights Reserved.
+
+module(
+    name = "rootcanal",
+    repo_name = "com_github_google_rootcanal",
+)
+
+bazel_dep(name = "rules_cc", version = "0.1.0")
+bazel_dep(name = "rules_rust", version = "0.57.1")
+bazel_dep(name = "rules_proto", version = "7.1.0")
+bazel_dep(name = "rules_python", version = "1.1.0")
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+
+bazel_dep(name = "openssl", version = "3.3.1.bcr.1")
+bazel_dep(name = "gflags", version = "2.2.2")
+
+local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "local_repository")
+new_local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")
+
+new_local_repository(
+    name = "fmtlib",
+    path = "third_party/fmtlib",
+    build_file = "//:BUILD.fmtlib",
+)
+
+new_local_repository(
+    name = "pdl",
+    path = "third_party/pdl",
+    build_file = "//:BUILD.pdl",
+)
+
+crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+
+crate.spec(package = "bytes", version = "1.0.1")
+crate.spec(package = "num-bigint", version = "0.4.3")
+crate.spec(package = "num-derive", version = "0.3.3")
+crate.spec(package = "num-integer", version = "0.1.45")
+crate.spec(package = "num-traits", version = "0.2.14")
+crate.spec(package = "paste", version = "1.0.4")
+crate.spec(package = "pdl-runtime", version = "0.2.2")
+crate.spec(package = "pin-utils", version = "0.1.0")
+crate.spec(package = "rand", version = "0.8.3")
+crate.spec(package = "thiserror", version = "1.0.23")
+crate.spec(package = "bytes", version = "1.0.1")
+
+crate.from_specs()
+use_repo(crate, "crates")
