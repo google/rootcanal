@@ -2,11 +2,8 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_rust//rust:defs.bzl", "rust_static_library")
-load("@rules_rust//rust:defs.bzl", "rust_library")
-load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 
 package(default_visibility = ["//visibility:private"])
 licenses(["notice"])
@@ -33,18 +30,6 @@ proto_library(
 cc_proto_library(
     name = "rootcanal_config",
     deps = [":rootcanal_proto"],
-)
-
-rust_library(
-    name = "pdl_runtime",
-    srcs = glob(["third_party/pdl/pdl-runtime/**/*.rs"]),
-    crate_root = "third_party/pdl/pdl-runtime/src/lib.rs",
-    edition = "2018",
-    version = "2.0.0",
-    deps = [
-        "//rust/cargo:bytes",
-        "//rust/cargo:thiserror",
-    ],
 )
 
 genrule(
@@ -103,18 +88,18 @@ rust_static_library(
         "lmp_packets.rs",
     ],
     proc_macro_deps = [
-        "//rust/cargo:num_derive",
-        "//rust/cargo:paste",
+        "@crates//:num-derive",
+        "@crates//:paste",
     ],
     deps = [
-        ":pdl_runtime",
-        "//rust/cargo:bytes",
-        "//rust/cargo:num_bigint",
-        "//rust/cargo:num_integer",
-        "//rust/cargo:num_traits",
-        "//rust/cargo:pin_utils",
-        "//rust/cargo:rand",
-        "//rust/cargo:thiserror",
+        "@crates//:bytes",
+        "@crates//:num-bigint",
+        "@crates//:num-integer",
+        "@crates//:num-traits",
+        "@crates//:pdl-runtime",
+        "@crates//:pin-utils",
+        "@crates//:rand",
+        "@crates//:thiserror",
     ],
 )
 
@@ -211,9 +196,6 @@ cc_library(
         "-I.",
         "-fmacro-prefix-map=external/rootcanal/=",
     ],
-    linkopts = [
-        "-lcrypto",
-    ],
     defines = [
         "NDEBUG",
         "_GNU_SOURCE",
@@ -229,16 +211,14 @@ cc_library(
         ":rootcanal_rs",
         "//packets:generated",
         "@fmtlib",
+        "@openssl//:crypto",
         "@pdl//:packet_runtime",
     ],
 )
 
 cc_binary(
     name = "librootcanal_ffi.so",
-    linkopts = [
-        "-shared",
-        "-lcrypto",
-    ],
+    linkopts = ["-shared"],
     srcs = [
         "include/crypto/crypto.h",
         "include/hci/address.h",
@@ -296,8 +276,9 @@ cc_binary(
         ":rootcanal_log",
         ":rootcanal_rs",
         "//packets:generated",
-        "@fmtlib",
         "@pdl//:packet_runtime",
+        "@fmtlib",
+        "@openssl//:crypto",
     ],
 )
 
@@ -316,5 +297,6 @@ cc_binary(
         ":rootcanal_rs",
         "@gflags",
         "@fmtlib",
+        "@openssl//:crypto",
     ],
 )

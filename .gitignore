@@ -1,3 +1,4 @@
 Cargo.lock
+MODULE.bazel.lock
 target/
 bazel-*
