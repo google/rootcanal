@@ -46,6 +46,6 @@ include = [
   "src/rootcanal/packets/llcp.py",
   "src/rootcanal/bin/linux-x86_64/rootcanal",
   "src/rootcanal/bin/linux-x86_64/librootcanal_ffi.so",
-  "src/rootcanal/bin/macos-x86_64/rootcanal",
-  "src/rootcanal/bin/macos-x86_64/librootcanal_ffi.so",
+  "src/rootcanal/bin/macos-arm64/rootcanal",
+  "src/rootcanal/bin/macos-arm64/librootcanal_ffi.so",
 ]
