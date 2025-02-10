@@ -6,7 +6,7 @@ of Bluetooth applications directly in Python.
 ## Supported platforms
 
 - `linux-x86_64`
-- `macos-x86_64`
+- `macos-arm64`
 
 ## Usage
 
