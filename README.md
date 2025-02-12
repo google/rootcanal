@@ -4,8 +4,6 @@ RootCanal is a virtual Bluetooth Controller. RootCanal aims reducing the
 overhead of writing and deploying end-to-end tests on Bluetooth devices
 by taking away the physical layer.
 
-## Feature emulation
-
 The emulation of Bluetooth features on RootCanal _is limited to features
 that have direct consequences on connected hosts_. The accurate implementation
 of HCI commands and events is thus critical to RootCanal's goal, while accurate
@@ -13,25 +11,33 @@ emulation of the scheduler and base-band is out of scope.
 
 ## Usage
 
-### Emulator integration
+RootCanal can be natively built or installed pre-compiled though the PyPI
+`rootcanal` package. Both options have been tested with `linux-x86_64` and
+`macos-arm64`, `windows` is not yet supported.
 
-RootCanal is natively integrated in the Cuttlefish and Goldfish emulators.
-Bluetooth is enabled by default on these platforms. External hosts can connect
-to the HCI port 7300 to interact with the emulated device.
+### Build instructions
 
-### Standalone tool
-
-RootCanal can be built and started as a standalone tool.
-Instructions to build and run root-canal from an AOSP instance:
-
-```bash
-source build/envsetup.sh
-lunch aosp_cf_x86_64_phone-userdebug
-m root-canal
-./out/host/linux-x86/bin/root-canal
 ```
-Note: You can also find a prebuilt version inside
-[cvd-host_package.tar.gz from Android CI][cvd-host_package]
+sudo apt install bazel rustc cargo
+cargo install pdl-compiler --version 0.3.2
+```
+
+```
+git clone https://github.com/google/rootcanal.git
+cd rootcanal
+git submodule update --init
+bazel run :rootcanal
+```
+
+### Python instructions
+
+```
+pip install rootcanal
+python -m rootcanal
+```
+
+### Launch options
+
 The following configuration options are implemented:
 
 * `--test_port` (default `6401`) Configure the TCP port for the test channel.
@@ -45,7 +51,8 @@ The following configuration options are implemented:
 * `--controller_properties_file` (default `""`) Configure the path to
 a custom Controller configuration file. All properties defined in
 `model/controller/controller_properties.h` can be edited to test with a
-specific controller setup.
+specific controller setup. The format of the configuration file is defined
+by `proto/rootcanal/configuration.proto`
 
 * `--enable_hci_sniffer` (default `false`) Capture PCAP traces for all
 connected HCI hosts. The PCAP traces are saved in the current directory.
@@ -396,7 +403,3 @@ begin BR/EDR and LE dual phys.
 | LE Set Data Related Address Changes                          | No            |
 | LE Set Default Subrate                                       | No            |
 | LE Subrate Request                                           | No            |
-
-# Links
-
-[cvd-host_package]: https://ci.android.com/builds/latest/branches/aosp-master/targets/aosp_cf_x86_64_phone-userdebug/view/cvd-host_package.tar.gz
