@@ -1588,6 +1588,10 @@ void DualModeController::SetControllerToHostFlowControl(CommandView command) {
           kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
+void DualModeController::HostNumberOfCompletedPackets(CommandView command) {
+  DEBUG(id_, "<< Host Number Of Completed Packets");
+}
+
 void DualModeController::SetEventFilter(CommandView command) {
   auto command_view = bluetooth::hci::SetEventFilterView::Create(command);
   CHECK_PACKET_VIEW(command_view);
@@ -3882,8 +3886,8 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
                 {OpCode::SET_CONTROLLER_TO_HOST_FLOW_CONTROL,
                  &DualModeController::SetControllerToHostFlowControl},
                 {OpCode::HOST_BUFFER_SIZE, &DualModeController::HostBufferSize},
-                //{OpCode::HOST_NUMBER_OF_COMPLETED_PACKETS,
-                //&DualModeController::HostNumberOfCompletedPackets},
+                {OpCode::HOST_NUMBER_OF_COMPLETED_PACKETS,
+                 &DualModeController::HostNumberOfCompletedPackets},
                 //{OpCode::READ_LINK_SUPERVISION_TIMEOUT,
                 //&DualModeController::ReadLinkSupervisionTimeout},
                 {OpCode::WRITE_LINK_SUPERVISION_TIMEOUT,
