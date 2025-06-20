@@ -70,39 +70,47 @@ class Test(ControllerTest):
                 peer_identity_address_type=hci.PeerAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS))
 
         await self.expect_evt(
-            hci.LeAddDeviceToResolvingListComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeAddDeviceToResolvingListComplete(status=ErrorCode.SUCCESS,
+                                                   num_hci_command_packets=1))
 
         controller.send_cmd(hci.LeSetResolvablePrivateAddressTimeout(rpa_timeout=0x10))
 
         await self.expect_evt(
-            hci.LeSetResolvablePrivateAddressTimeoutComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetResolvablePrivateAddressTimeoutComplete(status=ErrorCode.SUCCESS,
+                                                             num_hci_command_packets=1))
 
         # 4. The Upper Tester enables resolving list and directed connectable advertising in the IUT.
         controller.send_cmd(
-            hci.LeSetAdvertisingParameters(advertising_interval_min=Test.LL_advertiser_advInterval_MIN,
-                                           advertising_interval_max=Test.LL_advertiser_advInterval_MAX,
-                                           advertising_type=hci.AdvertisingType.ADV_DIRECT_IND_HIGH,
-                                           own_address_type=hci.OwnAddressType.RESOLVABLE_OR_PUBLIC_ADDRESS,
-                                           peer_address=peer_address,
-                                           peer_address_type=hci.PeerAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
-                                           advertising_channel_map=0x7,
-                                           advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES))
+            hci.LeSetAdvertisingParameters(
+                advertising_interval_min=Test.LL_advertiser_advInterval_MIN,
+                advertising_interval_max=Test.LL_advertiser_advInterval_MAX,
+                advertising_type=hci.AdvertisingType.ADV_DIRECT_IND_HIGH,
+                own_address_type=hci.OwnAddressType.RESOLVABLE_OR_PUBLIC_ADDRESS,
+                peer_address=peer_address,
+                peer_address_type=hci.PeerAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
+                advertising_channel_map=0x7,
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS,
+                                                   num_hci_command_packets=1))
 
         controller.send_cmd(hci.LeSetAdvertisingData())
 
-        await self.expect_evt(hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
-        controller.send_cmd(hci.LeSetAddressResolutionEnable(address_resolution_enable=hci.Enable.ENABLED))
+        controller.send_cmd(
+            hci.LeSetAddressResolutionEnable(address_resolution_enable=hci.Enable.ENABLED))
 
         await self.expect_evt(
-            hci.LeSetAddressResolutionEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAddressResolutionEnableComplete(status=ErrorCode.SUCCESS,
+                                                     num_hci_command_packets=1))
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
-        await self.expect_evt(hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 5. The Lower Tester expects the IUT to send ADV_DIRECT_IND packets on an applicable
         # advertising channel.
@@ -163,7 +171,8 @@ class Test(ControllerTest):
             hci.Disconnect(connection_handle=connection_complete_evt.connection_handle,
                            reason=hci.DisconnectReason.REMOTE_USER_TERMINATED_CONNECTION))
 
-        await self.expect_evt(hci.DisconnectStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.DisconnectStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         await self.expect_ll(
             ll.Disconnect(source_address=direct_ind.source_address,
@@ -176,17 +185,20 @@ class Test(ControllerTest):
                                       reason=ErrorCode.CONNECTION_TERMINATED_BY_LOCAL_HOST))
 
         # 9. The Upper Tester disables address resolution in the IUT.
-        controller.send_cmd(hci.LeSetAddressResolutionEnable(address_resolution_enable=hci.Enable.DISABLED))
+        controller.send_cmd(
+            hci.LeSetAddressResolutionEnable(address_resolution_enable=hci.Enable.DISABLED))
 
         await self.expect_evt(
-            hci.LeSetAddressResolutionEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAddressResolutionEnableComplete(status=ErrorCode.SUCCESS,
+                                                     num_hci_command_packets=1))
 
         # 10. Repeat steps 11–14 at least 20 times.
 
         # 11. The Upper Tester enables directed connectable advertising in the IUT.
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
-        await self.expect_evt(hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 12. The Lower Tester expects the IUT to send ADV_DIRECT_IND packets on an applicable
         # advertising channel. The Lower Tester resolves the AdvA address and identifies the IUT.

@@ -189,7 +189,8 @@ def main(argv):
         else:
             raw_port_shell = RawPortShell(raw_port)
             raw_port_shell.prompt = '$ '
-            raw_port_shell.cmdloop('Welcome to the RootCanal Console \n' + 'Type \'help\' for more information.')
+            raw_port_shell.cmdloop('Welcome to the RootCanal Console \n' +
+                                   'Type \'help\' for more information.')
 
 
 if __name__ == '__main__':

@@ -60,44 +60,51 @@ class Test(ControllerTest):
                 peer_identity_address_type=hci.PeerAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS))
 
         await self.expect_evt(
-            hci.LeAddDeviceToResolvingListComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeAddDeviceToResolvingListComplete(status=ErrorCode.SUCCESS,
+                                                   num_hci_command_packets=1))
 
         controller.send_cmd(hci.LeSetResolvablePrivateAddressTimeout(rpa_timeout=0x10))
 
         await self.expect_evt(
-            hci.LeSetResolvablePrivateAddressTimeoutComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetResolvablePrivateAddressTimeoutComplete(status=ErrorCode.SUCCESS,
+                                                             num_hci_command_packets=1))
 
-        controller.send_cmd(hci.LeSetAddressResolutionEnable(address_resolution_enable=hci.Enable.ENABLED))
+        controller.send_cmd(
+            hci.LeSetAddressResolutionEnable(address_resolution_enable=hci.Enable.ENABLED))
 
         await self.expect_evt(
-            hci.LeSetAddressResolutionEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAddressResolutionEnableComplete(status=ErrorCode.SUCCESS,
+                                                     num_hci_command_packets=1))
 
         # 3. The Upper Tester enables the initiator state in the IUT.
         controller.send_cmd(
-            hci.LeCreateConnection(le_scan_interval=Test.LL_initiator_scanInterval_MIN,
-                                   le_scan_window=Test.LL_initiator_scanWindow_MIN,
-                                   initiator_filter_policy=hci.InitiatorFilterPolicy.USE_PEER_ADDRESS,
-                                   peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                   peer_address=peer_address,
-                                   own_address_type=hci.OwnAddressType.RESOLVABLE_OR_PUBLIC_ADDRESS,
-                                   connection_interval_min=0x200,
-                                   connection_interval_max=0x200,
-                                   max_latency=0x6,
-                                   supervision_timeout=0xc80,
-                                   min_ce_length=0,
-                                   max_ce_length=0))
+            hci.LeCreateConnection(
+                le_scan_interval=Test.LL_initiator_scanInterval_MIN,
+                le_scan_window=Test.LL_initiator_scanWindow_MIN,
+                initiator_filter_policy=hci.InitiatorFilterPolicy.USE_PEER_ADDRESS,
+                peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                peer_address=peer_address,
+                own_address_type=hci.OwnAddressType.RESOLVABLE_OR_PUBLIC_ADDRESS,
+                connection_interval_min=0x200,
+                connection_interval_max=0x200,
+                max_latency=0x6,
+                supervision_timeout=0xc80,
+                min_ce_length=0,
+                max_ce_length=0))
 
-        await self.expect_evt(hci.LeCreateConnectionStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeCreateConnectionStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 4. Lower Tester sends ADV_DIRECT_IND packets, each advertising event, using the selected
         # advertising interval and with a resolvable private address in the InitA field generated from a
         # random IRK different from the one distributed to the IUT.
-        controller.send_ll(ll.LeLegacyAdvertisingPdu(source_address=generate_rpa(peer_irk),
-                                                     destination_address=generate_rpa(random_irk),
-                                                     target_address_type=ll.AddressType.RANDOM,
-                                                     advertising_address_type=ll.AddressType.RANDOM,
-                                                     advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
-                                                     advertising_data=[1, 2, 3]),
+        controller.send_ll(ll.LeLegacyAdvertisingPdu(
+            source_address=generate_rpa(peer_irk),
+            destination_address=generate_rpa(random_irk),
+            target_address_type=ll.AddressType.RANDOM,
+            advertising_address_type=ll.AddressType.RANDOM,
+            advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
+            advertising_data=[1, 2, 3]),
                            rssi=-16)
 
         # 5. The IUT tries to resolve the address in the InitA field by checking against its resolving list and
@@ -116,12 +123,13 @@ class Test(ControllerTest):
         # with the IUT’s local IRK.
         peer_resolvable_address = generate_rpa(peer_irk)
         local_resolvable_address = generate_rpa(local_irk)
-        controller.send_ll(ll.LeLegacyAdvertisingPdu(source_address=peer_resolvable_address,
-                                                     destination_address=local_resolvable_address,
-                                                     target_address_type=ll.AddressType.RANDOM,
-                                                     advertising_address_type=ll.AddressType.RANDOM,
-                                                     advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
-                                                     advertising_data=[1, 2, 3]),
+        controller.send_ll(ll.LeLegacyAdvertisingPdu(
+            source_address=peer_resolvable_address,
+            destination_address=local_resolvable_address,
+            target_address_type=ll.AddressType.RANDOM,
+            advertising_address_type=ll.AddressType.RANDOM,
+            advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
+            advertising_data=[1, 2, 3]),
                            rssi=-16)
 
         # 9. The Lower Tester receives a CONNECT_IND packet T_IFS after any of the ADV_DIRECT_IND
@@ -152,17 +160,18 @@ class Test(ControllerTest):
         # 10. Upper Tester receives an HCI_LE_Enhanced_Connection_Complete event from the IUT
         # including the Lower Tester address and connection interval selected.
         connect_complete = await self.expect_evt(
-            hci.LeEnhancedConnectionCompleteV1(status=ErrorCode.SUCCESS,
-                                               connection_handle=self.Any,
-                                               role=hci.Role.CENTRAL,
-                                               peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                               peer_address=peer_address,
-                                               peer_resolvable_private_address=peer_resolvable_address,
-                                               local_resolvable_private_address=connect_ind.source_address,
-                                               connection_interval=0x200,
-                                               peripheral_latency=0x6,
-                                               supervision_timeout=0xc80,
-                                               central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+            hci.LeEnhancedConnectionCompleteV1(
+                status=ErrorCode.SUCCESS,
+                connection_handle=self.Any,
+                role=hci.Role.CENTRAL,
+                peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                peer_address=peer_address,
+                peer_resolvable_private_address=peer_resolvable_address,
+                local_resolvable_private_address=connect_ind.source_address,
+                connection_interval=0x200,
+                peripheral_latency=0x6,
+                supervision_timeout=0xc80,
+                central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 
         # 11. After the CONNECT_IND has been received, the Lower Tester receives the first correctly
         # formatted LL Data Channel PDU on the data channel.

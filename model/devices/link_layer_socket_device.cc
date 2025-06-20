@@ -58,7 +58,7 @@ void LinkLayerSocketDevice::Tick() {
       offset_ += bytes_received;
       return;
     }
-    pdl::packet::slice size(std::move(size_bytes_));
+    pdl::packet::slice size(size_bytes_);
     bytes_left_ = size.read_le<uint32_t>();
     received_ = std::make_shared<std::vector<uint8_t>>(bytes_left_);
     offset_ = 0;

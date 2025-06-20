@@ -45,7 +45,8 @@ class Test(ControllerTest):
                                 tx_phys=0x2,
                                 rx_phys=0x2))
 
-        await self.expect_evt(hci.LeSetDefaultPhyComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetDefaultPhyComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 3. Upper Tester enables undirected advertising in the IUT using all supported advertising channels
         # and minimum advertising interval.
@@ -59,11 +60,13 @@ class Test(ControllerTest):
                 advertising_filter_policy=hci.AdvertisingFilterPolicy.LISTED_SCAN_AND_CONNECT))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS,
+                                                   num_hci_command_packets=1))
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
-        await self.expect_evt(hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 4. Lower Tester expects the IUT to send ADV_IND packets starting an event on an applicable
         # advertising channel using the LE 1M PHY.
@@ -80,4 +83,5 @@ class Test(ControllerTest):
         # IUT and receives an HCI_Command_Complete event from the IUT.
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=False))
 
-        await self.expect_evt(hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))

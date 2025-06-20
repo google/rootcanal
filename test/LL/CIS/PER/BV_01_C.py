@@ -70,7 +70,8 @@ class Test(ControllerTest):
         # HCI_Command_Complete in response.
         controller.send_cmd(hci.LeSetEventMask(le_event_mask=0xffffffffffffffff))
 
-        await self.expect_evt(hci.LeSetEventMaskComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetEventMaskComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 2. The Lower Tester sends an LL_CIS_REQ to the IUT with the contents specified in Table 4.156.
         # All bits in the RFU fields in the LL_CIS_REQ are set.
@@ -111,7 +112,8 @@ class Test(ControllerTest):
         controller.send_cmd(hci.LeAcceptCisRequest(connection_handle=cis_connection_handle))
 
         # 5. The IUT sends a successful Command Status to the Upper Tester.
-        await self.expect_evt(hci.LeAcceptCisRequestStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeAcceptCisRequestStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 6. The IUT sends an LL_CIS_RSP PDU to the Upper Tester. In the message, the CIS_Offset_Min
         # field and the CIS_Offset_Max field are equal to or a subset of the values received in the

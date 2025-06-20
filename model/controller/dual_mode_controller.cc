@@ -17,7 +17,9 @@
 #include "model/controller/dual_mode_controller.h"
 
 #include <openssl/ec.h>
-#include <openssl/obj_mac.h>
+#include <openssl/ec_key.h>
+#include <openssl/mem.h>
+#include <openssl/nid.h>
 #include <packet_runtime.h>
 
 #include <algorithm>
@@ -136,7 +138,7 @@ void DualModeController::HandleAcl(std::shared_ptr<std::vector<uint8_t>> packet)
     return;
   }
 
-  link_layer_controller_.SendAclToRemote(acl_packet);
+  link_layer_controller_.HandleAcl(acl_packet);
 }
 
 void DualModeController::HandleSco(std::shared_ptr<std::vector<uint8_t>> packet) {
@@ -913,6 +915,18 @@ void DualModeController::ReadLocalOobExtendedData(CommandView command) {
   DEBUG(id_, "<< Read Local Oob Extended Data");
 
   link_layer_controller_.ReadLocalOobExtendedData();
+}
+
+void DualModeController::SetMinEncryptionKeySize(CommandView command) {
+  auto command_view = bluetooth::hci::SetMinEncryptionKeySizeView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+
+  DEBUG(id_, "<< Set Min Encryption Key Size");
+  DEBUG(id_, "   min_encryption_key_size={}", command_view.GetMinEncryptionKeySize());
+
+  link_layer_controller_.SetMinEncryptionKeySize(command_view.GetMinEncryptionKeySize());
+  send_event_(bluetooth::hci::SetMinEncryptionKeySizeCompleteBuilder::Create(kNumCommandPackets,
+                                                                             ErrorCode::SUCCESS));
 }
 
 void DualModeController::WriteSimplePairingMode(CommandView command) {
@@ -2181,6 +2195,19 @@ void DualModeController::LeSetPhy(CommandView command) {
   send_event_(bluetooth::hci::LeSetPhyStatusBuilder::Create(status, kNumCommandPackets));
 }
 
+void DualModeController::LeSetDataLength(CommandView command) {
+  auto command_view = bluetooth::hci::LeSetDataLengthView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+
+  DEBUG(id_, "<< LE Set Data Length");
+  DEBUG(id_, "   connection_handle=0x{:x}", command_view.GetConnectionHandle());
+
+  ErrorCode status = link_layer_controller_.LeSetDataLength(
+          command_view.GetConnectionHandle(), command_view.GetTxOctets(), command_view.GetTxTime());
+  send_event_(bluetooth::hci::LeSetDataLengthCompleteBuilder::Create(
+          kNumCommandPackets, status, command_view.GetConnectionHandle()));
+}
+
 void DualModeController::LeReadSuggestedDefaultDataLength(CommandView command) {
   auto command_view = bluetooth::hci::LeReadSuggestedDefaultDataLengthView::Create(command);
   CHECK_PACKET_VIEW(command_view);
@@ -3288,9 +3315,58 @@ void DualModeController::WriteLoopbackMode(CommandView command) {
                                                                        ErrorCode::SUCCESS));
 }
 
-void DualModeController::IntelDdcConfigWrite(CommandView /*command*/) {
-  send_event_(bluetooth::hci::CommandCompleteBuilder::Create(kNumCommandPackets, OpCode::INTEL_DDC_CONFIG_WRITE,
-                                                             std::vector<uint8_t> { static_cast<uint8_t>(ErrorCode::SUCCESS) }));
+void DualModeController::IntelDdcConfigRead(CommandView command) {
+  std::vector<uint8_t> parameters(command.GetPayload());
+  ASSERT(parameters.size() == 2);
+  uint16_t id = parameters[0] | (parameters[1] << 8);
+
+  DEBUG(id_, "<< Intel DDC Config Read");
+  DEBUG(id_, "   id=0x{:04x}", id);
+
+  switch (id) {
+    case 0x0204:
+      send_event_(bluetooth::hci::CommandCompleteBuilder::Create(
+              kNumCommandPackets, OpCode::INTEL_DDC_CONFIG_READ,
+              std::vector<uint8_t>{static_cast<uint8_t>(ErrorCode::SUCCESS), 0x04, 0x02, 0x01,
+                                   0x10}));
+      break;
+    default:
+      send_event_(bluetooth::hci::CommandCompleteBuilder::Create(
+              kNumCommandPackets, OpCode::INTEL_DDC_CONFIG_READ,
+              std::vector<uint8_t>{static_cast<uint8_t>(ErrorCode::INVALID_HCI_COMMAND_PARAMETERS),
+                                   0x00, 0x00}));
+      break;
+  }
+}
+
+void DualModeController::IntelDdcConfigWrite(CommandView command) {
+  std::vector<uint8_t> parameters(command.GetPayload());
+  size_t offset = 0;
+
+  DEBUG(id_, "<< Intel DDC Config Write");
+
+  while (offset < parameters.size()) {
+    uint8_t len = parameters[offset];
+    ASSERT(len >= 2 && offset + len + 1 <= parameters.size());
+
+    uint16_t id = parameters[offset + 1] | (parameters[offset + 2] << 8);
+    uint8_t const* value = &parameters[offset + 3];
+    offset += 1 + len;
+
+    DEBUG(id_, "   id=0x{:04x} len={}", id, len);
+
+    if (id == 0x0126 && len == 10) {
+      INFO(id_, "Intel updating the LE Local Supported Features");
+      properties_.le_features = ((uint64_t)value[0] << 0) | ((uint64_t)value[1] << 8) |
+                                ((uint64_t)value[2] << 16) | ((uint64_t)value[3] << 24) |
+                                ((uint64_t)value[4] << 32) | ((uint64_t)value[5] << 40) |
+                                ((uint64_t)value[6] << 48) | ((uint64_t)value[7] << 56);
+    }
+  }
+
+  send_event_(bluetooth::hci::CommandCompleteBuilder::Create(
+          kNumCommandPackets, OpCode::INTEL_DDC_CONFIG_WRITE,
+          std::vector<uint8_t>{static_cast<uint8_t>(ErrorCode::SUCCESS), 0x00, 0x00}));
 }
 
 // Note: the list does not contain all defined opcodes.
@@ -3963,8 +4039,7 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
                 //{OpCode::SET_ECOSYSTEM_BASE_INTERVAL,
                 //&DualModeController::SetEcosystemBaseInterval},
                 //{OpCode::CONFIGURE_DATA_PATH, &DualModeController::ConfigureDataPath},
-                //{OpCode::SET_MIN_ENCRYPTION_KEY_SIZE,
-                //&DualModeController::SetMinEncryptionKeySize},
+                {OpCode::SET_MIN_ENCRYPTION_KEY_SIZE, &DualModeController::SetMinEncryptionKeySize},
 
                 // INFORMATIONAL_PARAMETERS
                 {OpCode::READ_LOCAL_VERSION_INFORMATION,
@@ -4063,7 +4138,7 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
                  &DualModeController::LeRemoteConnectionParameterRequestReply},
                 {OpCode::LE_REMOTE_CONNECTION_PARAMETER_REQUEST_NEGATIVE_REPLY,
                  &DualModeController::LeRemoteConnectionParameterRequestNegativeReply},
-                //{OpCode::LE_SET_DATA_LENGTH, &DualModeController::LeSetDataLength},
+                {OpCode::LE_SET_DATA_LENGTH, &DualModeController::LeSetDataLength},
                 {OpCode::LE_READ_SUGGESTED_DEFAULT_DATA_LENGTH,
                  &DualModeController::LeReadSuggestedDefaultDataLength},
                 {OpCode::LE_WRITE_SUGGESTED_DEFAULT_DATA_LENGTH,
@@ -4278,6 +4353,7 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
                  &DualModeController::LeGetControllerActivityEnergyInfo},
                 {OpCode::LE_EX_SET_SCAN_PARAMETERS, &DualModeController::LeExSetScanParameters},
                 {OpCode::GET_CONTROLLER_DEBUG_INFO, &DualModeController::GetControllerDebugInfo},
+                {OpCode::INTEL_DDC_CONFIG_READ, &DualModeController::IntelDdcConfigRead},
                 {OpCode::INTEL_DDC_CONFIG_WRITE, &DualModeController::IntelDdcConfigWrite},
         };
 

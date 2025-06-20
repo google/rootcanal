@@ -49,17 +49,19 @@ class Test(ControllerTest):
         # (Public Device Address), and Scanning_Filter_Policy shall be set to 0x00 (Accept All) and
         # receives a successful HCI_Command_Complete event in return.
         controller.send_cmd(
-            hci.LeSetExtendedScanParameters(own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
-                                            scanning_filter_policy=hci.LeScanningFilterPolicy.ACCEPT_ALL,
-                                            scanning_phys=0x1,
-                                            scanning_phy_parameters=[
-                                                hci.ScanningPhyParameters(le_scan_type=hci.LeScanType.PASSIVE,
-                                                                          le_scan_interval=0x0010,
-                                                                          le_scan_window=0x0010)
-                                            ]))
+            hci.LeSetExtendedScanParameters(
+                own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
+                scanning_filter_policy=hci.LeScanningFilterPolicy.ACCEPT_ALL,
+                scanning_phys=0x1,
+                scanning_phy_parameters=[
+                    hci.ScanningPhyParameters(le_scan_type=hci.LeScanType.PASSIVE,
+                                              le_scan_interval=0x0010,
+                                              le_scan_window=0x0010)
+                ]))
 
         await self.expect_evt(
-            hci.LeSetExtendedScanParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedScanParametersComplete(status=ErrorCode.SUCCESS,
+                                                    num_hci_command_packets=1))
 
         # 2. The Upper Tester sends an HCI_LE_Set_Extended_Scan_Enable command to the IUT to enable
         # scanning with Filter_Duplicates, Duration, and Period are set to zero and receives a successful
@@ -70,7 +72,9 @@ class Test(ControllerTest):
                                         duration=0,
                                         period=0))
 
-        await self.expect_evt(hci.LeSetExtendedScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetExtendedScanEnableComplete(status=ErrorCode.SUCCESS,
+                                                num_hci_command_packets=1))
 
         for n in range(3):
             # 3. The Lower Tester begins advertising using ADV_EXT_IND and AUX_ADV_IND PDUs. The
@@ -78,17 +82,18 @@ class Test(ControllerTest):
             # advertising channel. The AUX_ADV_IND PDUs include the AdvA field containing the Lower
             # Tester address, and the SyncInfo field referring to the AUX_SYNC_IND PDU. The Lower Tester
             # continues advertising until directed to stop in the test procedure.
-            controller.send_ll(ll.LeExtendedAdvertisingPdu(source_address=lower_tester_address,
-                                                           advertising_address_type=ll.AddressType.PUBLIC,
-                                                           connectable=False,
-                                                           scannable=False,
-                                                           directed=False,
-                                                           sid=advertising_sid,
-                                                           tx_power=tx_power,
-                                                           primary_phy=ll.PhyType.LE_1M,
-                                                           secondary_phy=ll.PhyType.NO_PACKETS,
-                                                           periodic_advertising_interval=0x100,
-                                                           advertising_data=[]),
+            controller.send_ll(ll.LeExtendedAdvertisingPdu(
+                source_address=lower_tester_address,
+                advertising_address_type=ll.AddressType.PUBLIC,
+                connectable=False,
+                scannable=False,
+                directed=False,
+                sid=advertising_sid,
+                tx_power=tx_power,
+                primary_phy=ll.PhyType.LE_1M,
+                secondary_phy=ll.PhyType.NO_PACKETS,
+                periodic_advertising_interval=0x100,
+                advertising_data=[]),
                                rssi=0x10)
 
             # 4. The IUT sends an HCI_LE_Extended_Advertising_Report event to the Upper Tester containing a
@@ -136,7 +141,8 @@ class Test(ControllerTest):
                 sync_cte_type=0))
 
         await self.expect_evt(
-            hci.LePeriodicAdvertisingCreateSyncStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LePeriodicAdvertisingCreateSyncStatus(status=ErrorCode.SUCCESS,
+                                                      num_hci_command_packets=1))
 
         # 6. The Lower Tester generates an AUX_SYNC_IND PDU on the secondary advertising channel with
         # AuxPtr set to a value referring to the first AUX_CHAIN_IND PDU in the train, TxPower set to 10,
@@ -172,12 +178,13 @@ class Test(ControllerTest):
             # (Scan_Max_Data – N) / 2) octets of random data for each AUX_CHAIN_IND PDU and the
             # TxPower value of the AUX_CHAIN_IND PDUs set to 15. The PDUs should be sent as far apart
             # as practical.
-            controller.send_ll(ll.LePeriodicAdvertisingPdu(source_address=lower_tester_address,
-                                                           advertising_address_type=ll.AddressType.PUBLIC,
-                                                           sid=advertising_sid,
-                                                           tx_power=tx_power,
-                                                           advertising_interval=periodic_advertising_interval,
-                                                           advertising_data=advertising_data),
+            controller.send_ll(ll.LePeriodicAdvertisingPdu(
+                source_address=lower_tester_address,
+                advertising_address_type=ll.AddressType.PUBLIC,
+                sid=advertising_sid,
+                tx_power=tx_power,
+                advertising_interval=periodic_advertising_interval,
+                advertising_data=advertising_data),
                                rssi=0x10)
 
             # 9. The IUT sends multiple HCI_LE_Periodic_Advertising_Report events to the Upper Tester with
@@ -193,10 +200,11 @@ class Test(ControllerTest):
                 fragment_length = min(max_fragment_length, remaining_length)
                 data_status = hci.DataStatus.CONTINUING if remaining_length > max_fragment_length else hci.DataStatus.COMPLETE
                 await self.expect_evt(
-                    hci.LePeriodicAdvertisingReportV1(sync_handle=0,
-                                                      tx_power=tx_power,
-                                                      rssi=0x10,
-                                                      cte_type=hci.CteType.NO_CONSTANT_TONE_EXTENSION,
-                                                      data_status=data_status,
-                                                      data=advertising_data[offset:offset + fragment_length]))
+                    hci.LePeriodicAdvertisingReportV1(
+                        sync_handle=0,
+                        tx_power=tx_power,
+                        rssi=0x10,
+                        cte_type=hci.CteType.NO_CONSTANT_TONE_EXTENSION,
+                        data_status=data_status,
+                        data=advertising_data[offset:offset + fragment_length]))
                 offset += fragment_length

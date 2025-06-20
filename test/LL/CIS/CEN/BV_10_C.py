@@ -67,43 +67,45 @@ class Test(ControllerTest):
 
         # Prelude: Establish CIS(1) and CIS(2) with connected peers.
         controller.send_cmd(
-            hci.LeSetCigParametersTest(cig_id=cig_id,
-                                       sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
-                                       sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
-                                       ft_c_to_p=self.FT_C_TO_P,
-                                       ft_p_to_c=self.FT_P_TO_C,
-                                       iso_interval=self.ISO_Interval,
-                                       worst_case_sca=self.Worst_Case_SCA,
-                                       packing=self.Packing,
-                                       framing=self.Framing,
-                                       cis_config=[
-                                           hci.LeCisParametersTestConfig(cis_id=cis_id_1,
-                                                                         nse=self.NSE,
-                                                                         max_sdu_c_to_p=self.Max_SDU_C_TO_P,
-                                                                         max_sdu_p_to_c=self.Max_SDU_P_TO_C,
-                                                                         max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                                                         max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                                                         phy_c_to_p=self.PHY_C_TO_P,
-                                                                         phy_p_to_c=self.PHY_P_TO_C,
-                                                                         bn_c_to_p=self.BN_C_TO_P,
-                                                                         bn_p_to_c=self.BN_P_TO_C),
-                                           hci.LeCisParametersTestConfig(cis_id=cis_id_2,
-                                                                         nse=self.NSE,
-                                                                         max_sdu_c_to_p=self.Max_SDU_C_TO_P,
-                                                                         max_sdu_p_to_c=self.Max_SDU_P_TO_C,
-                                                                         max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                                                         max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                                                         phy_c_to_p=self.PHY_C_TO_P,
-                                                                         phy_p_to_c=self.PHY_P_TO_C,
-                                                                         bn_c_to_p=self.BN_C_TO_P,
-                                                                         bn_p_to_c=self.BN_P_TO_C)
-                                       ]))
+            hci.LeSetCigParametersTest(
+                cig_id=cig_id,
+                sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
+                sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
+                ft_c_to_p=self.FT_C_TO_P,
+                ft_p_to_c=self.FT_P_TO_C,
+                iso_interval=self.ISO_Interval,
+                worst_case_sca=self.Worst_Case_SCA,
+                packing=self.Packing,
+                framing=self.Framing,
+                cis_config=[
+                    hci.LeCisParametersTestConfig(cis_id=cis_id_1,
+                                                  nse=self.NSE,
+                                                  max_sdu_c_to_p=self.Max_SDU_C_TO_P,
+                                                  max_sdu_p_to_c=self.Max_SDU_P_TO_C,
+                                                  max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                                                  max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                                                  phy_c_to_p=self.PHY_C_TO_P,
+                                                  phy_p_to_c=self.PHY_P_TO_C,
+                                                  bn_c_to_p=self.BN_C_TO_P,
+                                                  bn_p_to_c=self.BN_P_TO_C),
+                    hci.LeCisParametersTestConfig(cis_id=cis_id_2,
+                                                  nse=self.NSE,
+                                                  max_sdu_c_to_p=self.Max_SDU_C_TO_P,
+                                                  max_sdu_p_to_c=self.Max_SDU_P_TO_C,
+                                                  max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                                                  max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                                                  phy_c_to_p=self.PHY_C_TO_P,
+                                                  phy_p_to_c=self.PHY_P_TO_C,
+                                                  bn_c_to_p=self.BN_C_TO_P,
+                                                  bn_p_to_c=self.BN_P_TO_C)
+                ]))
 
         await self.expect_evt(
-            hci.LeSetCigParametersTestComplete(status=ErrorCode.SUCCESS,
-                                               num_hci_command_packets=1,
-                                               cig_id=cig_id,
-                                               connection_handle=[cis_connection_handle_1, cis_connection_handle_2]))
+            hci.LeSetCigParametersTestComplete(
+                status=ErrorCode.SUCCESS,
+                num_hci_command_packets=1,
+                cig_id=cig_id,
+                connection_handle=[cis_connection_handle_1, cis_connection_handle_2]))
 
         controller.send_cmd(
             hci.LeCreateCis(cis_config=[
@@ -113,31 +115,33 @@ class Test(ControllerTest):
                                       acl_connection_handle=acl_connection_handle_2)
             ]))
 
-        await self.expect_evt(hci.LeCreateCisStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeCreateCisStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         cis_req_1 = await self.expect_llcp(source_address=controller.address,
                                            destination_address=peer_address_1,
-                                           expected_pdu=llcp.CisReq(cig_id=cig_id,
-                                                                    cis_id=cis_id_1,
-                                                                    phy_c_to_p=hci.PhyType.LE_1M,
-                                                                    phy_p_to_c=hci.PhyType.LE_1M,
-                                                                    framed=self.Framing == hci.Enable.ENABLED,
-                                                                    max_sdu_c_to_p=self.Max_SDU_C_TO_P,
-                                                                    max_sdu_p_to_c=self.Max_SDU_P_TO_C,
-                                                                    sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
-                                                                    sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
-                                                                    max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                                                    max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                                                    nse=self.NSE,
-                                                                    sub_interval=self.Any,
-                                                                    bn_p_to_c=self.BN_C_TO_P,
-                                                                    bn_c_to_p=self.BN_P_TO_C,
-                                                                    ft_c_to_p=self.FT_C_TO_P,
-                                                                    ft_p_to_c=self.FT_P_TO_C,
-                                                                    iso_interval=self.ISO_Interval,
-                                                                    cis_offset_min=self.Any,
-                                                                    cis_offset_max=self.Any,
-                                                                    conn_event_count=0))
+                                           expected_pdu=llcp.CisReq(
+                                               cig_id=cig_id,
+                                               cis_id=cis_id_1,
+                                               phy_c_to_p=hci.PhyType.LE_1M,
+                                               phy_p_to_c=hci.PhyType.LE_1M,
+                                               framed=self.Framing == hci.Enable.ENABLED,
+                                               max_sdu_c_to_p=self.Max_SDU_C_TO_P,
+                                               max_sdu_p_to_c=self.Max_SDU_P_TO_C,
+                                               sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
+                                               sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
+                                               max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                                               max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                                               nse=self.NSE,
+                                               sub_interval=self.Any,
+                                               bn_p_to_c=self.BN_C_TO_P,
+                                               bn_c_to_p=self.BN_P_TO_C,
+                                               ft_c_to_p=self.FT_C_TO_P,
+                                               ft_p_to_c=self.FT_P_TO_C,
+                                               iso_interval=self.ISO_Interval,
+                                               cis_offset_min=self.Any,
+                                               cis_offset_max=self.Any,
+                                               conn_event_count=0))
 
         controller.send_llcp(source_address=peer_address_1,
                              destination_address=controller.address,
@@ -173,27 +177,28 @@ class Test(ControllerTest):
 
         cis_req_2 = await self.expect_llcp(source_address=controller.address,
                                            destination_address=peer_address_2,
-                                           expected_pdu=llcp.CisReq(cig_id=cig_id,
-                                                                    cis_id=cis_id_2,
-                                                                    phy_c_to_p=hci.PhyType.LE_1M,
-                                                                    phy_p_to_c=hci.PhyType.LE_1M,
-                                                                    framed=self.Framing == hci.Enable.ENABLED,
-                                                                    max_sdu_c_to_p=self.Max_SDU_C_TO_P,
-                                                                    max_sdu_p_to_c=self.Max_SDU_P_TO_C,
-                                                                    sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
-                                                                    sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
-                                                                    max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                                                    max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                                                    nse=self.NSE,
-                                                                    sub_interval=self.Any,
-                                                                    bn_p_to_c=self.BN_C_TO_P,
-                                                                    bn_c_to_p=self.BN_P_TO_C,
-                                                                    ft_c_to_p=self.FT_C_TO_P,
-                                                                    ft_p_to_c=self.FT_P_TO_C,
-                                                                    iso_interval=self.ISO_Interval,
-                                                                    cis_offset_min=self.Any,
-                                                                    cis_offset_max=self.Any,
-                                                                    conn_event_count=0))
+                                           expected_pdu=llcp.CisReq(
+                                               cig_id=cig_id,
+                                               cis_id=cis_id_2,
+                                               phy_c_to_p=hci.PhyType.LE_1M,
+                                               phy_p_to_c=hci.PhyType.LE_1M,
+                                               framed=self.Framing == hci.Enable.ENABLED,
+                                               max_sdu_c_to_p=self.Max_SDU_C_TO_P,
+                                               max_sdu_p_to_c=self.Max_SDU_P_TO_C,
+                                               sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
+                                               sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
+                                               max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                                               max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                                               nse=self.NSE,
+                                               sub_interval=self.Any,
+                                               bn_p_to_c=self.BN_C_TO_P,
+                                               bn_c_to_p=self.BN_P_TO_C,
+                                               ft_c_to_p=self.FT_C_TO_P,
+                                               ft_p_to_c=self.FT_P_TO_C,
+                                               iso_interval=self.ISO_Interval,
+                                               cis_offset_min=self.Any,
+                                               cis_offset_max=self.Any,
+                                               conn_event_count=0))
 
         controller.send_llcp(source_address=peer_address_2,
                              destination_address=controller.address,
@@ -248,6 +253,12 @@ class Test(ControllerTest):
                                          sequence_number=42,
                                          data=iso_sdu))
 
+        await self.expect_evt(
+            hci.NumberOfCompletedPackets(completed_packets=[
+                hci.CompletedPackets(connection_handle=cis_connection_handle_1,
+                                     host_num_of_completed_packets=1)
+            ]))
+
         # 4. Lower Tester 2 receives the payload PDU in the first subevent on CIS(2).
         # 5. Lower Tester 2 sends an Ack T_IFS after receiving the payload PDU.
         controller.send_iso(
@@ -265,6 +276,12 @@ class Test(ControllerTest):
                                          cis_id=cis_id_2,
                                          sequence_number=42,
                                          data=iso_sdu))
+
+        await self.expect_evt(
+            hci.NumberOfCompletedPackets(completed_packets=[
+                hci.CompletedPackets(connection_handle=cis_connection_handle_2,
+                                     host_num_of_completed_packets=1)
+            ]))
 
         # 6. If Table 4.139 specifies a BN of 2 or 3, when CIS(1) subevent interval ends, repeat steps 1–3 in
         # the next subevent.

@@ -55,7 +55,8 @@ class Test(ControllerTest):
                 advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES))
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingParametersV1Complete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingParametersV1Complete(status=ErrorCode.SUCCESS,
+                                                             num_hci_command_packets=1))
 
         # For each round from 1–3 based on Table 4.2:
         await self.steps_3_8(advertising_data=[1])
@@ -73,17 +74,22 @@ class Test(ControllerTest):
                                              advertising_data=advertising_data))
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingDataComplete(status=ErrorCode.SUCCESS,
+                                                     num_hci_command_packets=1))
 
         # 4. Upper Tester sends an HCI_LE_Set_Extended_Advertising_Enable command to the IUT to
         # enable advertising and receives an HCI_Command_Complete event in response.
         controller.send_cmd(
-            hci.LeSetExtendedAdvertisingEnable(
-                enable=hci.Enable.ENABLED,
-                enabled_sets=[hci.EnabledSet(advertising_handle=0, duration=0, max_extended_advertising_events=0)]))
+            hci.LeSetExtendedAdvertisingEnable(enable=hci.Enable.ENABLED,
+                                               enabled_sets=[
+                                                   hci.EnabledSet(advertising_handle=0,
+                                                                  duration=0,
+                                                                  max_extended_advertising_events=0)
+                                               ]))
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingEnableComplete(status=ErrorCode.SUCCESS,
+                                                       num_hci_command_packets=1))
 
         # 5. Lower Tester expects the IUT to send ADV_NONCONN_IND packets including the data
         # submitted in step 3 starting an event on the selected primary advertising channel.
@@ -99,7 +105,9 @@ class Test(ControllerTest):
 
         # 8. Upper Tester sends an HCI_LE_Set_Extended_Advertising_Enable command to the IUT to
         # disable advertising function and receives an HCI_Command_Complete event in response.
-        controller.send_cmd(hci.LeSetExtendedAdvertisingEnable(enable=hci.Enable.DISABLED, enabled_sets=[]))
+        controller.send_cmd(
+            hci.LeSetExtendedAdvertisingEnable(enable=hci.Enable.DISABLED, enabled_sets=[]))
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingEnableComplete(status=ErrorCode.SUCCESS,
+                                                       num_hci_command_packets=1))

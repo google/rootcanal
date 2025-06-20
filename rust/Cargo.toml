@@ -28,7 +28,7 @@ num-traits = "0.2.14"
 paste = "1.0.4"
 pdl-runtime = "0.3.0"
 pin-utils = "0.1.0"
-rand = "0.8.3"
+rand = "0.9.1"
 thiserror = "1.0.23"
 
 [build-dependencies]

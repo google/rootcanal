@@ -34,27 +34,31 @@ class Test(ControllerTest):
         controller = self.controller
         peer_address = Address('aa:bb:cc:dd:ee:ff')
         invalid_local_address = Address([
-            controller.address.address[0] ^ 0xff, controller.address.address[1], controller.address.address[2],
-            controller.address.address[3], controller.address.address[4], controller.address.address[5]
+            controller.address.address[0] ^ 0xff, controller.address.address[1],
+            controller.address.address[2], controller.address.address[3],
+            controller.address.address[4], controller.address.address[5]
         ])
         connection_handle = 0xefe
 
         # 1. Upper Tester enables undirected advertising in the IUT using all supported advertising channels
         # and a selected advertising interval between the minimum and maximum advertising intervals.
         controller.send_cmd(
-            hci.LeSetAdvertisingParameters(advertising_interval_min=LL_advertiser_advInterval_MIN,
-                                           advertising_interval_max=LL_advertiser_advInterval_MAX,
-                                           advertising_type=hci.AdvertisingType.ADV_IND,
-                                           own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
-                                           advertising_channel_map=LL_advertiser_Adv_Channel_Map,
-                                           advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES))
+            hci.LeSetAdvertisingParameters(
+                advertising_interval_min=LL_advertiser_advInterval_MIN,
+                advertising_interval_max=LL_advertiser_advInterval_MAX,
+                advertising_type=hci.AdvertisingType.ADV_IND,
+                own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
+                advertising_channel_map=LL_advertiser_Adv_Channel_Map,
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS,
+                                                   num_hci_command_packets=1))
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
-        await self.expect_evt(hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 2. Configure Lower Tester to monitor the advertising and connection procedures of the IUT and
         # send a CONNECT_IND packet on the first supported advertising channel.
@@ -68,13 +72,14 @@ class Test(ControllerTest):
                                       advertising_type=ll.LegacyAdvertisingType.ADV_IND,
                                       advertising_data=[]))
 
-        controller.send_ll(ll.LeConnect(source_address=peer_address,
-                                        destination_address=controller.address,
-                                        initiating_address_type=ll.AddressType.PUBLIC,
-                                        advertising_address_type=ll.AddressType.PUBLIC,
-                                        conn_interval=LL_initiator_connInterval,
-                                        conn_peripheral_latency=LL_initiator_connPeripheralLatency,
-                                        conn_supervision_timeout=LL_initiator_connSupervisionTimeout),
+        controller.send_ll(ll.LeConnect(
+            source_address=peer_address,
+            destination_address=controller.address,
+            initiating_address_type=ll.AddressType.PUBLIC,
+            advertising_address_type=ll.AddressType.PUBLIC,
+            conn_interval=LL_initiator_connInterval,
+            conn_peripheral_latency=LL_initiator_connPeripheralLatency,
+            conn_supervision_timeout=LL_initiator_connSupervisionTimeout),
                            rssi=-16)
 
         # 5. The Lower Tester receives no ADV_IND packet after the advertising interval from the IUT. Wait
@@ -90,15 +95,16 @@ class Test(ControllerTest):
         # 6. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT in step 4.
         await self.expect_evt(
-            hci.LeEnhancedConnectionCompleteV1(status=ErrorCode.SUCCESS,
-                                               connection_handle=connection_handle,
-                                               role=hci.Role.PERIPHERAL,
-                                               peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                               peer_address=peer_address,
-                                               connection_interval=LL_initiator_connInterval,
-                                               peripheral_latency=LL_initiator_connPeripheralLatency,
-                                               supervision_timeout=LL_initiator_connSupervisionTimeout,
-                                               central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+            hci.LeEnhancedConnectionCompleteV1(
+                status=ErrorCode.SUCCESS,
+                connection_handle=connection_handle,
+                role=hci.Role.PERIPHERAL,
+                peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                peer_address=peer_address,
+                connection_interval=LL_initiator_connInterval,
+                peripheral_latency=LL_initiator_connPeripheralLatency,
+                supervision_timeout=LL_initiator_connSupervisionTimeout,
+                central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 
         # 7. The Upper Tester sends an HCI_Disconnect command to the IUT with the Connection_Handle
         # and receives a successful HCI_Command_Status event in return.
@@ -106,7 +112,8 @@ class Test(ControllerTest):
             hci.Disconnect(connection_handle=connection_handle,
                            reason=hci.DisconnectReason.REMOTE_USER_TERMINATED_CONNECTION))
 
-        await self.expect_evt(hci.DisconnectStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.DisconnectStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # Note: Link layer sends Disconnect here.
         await self.expect_ll(
@@ -125,7 +132,8 @@ class Test(ControllerTest):
         # 10. Repeat steps 4–8.
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
-        await self.expect_evt(hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         await self.expect_ll(
             ll.LeLegacyAdvertisingPdu(source_address=controller.address,
@@ -133,13 +141,14 @@ class Test(ControllerTest):
                                       advertising_type=ll.LegacyAdvertisingType.ADV_IND,
                                       advertising_data=[]))
 
-        controller.send_ll(ll.LeConnect(source_address=peer_address,
-                                        destination_address=invalid_local_address,
-                                        initiating_address_type=ll.AddressType.PUBLIC,
-                                        advertising_address_type=ll.AddressType.PUBLIC,
-                                        conn_interval=LL_initiator_connInterval,
-                                        conn_peripheral_latency=LL_initiator_connPeripheralLatency,
-                                        conn_supervision_timeout=LL_initiator_connSupervisionTimeout),
+        controller.send_ll(ll.LeConnect(
+            source_address=peer_address,
+            destination_address=invalid_local_address,
+            initiating_address_type=ll.AddressType.PUBLIC,
+            advertising_address_type=ll.AddressType.PUBLIC,
+            conn_interval=LL_initiator_connInterval,
+            conn_peripheral_latency=LL_initiator_connPeripheralLatency,
+            conn_supervision_timeout=LL_initiator_connSupervisionTimeout),
                            rssi=-16)
 
         # Connect rejected, another ADV_IND event should be received.

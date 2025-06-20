@@ -34,7 +34,8 @@ H4_IDC_SCO = 0x03
 H4_IDC_EVT = 0x04
 H4_IDC_ISO = 0x05
 
-HCI_HEADER_SIZES = dict([(H4_IDC_CMD, 3), (H4_IDC_ACL, 4), (H4_IDC_SCO, 3), (H4_IDC_EVT, 2), (H4_IDC_ISO, 4)])
+HCI_HEADER_SIZES = dict([(H4_IDC_CMD, 3), (H4_IDC_ACL, 4), (H4_IDC_SCO, 3), (H4_IDC_EVT, 2),
+                         (H4_IDC_ISO, 4)])
 
 
 class Host:
@@ -187,7 +188,8 @@ async def run(tcp_port: int):
     await host.send_cmd(hci.ReadLocalSupportedCommands())
     evt = await host.expect_evt(hci.ReadLocalSupportedCommandsComplete)
 
-    print(f"supported_commands = {{ {', '.join([f'0x{b:02x}' for b in evt.supported_commands])} }};")
+    print(
+        f"supported_commands = {{ {', '.join([f'0x{b:02x}' for b in evt.supported_commands])} }};")
 
     try:
         await br_edr_properties(host)

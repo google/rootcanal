@@ -41,19 +41,22 @@ class Test(ControllerTest):
 
         # Prelude: Establish an ACL connection as central with the IUT.
         controller.send_cmd(
-            hci.LeSetAdvertisingParameters(advertising_interval_min=0x200,
-                                           advertising_interval_max=0x200,
-                                           advertising_type=hci.AdvertisingType.ADV_IND,
-                                           own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
-                                           advertising_channel_map=0x7,
-                                           advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES))
+            hci.LeSetAdvertisingParameters(
+                advertising_interval_min=0x200,
+                advertising_interval_max=0x200,
+                advertising_type=hci.AdvertisingType.ADV_IND,
+                own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
+                advertising_channel_map=0x7,
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS,
+                                                   num_hci_command_packets=1))
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
-        await self.expect_evt(hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         controller.send_ll(ll.LeConnect(source_address=peer_address,
                                         destination_address=controller.address,
@@ -72,15 +75,16 @@ class Test(ControllerTest):
                                  conn_supervision_timeout=0x200))
 
         await self.expect_evt(
-            hci.LeEnhancedConnectionCompleteV1(status=ErrorCode.SUCCESS,
-                                               connection_handle=acl_connection_handle,
-                                               role=hci.Role.PERIPHERAL,
-                                               peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                                               peer_address=peer_address,
-                                               connection_interval=0x200,
-                                               peripheral_latency=0x200,
-                                               supervision_timeout=0x200,
-                                               central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+            hci.LeEnhancedConnectionCompleteV1(
+                status=ErrorCode.SUCCESS,
+                connection_handle=acl_connection_handle,
+                role=hci.Role.PERIPHERAL,
+                peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                peer_address=peer_address,
+                connection_interval=0x200,
+                peripheral_latency=0x200,
+                supervision_timeout=0x200,
+                central_clock_accuracy=hci.ClockAccuracy.PPM_500))
 
         test_rounds = [
             TestRound(0x00, 0x01, 0x03, 0x02, 0x00),
@@ -160,12 +164,13 @@ class Test(ControllerTest):
         phy_c_to_p = 0x1
         phy_p_to_c = 0x1
         for test_round in test_rounds:
-            (phy_c_to_p, phy_p_to_c) = await self.steps_1_9(peer_address, acl_connection_handle, phy_c_to_p, phy_p_to_c,
+            (phy_c_to_p, phy_p_to_c) = await self.steps_1_9(peer_address, acl_connection_handle,
+                                                            phy_c_to_p, phy_p_to_c,
                                                             **vars(test_round))
 
-    async def steps_1_9(self, peer_address: Address, connection_handle: int, phy_c_to_p: int, phy_p_to_c: int,
-                        req_all_phys: int, req_tx_phys: int, req_rx_phys: int, phy_ltpref_c_to_p: int,
-                        phy_ltpref_p_to_c: int):
+    async def steps_1_9(self, peer_address: Address, connection_handle: int, phy_c_to_p: int,
+                        phy_p_to_c: int, req_all_phys: int, req_tx_phys: int, req_rx_phys: int,
+                        phy_ltpref_c_to_p: int, phy_ltpref_p_to_c: int):
         controller = self.controller
 
         def phy_from_mask(mask: int):
@@ -192,7 +197,8 @@ class Test(ControllerTest):
         # Connections, when ALL_PHYS is 0x00 and TX_PHYS does not equal RX_PHYS, the Status
         # shall be set to “Unsupported Feature or Parameter Value (0x11)”. Otherwise. the Status shall be
         # set to zero.
-        await self.expect_evt(hci.LeSetPhyStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetPhyStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 3. If the IUT does NOT initiate a PHY change, proceed to step 9 if the Status in step 2 was set to
         # zero, or proceed to the next round if the Status in step 2 was set to a non-zero value.

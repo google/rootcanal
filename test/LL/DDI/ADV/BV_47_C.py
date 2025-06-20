@@ -72,11 +72,14 @@ class Test(ControllerTest):
             TestRound(0x0, 474, FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x0, 0x0),
             TestRound(0x0, 711, FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x0, 0x0),
             TestRound(0x0, 948, FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x0, 0x0),
-            TestRound(0x0, maximum_advertising_data_length, FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x0, 0x0),
-            TestRound(0x0, maximum_advertising_data_length, FragmentPreference.CONTROLLER_SHOULD_NOT, 0x0, 0x0),
+            TestRound(0x0, maximum_advertising_data_length,
+                      FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x0, 0x0),
+            TestRound(0x0, maximum_advertising_data_length,
+                      FragmentPreference.CONTROLLER_SHOULD_NOT, 0x0, 0x0),
             TestRound(0x4, 0, FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x0, 0x0),
             TestRound(0x4, 251, FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x0, 0x0),
-            TestRound(0x4, maximum_advertising_data_length, FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x0, 0x0),
+            TestRound(0x4, maximum_advertising_data_length,
+                      FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x0, 0x0),
             TestRound(0x0, 0, FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x1f4, 0x0),
             TestRound(0x4, 0, FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x1f4, 0x0),
             TestRound(0x0, 0, FragmentPreference.CONTROLLER_MAY_FRAGMENT, 0x0, 0x32),
@@ -87,11 +90,13 @@ class Test(ControllerTest):
         for test_round in test_rounds:
             await self.steps_2_13(maximum_advertising_data_length, **vars(test_round))
 
-    async def steps_2_13(self, maximum_advertising_data_length: int, advertising_event_properties: int,
-                         data_length: int, fragment_preference: FragmentPreference, duration: int,
+    async def steps_2_13(self, maximum_advertising_data_length: int,
+                         advertising_event_properties: int, data_length: int,
+                         fragment_preference: FragmentPreference, duration: int,
                          max_extended_advertising_events: int):
         controller = self.controller
-        advertising_event_properties = make_advertising_event_properties(advertising_event_properties)
+        advertising_event_properties = make_advertising_event_properties(
+            advertising_event_properties)
 
         # 2. If the Data Length listed in Table 4.6 for the current Round is less than or equal to the
         # Maximum_Advertising_Data_Length proceed to step 3, otherwise skip to step 14.
@@ -118,7 +123,8 @@ class Test(ControllerTest):
                 primary_advertising_phy=hci.PrimaryPhyType.LE_1M))
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingParametersV1Complete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingParametersV1Complete(status=ErrorCode.SUCCESS,
+                                                             num_hci_command_packets=1))
 
         # 4. The Upper Tester sends one or more HCI_LE_Set_Extended_Advertising_Data commands to the
         # IUT with values according to Table 4.6 and using random octets from 1 to 254 as the payload. If
@@ -127,7 +133,8 @@ class Test(ControllerTest):
         # (Intermediate Fragment) commands, and a final Operation 0x02 (Last fragment) command.
         # Otherwise the Upper Tester shall send a single command using Operation 0x03 (Complete Data).
         advertising_data = [random.randint(1, 254) for n in range(data_length)]
-        num_fragments = math.ceil(data_length / 251) or 1  # Make sure to set the advertising data if it is empty.
+        num_fragments = math.ceil(
+            data_length / 251) or 1  # Make sure to set the advertising data if it is empty.
         for n in range(num_fragments):
             fragment_offset = 251 * n
             fragment_length = min(251, data_length - fragment_offset)
@@ -141,29 +148,32 @@ class Test(ControllerTest):
                 operation = hci.Operation.INTERMEDIATE_FRAGMENT
 
             controller.send_cmd(
-                hci.LeSetExtendedAdvertisingData(advertising_handle=0,
-                                                 operation=operation,
-                                                 advertising_data=advertising_data[fragment_offset:fragment_offset +
-                                                                                   fragment_length]))
+                hci.LeSetExtendedAdvertisingData(
+                    advertising_handle=0,
+                    operation=operation,
+                    advertising_data=advertising_data[fragment_offset:fragment_offset +
+                                                      fragment_length]))
 
             await self.expect_evt(
-                hci.LeSetExtendedAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+                hci.LeSetExtendedAdvertisingDataComplete(status=ErrorCode.SUCCESS,
+                                                         num_hci_command_packets=1))
 
         # 5. The Upper Tester enables advertising using the HCI_LE_Set_Extended_Advertising_Enable
         # command. The Duration[0] parameter shall be set to the value specified in Table 4.6 for this
         # round. The Max_Extended_Advertising_Events[0] parameter shall be set to the value specified in
         # Table 4.6 for this round.
         controller.send_cmd(
-            hci.LeSetExtendedAdvertisingEnable(enable=hci.Enable.ENABLED,
-                                               enabled_sets=[
-                                                   hci.EnabledSet(
-                                                       advertising_handle=0,
-                                                       duration=duration,
-                                                       max_extended_advertising_events=max_extended_advertising_events)
-                                               ]))
+            hci.LeSetExtendedAdvertisingEnable(
+                enable=hci.Enable.ENABLED,
+                enabled_sets=[
+                    hci.EnabledSet(advertising_handle=0,
+                                   duration=duration,
+                                   max_extended_advertising_events=max_extended_advertising_events)
+                ]))
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingEnableComplete(status=ErrorCode.SUCCESS,
+                                                       num_hci_command_packets=1))
 
         # 6. The Lower Tester receives an ADV_EXT_IND packet from the IUT with AdvMode set to 00b. The
         # ADV_EXT_IND PDU shall not include the SuppInfo, SyncInfo, TxPower, ACAD, or AdvData
@@ -193,7 +203,8 @@ class Test(ControllerTest):
                 ll.LeExtendedAdvertisingPdu(source_address=controller.address,
                                             advertising_address_type=ll.AddressType.PUBLIC,
                                             target_address_type=ll.AddressType.PUBLIC,
-                                            connectable=int(advertising_event_properties.connectable),
+                                            connectable=int(
+                                                advertising_event_properties.connectable),
                                             scannable=int(advertising_event_properties.scannable),
                                             directed=int(advertising_event_properties.directed),
                                             sid=0,
@@ -247,7 +258,9 @@ class Test(ControllerTest):
 
         # 13. The Upper Tester disables advertising using the HCI_LE_Set_Extended_Advertising_Enable
         # command.
-        controller.send_cmd(hci.LeSetExtendedAdvertisingEnable(enable=hci.Enable.DISABLED, enabled_sets=[]))
+        controller.send_cmd(
+            hci.LeSetExtendedAdvertisingEnable(enable=hci.Enable.DISABLED, enabled_sets=[]))
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingEnableComplete(status=ErrorCode.SUCCESS,
+                                                       num_hci_command_packets=1))

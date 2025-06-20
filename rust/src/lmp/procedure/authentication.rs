@@ -15,10 +15,7 @@
 //! Bluetooth Core, Vol 2, Part C, 4.2.1
 
 use crate::either::Either;
-use crate::lmp::procedure::features;
-use crate::lmp::procedure::legacy_pairing;
-use crate::lmp::procedure::secure_simple_pairing;
-use crate::lmp::procedure::Context;
+use crate::lmp::procedure::{features, legacy_pairing, secure_simple_pairing, Context};
 use crate::num_hci_command_packets;
 use crate::packets::{hci, lmp};
 
@@ -66,7 +63,14 @@ pub async fn initiate(ctx: &impl Context) {
                 }
                 .build(),
             );
-            hci::ErrorCode::Success
+
+            // Send the initial challenge to determine if the remote device has saved the link key,
+            // or deleted the bond. The authentication request fails with error PIN_OR_KEY_MISSING
+            // if the remote rejects the challenge.
+            match send_challenge(ctx, 0, *_reply.get_link_key()).await {
+                Err(_) => hci::ErrorCode::PinOrKeyMissing,
+                Ok(_) => hci::ErrorCode::Success,
+            }
         }
         Either::Right(_) => {
             ctx.send_hci_event(
@@ -107,11 +111,55 @@ pub async fn respond(ctx: &impl Context) {
         .await
     {
         Either::Left(_random_number) => {
-            // TODO: Resolve authentication challenge
-            // TODO: Ask for link key
-            ctx.send_lmp_packet(
-                lmp::SresBuilder { transaction_id: 0, authentication_rsp: [0; 4] }.build(),
-            );
+            // Request the Link Key from the host stack.
+            ctx.send_hci_event(hci::LinkKeyRequestBuilder { bd_addr: ctx.peer_address() }.build());
+
+            match ctx
+                .receive_hci_command::<Either<hci::LinkKeyRequestReply, hci::LinkKeyRequestNegativeReply>>()
+                .await
+            {
+                Either::Left(_reply) => {
+                    ctx.send_hci_event(
+                        hci::LinkKeyRequestReplyCompleteBuilder {
+                            num_hci_command_packets,
+                            status: hci::ErrorCode::Success,
+                            bd_addr: ctx.peer_address(),
+                        }
+                        .build(),
+                    );
+
+                    // TODO: Resolve authentication challenge
+                    // Currently the Link Key is always considered valid.
+                    // Send the expected LMP_SRES response.
+                    ctx.send_lmp_packet(
+                        lmp::SresBuilder {
+                            transaction_id: 0,
+                            authentication_rsp: [0; 4]
+                        }
+                        .build()
+                    );
+
+                    // Authentication is successul at this point.
+                }
+                Either::Right(_) => {
+                    ctx.send_hci_event(
+                        hci::LinkKeyRequestNegativeReplyCompleteBuilder {
+                            num_hci_command_packets,
+                            status: hci::ErrorCode::Success,
+                            bd_addr: ctx.peer_address(),
+                        }
+                        .build(),
+                    );
+
+                    // Respond with LMP_NOT_ACCEPTED to indicate that the
+                    // Link Key is missing.
+                    ctx.send_lmp_packet(lmp::NotAcceptedBuilder {
+                        not_accepted_opcode: lmp::Opcode::AuRand,
+                        error_code: hci::ErrorCode::PinOrKeyMissing as u8,
+                        transaction_id: 0
+                    }.build())
+                }
+            }
         }
         Either::Right(pairing) => {
             let _result = match pairing {

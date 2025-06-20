@@ -252,10 +252,14 @@ pub unsafe extern "C" fn link_layer_add_link(
 /// - `ll` must be a valid pointer
 /// - `peer` must be valid for reads for 6 bytes
 #[no_mangle]
-pub unsafe extern "C" fn link_layer_remove_link(ll: *const LinkLayer, handle: u16) -> bool {
+pub unsafe extern "C" fn link_layer_remove_link(
+    ll: *const LinkLayer,
+    handle: u16,
+    reason: u8,
+) -> bool {
     let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
     let ll = Rc::get_mut(&mut ll).unwrap();
-    ll.remove_link(handle).is_ok()
+    ll.remove_link(handle, reason).is_ok()
 }
 
 /// Run the Link Manager procedures

@@ -72,6 +72,7 @@ tests = [
     'LMP.LIH.BV_149_C',
     'LL.scan_collision',
     'LL.scan_timeout',
+    'LL.cis_disconnection',
     'LMP.page_collision',
 ]
 
