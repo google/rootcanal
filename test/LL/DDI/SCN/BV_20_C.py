@@ -80,17 +80,19 @@ class Test(ControllerTest):
         # Own_Address_Type is set to 0x00 (Public Device Address), and Scanning_Filter_Policy is set to
         # 0x00 (Accept All) and receives a successful HCI_Command_Complete.
         controller.send_cmd(
-            hci.LeSetExtendedScanParameters(own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
-                                            scanning_filter_policy=hci.LeScanningFilterPolicy.ACCEPT_ALL,
-                                            scanning_phys=0x1,
-                                            scanning_phy_parameters=[
-                                                hci.ScanningPhyParameters(le_scan_type=hci.LeScanType.ACTIVE,
-                                                                          le_scan_interval=0x0010,
-                                                                          le_scan_window=0x0010)
-                                            ]))
+            hci.LeSetExtendedScanParameters(
+                own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
+                scanning_filter_policy=hci.LeScanningFilterPolicy.ACCEPT_ALL,
+                scanning_phys=0x1,
+                scanning_phy_parameters=[
+                    hci.ScanningPhyParameters(le_scan_type=hci.LeScanType.ACTIVE,
+                                              le_scan_interval=0x0010,
+                                              le_scan_window=0x0010)
+                ]))
 
         await self.expect_evt(
-            hci.LeSetExtendedScanParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetExtendedScanParametersComplete(status=ErrorCode.SUCCESS,
+                                                    num_hci_command_packets=1))
 
         # 3. The Upper Tester sends an HCI_LE_Set_Extended_Scan_Enable command to the IUT to enable
         # scanning. Filter_Duplicates, Duration, and Period are all set to zero and receive a successful
@@ -101,7 +103,9 @@ class Test(ControllerTest):
                                         duration=0,
                                         period=0))
 
-        await self.expect_evt(hci.LeSetExtendedScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetExtendedScanEnableComplete(status=ErrorCode.SUCCESS,
+                                                num_hci_command_packets=1))
 
         # 4. The Lower Tester begins advertising on the channel as specified in Table 4.2-35 using the PDU
         # Type specified in Table 4.2-36 for this round. If AUX_ADV_IND is included in the round, the
@@ -185,8 +189,9 @@ class Test(ControllerTest):
                         tx_power=0x7f,
                         rssi=0,
                         periodic_advertising_interval=0,
-                        direct_address_type=hci.DirectAdvertisingAddressType.NO_ADDRESS_PROVIDED
-                        if not target_address else hci.DirectAdvertisingAddressType.PUBLIC_DEVICE_ADDRESS,
+                        direct_address_type=hci.DirectAdvertisingAddressType.
+                        NO_ADDRESS_PROVIDED if not target_address else hci.
+                        DirectAdvertisingAddressType.PUBLIC_DEVICE_ADDRESS,
                         direct_address=target_address or Address(),
                         advertising_data=[])
                 ]))
@@ -251,7 +256,8 @@ class Test(ControllerTest):
                             tx_power=0x7f,
                             rssi=0,
                             periodic_advertising_interval=0,
-                            direct_address_type=hci.DirectAdvertisingAddressType.NO_ADDRESS_PROVIDED,
+                            direct_address_type=hci.DirectAdvertisingAddressType.
+                            NO_ADDRESS_PROVIDED,
                             direct_address=Address(),
                             advertising_data=advertising_data[offset:offset + fragment_length])
                     ]))
@@ -261,4 +267,6 @@ class Test(ControllerTest):
         # receives an HCI_Command_Complete event in response.
         controller.send_cmd(hci.LeSetExtendedScanEnable(enable=hci.Enable.DISABLED))
 
-        await self.expect_evt(hci.LeSetExtendedScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetExtendedScanEnableComplete(status=ErrorCode.SUCCESS,
+                                                num_hci_command_packets=1))

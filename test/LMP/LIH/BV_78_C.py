@@ -31,21 +31,29 @@ class Test(ControllerTest):
         peer_address = Address('11:22:33:44:55:66')
 
         controller.send_cmd(
-            hci.CreateConnection(bd_addr=peer_address,
-                                 packet_type=0x7fff,
-                                 page_scan_repetition_mode=hci.PageScanRepetitionMode.R1,
-                                 allow_role_switch=hci.CreateConnectionRoleSwitch.ALLOW_ROLE_SWITCH))
-
-        await self.expect_evt(hci.CreateConnectionStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
-
-        await self.expect_ll(
-            ll.Page(source_address=controller.address, destination_address=peer_address, allow_role_switch=True))
-
-        controller.send_ll(
-            ll.PageResponse(source_address=peer_address, destination_address=controller.address, try_role_switch=True))
+            hci.CreateConnection(
+                bd_addr=peer_address,
+                packet_type=0x7fff,
+                page_scan_repetition_mode=hci.PageScanRepetitionMode.R1,
+                allow_role_switch=hci.CreateConnectionRoleSwitch.ALLOW_ROLE_SWITCH))
 
         await self.expect_evt(
-            hci.RoleChange(status=ErrorCode.SUCCESS, bd_addr=peer_address, new_role=hci.Role.PERIPHERAL))
+            hci.CreateConnectionStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+
+        await self.expect_ll(
+            ll.Page(source_address=controller.address,
+                    destination_address=peer_address,
+                    allow_role_switch=True))
+
+        controller.send_ll(
+            ll.PageResponse(source_address=peer_address,
+                            destination_address=controller.address,
+                            try_role_switch=True))
+
+        await self.expect_evt(
+            hci.RoleChange(status=ErrorCode.SUCCESS,
+                           bd_addr=peer_address,
+                           new_role=hci.Role.PERIPHERAL))
 
         await self.expect_evt(
             hci.ConnectionComplete(status=ErrorCode.SUCCESS,

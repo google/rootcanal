@@ -273,6 +273,12 @@ impl LinkManager {
         let index = self.links.iter().position(|link| link.peer.get() == peer);
 
         if let Some(index) = index {
+            // Send HCI command complete or status event for the pending HCI comamnd
+            // if any. Failing to do that would break flow control expectations for the host.
+            if let Some(command) = self.links[index].hci.replace(None) {
+                self.send_command_complete_event(&command, hci::ErrorCode::UnknownConnection)?;
+            }
+
             self.links[index].reset();
             self.procedures.borrow_mut()[index] = None;
             Ok(())

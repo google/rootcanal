@@ -135,7 +135,7 @@ bool link_layer_add_link(const LinkLayer* ll, uint16_t handle, const uint8_t (*p
 /// - This should be called from the thread of creation
 /// - `ll` must be a valid pointer
 /// - `peer` must be valid for reads for 6 bytes
-bool link_layer_remove_link(const LinkLayer* ll, uint16_t handle);
+bool link_layer_remove_link(const LinkLayer* ll, uint16_t handle, uint8_t reason);
 
 /// Run the Link Manager procedures
 /// # Arguments

@@ -307,7 +307,8 @@ class HCIShell(cmd.Cmd):
         address = split_args[0] if len(split_args) > 0 else 'NULL'
         timeout = int(split_args[1]) if len(split_args) > 1 else 2
         num_responses = 0
-        connect = HCI_Hdr(type='Command') / HCI_Command_Hdr(opcode=0x0405) / HCI_Cmd_Create_Connection(addr=address)
+        connect = HCI_Hdr(type='Command') / HCI_Command_Hdr(
+            opcode=0x0405) / HCI_Cmd_Create_Connection(addr=address)
         self._hci.send(connect)
         status = None
         while status == None:
@@ -315,8 +316,8 @@ class HCIShell(cmd.Cmd):
             if response == False:
                 continue
             if response[HCI_Hdr].type == HCI_Hdr(
-                    type='Event'
-            ).type and response[HCI_Event_Hdr].code == 0xf and response[HCI_Event_Command_Status].opcode == connect[HCI_Command_Hdr].opcode:
+                    type='Event').type and response[HCI_Event_Hdr].code == 0xf and response[
+                        HCI_Event_Command_Status].opcode == connect[HCI_Command_Hdr].opcode:
                 status = response[HCI_Event_Command_Status].status
         if status != HCI_Event_Command_Status(status='pending').status:
             print('Connection failed with status = ' + str(status))
@@ -327,8 +328,8 @@ class HCIShell(cmd.Cmd):
             connection_complete = self._hci.get_packet()
             if connection_complete == False:
                 continue
-            if (connection_complete[HCI_Hdr].type == HCI_Hdr(type='Event').type) and (
-                    connection_complete[HCI_Event_Hdr].code == 0x3):
+            if (connection_complete[HCI_Hdr].type == HCI_Hdr(
+                    type='Event').type) and (connection_complete[HCI_Event_Hdr].code == 0x3):
                 status = connection_complete[HCI_Event_Connection_Complete].status
                 if status != 0:
                     print('Connection complete with failed status = ' + str(status))
@@ -343,17 +344,26 @@ class HCIShell(cmd.Cmd):
             l2cap_req = self._hci.get_packet()
             if l2cap_req == False:
                 continue
-            if (l2cap_req[HCI_Hdr].type == HCI_Hdr(type='ACL Data').type) and (l2cap_req[L2CAP_Hdr].cid == L2CAP_Hdr(
-                    cid='control').cid) and (l2cap_req[L2CAP_CmdHdr].code == L2CAP_CmdHdr(code='info_req').code) and (
-                        l2cap_req[L2CAP_InfoReq].type == L2CAP_InfoReq(type='FEAT_MASK').type):
-                print('Send Features packet' +
-                      HCI_Hdr(type='ACL Data') / HCI_ACL_Hdr(handle=l2cap_req[HCI_ACL_Hdr].handle, PB=0, BC=2, len=16) /
-                      L2CAP_Hdr(len=12, cid='control') / L2CAP_CmdHdr(code='info_resp', id=146, len=8) / L2CAP_InfoResp(
-                          type=l2cap_req[L2CAP_InfoResp].type, result='success', data=b'\xb8\x00\x00\x00').__repr__())
+            if (l2cap_req[HCI_Hdr].type
+                    == HCI_Hdr(type='ACL Data').type) and (l2cap_req[L2CAP_Hdr].cid == L2CAP_Hdr(
+                        cid='control').cid) and (l2cap_req[L2CAP_CmdHdr].code == L2CAP_CmdHdr(
+                            code='info_req').code) and (l2cap_req[L2CAP_InfoReq].type
+                                                        == L2CAP_InfoReq(type='FEAT_MASK').type):
+                print('Send Features packet' + HCI_Hdr(type='ACL Data') /
+                      HCI_ACL_Hdr(handle=l2cap_req[HCI_ACL_Hdr].handle, PB=0, BC=2, len=16) /
+                      L2CAP_Hdr(len=12, cid='control') /
+                      L2CAP_CmdHdr(code='info_resp', id=146, len=8) /
+                      L2CAP_InfoResp(type=l2cap_req[L2CAP_InfoResp].type,
+                                     result='success',
+                                     data=b'\xb8\x00\x00\x00').__repr__())
                 self._hci.send(
-                    HCI_Hdr(type='ACL Data') / HCI_ACL_Hdr(handle=l2cap_req[HCI_ACL_Hdr].handle, PB=0, BC=2, len=16) /
-                    L2CAP_Hdr(len=12, cid='control') / L2CAP_CmdHdr(code='info_resp', id=146, len=8) / L2CAP_InfoResp(
-                        type=l2cap_req[L2CAP_InfoResp].type, result='success', data=b'\xb8\x00\x00\x00'))
+                    HCI_Hdr(type='ACL Data') /
+                    HCI_ACL_Hdr(handle=l2cap_req[HCI_ACL_Hdr].handle, PB=0, BC=2, len=16) /
+                    L2CAP_Hdr(len=12, cid='control') /
+                    L2CAP_CmdHdr(code='info_resp', id=146, len=8) /
+                    L2CAP_InfoResp(type=l2cap_req[L2CAP_InfoResp].type,
+                                   result='success',
+                                   data=b'\xb8\x00\x00\x00'))
 
     def do_le_scan(self, args):
         """Arguments: enable (0 or 1), filter duplicates (0 or 1) Print the scan responses from reachable devices
@@ -362,11 +372,12 @@ class HCIShell(cmd.Cmd):
         split_args = args.split()
         enable = int(split_args[0]) if len(split_args) > 0 else 1
         filter_dups = int(split_args[1]) if len(split_args) > 1 else 1
-        set_scan_parameters = HCI_Hdr(type=1) / HCI_Command_Hdr(opcode=0x200b) / HCI_Cmd_LE_Set_Scan_Parameters(type=1)
+        set_scan_parameters = HCI_Hdr(type=1) / HCI_Command_Hdr(
+            opcode=0x200b) / HCI_Cmd_LE_Set_Scan_Parameters(type=1)
         print('Tx: ' + set_scan_parameters.__repr__())
         self._hci.send(set_scan_parameters)
-        set_scan_enable = HCI_Hdr(type=1) / HCI_Command_Hdr(opcode=0x200c) / HCI_Cmd_LE_Set_Scan_Enable(
-            enable=enable, filter_dups=filter_dups)
+        set_scan_enable = HCI_Hdr(type=1) / HCI_Command_Hdr(
+            opcode=0x200c) / HCI_Cmd_LE_Set_Scan_Enable(enable=enable, filter_dups=filter_dups)
         print('Tx: ' + set_scan_enable.__repr__())
         self._hci.send(set_scan_enable)
 
@@ -425,7 +436,8 @@ def main(argv):
         else:
             hci_shell = HCIShell(hci)
             hci_shell.prompt = '$ '
-            hci_shell.cmdloop('Welcome to the RootCanal HCI Console \n' + 'Type \'help\' for more information.')
+            hci_shell.cmdloop('Welcome to the RootCanal HCI Console \n' +
+                              'Type \'help\' for more information.')
 
 
 if __name__ == '__main__':

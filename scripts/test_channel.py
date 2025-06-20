@@ -322,7 +322,8 @@ def main(argv):
         else:
             test_channel_shell = TestChannelShell(test_channel)
             test_channel_shell.prompt = '$ '
-            test_channel_shell.cmdloop('Welcome to the RootCanal Console \n' + 'Type \'help\' for more information.')
+            test_channel_shell.cmdloop('Welcome to the RootCanal Console \n' +
+                                       'Type \'help\' for more information.')
 
 
 if __name__ == '__main__':

@@ -400,6 +400,7 @@ enum OpCode : 16 {
   // VENDOR_SPECIFIC
   // MSFT_OPCODE_xxxx below is needed for the tests.
   MSFT_OPCODE_INTEL = 0xFC1E,
+  INTEL_DDC_CONFIG_READ = 0xFC8C,
   INTEL_DDC_CONFIG_WRITE = 0xFC8B,
   LE_GET_VENDOR_CAPABILITIES = 0xFD53,
   LE_BATCH_SCAN = 0xFD56,
@@ -4706,16 +4707,12 @@ packet LeSetupIsoDataPathComplete : CommandComplete (command_op_code = LE_SETUP_
   _reserved_ : 4,
 }
 
-enum RemoveDataPathDirection : 8 {
-  INPUT = 1,
-  OUTPUT = 2,
-  INPUT_AND_OUTPUT = 3,
-}
-
 packet LeRemoveIsoDataPath : Command (op_code = LE_REMOVE_ISO_DATA_PATH) {
   connection_handle : 12,
   _reserved_ : 4,
-  remove_data_path_direction : RemoveDataPathDirection,
+  remove_input_data_path: 1,
+  remove_output_data_path: 1,
+  _reserved_ : 6,
 }
 
 packet LeRemoveIsoDataPathComplete : CommandComplete (command_op_code = LE_REMOVE_ISO_DATA_PATH) {

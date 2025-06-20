@@ -86,7 +86,6 @@ public:
                                            const Address& peer_address);
   ErrorCode SendCommandToRemoteByHandle(OpCode opcode, pdl::packet::slice args, uint16_t handle);
   ErrorCode SendScoToRemote(bluetooth::hci::ScoView sco_packet);
-  ErrorCode SendAclToRemote(bluetooth::hci::AclView acl_packet);
 
   void ForwardToLm(bluetooth::hci::CommandView command);
   void ForwardToLl(bluetooth::hci::CommandView command);
@@ -313,6 +312,7 @@ public:
   // Returns true if the specified ACL connection handle is valid.
   bool HasAclConnection(uint16_t connection_handle);
 
+  void HandleAcl(bluetooth::hci::AclView acl);
   void HandleIso(bluetooth::hci::IsoView iso);
 
   // BR/EDR Commands
@@ -341,6 +341,9 @@ public:
   ErrorCode LeSetPhy(uint16_t connection_handle, bool all_phys_no_transmit_preference,
                      bool all_phys_no_receive_preference, uint8_t tx_phys, uint8_t rx_phys,
                      bluetooth::hci::PhyOptions phy_options);
+
+  // HCI LE Set Data Length (Vol 4, Part E § 7.8.33).
+  ErrorCode LeSetDataLength(uint16_t connection_handle, uint16_t tx_octets, uint16_t tx_time);
 
   // HCI LE Set Host Feature command (Vol 4, Part E § 7.8.115).
   ErrorCode LeSetHostFeature(uint8_t bit_number, uint8_t bit_value);
@@ -693,7 +696,10 @@ public:
 
   // TODO
   // The Encryption Key Size should be specific to an ACL connection.
-  uint8_t GetEncryptionKeySize() const { return min_encryption_key_size_; }
+  uint8_t GetEncryptionKeySize() const { return 16; }
+  void SetMinEncryptionKeySize(uint8_t min_encryption_key_size) {
+    min_encryption_key_size_ = min_encryption_key_size;
+  }
 
   bool GetScoFlowControlEnable() const { return sco_flow_control_enable_; }
 

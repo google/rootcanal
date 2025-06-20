@@ -36,23 +36,28 @@ class Test(ControllerTest):
         peer_address = Address('aa:bb:cc:dd:ee:ff')
 
         controller.send_cmd(
-            hci.LeSetScanParameters(le_scan_type=hci.LeScanType.ACTIVE,
-                                    le_scan_interval=LL_scanner_scanInterval_MAX,
-                                    le_scan_window=LL_scanner_scanWindow_MAX,
-                                    own_address_type=hci.OwnAddressType.RESOLVABLE_OR_PUBLIC_ADDRESS,
-                                    scanning_filter_policy=hci.LeScanningFilterPolicy.ACCEPT_ALL))
+            hci.LeSetScanParameters(
+                le_scan_type=hci.LeScanType.ACTIVE,
+                le_scan_interval=LL_scanner_scanInterval_MAX,
+                le_scan_window=LL_scanner_scanWindow_MAX,
+                own_address_type=hci.OwnAddressType.RESOLVABLE_OR_PUBLIC_ADDRESS,
+                scanning_filter_policy=hci.LeScanningFilterPolicy.ACCEPT_ALL))
 
-        await self.expect_evt(hci.LeSetScanParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetScanParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         controller.send_cmd(
-            hci.LeSetScanEnable(le_scan_enable=hci.Enable.ENABLED, filter_duplicates=hci.Enable.DISABLED))
+            hci.LeSetScanEnable(le_scan_enable=hci.Enable.ENABLED,
+                                filter_duplicates=hci.Enable.DISABLED))
 
-        await self.expect_evt(hci.LeSetScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
-        controller.send_ll(ll.LeLegacyAdvertisingPdu(source_address=peer_address,
-                                                     advertising_address_type=ll.AddressType.RANDOM,
-                                                     advertising_type=ll.LegacyAdvertisingType.ADV_SCAN_IND,
-                                                     advertising_data=[]),
+        controller.send_ll(ll.LeLegacyAdvertisingPdu(
+            source_address=peer_address,
+            advertising_address_type=ll.AddressType.RANDOM,
+            advertising_type=ll.LegacyAdvertisingType.ADV_SCAN_IND,
+            advertising_data=[]),
                            rssi=-16)
 
         await self.expect_evt(
@@ -73,7 +78,8 @@ class Test(ControllerTest):
         # Disable the scanner before the scan response is received.
         controller.send_cmd(hci.LeSetScanEnable(le_scan_enable=hci.Enable.DISABLED))
 
-        await self.expect_evt(hci.LeSetScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # Send the scan response now; it should be ignored by the disabled scanner.
         controller.send_ll(ll.LeScanResponse(source_address=peer_address,
@@ -84,14 +90,17 @@ class Test(ControllerTest):
         # Re-enable the scanner and send the advertising PDU again.
         # This time expect the scan response to be properly reported.
         controller.send_cmd(
-            hci.LeSetScanEnable(le_scan_enable=hci.Enable.ENABLED, filter_duplicates=hci.Enable.DISABLED))
+            hci.LeSetScanEnable(le_scan_enable=hci.Enable.ENABLED,
+                                filter_duplicates=hci.Enable.DISABLED))
 
-        await self.expect_evt(hci.LeSetScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
-        controller.send_ll(ll.LeLegacyAdvertisingPdu(source_address=peer_address,
-                                                     advertising_address_type=ll.AddressType.RANDOM,
-                                                     advertising_type=ll.LegacyAdvertisingType.ADV_SCAN_IND,
-                                                     advertising_data=[]),
+        controller.send_ll(ll.LeLegacyAdvertisingPdu(
+            source_address=peer_address,
+            advertising_address_type=ll.AddressType.RANDOM,
+            advertising_type=ll.LegacyAdvertisingType.ADV_SCAN_IND,
+            advertising_data=[]),
                            rssi=-16)
 
         await self.expect_evt(

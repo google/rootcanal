@@ -36,13 +36,18 @@ class Test(ControllerTest):
                                  page_scan_repetition_mode=hci.PageScanRepetitionMode.R0,
                                  allow_role_switch=hci.CreateConnectionRoleSwitch.REMAIN_CENTRAL))
 
-        await self.expect_evt(hci.CreateConnectionStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.CreateConnectionStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         await self.expect_ll(
-            ll.Page(source_address=controller.address, destination_address=peer_address, allow_role_switch=False))
+            ll.Page(source_address=controller.address,
+                    destination_address=peer_address,
+                    allow_role_switch=False))
 
         controller.send_ll(
-            ll.PageResponse(source_address=peer_address, destination_address=controller.address, try_role_switch=False))
+            ll.PageResponse(source_address=peer_address,
+                            destination_address=controller.address,
+                            try_role_switch=False))
 
         await self.expect_evt(
             hci.ConnectionComplete(status=ErrorCode.SUCCESS,
@@ -51,15 +56,18 @@ class Test(ControllerTest):
                                    link_type=hci.LinkType.ACL,
                                    encryption_enabled=hci.Enable.DISABLED))
 
-        controller.send_cmd(hci.WriteLinkPolicySettings(connection_handle=acl_connection_handle,
-                                                        link_policy_settings=0))
+        controller.send_cmd(
+            hci.WriteLinkPolicySettings(connection_handle=acl_connection_handle,
+                                        link_policy_settings=0))
 
         await self.expect_evt(
             hci.WriteLinkPolicySettingsComplete(status=ErrorCode.SUCCESS,
                                                 num_hci_command_packets=1,
                                                 connection_handle=acl_connection_handle))
 
-        controller.send_ll(ll.RoleSwitchRequest(source_address=peer_address, destination_address=controller.address))
+        controller.send_ll(
+            ll.RoleSwitchRequest(source_address=peer_address,
+                                 destination_address=controller.address))
 
         await self.expect_ll(
             ll.RoleSwitchResponse(source_address=controller.address,

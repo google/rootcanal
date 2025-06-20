@@ -65,12 +65,18 @@ impl LinkLayer {
         Ok(())
     }
 
-    pub fn remove_link(&mut self, acl_connection_handle: u16) -> Result<(), LinkLayerError> {
+    pub fn remove_link(
+        &mut self,
+        acl_connection_handle: u16,
+        reason: u8,
+    ) -> Result<(), LinkLayerError> {
         if self.links.remove(&acl_connection_handle).is_none() {
             return Err(LinkLayerError::UnknownPeer);
         }
 
-        self.iso.remove_acl_connection(acl_connection_handle);
+        let reason = hci::ErrorCode::try_from(reason)
+            .unwrap_or(hci::ErrorCode::RemoteUserTerminatedConnection);
+        self.iso.remove_acl_connection(acl_connection_handle, reason);
         Ok(())
     }
 

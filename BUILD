@@ -206,8 +206,6 @@ cc_binary(
         "model/devices/baseband_sniffer.h",
         "model/devices/beacon.cc",
         "model/devices/beacon.h",
-        "model/devices/beacon_swarm.cc",
-        "model/devices/beacon_swarm.h",
         "model/devices/device.cc",
         "model/devices/device.h",
         "model/devices/hci_device.cc",

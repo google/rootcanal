@@ -48,7 +48,8 @@ class Test(ControllerTest):
         # random static address.
         controller.send_cmd(hci.LeSetRandomAddress(random_address=local_random_address))
 
-        await self.expect_evt(hci.LeSetRandomAddressComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetRandomAddressComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 2. Configure the Lower Tester as an advertiser using a resolvable
         # private address in the AdvA field.
@@ -62,41 +63,50 @@ class Test(ControllerTest):
                                            peer_identity_address_type=peer_identity_address_type))
 
         await self.expect_evt(
-            hci.LeAddDeviceToResolvingListComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeAddDeviceToResolvingListComplete(status=ErrorCode.SUCCESS,
+                                                   num_hci_command_packets=1))
 
         controller.send_cmd(hci.LeSetResolvablePrivateAddressTimeout(rpa_timeout=RPA_timeout))
 
         await self.expect_evt(
-            hci.LeSetResolvablePrivateAddressTimeoutComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetResolvablePrivateAddressTimeoutComplete(status=ErrorCode.SUCCESS,
+                                                             num_hci_command_packets=1))
 
-        controller.send_cmd(hci.LeSetAddressResolutionEnable(address_resolution_enable=hci.Enable.ENABLED))
+        controller.send_cmd(
+            hci.LeSetAddressResolutionEnable(address_resolution_enable=hci.Enable.ENABLED))
 
         await self.expect_evt(
-            hci.LeSetAddressResolutionEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAddressResolutionEnableComplete(status=ErrorCode.SUCCESS,
+                                                     num_hci_command_packets=1))
 
         # 4. Upper Tester enables active scanning with filtering policy set to
         # ‘Accept all advertising packets (0x00)’ in the IUT.
         controller.send_cmd(
-            hci.LeSetScanParameters(le_scan_type=hci.LeScanType.ACTIVE,
-                                    le_scan_interval=LL_scanner_scanInterval_MAX,
-                                    le_scan_window=LL_scanner_scanWindow_MAX,
-                                    own_address_type=hci.OwnAddressType.RESOLVABLE_OR_RANDOM_ADDRESS,
-                                    scanning_filter_policy=hci.LeScanningFilterPolicy.ACCEPT_ALL))
+            hci.LeSetScanParameters(
+                le_scan_type=hci.LeScanType.ACTIVE,
+                le_scan_interval=LL_scanner_scanInterval_MAX,
+                le_scan_window=LL_scanner_scanWindow_MAX,
+                own_address_type=hci.OwnAddressType.RESOLVABLE_OR_RANDOM_ADDRESS,
+                scanning_filter_policy=hci.LeScanningFilterPolicy.ACCEPT_ALL))
 
-        await self.expect_evt(hci.LeSetScanParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetScanParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         controller.send_cmd(
-            hci.LeSetScanEnable(le_scan_enable=hci.Enable.ENABLED, filter_duplicates=hci.Enable.DISABLED))
+            hci.LeSetScanEnable(le_scan_enable=hci.Enable.ENABLED,
+                                filter_duplicates=hci.Enable.DISABLED))
 
-        await self.expect_evt(hci.LeSetScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeSetScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 5. The Lower Tester sends an ADV_SCAN_IND packet each advertising
         # event using the selected advertising channel only. Repeat for at
         # least 20 advertising intervals or until step 7 occurs.
-        controller.send_ll(ll.LeLegacyAdvertisingPdu(source_address=peer_resolvable_address,
-                                                     advertising_address_type=ll.AddressType.RANDOM,
-                                                     advertising_type=ll.LegacyAdvertisingType.ADV_SCAN_IND,
-                                                     advertising_data=[1, 2, 3]),
+        controller.send_ll(ll.LeLegacyAdvertisingPdu(
+            source_address=peer_resolvable_address,
+            advertising_address_type=ll.AddressType.RANDOM,
+            advertising_type=ll.LegacyAdvertisingType.ADV_SCAN_IND,
+            advertising_data=[1, 2, 3]),
                            rssi=-16)
 
         # 6. Lower Tester receives a SCAN_REQ packet T_IFS after any of the

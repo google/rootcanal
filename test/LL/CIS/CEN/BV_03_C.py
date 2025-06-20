@@ -74,16 +74,17 @@ class Test(ControllerTest):
                                        packing=self.Packing,
                                        framing=self.Framing,
                                        cis_config=[
-                                           hci.LeCisParametersTestConfig(cis_id=cis_id,
-                                                                         nse=self.NSE,
-                                                                         max_sdu_c_to_p=self.Max_SDU_C_TO_P,
-                                                                         max_sdu_p_to_c=self.Max_SDU_P_TO_C,
-                                                                         max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                                                         max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                                                         phy_c_to_p=self.PHY_C_TO_P,
-                                                                         phy_p_to_c=self.PHY_P_TO_C,
-                                                                         bn_c_to_p=self.BN_C_TO_P,
-                                                                         bn_p_to_c=self.BN_P_TO_C)
+                                           hci.LeCisParametersTestConfig(
+                                               cis_id=cis_id,
+                                               nse=self.NSE,
+                                               max_sdu_c_to_p=self.Max_SDU_C_TO_P,
+                                               max_sdu_p_to_c=self.Max_SDU_P_TO_C,
+                                               max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                                               max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                                               phy_c_to_p=self.PHY_C_TO_P,
+                                               phy_p_to_c=self.PHY_P_TO_C,
+                                               bn_c_to_p=self.BN_C_TO_P,
+                                               bn_p_to_c=self.BN_P_TO_C)
                                        ]))
 
         await self.expect_evt(
@@ -100,38 +101,41 @@ class Test(ControllerTest):
                                       acl_connection_handle=acl_connection_handle)
             ]))
 
-        await self.expect_evt(hci.LeCreateCisStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.LeCreateCisStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         # 3. The Lower Tester receives an LL_CIS_REQ PDU from the IUT with all fields set to valid values.
         cis_req = await self.expect_llcp(source_address=controller.address,
                                          destination_address=peer_address,
-                                         expected_pdu=llcp.CisReq(cig_id=cig_id,
-                                                                  cis_id=cis_id,
-                                                                  phy_c_to_p=hci.PhyType.LE_1M,
-                                                                  phy_p_to_c=hci.PhyType.LE_1M,
-                                                                  framed=self.Framing == hci.Enable.ENABLED,
-                                                                  max_sdu_c_to_p=self.Max_SDU_C_TO_P,
-                                                                  max_sdu_p_to_c=self.Max_SDU_P_TO_C,
-                                                                  sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
-                                                                  sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
-                                                                  max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                                                  max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                                                  nse=self.NSE,
-                                                                  sub_interval=self.Any,
-                                                                  bn_p_to_c=self.BN_C_TO_P,
-                                                                  bn_c_to_p=self.BN_P_TO_C,
-                                                                  ft_c_to_p=self.FT_C_TO_P,
-                                                                  ft_p_to_c=self.FT_P_TO_C,
-                                                                  iso_interval=self.ISO_Interval,
-                                                                  cis_offset_min=self.Any,
-                                                                  cis_offset_max=self.Any,
-                                                                  conn_event_count=0))
+                                         expected_pdu=llcp.CisReq(
+                                             cig_id=cig_id,
+                                             cis_id=cis_id,
+                                             phy_c_to_p=hci.PhyType.LE_1M,
+                                             phy_p_to_c=hci.PhyType.LE_1M,
+                                             framed=self.Framing == hci.Enable.ENABLED,
+                                             max_sdu_c_to_p=self.Max_SDU_C_TO_P,
+                                             max_sdu_p_to_c=self.Max_SDU_P_TO_C,
+                                             sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
+                                             sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
+                                             max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                                             max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                                             nse=self.NSE,
+                                             sub_interval=self.Any,
+                                             bn_p_to_c=self.BN_C_TO_P,
+                                             bn_c_to_p=self.BN_P_TO_C,
+                                             ft_c_to_p=self.FT_C_TO_P,
+                                             ft_p_to_c=self.FT_P_TO_C,
+                                             iso_interval=self.ISO_Interval,
+                                             cis_offset_min=self.Any,
+                                             cis_offset_max=self.Any,
+                                             conn_event_count=0))
 
         # 4. The Lower Tester sends an LL_REJECT_EXT_IND to the IUT with an error code not equal to 0x00.
         controller.send_llcp(source_address=peer_address,
                              destination_address=controller.address,
-                             pdu=llcp.RejectExtInd(reject_opcode=llcp.Opcode.LL_CIS_REQ,
-                                                   error_code=hci.ErrorCode.REMOTE_USER_TERMINATED_CONNECTION))
+                             pdu=llcp.RejectExtInd(
+                                 reject_opcode=llcp.Opcode.LL_CIS_REQ,
+                                 error_code=hci.ErrorCode.REMOTE_USER_TERMINATED_CONNECTION))
 
         # 5. The Upper Tester receives an HCI_LE_CIS_Established event from the IUT with a status failure.
         # The Status field has the same value as the LL_REJECT_EXT_IND PDU in step 4.

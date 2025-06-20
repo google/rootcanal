@@ -109,10 +109,10 @@ class LinkLayerSocket(object):
             payload_length |= header[2] << 16
             payload_length |= header[3] << 24
             print('Rx: type_byte ' + hex(header[4]))
-            print('Rx: from ' + hex(header[5]) + ':' + hex(header[6]) + ':' + hex(header[7]) + ':' + hex(header[8]) +
-                  ':' + hex(header[9]) + ':' + hex(header[10]))
-            print('Rx: to ' + hex(header[11]) + ':' + hex(header[12]) + ':' + hex(header[13]) + ':' + hex(header[14]) +
-                  ':' + hex(header[15]) + ':' + hex(header[16]))
+            print('Rx: from ' + hex(header[5]) + ':' + hex(header[6]) + ':' + hex(header[7]) + ':' +
+                  hex(header[8]) + ':' + hex(header[9]) + ':' + hex(header[10]))
+            print('Rx: to ' + hex(header[11]) + ':' + hex(header[12]) + ':' + hex(header[13]) +
+                  ':' + hex(header[14]) + ':' + hex(header[15]) + ':' + hex(header[16]))
             # Read the Payload
             payload = self.rx_bytes(payload_length) if payload_length != 0 else b''
             packet_bytes = header + payload

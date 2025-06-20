@@ -337,6 +337,9 @@ public:
   // 7.3.95
   void ReadLocalOobExtendedData(CommandView command);
 
+  // 7.3.102
+  void SetMinEncryptionKeySize(CommandView command);
+
   // Informational Parameters Commands
   // Bluetooth Core Specification Version 4.2 Volume 2 Part E 7.4
 
@@ -446,7 +449,8 @@ public:
   void LeRemoteConnectionParameterRequestReply(CommandView command);
   void LeRemoteConnectionParameterRequestNegativeReply(CommandView command);
 
-  // 7.8.34 - 7.8.35
+  // 7.8.33 - 7.8.35
+  void LeSetDataLength(CommandView command);
   void LeReadSuggestedDefaultDataLength(CommandView command);
   void LeWriteSuggestedDefaultDataLength(CommandView command);
 
@@ -525,6 +529,7 @@ public:
   void LeGetControllerActivityEnergyInfo(CommandView command);
   void LeExSetScanParameters(CommandView command);
   void GetControllerDebugInfo(CommandView command);
+  void IntelDdcConfigRead(CommandView command);
   void IntelDdcConfigWrite(CommandView command);
 
   // CSR vendor command.

@@ -32,20 +32,29 @@ class Test(ControllerTest):
 
         controller.send_cmd(hci.WriteScanEnable(scan_enable=hci.ScanEnable.PAGE_SCAN_ONLY))
 
-        await self.expect_evt(hci.WriteScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.WriteScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         controller.send_ll(
-            ll.Page(source_address=peer_address, destination_address=controller.address, allow_role_switch=False))
+            ll.Page(source_address=peer_address,
+                    destination_address=controller.address,
+                    allow_role_switch=False))
 
-        await self.expect_evt(hci.ConnectionRequest(bd_addr=peer_address, link_type=hci.ConnectionRequestLinkType.ACL))
+        await self.expect_evt(
+            hci.ConnectionRequest(bd_addr=peer_address,
+                                  link_type=hci.ConnectionRequestLinkType.ACL))
 
         controller.send_cmd(
-            hci.AcceptConnectionRequest(bd_addr=peer_address, role=hci.AcceptConnectionRequestRole.REMAIN_PERIPHERAL))
+            hci.AcceptConnectionRequest(bd_addr=peer_address,
+                                        role=hci.AcceptConnectionRequestRole.REMAIN_PERIPHERAL))
 
-        await self.expect_evt(hci.AcceptConnectionRequestStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.AcceptConnectionRequestStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         await self.expect_ll(
-            ll.PageResponse(source_address=controller.address, destination_address=peer_address, try_role_switch=False))
+            ll.PageResponse(source_address=controller.address,
+                            destination_address=peer_address,
+                            try_role_switch=False))
 
         await self.expect_evt(
             hci.ConnectionComplete(status=ErrorCode.SUCCESS,
@@ -65,9 +74,12 @@ class Test(ControllerTest):
 
         controller.send_cmd(hci.SwitchRole(bd_addr=peer_address, role=hci.Role.CENTRAL))
 
-        await self.expect_evt(hci.SwitchRoleStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.SwitchRoleStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
-        await self.expect_ll(ll.RoleSwitchRequest(source_address=controller.address, destination_address=peer_address))
+        await self.expect_ll(
+            ll.RoleSwitchRequest(source_address=controller.address,
+                                 destination_address=peer_address))
 
         controller.send_ll(
             ll.RoleSwitchResponse(source_address=peer_address,
@@ -75,12 +87,16 @@ class Test(ControllerTest):
                                   status=ErrorCode.ROLE_CHANGE_NOT_ALLOWED))
 
         await self.expect_evt(
-            hci.RoleChange(status=ErrorCode.ROLE_CHANGE_NOT_ALLOWED, bd_addr=peer_address,
+            hci.RoleChange(status=ErrorCode.ROLE_CHANGE_NOT_ALLOWED,
+                           bd_addr=peer_address,
                            new_role=hci.Role.PERIPHERAL))
 
         controller.send_cmd(hci.SwitchRole(bd_addr=peer_address, role=hci.Role.PERIPHERAL))
 
-        await self.expect_evt(hci.SwitchRoleStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+        await self.expect_evt(
+            hci.SwitchRoleStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         await self.expect_evt(
-            hci.RoleChange(status=ErrorCode.ROLE_SWITCH_FAILED, bd_addr=peer_address, new_role=hci.Role.PERIPHERAL))
+            hci.RoleChange(status=ErrorCode.ROLE_SWITCH_FAILED,
+                           bd_addr=peer_address,
+                           new_role=hci.Role.PERIPHERAL))
