@@ -2233,9 +2233,7 @@ packet WriteSynchronousFlowControlEnableComplete : CommandComplete (command_op_c
 }
 
 packet SetControllerToHostFlowControl : Command (op_code = SET_CONTROLLER_TO_HOST_FLOW_CONTROL) {
-  acl : 1,
-  synchronous : 1,
-  _reserved_ : 6,
+  enable : Enable,
 }
 
 packet SetControllerToHostFlowControlComplete : CommandComplete (command_op_code = SET_CONTROLLER_TO_HOST_FLOW_CONTROL) {

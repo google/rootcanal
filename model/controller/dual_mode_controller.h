@@ -273,8 +273,12 @@ public:
   void ReadSynchronousFlowControlEnable(CommandView command);
   void WriteSynchronousFlowControlEnable(CommandView command);
 
+  void SetControllerToHostFlowControl(CommandView command);
+
   // 7.3.39
   void HostBufferSize(CommandView command);
+
+  void HostNumberOfCompletedPackets(CommandView command);
 
   // 7.3.42
   void WriteLinkSupervisionTimeout(CommandView command);

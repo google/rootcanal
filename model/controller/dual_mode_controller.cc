@@ -1591,6 +1591,22 @@ void DualModeController::WriteSynchronousFlowControlEnable(CommandView command) 
           kNumCommandPackets, ErrorCode::SUCCESS));
 }
 
+void DualModeController::SetControllerToHostFlowControl(CommandView command) {
+  auto command_view = bluetooth::hci::SetControllerToHostFlowControlView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  auto enabled = command_view.GetEnable() == bluetooth::hci::Enable::ENABLED;
+
+  DEBUG(id_, "<< Set Controller To Host Flow Control");
+  DEBUG(id_, "   enable={}", enabled);
+
+  send_event_(bluetooth::hci::SetControllerToHostFlowControlCompleteBuilder::Create(
+          kNumCommandPackets, ErrorCode::SUCCESS));
+}
+
+void DualModeController::HostNumberOfCompletedPackets(CommandView command) {
+  DEBUG(id_, "<< Host Number Of Completed Packets");
+}
+
 void DualModeController::SetEventFilter(CommandView command) {
   auto command_view = bluetooth::hci::SetEventFilterView::Create(command);
   CHECK_PACKET_VIEW(command_view);
@@ -3574,8 +3590,8 @@ const std::unordered_map<OpCode, OpCodeIndex> DualModeController::hci_command_op
          OpCodeIndex::WRITE_SECURE_CONNECTIONS_HOST_SUPPORT},
         {OpCode::READ_AUTHENTICATED_PAYLOAD_TIMEOUT,
          OpCodeIndex::READ_AUTHENTICATED_PAYLOAD_TIMEOUT},
-        {OpCode::WRITE_AUTHENTICATED_PAYLOAD_TIMEOUT,
-         OpCodeIndex::WRITE_AUTHENTICATED_PAYLOAD_TIMEOUT},
+        // {OpCode::WRITE_AUTHENTICATED_PAYLOAD_TIMEOUT,
+        //  OpCodeIndex::WRITE_AUTHENTICATED_PAYLOAD_TIMEOUT},
         {OpCode::READ_LOCAL_OOB_EXTENDED_DATA, OpCodeIndex::READ_LOCAL_OOB_EXTENDED_DATA},
         {OpCode::READ_EXTENDED_PAGE_TIMEOUT, OpCodeIndex::READ_EXTENDED_PAGE_TIMEOUT},
         {OpCode::WRITE_EXTENDED_PAGE_TIMEOUT, OpCodeIndex::WRITE_EXTENDED_PAGE_TIMEOUT},
@@ -3970,11 +3986,11 @@ const std::unordered_map<OpCode, DualModeController::CommandHandler>
                  &DualModeController::ReadSynchronousFlowControlEnable},
                 {OpCode::WRITE_SYNCHRONOUS_FLOW_CONTROL_ENABLE,
                  &DualModeController::WriteSynchronousFlowControlEnable},
-                //{OpCode::SET_CONTROLLER_TO_HOST_FLOW_CONTROL,
-                //&DualModeController::SetControllerToHostFlowControl},
+                {OpCode::SET_CONTROLLER_TO_HOST_FLOW_CONTROL,
+                 &DualModeController::SetControllerToHostFlowControl},
                 {OpCode::HOST_BUFFER_SIZE, &DualModeController::HostBufferSize},
-                //{OpCode::HOST_NUMBER_OF_COMPLETED_PACKETS,
-                //&DualModeController::HostNumberOfCompletedPackets},
+                {OpCode::HOST_NUMBER_OF_COMPLETED_PACKETS,
+                 &DualModeController::HostNumberOfCompletedPackets},
                 //{OpCode::READ_LINK_SUPERVISION_TIMEOUT,
                 //&DualModeController::ReadLinkSupervisionTimeout},
                 {OpCode::WRITE_LINK_SUPERVISION_TIMEOUT,
