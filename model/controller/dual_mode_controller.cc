@@ -17,9 +17,10 @@
 #include "model/controller/dual_mode_controller.h"
 
 #include <openssl/ec.h>
-#include <openssl/ec_key.h>
-#include <openssl/mem.h>
-#include <openssl/nid.h>
+#include <openssl/obj_mac.h>
+#include <openssl/bn.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
 #include <packet_runtime.h>
 
 #include <algorithm>
@@ -2242,40 +2243,66 @@ void DualModeController::LeWriteSuggestedDefaultDataLength(CommandView command) 
 
 static ErrorCode generateP256Key(std::array<uint8_t, 32>& key_x_coordinate,
                                  std::array<uint8_t, 32>& key_y_coordinate) {
-  auto ec_key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-  if (!ec_key) {
-    WARNING("EC_KEY_new_by_curve_name(NID_X9_62_prime256v1) failed");
-    return ErrorCode::UNSPECIFIED_ERROR;
-  }
+    // Clear any previous OpenSSL errors.
+    ERR_clear_error();
 
-  if (!EC_KEY_generate_key(ec_key)) {
-    WARNING("EC_KEY_generate_key failed");
-    EC_KEY_free(ec_key);
-    return ErrorCode::UNSPECIFIED_ERROR;
-  }
+    // Use unique_ptr with custom deleters for automatic memory management
+    // This ensures resources are freed even if an early return occurs due
+    // to an error.
+    auto ec_key_deleter = [](EC_KEY* ptr) { EC_KEY_free(ptr); };
+    std::unique_ptr<EC_KEY, decltype(ec_key_deleter)> ec_key(
+        EC_KEY_new_by_curve_name(NID_X9_62_prime256v1), ec_key_deleter);
 
-  uint8_t* out_buf = nullptr;
-  auto size = EC_KEY_key2buf(ec_key, POINT_CONVERSION_UNCOMPRESSED, &out_buf, nullptr);
-  if (!out_buf) {
-    WARNING("EC_KEY_key2buf failed");
-    EC_KEY_free(ec_key);
-    return ErrorCode::UNSPECIFIED_ERROR;
-  }
+    if (!ec_key) {
+        WARNING("Failed to create EC_KEY for prime256v1 curve.");
+        return ErrorCode::UNSPECIFIED_ERROR;
+    }
 
-  const size_t expected_size = key_x_coordinate.size() + key_y_coordinate.size() + 1;
-  if (size != expected_size) {
-    WARNING("unexpected size {}", size);
-    OPENSSL_free(out_buf);
-    EC_KEY_free(ec_key);
-    return ErrorCode::UNSPECIFIED_ERROR;
-  }
+    // Generate the key pair.
+    if (!EC_KEY_generate_key(ec_key.get())) {
+        WARNING("Failed to generate EC key pair.");
+        return ErrorCode::UNSPECIFIED_ERROR;
+    }
 
-  memcpy(key_x_coordinate.data(), out_buf + 1, key_x_coordinate.size());
-  memcpy(key_y_coordinate.data(), out_buf + 1 + key_x_coordinate.size(), key_y_coordinate.size());
+    // Get the public key point and group.
+    const EC_POINT* pub_key_point = EC_KEY_get0_public_key(ec_key.get());
+    const EC_GROUP* ec_group = EC_KEY_get0_group(ec_key.get());
 
-  // OPENSSL_free(out_buf); // <-- this call fails with error invalid pointer
-  EC_KEY_free(ec_key);
-  return ErrorCode::SUCCESS;
+    if (!pub_key_point || !ec_group) {
+        WARNING("Failed to get public key point or EC group.");
+        return ErrorCode::UNSPECIFIED_ERROR;
+    }
+
+    // BIGNUM objects to hold the x and y coordinates
+    auto bn_deleter = [](BIGNUM* ptr) { BN_free(ptr); };
+    std::unique_ptr<BIGNUM, decltype(bn_deleter)> x_bn(BN_new(), bn_deleter);
+    std::unique_ptr<BIGNUM, decltype(bn_deleter)> y_bn(BN_new(), bn_deleter);
+
+    if (!x_bn || !y_bn) {
+        WARNING("Failed to allocate BIGNUMs for coordinates.");
+        return ErrorCode::UNSPECIFIED_ERROR;
+    }
+
+    // Extract affine coordinates (x, y) from the public key point
+    if (!EC_POINT_get_affine_coordinates(ec_group, pub_key_point, x_bn.get(), y_bn.get(), NULL)) {
+        WARNING("Failed to get affine coordinates from public key.");
+        return ErrorCode::UNSPECIFIED_ERROR;
+    }
+
+    // Convert BIGNUMs to fixed-size byte arrays (32 bytes for P-256)
+    // BN_bn2binpad pads with zeros if the BIGNUM is smaller than 'len'.
+    // It returns the number of bytes written, or -1 on error.
+    if (BN_bn2binpad(x_bn.get(), key_x_coordinate.data(), key_x_coordinate.size()) == -1) {
+        WARNING("Failed to convert X coordinate BIGNUM to binary.");
+        return ErrorCode::UNSPECIFIED_ERROR;
+    }
+
+    if (BN_bn2binpad(y_bn.get(), key_y_coordinate.data(), key_y_coordinate.size()) == -1) {
+        WARNING("Failed to convert Y coordinate BIGNUM to binary.");
+        return ErrorCode::UNSPECIFIED_ERROR;
+    }
+
+    return ErrorCode::SUCCESS;
 }
 
 void DualModeController::LeReadLocalP256PublicKey(CommandView command) {
