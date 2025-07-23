@@ -29,6 +29,10 @@ git submodule update --init
 bazel run :rootcanal
 ```
 
+### Creating compile_commands.json for IDE support
+
+`bazel run :refresh_compile_commands`
+
 ### Python instructions
 
 ```
