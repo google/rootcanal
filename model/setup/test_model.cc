@@ -81,8 +81,24 @@ void TestModel::StopTimer() {
   timer_tick_task_ = kInvalidTaskId;
 }
 
-std::unique_ptr<PhyLayer> TestModel::CreatePhyLayer(PhyLayer::Identifier id, Phy::Type type) {
-  return std::make_unique<PhyLayer>(id, type);
+class IdealPhyLayer : public PhyLayer {
+ public:
+  IdealPhyLayer(PhyLayer::Identifier id, Phy::Type type) : PhyLayer(id, type) {}
+
+  int8_t ComputeRssi(PhyDevice::Identifier sender_id, PhyDevice::Identifier receiver_id, int8_t tx_power) {
+    return -30;
+  }
+};
+
+std::unique_ptr<PhyLayer> TestModel::CreatePhyLayer(PhyLayer::Identifier id, Phy::Type type, Phy::Model model) {
+  if (model == Phy::Model::IDEAL) {
+    return std::make_unique<IdealPhyLayer>(id, type);
+  } else if (model == Phy::Model::PSEUDORANDOM) {
+    return std::make_unique<PhyLayer>(id, type);
+  } else {
+    ERROR("Unknown PHY model: {}, using pseudorandom", static_cast<std::underlying_type_t<Phy::Model>>(model));
+    return std::make_unique<PhyLayer>(id, type);
+  }
 }
 
 std::shared_ptr<PhyDevice> TestModel::CreatePhyDevice(std::string type,
@@ -133,9 +149,9 @@ void TestModel::RemoveDevice(PhyDevice::Identifier device_id) {
 }
 
 // Add a phy to the test model.
-PhyLayer::Identifier TestModel::AddPhy(Phy::Type type) {
+PhyLayer::Identifier TestModel::AddPhy(Phy::Type type, Phy::Model model) {
   static PhyLayer::Identifier next_id = 0;
-  std::shared_ptr<PhyLayer> phy_layer = CreatePhyLayer(next_id++, type);
+  std::shared_ptr<PhyLayer> phy_layer = CreatePhyLayer(next_id++, type, model);
   phy_layers_[phy_layer->id] = phy_layer;
   return phy_layer->id;
 }

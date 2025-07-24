@@ -155,13 +155,27 @@ void TestCommandHandler::RemoveDevice(const vector<std::string>& args) {
 }
 
 void TestCommandHandler::AddPhy(const vector<std::string>& args) {
-  if (args.size() != 1) {
-    response_string_ = "TestCommandHandler 'add_phy' takes one argument";
-  } else if (args[0] == "LOW_ENERGY") {
-    model_.AddPhy(Phy::Type::LOW_ENERGY);
+  if (args.size() < 1) {
+    response_string_ = "TestCommandHandler 'add_phy' takes at least one argument: type, and optional model";
+    return send_response_(response_string_);
+  }
+
+  Phy::Model phy_model = Phy::Model::PSEUDORANDOM;
+
+  if (args.size() > 1) {
+    if (args[1] == "IDEAL") {
+      phy_model = Phy::Model::IDEAL;
+    } else {
+      response_string_ = "TestCommandHandler 'add_phy' unrecognized model " + args[1];
+      return send_response_(response_string_);
+    }
+  }
+
+  if (args[0] == "LOW_ENERGY") {
+    model_.AddPhy(Phy::Type::LOW_ENERGY, phy_model);
     response_string_ = "TestCommandHandler 'add_phy' called with LOW_ENERGY";
   } else if (args[0] == "BR_EDR") {
-    model_.AddPhy(Phy::Type::BR_EDR);
+    model_.AddPhy(Phy::Type::BR_EDR, phy_model);
     response_string_ = "TestCommandHandler 'add_phy' called with BR_EDR";
   } else {
     response_string_ = "TestCommandHandler 'add_phy' with unrecognized type " + args[0];

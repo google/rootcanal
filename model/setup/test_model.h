@@ -60,7 +60,7 @@ public:
   }
 
   // Allow derived classes to use custom phy layer.
-  virtual std::unique_ptr<PhyLayer> CreatePhyLayer(PhyLayer::Identifier id, Phy::Type type);
+  virtual std::unique_ptr<PhyLayer> CreatePhyLayer(PhyLayer::Identifier id, Phy::Type type, Phy::Model model);
 
   // Allow derived classes to use custom phy devices.
   virtual std::shared_ptr<PhyDevice> CreatePhyDevice(std::string type,
@@ -70,7 +70,7 @@ public:
 
   PhyDevice::Identifier AddDevice(std::shared_ptr<Device> device);
   void RemoveDevice(PhyDevice::Identifier id);
-  PhyLayer::Identifier AddPhy(Phy::Type type);
+  PhyLayer::Identifier AddPhy(Phy::Type type, Phy::Model model);
   void RemovePhy(PhyLayer::Identifier id);
   void AddDeviceToPhy(PhyDevice::Identifier device_id, PhyLayer::Identifier phy_id);
   void RemoveDeviceFromPhy(PhyDevice::Identifier device_id, PhyLayer::Identifier phy_id);
