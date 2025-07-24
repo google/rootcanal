@@ -157,7 +157,8 @@ void TestCommandHandler::RemoveDevice(const vector<std::string>& args) {
 void TestCommandHandler::AddPhy(const vector<std::string>& args) {
   if (args.size() < 1) {
     response_string_ = "TestCommandHandler 'add_phy' takes at least one argument: type, and optional model";
-    return send_response_(response_string_);
+    send_response_(response_string_);
+    return;
   }
 
   Phy::Model phy_model = Phy::Model::PSEUDORANDOM;
@@ -165,9 +166,12 @@ void TestCommandHandler::AddPhy(const vector<std::string>& args) {
   if (args.size() > 1) {
     if (args[1] == "IDEAL") {
       phy_model = Phy::Model::IDEAL;
+    } else if (args[1] == "PSEUDORANDOM") {
+      phy_model = Phy::Model::PSEUDORANDOM;
     } else {
       response_string_ = "TestCommandHandler 'add_phy' unrecognized model " + args[1];
-      return send_response_(response_string_);
+      send_response_(response_string_);
+      return;
     }
   }
 
