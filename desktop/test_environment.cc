@@ -232,8 +232,8 @@ void TestEnvironment::SetUpTestChannel() {
             return false;
           });
 
-  test_channel_.AddPhy({"BR_EDR"});
-  test_channel_.AddPhy({"LOW_ENERGY"});
+  test_channel_.AddPhy({"BR_EDR", "IDEAL"});
+  test_channel_.AddPhy({"LOW_ENERGY", "IDEAL"});
   test_channel_.AddDevice({"beacon", "be:ac:01:55:00:01", "1000"});
   test_channel_.AddDeviceToPhy({"0", "1"});
   test_channel_.AddDevice({"beacon", "be:ac:01:55:00:02", "1000"});

@@ -24,6 +24,11 @@ public:
     LOW_ENERGY,
     BR_EDR,
   };
+
+  enum class Model {
+    PSEUDORANDOM,
+    IDEAL,
+  };
 };
 
 }  // namespace rootcanal
