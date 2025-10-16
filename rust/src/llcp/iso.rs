@@ -522,7 +522,7 @@ impl IsoManager {
         // state, the Controller shall return the error code
         // Command Disallowed (0x0C).
         if !self.cig_config.get(&cig_id).map(|cig| cig.configurable).unwrap_or(true) {
-            println!("CIG ({}) is no longer in the configurable state", cig_id);
+            println!("CIG ({cig_id}) is no longer in the configurable state");
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
 
@@ -618,8 +618,7 @@ impl IsoManager {
             || (configures_p_to_c && !(0xff..=0xf_ffff).contains(&sdu_interval_p_to_c))
         {
             println!(
-                "invalid SDU_Interval C->P ({}) or SDU_Interval P->C ({})",
-                sdu_interval_c_to_p, sdu_interval_p_to_c
+                "invalid SDU_Interval C->P ({sdu_interval_c_to_p}) or SDU_Interval P->C ({sdu_interval_p_to_c})"
             );
             return self
                 .send_hci_event(command_complete(hci::ErrorCode::InvalidHciCommandParameters));
@@ -628,8 +627,7 @@ impl IsoManager {
             || (configures_p_to_c && !(0x5..=0xfa0).contains(&max_transport_latency_p_to_c))
         {
             println!(
-                "invalid Max_Transport_Latency C->P ({}) or Max_Transport_Latency P->C ({})",
-                max_transport_latency_c_to_p, max_transport_latency_p_to_c
+                "invalid Max_Transport_Latency C->P ({max_transport_latency_c_to_p}) or Max_Transport_Latency P->C ({max_transport_latency_p_to_c})"
             );
             return self
                 .send_hci_event(command_complete(hci::ErrorCode::InvalidHciCommandParameters));
@@ -711,7 +709,7 @@ impl IsoManager {
         // state, the Controller shall return the error code
         // Command Disallowed (0x0C).
         if !self.cig_config.get(&cig_id).map(|cig| cig.configurable).unwrap_or(true) {
-            println!("CIG ({}) is no longer in the configurable state", cig_id);
+            println!("CIG ({cig_id}) is no longer in the configurable state");
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
 
@@ -807,8 +805,7 @@ impl IsoManager {
             || (configures_p_to_c && !(0xff..=0xf_ffff).contains(&sdu_interval_p_to_c))
         {
             println!(
-                "invalid SDU_Interval C->P ({}) or SDU_Interval P->C ({})",
-                sdu_interval_c_to_p, sdu_interval_p_to_c
+                "invalid SDU_Interval C->P ({sdu_interval_c_to_p}) or SDU_Interval P->C ({sdu_interval_p_to_c})"
             );
             return self
                 .send_hci_event(command_complete(hci::ErrorCode::InvalidHciCommandParameters));
@@ -864,7 +861,7 @@ impl IsoManager {
         // If the Host issues this command with a CIG_ID that does not exist, the
         // Controller shall return the error code Unknown Connection Identifier (0x02).
         if !self.cig_config.contains_key(&cig_id) {
-            println!("CIG ({}) does not exist", cig_id);
+            println!("CIG ({cig_id}) does not exist");
             return self.send_hci_event(command_complete(hci::ErrorCode::UnknownConnection));
         }
 
@@ -876,7 +873,7 @@ impl IsoManager {
                 && cis.cig_id == cig_id
                 && cis.state != CisState::Configuration
         }) {
-            println!("CIG ({}) cannot be removed as it is in active state", cig_id);
+            println!("CIG ({cig_id}) cannot be removed as it is in active state");
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
 
@@ -1007,8 +1004,7 @@ impl IsoManager {
         // Unknown Connection Identifier (0x02).
         if !self.cis_connections.contains_key(&connection_handle) {
             println!(
-                "cannot accept LE CIS request with invalid connection handle {}",
-                connection_handle
+                "cannot accept LE CIS request with invalid connection handle {connection_handle}"
             );
             return self.send_hci_event(command_status(hci::ErrorCode::UnknownConnection));
         }
@@ -1019,8 +1015,7 @@ impl IsoManager {
         // return the error code Command Disallowed (0x0C).
         if cis.role == hci::Role::Central {
             println!(
-                "cannot accept LE CIS request with central connection handle {}",
-                connection_handle
+                "cannot accept LE CIS request with central connection handle {connection_handle}"
             );
             return self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
         }
@@ -1031,8 +1026,7 @@ impl IsoManager {
         // the Controller shall return the error code Command Disallowed (0x0C).
         if cis.state != CisState::PendingAccept {
             println!(
-                "cannot accept LE CIS request for non-pending connection handle {}",
-                connection_handle
+                "cannot accept LE CIS request for non-pending connection handle {connection_handle}"
             );
             return self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
         }
@@ -1069,8 +1063,7 @@ impl IsoManager {
         // Unknown Connection Identifier (0x02).
         if !self.cis_connections.contains_key(&connection_handle) {
             println!(
-                "cannot accept LE CIS request with invalid connection handle {}",
-                connection_handle
+                "cannot accept LE CIS request with invalid connection handle {connection_handle}"
             );
             return self.send_hci_event(command_complete(hci::ErrorCode::UnknownConnection));
         }
@@ -1081,8 +1074,7 @@ impl IsoManager {
         // return the error code Command Disallowed (0x0C).
         if cis.role == hci::Role::Central {
             println!(
-                "cannot accept LE CIS request with central connection handle {}",
-                connection_handle
+                "cannot accept LE CIS request with central connection handle {connection_handle}"
             );
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
@@ -1093,8 +1085,7 @@ impl IsoManager {
         // the Controller shall return the error code Command Disallowed (0x0C).
         if cis.state != CisState::PendingAccept {
             println!(
-                "cannot accept LE CIS request for non-pending connection handle {}",
-                connection_handle
+                "cannot accept LE CIS request for non-pending connection handle {connection_handle}"
             );
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
@@ -1134,7 +1125,7 @@ impl IsoManager {
         // exist or that is not for a CIS, CIS configuration, or BIS, the Controller shall
         // return the error code Unknown Connection Identifier (0x02).
         let Some(cis) = self.cis_connections.get_mut(&connection_handle) else {
-            println!("the CIS connection handle 0x{:x} is not assigned", connection_handle);
+            println!("the CIS connection handle 0x{connection_handle:x} is not assigned");
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         };
 
@@ -1217,7 +1208,7 @@ impl IsoManager {
         // or is not for a CIS, CIS configuration, or BIS, the Controller shall return the
         // error code Unknown Connection Identifier (0x02).
         let Some(cis) = self.cis_connections.get_mut(&connection_handle) else {
-            println!("the CIS connection handle 0x{:x} is not assigned", connection_handle);
+            println!("the CIS connection handle 0x{connection_handle:x} is not assigned");
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         };
 
@@ -1266,8 +1257,7 @@ impl IsoManager {
         // shall return the error code Command Disallowed (0x0C).
         if !matches!(cis.state, CisState::Connected | CisState::PendingRsp) {
             println!(
-                "cannot disconnect CIS connection with handle {} because it is not connected",
-                connection_handle
+                "cannot disconnect CIS connection with handle {connection_handle} because it is not connected"
             );
             return self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
         }

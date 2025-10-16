@@ -880,7 +880,7 @@ mod tests {
         fn assert_max_size<T>(_value: T, limit: usize) {
             let type_name = std::any::type_name::<T>();
             let size = std::mem::size_of::<T>();
-            println!("Size of {}: {}", type_name, size);
+            println!("Size of {type_name}: {size}");
             assert!(size < limit)
         }
 
