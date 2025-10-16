@@ -15,6 +15,7 @@
 // TODO(b/290018030): Remove this and add proper safety comments.
 #![allow(clippy::undocumented_unsafe_blocks)]
 
+use pdl_runtime::Packet;
 use std::convert::TryFrom;
 use std::mem::ManuallyDrop;
 use std::rc::Rc;
@@ -161,7 +162,7 @@ pub unsafe extern "C" fn link_manager_ingest_hci(
     let lm = ManuallyDrop::new(unsafe { Rc::from_raw(lm) });
     let data = unsafe { slice::from_raw_parts(data, len) };
 
-    if let Ok(packet) = hci::Command::parse(data) {
+    if let Ok(packet) = hci::Command::decode_full(data) {
         lm.ingest_hci(packet).is_ok()
     } else {
         false
@@ -190,7 +191,7 @@ pub unsafe extern "C" fn link_manager_ingest_lmp(
     let lm = ManuallyDrop::new(unsafe { Rc::from_raw(lm) });
     let data = unsafe { slice::from_raw_parts(data, len) };
 
-    if let Ok(packet) = lmp::LmpPacket::parse(data) {
+    if let Ok(packet) = lmp::LmpPacket::decode_full(data) {
         unsafe { lm.ingest_lmp(hci::Address::from(&*from), packet).is_ok() }
     } else {
         false
@@ -295,7 +296,7 @@ pub unsafe extern "C" fn link_layer_ingest_hci(
     let ll = Rc::get_mut(&mut ll).unwrap();
     let data = unsafe { slice::from_raw_parts(data, len) };
 
-    if let Ok(packet) = hci::Command::parse(data) {
+    if let Ok(packet) = hci::Command::decode_full(data) {
         ll.ingest_hci(packet).is_ok()
     } else {
         false
@@ -324,7 +325,7 @@ pub unsafe extern "C" fn link_layer_ingest_llcp(
     let ll = Rc::get_mut(&mut ll).unwrap();
     let data = unsafe { slice::from_raw_parts(data, len) };
 
-    if let Ok(packet) = llcp::LlcpPacket::parse(data) {
+    if let Ok(packet) = llcp::LlcpPacket::decode_full(data) {
         ll.ingest_llcp(handle, packet).is_ok()
     } else {
         false

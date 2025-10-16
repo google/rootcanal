@@ -85,15 +85,15 @@ impl LinkLayer {
     pub fn ingest_hci(&mut self, packet: hci::Command) -> Result<(), LinkLayerError> {
         use hci::CommandChild::*;
         match packet.specialize() {
-            Disconnect(packet) => self.iso.hci_disconnect(packet),
-            LeSetCigParameters(packet) => self.iso.hci_le_set_cig_parameters(packet),
-            LeSetCigParametersTest(packet) => self.iso.hci_le_set_cig_parameters_test(packet),
-            LeCreateCis(packet) => self.iso.hci_le_create_cis(packet),
-            LeRemoveCig(packet) => self.iso.hci_le_remove_cig(packet),
-            LeAcceptCisRequest(packet) => self.iso.hci_le_accept_cis_request(packet),
-            LeRejectCisRequest(packet) => self.iso.hci_le_reject_cis_request(packet),
-            LeSetupIsoDataPath(packet) => self.iso.hci_le_setup_iso_data_path(packet),
-            LeRemoveIsoDataPath(packet) => self.iso.hci_le_remove_iso_data_path(packet),
+            Ok(Disconnect(packet)) => self.iso.hci_disconnect(packet),
+            Ok(LeSetCigParameters(packet)) => self.iso.hci_le_set_cig_parameters(packet),
+            Ok(LeSetCigParametersTest(packet)) => self.iso.hci_le_set_cig_parameters_test(packet),
+            Ok(LeCreateCis(packet)) => self.iso.hci_le_create_cis(packet),
+            Ok(LeRemoveCig(packet)) => self.iso.hci_le_remove_cig(packet),
+            Ok(LeAcceptCisRequest(packet)) => self.iso.hci_le_accept_cis_request(packet),
+            Ok(LeRejectCisRequest(packet)) => self.iso.hci_le_reject_cis_request(packet),
+            Ok(LeSetupIsoDataPath(packet)) => self.iso.hci_le_setup_iso_data_path(packet),
+            Ok(LeRemoveIsoDataPath(packet)) => self.iso.hci_le_remove_iso_data_path(packet),
             _ => Err(LinkLayerError::UnhandledHciPacket)?,
         };
         Ok(())
@@ -106,16 +106,18 @@ impl LinkLayer {
     ) -> Result<(), LinkLayerError> {
         use llcp::LlcpPacketChild::*;
         match packet.specialize() {
-            RejectExtInd(packet) => match llcp::Opcode::try_from(packet.get_reject_opcode()) {
+            Ok(RejectExtInd(packet)) => match llcp::Opcode::try_from(packet.reject_opcode()) {
                 Ok(llcp::Opcode::LlCisReq) => {
                     self.iso.ll_reject_ext_ind(acl_connection_handle, packet)
                 }
                 _ => unreachable!(),
             },
-            CisReq(packet) => self.iso.ll_cis_req(acl_connection_handle, packet),
-            CisRsp(packet) => self.iso.ll_cis_rsp(acl_connection_handle, packet),
-            CisInd(packet) => self.iso.ll_cis_ind(acl_connection_handle, packet),
-            CisTerminateInd(packet) => self.iso.ll_cis_terminate_ind(acl_connection_handle, packet),
+            Ok(CisReq(packet)) => self.iso.ll_cis_req(acl_connection_handle, packet),
+            Ok(CisRsp(packet)) => self.iso.ll_cis_rsp(acl_connection_handle, packet),
+            Ok(CisInd(packet)) => self.iso.ll_cis_ind(acl_connection_handle, packet),
+            Ok(CisTerminateInd(packet)) => {
+                self.iso.ll_cis_terminate_ind(acl_connection_handle, packet)
+            }
             _ => unimplemented!(),
         }
         Ok(())

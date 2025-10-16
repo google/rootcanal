@@ -20,11 +20,11 @@ macro_rules! sequence_body {
             use crate::packets::lmp::*;
 
             let builder = paste! {
-                [<$packet Builder>] {
+                $packet {
                     $($name: $value),*
                 }
             };
-            $ctx.0.in_lmp_packets.borrow_mut().push_back(builder.build().into());
+            $ctx.0.in_lmp_packets.borrow_mut().push_back(builder.try_into().unwrap());
 
             let poll = crate::lmp::test::poll($ctx.1.as_mut());
 
@@ -40,11 +40,11 @@ macro_rules! sequence_body {
             use crate::packets::hci::*;
 
             let builder = paste! {
-                [<$packet Builder>] {
+                $packet {
                     $($name: $value),*
                 }
             };
-            $ctx.0.hci_commands.borrow_mut().push_back(builder.build().into());
+            $ctx.0.hci_commands.borrow_mut().push_back(builder.try_into().unwrap());
 
             let poll = crate::lmp::test::poll($ctx.1.as_mut());
 
@@ -64,7 +64,7 @@ macro_rules! sequence_body {
             }
 
             $(
-                let value = paste! { packet.[<get_ $name>]() };
+                let value = paste! { packet.$name() };
                 assert_eq!(value.clone(), $expected_value);
             )*
 
@@ -82,7 +82,7 @@ macro_rules! sequence_body {
             }
 
             $(
-                let value = paste! { packet.[<get_ $name>]() };
+                let value = paste! { packet.$name() };
                 assert_eq!(value.clone(), $expected_value);
             )*
 
@@ -136,5 +136,4 @@ macro_rules! sequence {
         });
     }
 
-pub(crate) use sequence;
-pub(crate) use sequence_body;
+pub(crate) use {sequence, sequence_body};

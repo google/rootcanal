@@ -14,7 +14,6 @@
 
 use crate::ffi;
 use crate::packets::{hci, llcp};
-use pdl_runtime::Packet as _;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 
@@ -141,10 +140,10 @@ impl CisParameters {
     fn new(cig_config: &CigConfig, cis_config: &CisConfig) -> CisParameters {
         let bn_c_to_p: u8 = cis_config
             .bn_c_to_p
-            .unwrap_or_else(|| ((cis_config.max_sdu_c_to_p + 250) / 251).try_into().unwrap());
+            .unwrap_or_else(|| cis_config.max_sdu_c_to_p.div_ceil(251).try_into().unwrap());
         let bn_p_to_c: u8 = cis_config
             .bn_p_to_c
-            .unwrap_or_else(|| ((cis_config.max_sdu_p_to_c + 250) / 251).try_into().unwrap());
+            .unwrap_or_else(|| cis_config.max_sdu_p_to_c.div_ceil(251).try_into().unwrap());
         let nse = cis_config.nse.unwrap_or(std::cmp::max(bn_c_to_p, bn_p_to_c));
         let max_pdu_c_to_p = cis_config.max_pdu_c_to_p.unwrap_or(251);
         let max_pdu_p_to_c = cis_config.max_pdu_p_to_c.unwrap_or(251);
@@ -299,7 +298,7 @@ impl IsoManager {
             match cis.state {
                 // When the CIS is fully connected, disconnection is notified
                 // with Disconnection Complete event.
-                CisState::Connected => self.send_hci_event(hci::DisconnectionCompleteBuilder {
+                CisState::Connected => self.send_hci_event(hci::DisconnectionComplete {
                     status: hci::ErrorCode::Success,
                     connection_handle: cis.cis_connection_handle,
                     reason,
@@ -310,7 +309,7 @@ impl IsoManager {
                 // Similarly, when a remote CIS connection request has been accepted
                 // by the Host, the status must be notified with LE Cis Established.
                 CisState::PendingRsp | CisState::PendingInd => {
-                    self.send_hci_event(hci::LeCisEstablishedV1Builder {
+                    self.send_hci_event(hci::LeCisEstablishedV1 {
                         status: reason,
                         connection_handle: cis.cis_connection_handle,
                         cig_sync_delay: 0,
@@ -341,7 +340,7 @@ impl IsoManager {
                 continue;
             }
 
-            self.send_hci_event(hci::LeCisEstablishedV1Builder {
+            self.send_hci_event(hci::LeCisEstablishedV1 {
                 status: reason,
                 connection_handle: cis.cis_connection_handle,
                 cig_sync_delay: 0,
@@ -416,12 +415,16 @@ impl IsoManager {
         })
     }
 
-    fn send_hci_event<E: Into<hci::Event>>(&self, event: E) {
-        self.ops.send_hci_event(&event.into().encode_to_vec().unwrap())
+    fn send_hci_event<E: TryInto<hci::Event> + pdl_runtime::Packet>(&self, event: E) {
+        self.ops.send_hci_event(&event.encode_to_vec().unwrap())
     }
 
-    fn send_llcp_packet<P: Into<llcp::LlcpPacket>>(&self, acl_connection_handle: u16, packet: P) {
-        self.ops.send_llcp_packet(acl_connection_handle, &packet.into().encode_to_vec().unwrap())
+    fn send_llcp_packet<P: TryInto<llcp::LlcpPacket> + pdl_runtime::Packet>(
+        &self,
+        acl_connection_handle: u16,
+        packet: P,
+    ) {
+        self.ops.send_llcp_packet(acl_connection_handle, &packet.encode_to_vec().unwrap())
     }
 
     fn get_le_features(&self) -> u64 {
@@ -470,7 +473,7 @@ impl IsoManager {
 
             self.send_llcp_packet(
                 request.acl_connection_handle,
-                llcp::CisReqBuilder {
+                llcp::CisReq {
                     cig_id: request.cig_id,
                     cis_id: request.cis_id,
                     phy_c_to_p: parameters.phy_c_to_p,
@@ -503,15 +506,15 @@ impl IsoManager {
     }
 
     pub fn hci_le_set_cig_parameters(&mut self, packet: hci::LeSetCigParameters) {
-        let cig_id: u8 = packet.get_cig_id();
-        let sdu_interval_c_to_p: u32 = packet.get_sdu_interval_c_to_p();
-        let sdu_interval_p_to_c: u32 = packet.get_sdu_interval_p_to_c();
-        let framed: bool = packet.get_framing() == hci::Enable::Enabled;
-        let max_transport_latency_c_to_p: u16 = packet.get_max_transport_latency_c_to_p();
-        let max_transport_latency_p_to_c: u16 = packet.get_max_transport_latency_p_to_c();
-        let cis_config: &[hci::CisParametersConfig] = packet.get_cis_config();
+        let cig_id: u8 = packet.cig_id();
+        let sdu_interval_c_to_p: u32 = packet.sdu_interval_c_to_p();
+        let sdu_interval_p_to_c: u32 = packet.sdu_interval_p_to_c();
+        let framed: bool = packet.framing() == hci::Enable::Enabled;
+        let max_transport_latency_c_to_p: u16 = packet.max_transport_latency_c_to_p();
+        let max_transport_latency_p_to_c: u16 = packet.max_transport_latency_p_to_c();
+        let cis_config: &[hci::CisParametersConfig] = packet.cis_config();
 
-        let command_complete = |status| hci::LeSetCigParametersCompleteBuilder {
+        let command_complete = |status| hci::LeSetCigParametersComplete {
             status,
             cig_id,
             connection_handle: vec![],
@@ -522,7 +525,7 @@ impl IsoManager {
         // state, the Controller shall return the error code
         // Command Disallowed (0x0C).
         if !self.cig_config.get(&cig_id).map(|cig| cig.configurable).unwrap_or(true) {
-            println!("CIG ({cig_id}) is no longer in the configurable state");
+            println!("CIG ({}) is no longer in the configurable state", cig_id);
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
 
@@ -618,7 +621,8 @@ impl IsoManager {
             || (configures_p_to_c && !(0xff..=0xf_ffff).contains(&sdu_interval_p_to_c))
         {
             println!(
-                "invalid SDU_Interval C->P ({sdu_interval_c_to_p}) or SDU_Interval P->C ({sdu_interval_p_to_c})"
+                "invalid SDU_Interval C->P ({}) or SDU_Interval P->C ({})",
+                sdu_interval_c_to_p, sdu_interval_p_to_c
             );
             return self
                 .send_hci_event(command_complete(hci::ErrorCode::InvalidHciCommandParameters));
@@ -627,7 +631,8 @@ impl IsoManager {
             || (configures_p_to_c && !(0x5..=0xfa0).contains(&max_transport_latency_p_to_c))
         {
             println!(
-                "invalid Max_Transport_Latency C->P ({max_transport_latency_c_to_p}) or Max_Transport_Latency P->C ({max_transport_latency_p_to_c})"
+                "invalid Max_Transport_Latency C->P ({}) or Max_Transport_Latency P->C ({})",
+                max_transport_latency_c_to_p, max_transport_latency_p_to_c
             );
             return self
                 .send_hci_event(command_complete(hci::ErrorCode::InvalidHciCommandParameters));
@@ -680,7 +685,7 @@ impl IsoManager {
             cis_connection_handles.push(cis_connection_handle);
         }
 
-        self.send_hci_event(hci::LeSetCigParametersCompleteBuilder {
+        self.send_hci_event(hci::LeSetCigParametersComplete {
             status: hci::ErrorCode::Success,
             cig_id,
             connection_handle: cis_connection_handles,
@@ -689,16 +694,16 @@ impl IsoManager {
     }
 
     pub fn hci_le_set_cig_parameters_test(&mut self, packet: hci::LeSetCigParametersTest) {
-        let cig_id: u8 = packet.get_cig_id();
-        let sdu_interval_c_to_p: u32 = packet.get_sdu_interval_c_to_p();
-        let sdu_interval_p_to_c: u32 = packet.get_sdu_interval_p_to_c();
-        let ft_c_to_p: u8 = packet.get_ft_c_to_p();
-        let ft_p_to_c: u8 = packet.get_ft_p_to_c();
-        let iso_interval: u16 = packet.get_iso_interval();
-        let framed: bool = packet.get_framing() == hci::Enable::Enabled;
-        let cis_config: &[hci::LeCisParametersTestConfig] = packet.get_cis_config();
+        let cig_id: u8 = packet.cig_id();
+        let sdu_interval_c_to_p: u32 = packet.sdu_interval_c_to_p();
+        let sdu_interval_p_to_c: u32 = packet.sdu_interval_p_to_c();
+        let ft_c_to_p: u8 = packet.ft_c_to_p();
+        let ft_p_to_c: u8 = packet.ft_p_to_c();
+        let iso_interval: u16 = packet.iso_interval();
+        let framed: bool = packet.framing() == hci::Enable::Enabled;
+        let cis_config: &[hci::LeCisParametersTestConfig] = packet.cis_config();
 
-        let command_complete = |status| hci::LeSetCigParametersTestCompleteBuilder {
+        let command_complete = |status| hci::LeSetCigParametersTestComplete {
             status,
             cig_id,
             connection_handle: vec![],
@@ -709,7 +714,7 @@ impl IsoManager {
         // state, the Controller shall return the error code
         // Command Disallowed (0x0C).
         if !self.cig_config.get(&cig_id).map(|cig| cig.configurable).unwrap_or(true) {
-            println!("CIG ({cig_id}) is no longer in the configurable state");
+            println!("CIG ({}) is no longer in the configurable state", cig_id);
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
 
@@ -805,7 +810,8 @@ impl IsoManager {
             || (configures_p_to_c && !(0xff..=0xf_ffff).contains(&sdu_interval_p_to_c))
         {
             println!(
-                "invalid SDU_Interval C->P ({sdu_interval_c_to_p}) or SDU_Interval P->C ({sdu_interval_p_to_c})"
+                "invalid SDU_Interval C->P ({}) or SDU_Interval P->C ({})",
+                sdu_interval_c_to_p, sdu_interval_p_to_c
             );
             return self
                 .send_hci_event(command_complete(hci::ErrorCode::InvalidHciCommandParameters));
@@ -844,7 +850,7 @@ impl IsoManager {
             cis_connection_handles.push(cis_connection_handle);
         }
 
-        self.send_hci_event(hci::LeSetCigParametersTestCompleteBuilder {
+        self.send_hci_event(hci::LeSetCigParametersTestComplete {
             status: hci::ErrorCode::Success,
             cig_id,
             connection_handle: cis_connection_handles,
@@ -853,15 +859,15 @@ impl IsoManager {
     }
 
     pub fn hci_le_remove_cig(&mut self, packet: hci::LeRemoveCig) {
-        let cig_id: u8 = packet.get_cig_id();
+        let cig_id: u8 = packet.cig_id();
 
         let command_complete =
-            |status| hci::LeRemoveCigCompleteBuilder { status, cig_id, num_hci_command_packets: 1 };
+            |status| hci::LeRemoveCigComplete { status, cig_id, num_hci_command_packets: 1 };
 
         // If the Host issues this command with a CIG_ID that does not exist, the
         // Controller shall return the error code Unknown Connection Identifier (0x02).
         if !self.cig_config.contains_key(&cig_id) {
-            println!("CIG ({cig_id}) does not exist");
+            println!("CIG ({}) does not exist", cig_id);
             return self.send_hci_event(command_complete(hci::ErrorCode::UnknownConnection));
         }
 
@@ -873,7 +879,7 @@ impl IsoManager {
                 && cis.cig_id == cig_id
                 && cis.state != CisState::Configuration
         }) {
-            println!("CIG ({cig_id}) cannot be removed as it is in active state");
+            println!("CIG ({}) cannot be removed as it is in active state", cig_id);
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
 
@@ -889,11 +895,10 @@ impl IsoManager {
     }
 
     pub fn hci_le_create_cis(&mut self, packet: hci::LeCreateCis) {
-        let cis_config: &[hci::LeCreateCisConfig] = packet.get_cis_config();
+        let cis_config: &[hci::LeCreateCisConfig] = packet.cis_config();
         let mut cis_connection_requests: Vec<CisRequest> = vec![];
 
-        let command_status =
-            |status| hci::LeCreateCisStatusBuilder { status, num_hci_command_packets: 1 };
+        let command_status = |status| hci::LeCreateCisStatus { status, num_hci_command_packets: 1 };
 
         for cis_config in cis_config {
             match self.acl_connections.get(&cis_config.acl_connection_handle) {
@@ -993,10 +998,10 @@ impl IsoManager {
     }
 
     pub fn hci_le_accept_cis_request(&mut self, packet: hci::LeAcceptCisRequest) {
-        let connection_handle: u16 = packet.get_connection_handle();
+        let connection_handle: u16 = packet.connection_handle();
 
         let command_status =
-            |status| hci::LeAcceptCisRequestStatusBuilder { status, num_hci_command_packets: 1 };
+            |status| hci::LeAcceptCisRequestStatus { status, num_hci_command_packets: 1 };
 
         // If the Peripheral’s Host issues this command with a
         // Connection_Handle that does not exist, or the Connection_Handle
@@ -1004,7 +1009,8 @@ impl IsoManager {
         // Unknown Connection Identifier (0x02).
         if !self.cis_connections.contains_key(&connection_handle) {
             println!(
-                "cannot accept LE CIS request with invalid connection handle {connection_handle}"
+                "cannot accept LE CIS request with invalid connection handle {}",
+                connection_handle
             );
             return self.send_hci_event(command_status(hci::ErrorCode::UnknownConnection));
         }
@@ -1015,7 +1021,8 @@ impl IsoManager {
         // return the error code Command Disallowed (0x0C).
         if cis.role == hci::Role::Central {
             println!(
-                "cannot accept LE CIS request with central connection handle {connection_handle}"
+                "cannot accept LE CIS request with central connection handle {}",
+                connection_handle
             );
             return self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
         }
@@ -1026,7 +1033,8 @@ impl IsoManager {
         // the Controller shall return the error code Command Disallowed (0x0C).
         if cis.state != CisState::PendingAccept {
             println!(
-                "cannot accept LE CIS request for non-pending connection handle {connection_handle}"
+                "cannot accept LE CIS request for non-pending connection handle {}",
+                connection_handle
             );
             return self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
         }
@@ -1038,20 +1046,16 @@ impl IsoManager {
         let acl_connection_handle = cis.acl_connection_handle.unwrap();
         self.send_llcp_packet(
             acl_connection_handle,
-            llcp::CisRspBuilder {
-                cis_offset_min: 0,
-                cis_offset_max: 0xffffff,
-                conn_event_count: 0,
-            },
+            llcp::CisRsp { cis_offset_min: 0, cis_offset_max: 0xffffff, conn_event_count: 0 },
         );
 
         self.send_hci_event(command_status(hci::ErrorCode::Success))
     }
 
     pub fn hci_le_reject_cis_request(&mut self, packet: hci::LeRejectCisRequest) {
-        let connection_handle: u16 = packet.get_connection_handle();
+        let connection_handle: u16 = packet.connection_handle();
 
-        let command_complete = |status| hci::LeRejectCisRequestCompleteBuilder {
+        let command_complete = |status| hci::LeRejectCisRequestComplete {
             status,
             connection_handle,
             num_hci_command_packets: 1,
@@ -1063,7 +1067,8 @@ impl IsoManager {
         // Unknown Connection Identifier (0x02).
         if !self.cis_connections.contains_key(&connection_handle) {
             println!(
-                "cannot accept LE CIS request with invalid connection handle {connection_handle}"
+                "cannot accept LE CIS request with invalid connection handle {}",
+                connection_handle
             );
             return self.send_hci_event(command_complete(hci::ErrorCode::UnknownConnection));
         }
@@ -1074,7 +1079,8 @@ impl IsoManager {
         // return the error code Command Disallowed (0x0C).
         if cis.role == hci::Role::Central {
             println!(
-                "cannot accept LE CIS request with central connection handle {connection_handle}"
+                "cannot accept LE CIS request with central connection handle {}",
+                connection_handle
             );
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
@@ -1085,7 +1091,8 @@ impl IsoManager {
         // the Controller shall return the error code Command Disallowed (0x0C).
         if cis.state != CisState::PendingAccept {
             println!(
-                "cannot accept LE CIS request for non-pending connection handle {connection_handle}"
+                "cannot accept LE CIS request for non-pending connection handle {}",
+                connection_handle
             );
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
@@ -1095,14 +1102,14 @@ impl IsoManager {
         self.cis_connections.remove(&connection_handle);
 
         // Send back LL_CIS_RSP to reject the request.
-        let error_code = if packet.get_reason() == hci::ErrorCode::Success {
+        let error_code = if packet.reason() == hci::ErrorCode::Success {
             hci::ErrorCode::RemoteUserTerminatedConnection
         } else {
-            packet.get_reason()
+            packet.reason()
         };
         self.send_llcp_packet(
             acl_connection_handle,
-            llcp::RejectExtIndBuilder {
+            llcp::RejectExtInd {
                 reject_opcode: llcp::Opcode::LlCisReq as u8,
                 error_code: error_code as u8,
             },
@@ -1112,10 +1119,10 @@ impl IsoManager {
     }
 
     pub fn hci_le_setup_iso_data_path(&mut self, packet: hci::LeSetupIsoDataPath) {
-        let connection_handle: u16 = packet.get_connection_handle();
-        let codec_configuration = packet.get_codec_configuration();
+        let connection_handle: u16 = packet.connection_handle();
+        let codec_configuration = packet.codec_configuration();
 
-        let command_complete = |status| hci::LeSetupIsoDataPathCompleteBuilder {
+        let command_complete = |status| hci::LeSetupIsoDataPathComplete {
             status,
             connection_handle,
             num_hci_command_packets: 1,
@@ -1125,7 +1132,7 @@ impl IsoManager {
         // exist or that is not for a CIS, CIS configuration, or BIS, the Controller shall
         // return the error code Unknown Connection Identifier (0x02).
         let Some(cis) = self.cis_connections.get_mut(&connection_handle) else {
-            println!("the CIS connection handle 0x{connection_handle:x} is not assigned");
+            println!("the CIS connection handle 0x{:x} is not assigned", connection_handle);
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         };
 
@@ -1139,15 +1146,11 @@ impl IsoManager {
         // Connection_Handle and direction before issuing the HCI_LE_Remove_ISO_Data_-
         // Path command for that Connection_Handle and direction, the Controller shall
         // return the error code Command Disallowed (0x0C).
-        if cis.iso_data_path_c_to_p.is_some()
-            && packet.get_data_path_direction() == c_to_p_direction
-        {
+        if cis.iso_data_path_c_to_p.is_some() && packet.data_path_direction() == c_to_p_direction {
             println!("C->P ISO data path already configured for ({}, {})", cis.cig_id, cis.cis_id);
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
-        if cis.iso_data_path_p_to_c.is_some()
-            && packet.get_data_path_direction() == p_to_c_direction
-        {
+        if cis.iso_data_path_p_to_c.is_some() && packet.data_path_direction() == p_to_c_direction {
             println!("P->C ISO data path already configured for ({}, {})", cis.cig_id, cis.cis_id);
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
@@ -1173,7 +1176,7 @@ impl IsoManager {
         // If the Host issues this command with Codec_Configuration_Length non-zero
         // and Codec_ID set to transparent air mode, the Controller shall return the error
         // code Invalid HCI Command Parameters (0x12).
-        if !codec_configuration.is_empty() && packet.get_codec_id() == 0x3 {
+        if !codec_configuration.is_empty() && packet.codec_id() == 0x3 {
             println!("Codec Configuration is not empty and Codec ID is for transparent air mode");
             return self
                 .send_hci_event(command_complete(hci::ErrorCode::InvalidHciCommandParameters));
@@ -1184,7 +1187,7 @@ impl IsoManager {
         // Connection_Handle parameter, the Controller shall return the error code
         // Invalid HCI Command Parameters (0x12).
 
-        if packet.get_data_path_direction() == c_to_p_direction {
+        if packet.data_path_direction() == c_to_p_direction {
             cis.iso_data_path_c_to_p = Some(IsoDataPath::Hci);
         } else {
             cis.iso_data_path_p_to_c = Some(IsoDataPath::Hci);
@@ -1194,11 +1197,11 @@ impl IsoManager {
     }
 
     pub fn hci_le_remove_iso_data_path(&mut self, packet: hci::LeRemoveIsoDataPath) {
-        let connection_handle: u16 = packet.get_connection_handle();
-        let remove_input_data_path = packet.get_remove_input_data_path() != 0;
-        let remove_output_data_path = packet.get_remove_output_data_path() != 0;
+        let connection_handle: u16 = packet.connection_handle();
+        let remove_input_data_path = packet.remove_input_data_path() != 0;
+        let remove_output_data_path = packet.remove_output_data_path() != 0;
 
-        let command_complete = |status| hci::LeRemoveIsoDataPathCompleteBuilder {
+        let command_complete = |status| hci::LeRemoveIsoDataPathComplete {
             status,
             connection_handle,
             num_hci_command_packets: 1,
@@ -1208,7 +1211,7 @@ impl IsoManager {
         // or is not for a CIS, CIS configuration, or BIS, the Controller shall return the
         // error code Unknown Connection Identifier (0x02).
         let Some(cis) = self.cis_connections.get_mut(&connection_handle) else {
-            println!("the CIS connection handle 0x{connection_handle:x} is not assigned");
+            println!("the CIS connection handle 0x{:x} is not assigned", connection_handle);
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         };
 
@@ -1241,9 +1244,8 @@ impl IsoManager {
     }
 
     pub fn hci_disconnect(&mut self, packet: hci::Disconnect) {
-        let connection_handle: u16 = packet.get_connection_handle();
-        let command_status =
-            |status| hci::DisconnectStatusBuilder { status, num_hci_command_packets: 1 };
+        let connection_handle: u16 = packet.connection_handle();
+        let command_status = |status| hci::DisconnectStatus { status, num_hci_command_packets: 1 };
 
         let Some(cis) = self.cis_connections.get(&connection_handle).cloned() else {
             return self.send_hci_event(command_status(hci::ErrorCode::UnknownConnection));
@@ -1257,7 +1259,8 @@ impl IsoManager {
         // shall return the error code Command Disallowed (0x0C).
         if !matches!(cis.state, CisState::Connected | CisState::PendingRsp) {
             println!(
-                "cannot disconnect CIS connection with handle {connection_handle} because it is not connected"
+                "cannot disconnect CIS connection with handle {} because it is not connected",
+                connection_handle
             );
             return self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
         }
@@ -1272,15 +1275,15 @@ impl IsoManager {
 
         self.send_llcp_packet(
             cis.acl_connection_handle.unwrap(),
-            llcp::CisTerminateIndBuilder {
+            llcp::CisTerminateInd {
                 cig_id: cis.cig_id,
                 cis_id: cis.cis_id,
-                error_code: packet.get_reason().into(),
+                error_code: packet.reason().into(),
             },
         );
 
         self.send_hci_event(command_status(hci::ErrorCode::Success));
-        self.send_hci_event(hci::DisconnectionCompleteBuilder {
+        self.send_hci_event(hci::DisconnectionComplete {
             status: hci::ErrorCode::Success,
             connection_handle,
             reason: hci::ErrorCode::ConnectionTerminatedByLocalHost,
@@ -1292,8 +1295,8 @@ impl IsoManager {
         self.cis_connections.insert(
             cis_connection_handle,
             Cis {
-                cig_id: packet.get_cig_id(),
-                cis_id: packet.get_cis_id(),
+                cig_id: packet.cig_id(),
+                cis_id: packet.cis_id(),
                 role: hci::Role::Peripheral,
                 acl_connection_handle: Some(acl_connection_handle),
                 cis_connection_handle,
@@ -1303,31 +1306,31 @@ impl IsoManager {
                 parameters: Some(CisParameters {
                     cig_sync_delay: 0,
                     cis_sync_delay: 0,
-                    phy_c_to_p: packet.get_phy_c_to_p(),
-                    phy_p_to_c: packet.get_phy_p_to_c(),
-                    nse: packet.get_nse(),
-                    bn_c_to_p: packet.get_bn_c_to_p(),
-                    bn_p_to_c: packet.get_bn_p_to_c(),
-                    ft_c_to_p: packet.get_ft_c_to_p(),
-                    ft_p_to_c: packet.get_ft_p_to_c(),
-                    max_pdu_c_to_p: packet.get_max_pdu_c_to_p(),
-                    max_pdu_p_to_c: packet.get_max_pdu_p_to_c(),
-                    max_sdu_c_to_p: packet.get_max_sdu_c_to_p(),
-                    max_sdu_p_to_c: packet.get_max_sdu_p_to_c(),
-                    sdu_interval_c_to_p: packet.get_sdu_interval_c_to_p(),
-                    sdu_interval_p_to_c: packet.get_sdu_interval_p_to_c(),
-                    iso_interval: packet.get_iso_interval(),
-                    sub_interval: packet.get_sub_interval(),
-                    framed: packet.get_framed() != 0,
+                    phy_c_to_p: packet.phy_c_to_p(),
+                    phy_p_to_c: packet.phy_p_to_c(),
+                    nse: packet.nse(),
+                    bn_c_to_p: packet.bn_c_to_p(),
+                    bn_p_to_c: packet.bn_p_to_c(),
+                    ft_c_to_p: packet.ft_c_to_p(),
+                    ft_p_to_c: packet.ft_p_to_c(),
+                    max_pdu_c_to_p: packet.max_pdu_c_to_p(),
+                    max_pdu_p_to_c: packet.max_pdu_p_to_c(),
+                    max_sdu_c_to_p: packet.max_sdu_c_to_p(),
+                    max_sdu_p_to_c: packet.max_sdu_p_to_c(),
+                    sdu_interval_c_to_p: packet.sdu_interval_c_to_p(),
+                    sdu_interval_p_to_c: packet.sdu_interval_p_to_c(),
+                    iso_interval: packet.iso_interval(),
+                    sub_interval: packet.sub_interval(),
+                    framed: packet.framed() != 0,
                 }),
             },
         );
 
-        self.send_hci_event(hci::LeCisRequestBuilder {
+        self.send_hci_event(hci::LeCisRequest {
             acl_connection_handle,
             cis_connection_handle,
-            cig_id: packet.get_cig_id(),
-            cis_id: packet.get_cis_id(),
+            cig_id: packet.cig_id(),
+            cis_id: packet.cis_id(),
         })
     }
 
@@ -1346,7 +1349,7 @@ impl IsoManager {
             let parameters = cis.parameters.as_ref().unwrap();
             self.send_llcp_packet(
                 acl_connection_handle,
-                llcp::CisIndBuilder {
+                llcp::CisInd {
                     aa: 0,
                     cis_offset: 0,
                     cig_sync_delay: parameters.cig_sync_delay,
@@ -1354,7 +1357,7 @@ impl IsoManager {
                     conn_event_count: 0,
                 },
             );
-            self.send_hci_event(hci::LeCisEstablishedV1Builder {
+            self.send_hci_event(hci::LeCisEstablishedV1 {
                 status: hci::ErrorCode::Success,
                 connection_handle: cis_connection_handle,
                 cig_sync_delay: parameters.cig_sync_delay,
@@ -1380,7 +1383,7 @@ impl IsoManager {
     }
 
     pub fn ll_reject_ext_ind(&mut self, acl_connection_handle: u16, packet: llcp::RejectExtInd) {
-        if packet.get_reject_opcode() != llcp::Opcode::LlCisReq as u8 {
+        if packet.reject_opcode() != llcp::Opcode::LlCisReq as u8 {
             return;
         }
 
@@ -1394,7 +1397,7 @@ impl IsoManager {
             let cis = self.cis_connections.get_mut(&cis_connection_handle).unwrap();
             cis.state = CisState::Configuration;
             cis.parameters = None;
-            self.send_hci_event(hci::LeCisEstablishedV1Builder {
+            self.send_hci_event(hci::LeCisEstablishedV1 {
                 status: hci::ErrorCode::RemoteUserTerminatedConnection,
                 connection_handle: cis_connection_handle,
                 cig_sync_delay: 0,
@@ -1430,12 +1433,12 @@ impl IsoManager {
             self.cis_connections.entry(cis_connection_handle).and_modify(|cis| {
                 cis.state = CisState::Connected;
                 let parameters = cis.parameters.as_mut().unwrap();
-                parameters.cig_sync_delay = packet.get_cig_sync_delay();
-                parameters.cis_sync_delay = packet.get_cis_sync_delay();
+                parameters.cig_sync_delay = packet.cig_sync_delay();
+                parameters.cis_sync_delay = packet.cis_sync_delay();
             });
             let cis = self.cis_connections.get(&cis_connection_handle).unwrap();
             let parameters = cis.parameters.as_ref().unwrap();
-            self.send_hci_event(hci::LeCisEstablishedV1Builder {
+            self.send_hci_event(hci::LeCisEstablishedV1 {
                 status: hci::ErrorCode::Success,
                 connection_handle: cis_connection_handle,
                 cig_sync_delay: parameters.cig_sync_delay,
@@ -1465,15 +1468,15 @@ impl IsoManager {
     ) {
         let cis_connection_handle = self.get_cis_connection_handle(|cis| {
             cis.acl_connection_handle == Some(acl_connection_handle)
-                && cis.cig_id == packet.get_cig_id()
-                && cis.cis_id == packet.get_cis_id()
+                && cis.cig_id == packet.cig_id()
+                && cis.cis_id == packet.cis_id()
         });
 
         if let Some(cis_connection_handle) = cis_connection_handle {
-            self.send_hci_event(hci::DisconnectionCompleteBuilder {
+            self.send_hci_event(hci::DisconnectionComplete {
                 status: hci::ErrorCode::Success,
                 connection_handle: cis_connection_handle,
-                reason: hci::ErrorCode::try_from(packet.get_error_code()).unwrap(),
+                reason: hci::ErrorCode::try_from(packet.error_code()).unwrap(),
             });
             self.cis_connections.remove(&cis_connection_handle);
         } else {
@@ -1494,7 +1497,7 @@ fn iso_interval(
 ) -> Option<slots> {
     if framed {
         let iso_interval = std::cmp::max(sdu_interval_c_to_p, sdu_interval_p_to_c);
-        Some(((iso_interval + 1249) / 1250) as u16)
+        Some(iso_interval.div_ceil(1250) as u16)
     } else {
         // Unframed PDUs shall only be used when the ISO_Interval is equal to
         // or an integer multiple of the SDU_Interval and a constant time offset

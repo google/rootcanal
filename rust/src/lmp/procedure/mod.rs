@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{self, Poll};
@@ -24,8 +24,8 @@ pub trait Context {
     fn poll_hci_command<C: TryFrom<hci::Command>>(&self) -> Poll<C>;
     fn poll_lmp_packet<P: TryFrom<lmp::LmpPacket>>(&self) -> Poll<P>;
 
-    fn send_hci_event<E: Into<hci::Event>>(&self, event: E);
-    fn send_lmp_packet<P: Into<lmp::LmpPacket>>(&self, packet: P);
+    fn send_hci_event<E: TryInto<hci::Event> + pdl_runtime::Packet>(&self, event: E);
+    fn send_lmp_packet<P: TryInto<lmp::LmpPacket> + pdl_runtime::Packet>(&self, packet: P);
 
     fn peer_address(&self) -> hci::Address;
     fn peer_handle(&self) -> u16;
@@ -44,12 +44,15 @@ pub trait Context {
         ReceiveFuture(Self::poll_lmp_packet, self)
     }
 
-    fn send_accepted_lmp_packet<P: Into<lmp::LmpPacket>>(
+    fn send_accepted_lmp_packet<P: TryInto<lmp::LmpPacket> + pdl_runtime::Packet>(
         &self,
         packet: P,
-    ) -> SendAcceptedLmpPacketFuture<'_, Self> {
-        let packet = packet.into();
-        let opcode = packet.get_opcode();
+    ) -> SendAcceptedLmpPacketFuture<'_, Self>
+    where
+        <P as TryInto<lmp::LmpPacket>>::Error: std::fmt::Debug,
+    {
+        let packet = packet.try_into().unwrap();
+        let opcode = packet.opcode();
         self.send_lmp_packet(packet);
 
         SendAcceptedLmpPacketFuture(self, opcode)
@@ -89,15 +92,15 @@ where
     fn poll(self: Pin<&mut Self>, _cx: &mut task::Context<'_>) -> Poll<Self::Output> {
         let accepted = self.0.poll_lmp_packet::<lmp::Accepted>();
         if let Poll::Ready(accepted) = accepted {
-            if accepted.get_accepted_opcode() == self.1 {
+            if accepted.accepted_opcode() == self.1 {
                 return Poll::Ready(Ok(()));
             }
         }
 
         let not_accepted = self.0.poll_lmp_packet::<lmp::NotAccepted>();
         if let Poll::Ready(not_accepted) = not_accepted {
-            if not_accepted.get_not_accepted_opcode() == self.1 {
-                return Poll::Ready(Err(not_accepted.get_error_code()));
+            if not_accepted.not_accepted_opcode() == self.1 {
+                return Poll::Ready(Err(not_accepted.error_code()));
             }
         }
 

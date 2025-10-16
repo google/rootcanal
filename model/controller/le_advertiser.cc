@@ -40,7 +40,7 @@ using duration = std::chrono::steady_clock::duration;
 using time_point = std::chrono::steady_clock::time_point;
 };  // namespace chrono
 
-slots operator"" _slots(unsigned long long count) { return slots(count); }
+slots operator""_slots(unsigned long long count) { return slots(count); }
 
 // =============================================================================
 //  Constants

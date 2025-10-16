@@ -18,34 +18,26 @@ use crate::lmp::procedure::Context;
 use crate::packets::lmp;
 
 pub async fn initiate(ctx: &impl Context, features_page: u8) -> u64 {
-    ctx.send_lmp_packet(
-        lmp::FeaturesReqExtBuilder {
-            transaction_id: 0,
-            features_page,
-            max_supported_page: 1,
-            extended_features: ctx.extended_features(features_page).to_le_bytes(),
-        }
-        .build(),
-    );
+    ctx.send_lmp_packet(lmp::FeaturesReqExt {
+        transaction_id: 0,
+        features_page,
+        max_supported_page: 1,
+        extended_features: ctx.extended_features(features_page).to_le_bytes(),
+    });
 
-    u64::from_le_bytes(
-        *ctx.receive_lmp_packet::<lmp::FeaturesResExt>().await.get_extended_features(),
-    )
+    u64::from_le_bytes(*ctx.receive_lmp_packet::<lmp::FeaturesResExt>().await.extended_features())
 }
 
 pub async fn respond(ctx: &impl Context) {
     let req = ctx.receive_lmp_packet::<lmp::FeaturesReqExt>().await;
-    let features_page = req.get_features_page();
+    let features_page = req.features_page();
 
-    ctx.send_lmp_packet(
-        lmp::FeaturesResExtBuilder {
-            transaction_id: 0,
-            features_page,
-            max_supported_page: 1,
-            extended_features: ctx.extended_features(features_page).to_le_bytes(),
-        }
-        .build(),
-    );
+    ctx.send_lmp_packet(lmp::FeaturesResExt {
+        transaction_id: 0,
+        features_page,
+        max_supported_page: 1,
+        extended_features: ctx.extended_features(features_page).to_le_bytes(),
+    });
 }
 
 async fn supported_on_both_page(ctx: &impl Context, page_number: u8, feature_mask: u64) -> bool {

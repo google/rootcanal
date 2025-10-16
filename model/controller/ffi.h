@@ -19,10 +19,13 @@
 
 extern "C" {
 
-void* ffi_controller_new(uint8_t const address[6],
-                         void (*send_hci)(int idc, uint8_t const* data, size_t data_len),
-                         void (*send_ll)(uint8_t const* data, size_t data_len, int phy,
-                                         int tx_power));
+void* ffi_controller_new(
+        uint8_t const address[6],
+        void (*send_hci)(void* cookie, int idc, uint8_t const* data, size_t data_len),
+        void (*send_ll)(void* cookie, uint8_t const* data, size_t data_len, int phy, int tx_power),
+        void (*invalid_packet_handler)(void* cookie, int reason, char const* message,
+                                       uint8_t const* data, size_t data_len),
+        void* cookie);
 void ffi_controller_delete(void* controller);
 void ffi_controller_receive_hci(void* controller, int idc, uint8_t const* data, size_t data_len);
 void ffi_controller_receive_ll(void* controller, uint8_t const* data, size_t data_len, int phy,

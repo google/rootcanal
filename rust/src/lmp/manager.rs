@@ -133,110 +133,103 @@ impl LinkManager {
         status: hci::ErrorCode,
     ) -> Result<(), LinkManagerError> {
         use hci::CommandChild::*;
-        #[allow(unused_imports)]
-        use Option::None; // Overwrite `None` variant of `Child` enum
 
         let event: hci::Event = match command.specialize() {
-            LinkKeyRequestReply(packet) => hci::LinkKeyRequestReplyCompleteBuilder {
+            Ok(LinkKeyRequestReply(packet)) => hci::LinkKeyRequestReplyComplete {
                 status,
-                bd_addr: packet.get_bd_addr(),
+                bd_addr: packet.bd_addr(),
                 num_hci_command_packets,
             }
-            .into(),
-            LinkKeyRequestNegativeReply(packet) => {
-                hci::LinkKeyRequestNegativeReplyCompleteBuilder {
-                    status,
-                    bd_addr: packet.get_bd_addr(),
-                    num_hci_command_packets,
-                }
-                .into()
-            }
-            PinCodeRequestReply(packet) => hci::PinCodeRequestReplyCompleteBuilder {
+            .try_into(),
+            Ok(LinkKeyRequestNegativeReply(packet)) => hci::LinkKeyRequestNegativeReplyComplete {
                 status,
-                bd_addr: packet.get_bd_addr(),
+                bd_addr: packet.bd_addr(),
                 num_hci_command_packets,
             }
-            .into(),
-            PinCodeRequestNegativeReply(packet) => {
-                hci::PinCodeRequestNegativeReplyCompleteBuilder {
-                    status,
-                    bd_addr: packet.get_bd_addr(),
-                    num_hci_command_packets,
-                }
-                .into()
-            }
-            IoCapabilityRequestReply(packet) => hci::IoCapabilityRequestReplyCompleteBuilder {
+            .try_into(),
+            Ok(PinCodeRequestReply(packet)) => hci::PinCodeRequestReplyComplete {
                 status,
-                bd_addr: packet.get_bd_addr(),
+                bd_addr: packet.bd_addr(),
                 num_hci_command_packets,
             }
-            .into(),
-            IoCapabilityRequestNegativeReply(packet) => {
-                hci::IoCapabilityRequestNegativeReplyCompleteBuilder {
-                    status,
-                    bd_addr: packet.get_bd_addr(),
-                    num_hci_command_packets,
-                }
-                .into()
-            }
-            UserConfirmationRequestReply(packet) => {
-                hci::UserConfirmationRequestReplyCompleteBuilder {
-                    status,
-                    bd_addr: packet.get_bd_addr(),
-                    num_hci_command_packets,
-                }
-                .into()
-            }
-            UserConfirmationRequestNegativeReply(packet) => {
-                hci::UserConfirmationRequestNegativeReplyCompleteBuilder {
-                    status,
-                    bd_addr: packet.get_bd_addr(),
-                    num_hci_command_packets,
-                }
-                .into()
-            }
-            UserPasskeyRequestReply(packet) => hci::UserPasskeyRequestReplyCompleteBuilder {
+            .try_into(),
+            Ok(PinCodeRequestNegativeReply(packet)) => hci::PinCodeRequestNegativeReplyComplete {
                 status,
-                bd_addr: packet.get_bd_addr(),
+                bd_addr: packet.bd_addr(),
                 num_hci_command_packets,
             }
-            .into(),
-            UserPasskeyRequestNegativeReply(packet) => {
-                hci::UserPasskeyRequestNegativeReplyCompleteBuilder {
-                    status,
-                    bd_addr: packet.get_bd_addr(),
-                    num_hci_command_packets,
-                }
-                .into()
-            }
-            RemoteOobDataRequestReply(packet) => hci::RemoteOobDataRequestReplyCompleteBuilder {
+            .try_into(),
+            Ok(IoCapabilityRequestReply(packet)) => hci::IoCapabilityRequestReplyComplete {
                 status,
-                bd_addr: packet.get_bd_addr(),
+                bd_addr: packet.bd_addr(),
                 num_hci_command_packets,
             }
-            .into(),
-            RemoteOobDataRequestNegativeReply(packet) => {
-                hci::RemoteOobDataRequestNegativeReplyCompleteBuilder {
+            .try_into(),
+            Ok(IoCapabilityRequestNegativeReply(packet)) => {
+                hci::IoCapabilityRequestNegativeReplyComplete {
                     status,
-                    bd_addr: packet.get_bd_addr(),
+                    bd_addr: packet.bd_addr(),
                     num_hci_command_packets,
                 }
-                .into()
+                .try_into()
             }
-            SendKeypressNotification(packet) => hci::SendKeypressNotificationCompleteBuilder {
+            Ok(UserConfirmationRequestReply(packet)) => hci::UserConfirmationRequestReplyComplete {
                 status,
-                bd_addr: packet.get_bd_addr(),
+                bd_addr: packet.bd_addr(),
                 num_hci_command_packets,
             }
-            .into(),
-            AuthenticationRequested(_) => {
-                hci::AuthenticationRequestedStatusBuilder { status, num_hci_command_packets }.into()
+            .try_into(),
+            Ok(UserConfirmationRequestNegativeReply(packet)) => {
+                hci::UserConfirmationRequestNegativeReplyComplete {
+                    status,
+                    bd_addr: packet.bd_addr(),
+                    num_hci_command_packets,
+                }
+                .try_into()
             }
-            SetConnectionEncryption(_) => {
-                hci::SetConnectionEncryptionStatusBuilder { status, num_hci_command_packets }.into()
+            Ok(UserPasskeyRequestReply(packet)) => hci::UserPasskeyRequestReplyComplete {
+                status,
+                bd_addr: packet.bd_addr(),
+                num_hci_command_packets,
+            }
+            .try_into(),
+            Ok(UserPasskeyRequestNegativeReply(packet)) => {
+                hci::UserPasskeyRequestNegativeReplyComplete {
+                    status,
+                    bd_addr: packet.bd_addr(),
+                    num_hci_command_packets,
+                }
+                .try_into()
+            }
+            Ok(RemoteOobDataRequestReply(packet)) => hci::RemoteOobDataRequestReplyComplete {
+                status,
+                bd_addr: packet.bd_addr(),
+                num_hci_command_packets,
+            }
+            .try_into(),
+            Ok(RemoteOobDataRequestNegativeReply(packet)) => {
+                hci::RemoteOobDataRequestNegativeReplyComplete {
+                    status,
+                    bd_addr: packet.bd_addr(),
+                    num_hci_command_packets,
+                }
+                .try_into()
+            }
+            Ok(SendKeypressNotification(packet)) => hci::SendKeypressNotificationComplete {
+                status,
+                bd_addr: packet.bd_addr(),
+                num_hci_command_packets,
+            }
+            .try_into(),
+            Ok(AuthenticationRequested(_)) => {
+                hci::AuthenticationRequestedStatus { status, num_hci_command_packets }.try_into()
+            }
+            Ok(SetConnectionEncryption(_)) => {
+                hci::SetConnectionEncryptionStatus { status, num_hci_command_packets }.try_into()
             }
             _ => return Err(LinkManagerError::UnhandledHciPacket),
-        };
+        }
+        .expect("failed to serialize response event");
         self.ops.send_hci_event(&event.encode_to_vec().unwrap());
         Ok(())
     }
@@ -322,17 +315,15 @@ impl procedure::Context for LinkContext {
         }
     }
 
-    fn send_hci_event<E: Into<hci::Event>>(&self, event: E) {
+    fn send_hci_event<E: TryInto<hci::Event> + pdl_runtime::Packet>(&self, event: E) {
         if let Some(manager) = self.manager.upgrade() {
-            manager.ops.send_hci_event(&event.into().encode_to_vec().unwrap())
+            manager.ops.send_hci_event(&event.encode_to_vec().unwrap())
         }
     }
 
-    fn send_lmp_packet<P: Into<lmp::LmpPacket>>(&self, packet: P) {
+    fn send_lmp_packet<P: TryInto<lmp::LmpPacket> + pdl_runtime::Packet>(&self, packet: P) {
         if let Some(manager) = self.manager.upgrade() {
-            manager
-                .ops
-                .send_lmp_packet(self.peer_address(), &packet.into().encode_to_vec().unwrap())
+            manager.ops.send_lmp_packet(self.peer_address(), &packet.encode_to_vec().unwrap())
         }
     }
 

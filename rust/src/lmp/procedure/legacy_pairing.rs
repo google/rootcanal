@@ -20,27 +20,22 @@ use crate::packets::{hci, lmp};
 use crate::num_hci_command_packets;
 
 pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
-    ctx.send_hci_event(hci::PinCodeRequestBuilder { bd_addr: ctx.peer_address() }.build());
+    ctx.send_hci_event(hci::PinCodeRequest { bd_addr: ctx.peer_address() });
 
     let _pin_code = ctx.receive_hci_command::<hci::PinCodeRequestReply>().await;
 
-    ctx.send_hci_event(
-        hci::PinCodeRequestReplyCompleteBuilder {
-            num_hci_command_packets: 1,
-            status: hci::ErrorCode::Success,
-            bd_addr: ctx.peer_address(),
-        }
-        .build(),
-    );
+    ctx.send_hci_event(hci::PinCodeRequestReplyComplete {
+        num_hci_command_packets: 1,
+        status: hci::ErrorCode::Success,
+        bd_addr: ctx.peer_address(),
+    });
 
     // TODO: handle result
     let _ = ctx
-        .send_accepted_lmp_packet(
-            lmp::InRandBuilder { transaction_id: 0, random_number: [0; 16] }.build(),
-        )
+        .send_accepted_lmp_packet(lmp::InRand { transaction_id: 0, random_number: [0; 16] })
         .await;
 
-    ctx.send_lmp_packet(lmp::CombKeyBuilder { transaction_id: 0, random_number: [0; 16] }.build());
+    ctx.send_lmp_packet(lmp::CombKey { transaction_id: 0, random_number: [0; 16] });
 
     let _ = ctx.receive_lmp_packet::<lmp::CombKey>().await;
 
@@ -52,39 +47,31 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     if auth_result.is_err() {
         return Err(());
     }
-    ctx.send_hci_event(
-        hci::LinkKeyNotificationBuilder {
-            bd_addr: ctx.peer_address(),
-            key_type: hci::KeyType::Combination,
-            link_key,
-        }
-        .build(),
-    );
+    ctx.send_hci_event(hci::LinkKeyNotification {
+        bd_addr: ctx.peer_address(),
+        key_type: hci::KeyType::Combination,
+        link_key,
+    });
 
     Ok(())
 }
 
 pub async fn respond(ctx: &impl Context, _request: lmp::InRand) -> Result<(), ()> {
-    ctx.send_hci_event(hci::PinCodeRequestBuilder { bd_addr: ctx.peer_address() }.build());
+    ctx.send_hci_event(hci::PinCodeRequest { bd_addr: ctx.peer_address() });
 
     let _pin_code = ctx.receive_hci_command::<hci::PinCodeRequestReply>().await;
 
-    ctx.send_hci_event(
-        hci::PinCodeRequestReplyCompleteBuilder {
-            num_hci_command_packets,
-            status: hci::ErrorCode::Success,
-            bd_addr: ctx.peer_address(),
-        }
-        .build(),
-    );
+    ctx.send_hci_event(hci::PinCodeRequestReplyComplete {
+        num_hci_command_packets,
+        status: hci::ErrorCode::Success,
+        bd_addr: ctx.peer_address(),
+    });
 
-    ctx.send_lmp_packet(
-        lmp::AcceptedBuilder { transaction_id: 0, accepted_opcode: lmp::Opcode::InRand }.build(),
-    );
+    ctx.send_lmp_packet(lmp::Accepted { transaction_id: 0, accepted_opcode: lmp::Opcode::InRand });
 
     let _ = ctx.receive_lmp_packet::<lmp::CombKey>().await;
 
-    ctx.send_lmp_packet(lmp::CombKeyBuilder { transaction_id: 0, random_number: [0; 16] }.build());
+    ctx.send_lmp_packet(lmp::CombKey { transaction_id: 0, random_number: [0; 16] });
 
     // Post pairing authentication
     let link_key = [0; 16];
@@ -94,14 +81,11 @@ pub async fn respond(ctx: &impl Context, _request: lmp::InRand) -> Result<(), ()
     if auth_result.is_err() {
         return Err(());
     }
-    ctx.send_hci_event(
-        hci::LinkKeyNotificationBuilder {
-            bd_addr: ctx.peer_address(),
-            key_type: hci::KeyType::Combination,
-            link_key,
-        }
-        .build(),
-    );
+    ctx.send_hci_event(hci::LinkKeyNotification {
+        bd_addr: ctx.peer_address(),
+        key_type: hci::KeyType::Combination,
+        link_key,
+    });
 
     Ok(())
 }

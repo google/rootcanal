@@ -25,7 +25,7 @@ pub async fn send_challenge(
     _link_key: [u8; 16],
 ) -> Result<(), ()> {
     let random_number = [0; 16];
-    ctx.send_lmp_packet(lmp::AuRandBuilder { transaction_id, random_number }.build());
+    ctx.send_lmp_packet(lmp::AuRand { transaction_id, random_number });
 
     match ctx.receive_lmp_packet::<Either<lmp::Sres, lmp::NotAccepted>>().await {
         Either::Left(_response) => Ok(()),
@@ -34,53 +34,44 @@ pub async fn send_challenge(
 }
 
 pub async fn receive_challenge(ctx: &impl Context, _link_key: [u8; 16]) {
-    let _random_number = *ctx.receive_lmp_packet::<lmp::AuRand>().await.get_random_number();
-    ctx.send_lmp_packet(lmp::SresBuilder { transaction_id: 0, authentication_rsp: [0; 4] }.build());
+    let _random_number = *ctx.receive_lmp_packet::<lmp::AuRand>().await.random_number();
+    ctx.send_lmp_packet(lmp::Sres { transaction_id: 0, authentication_rsp: [0; 4] });
 }
 
 pub async fn initiate(ctx: &impl Context) {
     let _ = ctx.receive_hci_command::<hci::AuthenticationRequested>().await;
-    ctx.send_hci_event(
-        hci::AuthenticationRequestedStatusBuilder {
-            num_hci_command_packets,
-            status: hci::ErrorCode::Success,
-        }
-        .build(),
-    );
+    ctx.send_hci_event(hci::AuthenticationRequestedStatus {
+        num_hci_command_packets,
+        status: hci::ErrorCode::Success,
+    });
 
-    ctx.send_hci_event(hci::LinkKeyRequestBuilder { bd_addr: ctx.peer_address() }.build());
+    ctx.send_hci_event(hci::LinkKeyRequest { bd_addr: ctx.peer_address() });
 
     let status = match ctx
         .receive_hci_command::<Either<hci::LinkKeyRequestReply, hci::LinkKeyRequestNegativeReply>>()
         .await
     {
         Either::Left(_reply) => {
-            ctx.send_hci_event(
-                hci::LinkKeyRequestReplyCompleteBuilder {
-                    num_hci_command_packets,
-                    status: hci::ErrorCode::Success,
-                    bd_addr: ctx.peer_address(),
-                }
-                .build(),
-            );
+            ctx.send_hci_event(hci::LinkKeyRequestReplyComplete {
+                num_hci_command_packets,
+                status: hci::ErrorCode::Success,
+                bd_addr: ctx.peer_address(),
+            });
 
             // Send the initial challenge to determine if the remote device has saved the link key,
             // or deleted the bond. The authentication request fails with error PIN_OR_KEY_MISSING
             // if the remote rejects the challenge.
-            match send_challenge(ctx, 0, *_reply.get_link_key()).await {
+            match send_challenge(ctx, 0, *_reply.link_key()).await {
                 Err(_) => hci::ErrorCode::PinOrKeyMissing,
                 Ok(_) => hci::ErrorCode::Success,
             }
         }
         Either::Right(_) => {
-            ctx.send_hci_event(
-                hci::LinkKeyRequestNegativeReplyCompleteBuilder {
-                    num_hci_command_packets,
-                    status: hci::ErrorCode::Success,
-                    bd_addr: ctx.peer_address(),
-                }
-                .build(),
-            );
+            ctx.send_hci_event(hci::LinkKeyRequestNegativeReplyComplete {
+                num_hci_command_packets,
+                status: hci::ErrorCode::Success,
+                bd_addr: ctx.peer_address(),
+            });
 
             let result = if features::supported_on_both_page1(
                 ctx,
@@ -100,9 +91,10 @@ pub async fn initiate(ctx: &impl Context) {
         }
     };
 
-    ctx.send_hci_event(
-        hci::AuthenticationCompleteBuilder { status, connection_handle: ctx.peer_handle() }.build(),
-    );
+    ctx.send_hci_event(hci::AuthenticationComplete {
+        status,
+        connection_handle: ctx.peer_handle(),
+    });
 }
 
 pub async fn respond(ctx: &impl Context) {
@@ -112,7 +104,7 @@ pub async fn respond(ctx: &impl Context) {
     {
         Either::Left(_random_number) => {
             // Request the Link Key from the host stack.
-            ctx.send_hci_event(hci::LinkKeyRequestBuilder { bd_addr: ctx.peer_address() }.build());
+            ctx.send_hci_event(hci::LinkKeyRequest { bd_addr: ctx.peer_address() });
 
             match ctx
                 .receive_hci_command::<Either<hci::LinkKeyRequestReply, hci::LinkKeyRequestNegativeReply>>()
@@ -120,44 +112,41 @@ pub async fn respond(ctx: &impl Context) {
             {
                 Either::Left(_reply) => {
                     ctx.send_hci_event(
-                        hci::LinkKeyRequestReplyCompleteBuilder {
+                        hci::LinkKeyRequestReplyComplete {
                             num_hci_command_packets,
                             status: hci::ErrorCode::Success,
                             bd_addr: ctx.peer_address(),
                         }
-                        .build(),
                     );
 
                     // TODO: Resolve authentication challenge
                     // Currently the Link Key is always considered valid.
                     // Send the expected LMP_SRES response.
                     ctx.send_lmp_packet(
-                        lmp::SresBuilder {
+                        lmp::Sres {
                             transaction_id: 0,
                             authentication_rsp: [0; 4]
                         }
-                        .build()
                     );
 
                     // Authentication is successul at this point.
                 }
                 Either::Right(_) => {
                     ctx.send_hci_event(
-                        hci::LinkKeyRequestNegativeReplyCompleteBuilder {
+                        hci::LinkKeyRequestNegativeReplyComplete {
                             num_hci_command_packets,
                             status: hci::ErrorCode::Success,
                             bd_addr: ctx.peer_address(),
                         }
-                        .build(),
                     );
 
                     // Respond with LMP_NOT_ACCEPTED to indicate that the
                     // Link Key is missing.
-                    ctx.send_lmp_packet(lmp::NotAcceptedBuilder {
+                    ctx.send_lmp_packet(lmp::NotAccepted {
                         not_accepted_opcode: lmp::Opcode::AuRand,
                         error_code: hci::ErrorCode::PinOrKeyMissing as u8,
                         transaction_id: 0
-                    }.build())
+                    })
                 }
             }
         }
