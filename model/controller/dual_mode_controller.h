@@ -598,14 +598,16 @@ private:
 
   // Map command opcodes to the corresponding bit index in the
   // supported command mask.
-  static const std::unordered_map<OpCode, OpCodeIndex> hci_command_op_code_to_index_;
+  static const std::unordered_map<OpCode, OpCodeIndex>& GetOpCodeToIndex();
 
   // Map all implemented opcodes to the function implementing the handler
   // for the associated command. The map should be a subset of the
   // supported_command field in the properties_ object. Commands
   // that are supported but not implemented will raise a fatal assert.
   using CommandHandler = std::function<void(DualModeController*, bluetooth::hci::CommandView)>;
-  static const std::unordered_map<OpCode, CommandHandler> hci_command_handlers_;
+
+  // Getter for the command handlers map
+  static const std::unordered_map<OpCode, CommandHandler>& GetHciCommandHandlers();
 };
 
 }  // namespace rootcanal

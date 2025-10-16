@@ -88,12 +88,18 @@ impl Context for TestContext {
         }
     }
 
-    fn send_hci_event<E: Into<hci::Event>>(&self, event: E) {
-        self.hci_events.borrow_mut().push_back(event.into());
+    fn send_hci_event<E: TryInto<hci::Event> + pdl_runtime::Packet>(&self, event: E) {
+        let Ok(event) = event.try_into() else {
+            panic!("failed to convert to Event");
+        };
+        self.hci_events.borrow_mut().push_back(event);
     }
 
-    fn send_lmp_packet<P: Into<lmp::LmpPacket>>(&self, packet: P) {
-        self.out_lmp_packets.borrow_mut().push_back(packet.into());
+    fn send_lmp_packet<P: TryInto<lmp::LmpPacket> + pdl_runtime::Packet>(&self, packet: P) {
+        let Ok(packet) = packet.try_into() else {
+            panic!("failed to convert to LmpPacket");
+        };
+        self.out_lmp_packets.borrow_mut().push_back(packet);
     }
 
     fn peer_address(&self) -> hci::Address {

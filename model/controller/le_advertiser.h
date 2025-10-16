@@ -32,7 +32,7 @@ namespace rootcanal {
 using slots = std::chrono::duration<unsigned long long, std::ratio<625, 1000000>>;
 
 // User defined literal for slots, e.g. `0x800_slots`
-slots operator"" _slots(unsigned long long count);
+slots operator""_slots(unsigned long long count);
 
 using namespace bluetooth::hci;
 

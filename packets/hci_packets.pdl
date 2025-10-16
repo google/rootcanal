@@ -384,12 +384,13 @@ enum OpCode : 16 {
   LE_CS_READ_REMOTE_FAE_TABLE = 0x208E,
   LE_CS_WRITE_CACHED_REMOTE_FAE_TABLE = 0x208F,
   LE_CS_CREATE_CONFIG = 0x2090,
-  LE_CS_REMOVE_CONFIG = 0x0291,
+  LE_CS_REMOVE_CONFIG = 0x2091,
   LE_CS_SET_CHANNEL_CLASSIFICATION = 0x2092,
   LE_CS_SET_PROCEDURE_PARAMETERS = 0x2093,
   LE_CS_PROCEDURE_ENABLE = 0x2094,
   LE_CS_TEST = 0x2095,
   LE_CS_TEST_END = 0x2096,
+  LE_SET_HOST_FEATURE_V2 = 0x2097,
   LE_ADD_DEVICE_TO_MONITORED_ADVERTISERS_LIST = 0x2098,
   LE_REMOVE_DEVICE_FROM_MONITORED_ADVERTISERS_LIST = 0x2099,
   LE_CLEAR_MONITORED_ADVERTISERS_LIST = 0x209A,
@@ -4029,18 +4030,6 @@ struct EnabledSet {
   max_extended_advertising_events : 8,
 }
 
-struct DisabledSet {
-  advertising_handle : 8,
-  _fixed_ = 0x00 : 16, // duration
-  _fixed_ = 0x00 : 8, // max_extended_advertising_events
-}
-
-packet LeSetExtendedAdvertisingDisable : Command (op_code = LE_SET_EXTENDED_ADVERTISING_ENABLE) {
-  _fixed_ = 0x00 : 8, // Enable::DISABLED
-  _count_(disabled_sets) : 8,
-  disabled_sets : DisabledSet[],
-}
-
 packet LeSetExtendedAdvertisingEnable : Command (op_code = LE_SET_EXTENDED_ADVERTISING_ENABLE) {
   enable : Enable,
   _count_(enabled_sets) : 8,
@@ -4051,7 +4040,7 @@ test LeSetExtendedAdvertisingEnable {
   "\x39\x20\x06\x01\x01\x01\x00\x00\x00",
 }
 
-test LeSetExtendedAdvertisingDisable {
+test LeSetExtendedAdvertisingEnable {
   "\x39\x20\x06\x00\x01\x01\x00\x00\x00",
 }
 
@@ -6530,12 +6519,6 @@ packet LeBatchScanReadResultParameters : LeBatchScan (batch_scan_opcode = READ_R
   batch_scan_data_read : BatchScanDataRead,
 }
 
-packet LeBatchScanReadResultParametersCompleteRaw : LeBatchScanComplete (batch_scan_opcode = READ_RESULT_PARAMETERS) {
-  batch_scan_data_read : BatchScanDataRead,
-  num_of_records : 8,
-  raw_data : 8[],
-}
-
 packet LeBatchScanReadResultParametersComplete : LeBatchScanComplete (batch_scan_opcode = READ_RESULT_PARAMETERS) {
   batch_scan_data_read : BatchScanDataRead,
   _body_,
@@ -6887,187 +6870,4 @@ packet ControllerDebugInfoEvent : VendorSpecificEvent (subevent_code = CONTROLLE
   last_block : 8,
   _size_(debug_data) : 16,
   debug_data : 8[],
-}
-
-// -----------------------------------------------------------------------------
-//  Microsoft Commands
-//  https://learn.microsoft.com/en-us/windows-hardware/drivers/bluetooth/microsoft-defined-bluetooth-hci-commands-and-events
-// -----------------------------------------------------------------------------
-
-enum MsftSubcommandOpcode : 8 {
-  MSFT_READ_SUPPORTED_FEATURES = 0x00,
-  MSFT_MONITOR_RSSI = 0x01,
-  MSFT_CANCEL_MONITOR_RSSI = 0x02,
-  MSFT_LE_MONITOR_ADV = 0x03,
-  MSFT_LE_CANCEL_MONITOR_ADV = 0x04,
-  MSFT_LE_SET_ADV_FILTER_ENABLE = 0x05,
-  MSFT_READ_ABSOLUTE_RSSI = 0x06,
-}
-
-// MSFT Commands do not have a constant opcode, so leave `op_code` undefined.
-packet MsftCommand : Command {
-  subcommand_opcode: MsftSubcommandOpcode,
-  _payload_,
-}
-
-packet MsftReadSupportedFeatures : MsftCommand (subcommand_opcode = MSFT_READ_SUPPORTED_FEATURES) {}
-
-enum MsftLeMonitorAdvConditionType : 8 {
-  MSFT_CONDITION_TYPE_PATTERNS = 0x01,
-  MSFT_CONDITION_TYPE_UUID = 0x02,
-  MSFT_CONDITION_TYPE_IRK_RESOLUTION = 0x03,
-  MSFT_CONDITION_TYPE_ADDRESS = 0x04,
-}
-
-enum MsftLeMonitorAdvConditionUuidType : 8 {
-  MSFT_CONDITION_UUID_TYPE_16_BIT = 0x01,
-  MSFT_CONDITION_UUID_TYPE_32_BIT = 0x02,
-  MSFT_CONDITION_UUID_TYPE_128_BIT = 0x03,
-}
-
-packet MsftLeMonitorAdv : MsftCommand (subcommand_opcode = MSFT_LE_MONITOR_ADV) {
-  rssi_threshold_high : 8,
-  rssi_threshold_low : 8,
-  rssi_threshold_low_time_interval : 8,
-  rssi_sampling_period : 8,
-  condition_type: MsftLeMonitorAdvConditionType,
-  _payload_,
-}
-
-struct MsftLeMonitorAdvConditionPattern {
-  _size_(pattern) : 8, // including one byte for ad_type and one byte for start_of_pattern
-  ad_type: 8,
-  start_of_pattern: 8,
-  pattern: 8[+2],
-}
-
-packet MsftLeMonitorAdvConditionPatterns : MsftLeMonitorAdv (condition_type = MSFT_CONDITION_TYPE_PATTERNS) {
-  _count_(patterns): 8,
-  patterns: MsftLeMonitorAdvConditionPattern[],
-}
-
-test MsftLeMonitorAdvConditionPatterns {
-  "\x1e\xfc\x0e\x03\x10\x05\x04\xaa\x01\x01\x06\x03\x00\x80\x81\x82\x83", // 1 pattern
-  "\x70\xfd\x13\x03\x15\x04\x02\xbb\x01\x02\x04\x03\x00\x80\x81\x06\x0f\x00\x90\x91\x92\x93", // 2 patterns
-}
-
-packet MsftLeMonitorAdvConditionUuid : MsftLeMonitorAdv (condition_type = MSFT_CONDITION_TYPE_UUID) {
-  uuid_type: MsftLeMonitorAdvConditionUuidType,
-  _payload_,
-}
-
-packet MsftLeMonitorAdvConditionUuid2 : MsftLeMonitorAdvConditionUuid (uuid_type = MSFT_CONDITION_UUID_TYPE_16_BIT) {
-  uuid2: 8[2],
-}
-
-test MsftLeMonitorAdvConditionUuid2 {
-  "\x1e\xfc\x09\x03\x10\x11\x12\x13\x02\x01\x70\x71", // opcode = fc1e for Intel
-  "\x70\xfd\x09\x03\x10\x11\x12\x13\x02\x01\x70\x71", // opcode = fd70 for Qualcomm
-}
-
-packet MsftLeMonitorAdvConditionUuid4 : MsftLeMonitorAdvConditionUuid (uuid_type = MSFT_CONDITION_UUID_TYPE_32_BIT) {
-  uuid4: 8[4],
-}
-
-test MsftLeMonitorAdvConditionUuid4 {
-  "\x1e\xfc\x0b\x03\x10\x11\x12\x13\x02\x02\x70\x71\x72\x73",
-  "\x70\xfd\x0b\x03\x10\x11\x12\x13\x02\x02\x70\x71\x72\x73",
-}
-
-packet MsftLeMonitorAdvConditionUuid16 : MsftLeMonitorAdvConditionUuid (uuid_type = MSFT_CONDITION_UUID_TYPE_128_BIT) {
-  uuid16: 8[16],
-}
-
-test MsftLeMonitorAdvConditionUuid16 {
-  "\x1e\xfc\x17\x03\x10\x11\x12\x13\x02\x03\x70\x71\x72\x73\x74\x75\x76\x77\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f",
-  "\x70\xfd\x17\x03\x10\x11\x12\x13\x02\x03\x70\x71\x72\x73\x74\x75\x76\x77\x78\x79\x7a\x7b\x7c\x7d\x7e\x7f",
-}
-
-packet MsftLeCancelMonitorAdv: MsftCommand (subcommand_opcode = MSFT_LE_CANCEL_MONITOR_ADV) {
-  monitor_handle: 8,
-}
-
-test MsftLeCancelMonitorAdv {
-  "\x1e\xfc\x02\x04\x01", // cancel handle 0x01
-}
-
-packet MsftLeSetAdvFilterEnable : MsftCommand (subcommand_opcode = MSFT_LE_SET_ADV_FILTER_ENABLE) {
-  enable: 8,
-}
-
-test MsftLeSetAdvFilterEnable {
-  "\x1e\xfc\x02\x05\x01", // disable
-  "\x70\xfd\x02\x05\x01", // enable
-}
-
-packet MsftCommandComplete : CommandComplete {
-  status: ErrorCode,
-  subcommand_opcode: MsftSubcommandOpcode,
-  _payload_,
-}
-
-packet MsftReadSupportedFeaturesCommandComplete : MsftCommandComplete (subcommand_opcode = MSFT_READ_SUPPORTED_FEATURES) {
-  supported_features: 64,
-  _size_(prefix) : 8,
-  prefix: 8[],
-}
-
-test MsftReadSupportedFeaturesCommandComplete {
-  "\x0e\x10\x01\x1e\xfc\x00\x00\x7f\x00\x00\x00\x00\x00\x00\x00\x02\x87\x80", // Msft opcode by Intel
-  "\x0e\x12\x01\x70\xfd\x00\x00\x1f\x00\x00\x00\x00\x00\x00\x00\x04\x4d\x53\x46\x54", // Msft opcode by Qualcomm
-}
-
-packet MsftLeMonitorAdvCommandComplete : MsftCommandComplete (subcommand_opcode = MSFT_LE_MONITOR_ADV) {
-  monitor_handle: 8,
-}
-
-test MsftLeMonitorAdvCommandComplete {
-  "\x0e\x06\x01\x1e\xfc\x00\x03\x05", // succeeded
-  "\x0e\x06\x01\x70\xfd\x01\x03\x06", // failed
-}
-
-packet MsftLeCancelMonitorAdvCommandComplete : MsftCommandComplete (subcommand_opcode = MSFT_LE_CANCEL_MONITOR_ADV) {}
-
-packet MsftLeSetAdvFilterEnableCommandComplete : MsftCommandComplete (subcommand_opcode = MSFT_LE_SET_ADV_FILTER_ENABLE) {}
-
-enum MsftEventCode : 8 {
-  MSFT_RSSI_EVENT = 0x01,
-  MSFT_LE_MONITOR_DEVICE_EVENT = 0x02,
-}
-
-enum MsftEventStatus : 8 {
-  MSFT_EVENT_STATUS_SUCCESS = 0x00,
-  MSFT_EVENT_STATUS_FAILURE = 0x01,
-}
-
-// It is not possible to define MSFT Event packet by deriving `Event` packet
-// because it starts with variable-length event prefix which can only be determined
-// at run-time (after receiving return of MSFT Read Supported Features).
-// Therefore we only define the payload which is located after the event prefix.
-packet MsftEventPayload {
-  msft_event_code : MsftEventCode,
-  _payload_,
-}
-
-packet MsftRssiEventPayload : MsftEventPayload (msft_event_code = MSFT_RSSI_EVENT) {
-  status: MsftEventStatus,
-  connection_handle: 16,
-  rssi: 8,
-}
-
-test MsftRssiEventPayload {
-  "\x01\x00\x01\x10\xf0", // MSFT_RSSI_EVENT succeeded
-  "\x01\x01\x02\x02\x08", // MSFT_RSSI_EVENT failed
-}
-
-packet MsftLeMonitorDeviceEventPayload : MsftEventPayload (msft_event_code = MSFT_LE_MONITOR_DEVICE_EVENT) {
-  address_type: 8,
-  bd_addr: Address,
-  monitor_handle: 8,
-  monitor_state: 8,
-}
-
-test MsftLeMonitorDeviceEventPayload {
-  "\x02\x01\x00\x01\x02\x03\x04\x05\x10\x00",
-  "\x02\x02\xf0\xf1\xf2\xf3\xf4\xf5\xaa\x02",
 }

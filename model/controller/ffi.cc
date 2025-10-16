@@ -38,27 +38,40 @@ enum Idc {
 extern "C" {
 
 __attribute__((visibility("default"))) void* ffi_controller_new(
-        uint8_t const address[6], void (*send_hci)(int idc, uint8_t const* data, size_t data_len),
-        void (*send_ll)(uint8_t const* data, size_t data_len, int phy, int tx_power)) {
+        uint8_t const address[6],
+        void (*send_hci)(void* cookie, int idc, uint8_t const* data, size_t data_len),
+        void (*send_ll)(void* cookie, uint8_t const* data, size_t data_len, int phy, int tx_power),
+        void (*invalid_packet_handler)(void* cookie, int reason, char const* message,
+                                       uint8_t const* data, size_t data_len),
+        void* cookie) {
   DualModeController* controller = new DualModeController();
   controller->SetAddress(
           Address({address[0], address[1], address[2], address[3], address[4], address[5]}));
   controller->RegisterEventChannel([=](std::shared_ptr<std::vector<uint8_t>> data) {
-    send_hci(hci::Idc::EVT, data->data(), data->size());
+    send_hci(cookie, hci::Idc::EVT, data->data(), data->size());
   });
   controller->RegisterAclChannel([=](std::shared_ptr<std::vector<uint8_t>> data) {
-    send_hci(hci::Idc::ACL, data->data(), data->size());
+    send_hci(cookie, hci::Idc::ACL, data->data(), data->size());
   });
   controller->RegisterScoChannel([=](std::shared_ptr<std::vector<uint8_t>> data) {
-    send_hci(hci::Idc::SCO, data->data(), data->size());
+    send_hci(cookie, hci::Idc::SCO, data->data(), data->size());
   });
   controller->RegisterIsoChannel([=](std::shared_ptr<std::vector<uint8_t>> data) {
-    send_hci(hci::Idc::ISO, data->data(), data->size());
+    send_hci(cookie, hci::Idc::ISO, data->data(), data->size());
   });
   controller->RegisterLinkLayerChannel(
           [=](std::vector<uint8_t> const& data, Phy::Type phy, int8_t tx_power) {
-            send_ll(data.data(), data.size(), static_cast<int>(phy), tx_power);
+            send_ll(cookie, data.data(), data.size(), static_cast<int>(phy), tx_power);
           });
+
+  if (invalid_packet_handler) {
+    controller->RegisterInvalidPacketHandler([=](uint32_t /*id*/, InvalidPacketReason reason,
+                                                 std::string message,
+                                                 std::vector<uint8_t> const& packet) {
+      invalid_packet_handler(cookie, static_cast<int>(reason), message.c_str(), packet.data(),
+                             packet.size());
+    });
+  }
 
   return controller;
 }

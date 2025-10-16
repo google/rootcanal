@@ -25,99 +25,83 @@ use hci::LMPFeaturesPage2Bits::SecureConnectionsControllerSupport;
 pub async fn initiate(ctx: &impl Context) {
     // TODO: handle turn off
     let _ = ctx.receive_hci_command::<hci::SetConnectionEncryption>().await;
-    ctx.send_hci_event(
-        hci::SetConnectionEncryptionStatusBuilder {
-            num_hci_command_packets,
-            status: hci::ErrorCode::Success,
-        }
-        .build(),
-    );
+    ctx.send_hci_event(hci::SetConnectionEncryptionStatus {
+        num_hci_command_packets,
+        status: hci::ErrorCode::Success,
+    });
 
     // TODO: handle failure
     let _ = ctx
-        .send_accepted_lmp_packet(
-            lmp::EncryptionModeReqBuilder { transaction_id: 0, encryption_mode: 0x1 }.build(),
-        )
+        .send_accepted_lmp_packet(lmp::EncryptionModeReq {
+            transaction_id: 0,
+            encryption_mode: 0x1,
+        })
         .await;
 
     // TODO: handle failure
     let _ = ctx
-        .send_accepted_lmp_packet(
-            lmp::EncryptionKeySizeReqBuilder { transaction_id: 0, key_size: 16 }.build(),
-        )
+        .send_accepted_lmp_packet(lmp::EncryptionKeySizeReq { transaction_id: 0, key_size: 16 })
         .await;
 
     // TODO: handle failure
     let _ = ctx
-        .send_accepted_lmp_packet(
-            lmp::StartEncryptionReqBuilder { transaction_id: 0, random_number: [0; 16] }.build(),
-        )
+        .send_accepted_lmp_packet(lmp::StartEncryptionReq {
+            transaction_id: 0,
+            random_number: [0; 16],
+        })
         .await;
 
     let aes_ccm = features::supported_on_both_page1(ctx, SecureConnectionsHostSupport).await
         && features::supported_on_both_page2(ctx, SecureConnectionsControllerSupport).await;
 
-    ctx.send_hci_event(
-        hci::EncryptionChangeBuilder {
-            status: hci::ErrorCode::Success,
-            connection_handle: ctx.peer_handle(),
-            encryption_enabled: if aes_ccm {
-                hci::EncryptionEnabled::BrEdrAesCcm
-            } else {
-                hci::EncryptionEnabled::On
-            },
-        }
-        .build(),
-    );
+    ctx.send_hci_event(hci::EncryptionChange {
+        status: hci::ErrorCode::Success,
+        connection_handle: ctx.peer_handle(),
+        encryption_enabled: if aes_ccm {
+            hci::EncryptionEnabled::BrEdrAesCcm
+        } else {
+            hci::EncryptionEnabled::On
+        },
+    });
 }
 
 pub async fn respond(ctx: &impl Context) {
     // TODO: handle
     let _ = ctx.receive_lmp_packet::<lmp::EncryptionModeReq>().await;
-    ctx.send_lmp_packet(
-        lmp::AcceptedBuilder { transaction_id: 0, accepted_opcode: lmp::Opcode::EncryptionModeReq }
-            .build(),
-    );
+    ctx.send_lmp_packet(lmp::Accepted {
+        transaction_id: 0,
+        accepted_opcode: lmp::Opcode::EncryptionModeReq,
+    });
 
     let _ = ctx.receive_lmp_packet::<lmp::EncryptionKeySizeReq>().await;
-    ctx.send_lmp_packet(
-        lmp::AcceptedBuilder {
-            transaction_id: 0,
-            accepted_opcode: lmp::Opcode::EncryptionKeySizeReq,
-        }
-        .build(),
-    );
+    ctx.send_lmp_packet(lmp::Accepted {
+        transaction_id: 0,
+        accepted_opcode: lmp::Opcode::EncryptionKeySizeReq,
+    });
 
     let _ = ctx.receive_lmp_packet::<lmp::StartEncryptionReq>().await;
-    ctx.send_lmp_packet(
-        lmp::AcceptedBuilder {
-            transaction_id: 0,
-            accepted_opcode: lmp::Opcode::StartEncryptionReq,
-        }
-        .build(),
-    );
+    ctx.send_lmp_packet(lmp::Accepted {
+        transaction_id: 0,
+        accepted_opcode: lmp::Opcode::StartEncryptionReq,
+    });
 
     let aes_ccm = features::supported_on_both_page1(ctx, SecureConnectionsHostSupport).await
         && features::supported_on_both_page2(ctx, SecureConnectionsControllerSupport).await;
 
-    ctx.send_hci_event(
-        hci::EncryptionChangeBuilder {
-            status: hci::ErrorCode::Success,
-            connection_handle: ctx.peer_handle(),
-            encryption_enabled: if aes_ccm {
-                hci::EncryptionEnabled::BrEdrAesCcm
-            } else {
-                hci::EncryptionEnabled::On
-            },
-        }
-        .build(),
-    );
+    ctx.send_hci_event(hci::EncryptionChange {
+        status: hci::ErrorCode::Success,
+        connection_handle: ctx.peer_handle(),
+        encryption_enabled: if aes_ccm {
+            hci::EncryptionEnabled::BrEdrAesCcm
+        } else {
+            hci::EncryptionEnabled::On
+        },
+    });
 }
 
 #[cfg(test)]
 mod tests {
-    use super::initiate;
-    use super::respond;
+    use super::{initiate, respond};
     use crate::lmp::procedure::Context;
     use crate::lmp::test::{sequence, TestContext};
 
