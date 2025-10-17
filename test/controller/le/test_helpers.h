@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "model/controller/link_layer_controller.h"
+#include "model/controller/le_controller.h"
 
 enum : unsigned {
   CONNECTABLE = 0x1,

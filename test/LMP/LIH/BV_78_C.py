@@ -18,7 +18,7 @@ import link_layer_packets as ll
 import unittest
 from hci_packets import ErrorCode
 from py.bluetooth import Address
-from py.controller import ControllerTest
+from py.controller import ControllerTest, Phy
 
 
 class Test(ControllerTest):
@@ -27,7 +27,6 @@ class Test(ControllerTest):
     async def test(self):
         # Test parameters.
         controller = self.controller
-        acl_connection_handle = 0xefe
         peer_address = Address('11:22:33:44:55:66')
 
         controller.send_cmd(
@@ -48,7 +47,8 @@ class Test(ControllerTest):
         controller.send_ll(
             ll.PageResponse(source_address=peer_address,
                             destination_address=controller.address,
-                            try_role_switch=True))
+                            try_role_switch=True),
+            phy=Phy.BrEdr)
 
         await self.expect_evt(
             hci.RoleChange(status=ErrorCode.SUCCESS,
@@ -57,7 +57,7 @@ class Test(ControllerTest):
 
         await self.expect_evt(
             hci.ConnectionComplete(status=ErrorCode.SUCCESS,
-                                   connection_handle=acl_connection_handle,
+                                   connection_handle=self.Any,
                                    bd_addr=peer_address,
                                    link_type=hci.LinkType.ACL,
                                    encryption_enabled=hci.Enable.DISABLED))

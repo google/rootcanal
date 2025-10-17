@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "hci/address.h"
-#include "model/controller/link_layer_controller.h"
+#include "model/controller/le_controller.h"
 #include "packets/hci_packets.h"
 #include "packets/link_layer_packets.h"
 
@@ -138,7 +138,7 @@ public:
 protected:
   Address address_{};
   ControllerProperties properties_{};
-  LinkLayerController controller_{address_, properties_};
+  LeController controller_{address_, properties_};
   static unsigned event_listener_called_;
 
 private:
