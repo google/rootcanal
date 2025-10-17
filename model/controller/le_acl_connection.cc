@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "model/controller/acl_connection.h"
+#include "model/controller/le_acl_connection.h"
 
 #include <chrono>
 #include <cstdint>
@@ -22,44 +22,45 @@
 #include "packets/hci_packets.h"
 
 namespace rootcanal {
-AclConnection::AclConnection(uint16_t handle, Address address, Address own_address,
-                             bluetooth::hci::Role role)
+
+LeAclConnection::LeAclConnection(uint16_t handle, AddressWithType address,
+                                 AddressWithType own_address, AddressWithType resolved_address,
+                                 bluetooth::hci::Role role,
+                                 LeAclConnectionParameters connection_parameters)
     : handle(handle),
       address(address),
       own_address(own_address),
-      role_(role),
+      resolved_address(resolved_address),
+      role(role),
+      parameters(connection_parameters),
       last_packet_timestamp_(std::chrono::steady_clock::now()),
       timeout_(std::chrono::seconds(3)) {}
 
-void AclConnection::Encrypt() { encrypted_ = true; }
+void LeAclConnection::Encrypt() { encrypted_ = true; }
 
-bool AclConnection::IsEncrypted() const { return encrypted_; }
+bool LeAclConnection::IsEncrypted() const { return encrypted_; }
 
-void AclConnection::SetLinkPolicySettings(uint16_t settings) { link_policy_settings_ = settings; }
+int8_t LeAclConnection::GetRssi() const { return rssi_; }
 
-bluetooth::hci::Role AclConnection::GetRole() const { return role_; }
+void LeAclConnection::SetRssi(int8_t rssi) { rssi_ = rssi; }
 
-void AclConnection::SetRole(bluetooth::hci::Role role) { role_ = role; }
+void LeAclConnection::ResetLinkTimer() {
+  last_packet_timestamp_ = std::chrono::steady_clock::now();
+}
 
-int8_t AclConnection::GetRssi() const { return rssi_; }
-
-void AclConnection::SetRssi(int8_t rssi) { rssi_ = rssi; }
-
-void AclConnection::ResetLinkTimer() { last_packet_timestamp_ = std::chrono::steady_clock::now(); }
-
-std::chrono::steady_clock::duration AclConnection::TimeUntilNearExpiring() const {
+std::chrono::steady_clock::duration LeAclConnection::TimeUntilNearExpiring() const {
   return (last_packet_timestamp_ + timeout_ / 2) - std::chrono::steady_clock::now();
 }
 
-bool AclConnection::IsNearExpiring() const {
+bool LeAclConnection::IsNearExpiring() const {
   return TimeUntilNearExpiring() < std::chrono::steady_clock::duration::zero();
 }
 
-std::chrono::steady_clock::duration AclConnection::TimeUntilExpired() const {
+std::chrono::steady_clock::duration LeAclConnection::TimeUntilExpired() const {
   return (last_packet_timestamp_ + timeout_) - std::chrono::steady_clock::now();
 }
 
-bool AclConnection::HasExpired() const {
+bool LeAclConnection::HasExpired() const {
   return TimeUntilExpired() < std::chrono::steady_clock::duration::zero();
 }
 

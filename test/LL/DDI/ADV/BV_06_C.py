@@ -38,7 +38,7 @@ class Test(ControllerTest):
             controller.address.address[2], controller.address.address[3],
             controller.address.address[4], controller.address.address[5]
         ])
-        connection_handle = 0xefe
+        connection_handle = None
 
         # 1. Upper Tester enables undirected advertising in the IUT using all supported advertising channels
         # and a selected advertising interval between the minimum and maximum advertising intervals.
@@ -94,10 +94,10 @@ class Test(ControllerTest):
 
         # 6. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT in step 4.
-        await self.expect_evt(
+        evt = await self.expect_evt(
             hci.LeEnhancedConnectionCompleteV1(
                 status=ErrorCode.SUCCESS,
-                connection_handle=connection_handle,
+                connection_handle=self.Any,
                 role=hci.Role.PERIPHERAL,
                 peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
                 peer_address=peer_address,
@@ -105,6 +105,8 @@ class Test(ControllerTest):
                 peripheral_latency=LL_initiator_connPeripheralLatency,
                 supervision_timeout=LL_initiator_connSupervisionTimeout,
                 central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+
+        connection_handle = evt.connection_handle
 
         # 7. The Upper Tester sends an HCI_Disconnect command to the IUT with the Connection_Handle
         # and receives a successful HCI_Command_Status event in return.

@@ -177,7 +177,8 @@ class Test(ControllerTest):
         # 10. The Lower Tester sends data packets to the IUT.
         iso_sdu = [random.randint(1, 251) for n in range(self.Max_SDU_C_TO_P)]
         controller.send_ll(
-            ll.LeConnectedIsochronousPdu(source_address=controller.address,
+            ll.LeConnectedIsochronousPdu(source_address=peer_address,
+                                         destination_address=controller.address,
                                          cig_id=cig_id,
                                          cis_id=cis_id,
                                          sequence_number=42,

@@ -130,9 +130,9 @@ __attribute__((visibility("default"))) void ffi_controller_tick(void* controller
 
 __attribute__((visibility("default"))) void ffi_generate_rpa(uint8_t const irk_[16],
                                                              uint8_t rpa[6]) {
-  std::array<uint8_t, LinkLayerController::kIrkSize> irk;
-  memcpy(irk.data(), irk_, LinkLayerController::kIrkSize);
-  Address address = LinkLayerController::generate_rpa(irk);
+  std::array<uint8_t, LeController::kIrkSize> irk;
+  memcpy(irk.data(), irk_, LeController::kIrkSize);
+  Address address = LeController::generate_rpa(irk);
   memcpy(rpa, address.data(), Address::kLength);
 }
 

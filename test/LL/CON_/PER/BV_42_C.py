@@ -36,7 +36,7 @@ class Test(ControllerTest):
     async def test(self):
         # Test parameters.
         controller = self.controller
-        acl_connection_handle = 0xefe
+        acl_connection_handle = None
         peer_address = Address('11:22:33:44:55:66')
 
         # Prelude: Establish an ACL connection as central with the IUT.
@@ -74,10 +74,10 @@ class Test(ControllerTest):
                                  conn_peripheral_latency=0x200,
                                  conn_supervision_timeout=0x200))
 
-        await self.expect_evt(
+        evt = await self.expect_evt(
             hci.LeEnhancedConnectionCompleteV1(
                 status=ErrorCode.SUCCESS,
-                connection_handle=acl_connection_handle,
+                connection_handle=self.Any,
                 role=hci.Role.PERIPHERAL,
                 peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
                 peer_address=peer_address,
@@ -85,6 +85,8 @@ class Test(ControllerTest):
                 peripheral_latency=0x200,
                 supervision_timeout=0x200,
                 central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+
+        acl_connection_handle = evt.connection_handle
 
         # 1. Upper Tester sends an HCI_LE_Set_PHY command to the IUT with the ALL_PHYS fields set to a
         # value of 0x03. Upper Tester receives an HCI_Command_Status event indicating success in

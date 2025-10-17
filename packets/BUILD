@@ -14,9 +14,9 @@ genrule(
 
 genrule(
     name = "bredr_bb_packets_json",
-    cmd = "pdlc $(location bredr_bb.pdl) > $(location bredr_bb_packets.json)",
+    cmd = "pdlc $(location bredr_bb_packets.pdl) > $(location bredr_bb_packets.json)",
     outs = ["bredr_bb_packets.json"],
-    srcs = ["bredr_bb.pdl"],
+    srcs = ["bredr_bb_packets.pdl"],
 )
 
 genrule(

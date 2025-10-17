@@ -20,7 +20,7 @@
 #include <cstdint>
 
 #include "log.h"
-#include "model/controller/link_layer_controller.h"
+#include "model/controller/le_controller.h"
 #include "packets/hci_packets.h"
 
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -136,12 +136,12 @@ namespace rootcanal {
 
 using bluetooth::hci::ApcfAction;
 
-ErrorCode LinkLayerController::LeApcfEnable(bool apcf_enable) {
+ErrorCode LeController::LeApcfEnable(bool apcf_enable) {
   apcf_scanner_.enable = apcf_enable;
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::LeApcfAddFilteringParameters(
+ErrorCode LeController::LeApcfAddFilteringParameters(
         uint8_t apcf_filter_index, uint16_t apcf_feature_selection, uint16_t apcf_list_logic_type,
         uint8_t apcf_filter_logic_type, uint8_t rssi_high_thresh,
         bluetooth::hci::DeliveryMode delivery_mode, uint16_t onfound_timeout,
@@ -177,8 +177,8 @@ ErrorCode LinkLayerController::LeApcfAddFilteringParameters(
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::LeApcfDeleteFilteringParameters(uint8_t apcf_filter_index,
-                                                               uint8_t* apcf_available_spaces) {
+ErrorCode LeController::LeApcfDeleteFilteringParameters(uint8_t apcf_filter_index,
+                                                        uint8_t* apcf_available_spaces) {
   *apcf_available_spaces = properties_.le_apcf_filter_list_size - apcf_scanner_.filters.size();
 
   if (!apcf_scanner_.HasFilterIndex(apcf_filter_index)) {
@@ -196,13 +196,13 @@ ErrorCode LinkLayerController::LeApcfDeleteFilteringParameters(uint8_t apcf_filt
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::LeApcfClearFilteringParameters(uint8_t* apcf_available_spaces) {
+ErrorCode LeController::LeApcfClearFilteringParameters(uint8_t* apcf_available_spaces) {
   apcf_scanner_.Clear();
   *apcf_available_spaces = properties_.le_apcf_filter_list_size;
   return ErrorCode::SUCCESS;
 }
 
-ErrorCode LinkLayerController::LeApcfBroadcasterAddress(
+ErrorCode LeController::LeApcfBroadcasterAddress(
         ApcfAction apcf_action, uint8_t apcf_filter_index,
         bluetooth::hci::Address apcf_broadcaster_address,
         bluetooth::hci::ApcfApplicationAddressType apcf_application_address_type,
@@ -222,9 +222,9 @@ ErrorCode LinkLayerController::LeApcfBroadcasterAddress(
   return status;
 }
 
-ErrorCode LinkLayerController::LeApcfServiceUuid(ApcfAction apcf_action, uint8_t apcf_filter_index,
-                                                 std::vector<uint8_t> apcf_uuid_data,
-                                                 uint8_t* apcf_available_spaces) {
+ErrorCode LeController::LeApcfServiceUuid(ApcfAction apcf_action, uint8_t apcf_filter_index,
+                                          std::vector<uint8_t> apcf_uuid_data,
+                                          uint8_t* apcf_available_spaces) {
   size_t uuid_data_size = apcf_uuid_data.size() / 2;
   std::vector<uint8_t> uuid_data(std::begin(apcf_uuid_data),
                                  std::begin(apcf_uuid_data) + uuid_data_size);
@@ -246,10 +246,10 @@ ErrorCode LinkLayerController::LeApcfServiceUuid(ApcfAction apcf_action, uint8_t
   return status;
 }
 
-ErrorCode LinkLayerController::LeApcfServiceSolicitationUuid(ApcfAction apcf_action,
-                                                             uint8_t apcf_filter_index,
-                                                             std::vector<uint8_t> apcf_uuid_data,
-                                                             uint8_t* apcf_available_spaces) {
+ErrorCode LeController::LeApcfServiceSolicitationUuid(ApcfAction apcf_action,
+                                                      uint8_t apcf_filter_index,
+                                                      std::vector<uint8_t> apcf_uuid_data,
+                                                      uint8_t* apcf_available_spaces) {
   size_t uuid_data_size = apcf_uuid_data.size() / 2;
   std::vector<uint8_t> uuid_data(std::begin(apcf_uuid_data),
                                  std::begin(apcf_uuid_data) + uuid_data_size);
@@ -271,9 +271,9 @@ ErrorCode LinkLayerController::LeApcfServiceSolicitationUuid(ApcfAction apcf_act
   return status;
 }
 
-ErrorCode LinkLayerController::LeApcfLocalName(ApcfAction apcf_action, uint8_t apcf_filter_index,
-                                               std::vector<uint8_t> apcf_local_name,
-                                               uint8_t* apcf_available_spaces) {
+ErrorCode LeController::LeApcfLocalName(ApcfAction apcf_action, uint8_t apcf_filter_index,
+                                        std::vector<uint8_t> apcf_local_name,
+                                        uint8_t* apcf_available_spaces) {
   size_t local_name_size = apcf_local_name.size() / 2;
   std::vector<uint8_t> local_name(std::begin(apcf_local_name),
                                   std::begin(apcf_local_name) + local_name_size);
@@ -295,10 +295,9 @@ ErrorCode LinkLayerController::LeApcfLocalName(ApcfAction apcf_action, uint8_t a
   return status;
 }
 
-ErrorCode LinkLayerController::LeApcfManufacturerData(ApcfAction apcf_action,
-                                                      uint8_t apcf_filter_index,
-                                                      std::vector<uint8_t> apcf_manufacturer_data,
-                                                      uint8_t* apcf_available_spaces) {
+ErrorCode LeController::LeApcfManufacturerData(ApcfAction apcf_action, uint8_t apcf_filter_index,
+                                               std::vector<uint8_t> apcf_manufacturer_data,
+                                               uint8_t* apcf_available_spaces) {
   size_t manufacturer_data_size = apcf_manufacturer_data.size() / 2;
   std::vector<uint8_t> manufacturer_data(
           std::begin(apcf_manufacturer_data),
@@ -322,9 +321,9 @@ ErrorCode LinkLayerController::LeApcfManufacturerData(ApcfAction apcf_action,
   return status;
 }
 
-ErrorCode LinkLayerController::LeApcfServiceData(ApcfAction apcf_action, uint8_t apcf_filter_index,
-                                                 std::vector<uint8_t> apcf_service_data,
-                                                 uint8_t* apcf_available_spaces) {
+ErrorCode LeController::LeApcfServiceData(ApcfAction apcf_action, uint8_t apcf_filter_index,
+                                          std::vector<uint8_t> apcf_service_data,
+                                          uint8_t* apcf_available_spaces) {
   size_t service_data_size = apcf_service_data.size() / 2;
   std::vector<uint8_t> service_data(std::begin(apcf_service_data),
                                     std::begin(apcf_service_data) + service_data_size);
@@ -346,11 +345,10 @@ ErrorCode LinkLayerController::LeApcfServiceData(ApcfAction apcf_action, uint8_t
   return status;
 }
 
-ErrorCode LinkLayerController::LeApcfAdTypeFilter(ApcfAction apcf_action, uint8_t apcf_filter_index,
-                                                  uint8_t apcf_ad_type,
-                                                  std::vector<uint8_t> apcf_ad_data,
-                                                  std::vector<uint8_t> apcf_ad_data_mask,
-                                                  uint8_t* apcf_available_spaces) {
+ErrorCode LeController::LeApcfAdTypeFilter(ApcfAction apcf_action, uint8_t apcf_filter_index,
+                                           uint8_t apcf_ad_type, std::vector<uint8_t> apcf_ad_data,
+                                           std::vector<uint8_t> apcf_ad_data_mask,
+                                           uint8_t* apcf_available_spaces) {
   ErrorCode status = apcf_scanner_.UpdateFilterList(
           apcf_scanner_.ad_type_filters, properties_.le_apcf_ad_type_filter_list_size, apcf_action,
           rootcanal::apcf::AdTypeFilter{

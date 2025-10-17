@@ -34,7 +34,7 @@ class Test(ControllerTest):
     async def test(self):
         controller = self.controller
         peer_address = Address('aa:bb:cc:dd:ee:ff')
-        connection_handle = 0xefe
+        connection_handle = None
 
         # 1. Configure Lower Tester to start passive scanning.
         # 2. Upper Tester enables high duty cycle directed advertising in the IUT using all supported
@@ -133,10 +133,10 @@ class Test(ControllerTest):
 
         # 11. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT in step 8.
-        await self.expect_evt(
+        evt = await self.expect_evt(
             hci.LeEnhancedConnectionCompleteV1(
                 status=ErrorCode.SUCCESS,
-                connection_handle=connection_handle,
+                connection_handle=self.Any,
                 role=hci.Role.PERIPHERAL,
                 peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
                 peer_address=peer_address,
@@ -144,6 +144,8 @@ class Test(ControllerTest):
                 peripheral_latency=self.LL_initiator_connPeripheralLatency,
                 supervision_timeout=self.LL_initiator_connSupervisionTimeout,
                 central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+
+        connection_handle = evt.connection_handle
 
         # 12. Upper Tester receives an HCI_LE_Disconnection_Complete event from the IUT with the reason
         # parameter indicating ‘connection failed to be established’, with the connection handle parameter
