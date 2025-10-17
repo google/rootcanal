@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "model/controller/link_layer_controller.h"
+#include "model/controller/le_controller.h"
 
 namespace rootcanal {
 
@@ -29,11 +29,11 @@ public:
 };
 
 TEST_F(RpaGenerationTest, Test) {
-  std::array<uint8_t, rootcanal::LinkLayerController::kIrkSize> irk = {
+  std::array<uint8_t, rootcanal::LeController::kIrkSize> irk = {
           0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
   };
 
-  AddressWithType rpa{rootcanal::LinkLayerController::generate_rpa(irk),
+  AddressWithType rpa{rootcanal::LeController::generate_rpa(irk),
                       AddressType::RANDOM_DEVICE_ADDRESS};
 
   ASSERT_TRUE(rpa.IsRpa());

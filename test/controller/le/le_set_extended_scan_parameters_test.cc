@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include "model/controller/link_layer_controller.h"
+#include "model/controller/le_controller.h"
 
 namespace rootcanal {
 
@@ -30,7 +30,7 @@ public:
 protected:
   Address address_{0};
   ControllerProperties properties_{};
-  LinkLayerController controller_{address_, properties_};
+  LeController controller_{address_, properties_};
 };
 
 static ScanningPhyParameters MakeScanningPhyParameters(LeScanType scan_type, uint16_t scan_interval,

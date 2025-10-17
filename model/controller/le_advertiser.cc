@@ -26,7 +26,7 @@
 
 #include "hci/address_with_type.h"
 #include "log.h"
-#include "model/controller/link_layer_controller.h"
+#include "model/controller/le_controller.h"
 #include "packets/hci_packets.h"
 #include "packets/link_layer_packets.h"
 
@@ -61,7 +61,7 @@ const uint16_t max_extended_advertising_pdu_size = 1650;
 // =============================================================================
 
 // HCI command LE_Set_Advertising_Parameters (Vol 4, Part E § 7.8.5).
-ErrorCode LinkLayerController::LeSetAdvertisingParameters(
+ErrorCode LeController::LeSetAdvertisingParameters(
         uint16_t advertising_interval_min, uint16_t advertising_interval_max,
         AdvertisingType advertising_type, OwnAddressType own_address_type,
         PeerAddressType peer_address_type, Address peer_address, uint8_t advertising_channel_map,
@@ -143,7 +143,7 @@ ErrorCode LinkLayerController::LeSetAdvertisingParameters(
 }
 
 // HCI command LE_Set_Advertising_Data (Vol 4, Part E § 7.8.7).
-ErrorCode LinkLayerController::LeSetAdvertisingData(const std::vector<uint8_t>& advertising_data) {
+ErrorCode LeController::LeSetAdvertisingData(const std::vector<uint8_t>& advertising_data) {
   // Legacy advertising commands are disallowed when extended advertising
   // commands were used since the last reset.
   if (!SelectLegacyAdvertising()) {
@@ -158,8 +158,7 @@ ErrorCode LinkLayerController::LeSetAdvertisingData(const std::vector<uint8_t>& 
 }
 
 // HCI command LE_Set_Scan_Response_Data (Vol 4, Part E § 7.8.8).
-ErrorCode LinkLayerController::LeSetScanResponseData(
-        const std::vector<uint8_t>& scan_response_data) {
+ErrorCode LeController::LeSetScanResponseData(const std::vector<uint8_t>& scan_response_data) {
   // Legacy advertising commands are disallowed when extended advertising
   // commands were used since the last reset.
   if (!SelectLegacyAdvertising()) {
@@ -174,7 +173,7 @@ ErrorCode LinkLayerController::LeSetScanResponseData(
 }
 
 // HCI command LE_Advertising_Enable (Vol 4, Part E § 7.8.9).
-ErrorCode LinkLayerController::LeSetAdvertisingEnable(bool advertising_enable) {
+ErrorCode LeController::LeSetAdvertisingEnable(bool advertising_enable) {
   // Legacy advertising commands are disallowed when extended advertising
   // commands were used since the last reset.
   if (!SelectLegacyAdvertising()) {
@@ -285,8 +284,8 @@ ErrorCode LinkLayerController::LeSetAdvertisingEnable(bool advertising_enable) {
 // =============================================================================
 
 // HCI command LE_Set_Advertising_Set_Random_Address (Vol 4, Part E § 7.8.52).
-ErrorCode LinkLayerController::LeSetAdvertisingSetRandomAddress(uint8_t advertising_handle,
-                                                                Address random_address) {
+ErrorCode LeController::LeSetAdvertisingSetRandomAddress(uint8_t advertising_handle,
+                                                         Address random_address) {
   // If the advertising set corresponding to the Advertising_Handle parameter
   // does not exist, then the Controller shall return the error code
   // Unknown Advertising Identifier (0x42).
@@ -313,7 +312,7 @@ ErrorCode LinkLayerController::LeSetAdvertisingSetRandomAddress(uint8_t advertis
 }
 
 // HCI command LE_Set_Extended_Advertising_Parameters (Vol 4, Part E § 7.8.53).
-ErrorCode LinkLayerController::LeSetExtendedAdvertisingParameters(
+ErrorCode LeController::LeSetExtendedAdvertisingParameters(
         uint8_t advertising_handle, AdvertisingEventProperties advertising_event_properties,
         uint16_t primary_advertising_interval_min, uint16_t primary_advertising_interval_max,
         uint8_t primary_advertising_channel_map, OwnAddressType own_address_type,
@@ -570,9 +569,10 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingParameters(
 }
 
 // HCI command LE_Set_Extended_Advertising_Data (Vol 4, Part E § 7.8.54).
-ErrorCode LinkLayerController::LeSetExtendedAdvertisingData(
-        uint8_t advertising_handle, Operation operation, FragmentPreference fragment_preference,
-        const std::vector<uint8_t>& advertising_data) {
+ErrorCode LeController::LeSetExtendedAdvertisingData(uint8_t advertising_handle,
+                                                     Operation operation,
+                                                     FragmentPreference fragment_preference,
+                                                     const std::vector<uint8_t>& advertising_data) {
   // Extended advertising commands are disallowed when legacy advertising
   // commands were used since the last reset.
   if (!SelectExtendedAdvertising()) {
@@ -743,7 +743,7 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingData(
 }
 
 // HCI command LE_Set_Extended_Scan_Response_Data (Vol 4, Part E § 7.8.55).
-ErrorCode LinkLayerController::LeSetExtendedScanResponseData(
+ErrorCode LeController::LeSetExtendedScanResponseData(
         uint8_t advertising_handle, Operation operation, FragmentPreference fragment_preference,
         const std::vector<uint8_t>& scan_response_data) {
   // Extended advertising commands are disallowed when legacy advertising
@@ -906,7 +906,7 @@ ErrorCode LinkLayerController::LeSetExtendedScanResponseData(
 }
 
 // HCI command LE_Set_Extended_Advertising_Enable (Vol 4, Part E § 7.8.56).
-ErrorCode LinkLayerController::LeSetExtendedAdvertisingEnable(
+ErrorCode LeController::LeSetExtendedAdvertisingEnable(
         bool enable, const std::vector<bluetooth::hci::EnabledSet>& sets) {
   // Extended advertising commands are disallowed when legacy advertising
   // commands were used since the last reset.
@@ -1123,7 +1123,7 @@ ErrorCode LinkLayerController::LeSetExtendedAdvertisingEnable(
 }
 
 // HCI command LE_Remove_Advertising_Set (Vol 4, Part E § 7.8.59).
-ErrorCode LinkLayerController::LeRemoveAdvertisingSet(uint8_t advertising_handle) {
+ErrorCode LeController::LeRemoveAdvertisingSet(uint8_t advertising_handle) {
   // If the advertising set corresponding to the Advertising_Handle parameter
   // does not exist, then the Controller shall return the error code
   // Unknown Advertising Identifier (0x42).
@@ -1148,7 +1148,7 @@ ErrorCode LinkLayerController::LeRemoveAdvertisingSet(uint8_t advertising_handle
 }
 
 // HCI command LE_Clear_Advertising_Sets (Vol 4, Part E § 7.8.60).
-ErrorCode LinkLayerController::LeClearAdvertisingSets() {
+ErrorCode LeController::LeClearAdvertisingSets() {
   // If advertising or periodic advertising is enabled on any advertising set,
   // then the Controller shall return the error code Command Disallowed (0x0C).
   for (auto& advertiser : extended_advertisers_) {
@@ -1196,9 +1196,9 @@ uint16_t ExtendedAdvertiser::GetMaxAdvertisingDataLength(
     // length is 254. Extended payload header fields eat into the
     // available space.
     max_advertising_data_length = 254;
-    max_advertising_data_length -= 6;                         // AdvA
-    max_advertising_data_length -= 2;                         // ADI
-    max_advertising_data_length -= 6 * properties.directed_;  // TargetA
+    max_advertising_data_length -= 6;                                 // AdvA
+    max_advertising_data_length -= 2;                                 // ADI
+    max_advertising_data_length -= 6 * properties.directed_;          // TargetA
     max_advertising_data_length -= 1 * properties.include_tx_power_;  // TxPower
     // TODO(pedantic): configure the ACAD field in order to leave the least
     // amount of AdvData space to the user (191).
@@ -1263,7 +1263,7 @@ uint16_t ExtendedAdvertiser::GetRawAdvertisingEventProperties(
 // =============================================================================
 
 // HCI LE Set Periodic Advertising Parameters command (Vol 4, Part E § 7.8.61).
-ErrorCode LinkLayerController::LeSetPeriodicAdvertisingParameters(
+ErrorCode LeController::LeSetPeriodicAdvertisingParameters(
         uint8_t advertising_handle, uint16_t periodic_advertising_interval_min,
         uint16_t periodic_advertising_interval_max, bool /*include_tx_power*/) {
   // The Advertising_Handle parameter identifies the advertising set whose
@@ -1338,9 +1338,9 @@ ErrorCode LinkLayerController::LeSetPeriodicAdvertisingParameters(
 }
 
 // HCI LE Set Periodic Advertising Data command (Vol 4, Part E § 7.8.62).
-ErrorCode LinkLayerController::LeSetPeriodicAdvertisingData(
-        uint8_t advertising_handle, bluetooth::hci::Operation operation,
-        const std::vector<uint8_t>& advertising_data) {
+ErrorCode LeController::LeSetPeriodicAdvertisingData(uint8_t advertising_handle,
+                                                     bluetooth::hci::Operation operation,
+                                                     const std::vector<uint8_t>& advertising_data) {
   // If the advertising set corresponding to the Advertising_Handle parameter
   // does not exist, then the Controller shall return the error code
   // Unknown Advertising Identifier (0x42).
@@ -1463,8 +1463,8 @@ ErrorCode LinkLayerController::LeSetPeriodicAdvertisingData(
 }
 
 // HCI LE Set Periodic Advertising Enable command (Vol 4, Part E § 7.8.63).
-ErrorCode LinkLayerController::LeSetPeriodicAdvertisingEnable(bool enable, bool include_adi,
-                                                              uint8_t advertising_handle) {
+ErrorCode LeController::LeSetPeriodicAdvertisingEnable(bool enable, bool include_adi,
+                                                       uint8_t advertising_handle) {
   // If the advertising set corresponding to the Advertising_Handle parameter
   // does not exist, the Controller shall return the error code Unknown
   // Advertising Identifier (0x42).
@@ -1557,7 +1557,7 @@ uint16_t ExtendedAdvertiser::GetMaxPeriodicAdvertisingDataLength(
 //  Advertising Routines
 // =============================================================================
 
-void LinkLayerController::LeAdvertising() {
+void LeController::LeAdvertising() {
   chrono::time_point now = std::chrono::steady_clock::now();
 
   // Legacy Advertising Timeout

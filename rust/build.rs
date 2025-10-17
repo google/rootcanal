@@ -42,5 +42,7 @@ fn generate_module(in_file: &Path) {
     .expect("PDL parse failed");
     let analyzed_file = pdl_compiler::analyzer::analyze(&parsed_file).expect("PDL analysis failed");
     let rust_source = pdl_compiler::backends::rust::generate(&sources, &analyzed_file, &[]);
-    out_file.write_all(rust_source.as_bytes()).expect("Could not write to output file");
+    out_file
+        .write_all(rust_source.as_bytes())
+        .expect("Could not write to output file");
 }

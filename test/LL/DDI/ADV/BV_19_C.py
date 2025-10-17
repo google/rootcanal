@@ -33,7 +33,7 @@ class Test(ControllerTest):
     async def test(self):
         controller = self.controller
         public_peer_address = Address('aa:bb:cc:dd:ee:ff')
-        connection_handle = 0xefe
+        connection_handle = None
 
         # 1. Configure Lower Tester to start scanning and monitor advertising packets from the IUT.
         # 2. Upper Tester enables low duty cycle directed advertising in the IUT using a selected advertising
@@ -109,10 +109,10 @@ class Test(ControllerTest):
 
         # 10. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT in step 7.
-        await self.expect_evt(
+        evt = await self.expect_evt(
             hci.LeEnhancedConnectionCompleteV1(
                 status=ErrorCode.SUCCESS,
-                connection_handle=connection_handle,
+                connection_handle=self.Any,
                 role=hci.Role.PERIPHERAL,
                 peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
                 peer_address=public_peer_address,
@@ -120,6 +120,8 @@ class Test(ControllerTest):
                 peripheral_latency=self.LL_initiator_connPeripheralLatency,
                 supervision_timeout=self.LL_initiator_connSupervisionTimeout,
                 central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+
+        connection_handle = evt.connection_handle
 
         # 11. Upper Tester receives an HCI_Disconnection_Complete event from the IUT once the
         # Establishment Timeout has expired.
