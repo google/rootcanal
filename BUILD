@@ -3,7 +3,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@rules_rust//rust:defs.bzl", "rust_static_library")
 
 package(default_visibility = ["//visibility:private"])
 licenses(["notice"])
@@ -30,77 +29,6 @@ proto_library(
 cc_proto_library(
     name = "rootcanal_config",
     deps = [":rootcanal_proto"],
-)
-
-genrule(
-    name = "lmp_packets_rs",
-    cmd = "pdlc --output-format rust_legacy $(location rust/lmp_packets.pdl) > $(location lmp_packets.rs)",
-    outs = ["lmp_packets.rs"],
-    srcs = ["rust/lmp_packets.pdl"],
-)
-
-genrule(
-    name = "llcp_packets_rs",
-    cmd = "pdlc --output-format rust_legacy $(location rust/llcp_packets.pdl) > $(location llcp_packets.rs)",
-    outs = ["llcp_packets.rs"],
-    srcs = ["rust/llcp_packets.pdl"],
-)
-
-genrule(
-    name = "hci_packets_rs",
-    cmd = "pdlc --output-format rust_legacy $(location //packets:hci_packets.pdl) > $(location hci_packets.rs)",
-    outs = ["hci_packets.rs"],
-    srcs = ["//packets:hci_packets.pdl"],
-    visibility = ["//visibility:public"],
-)
-
-rust_static_library(
-    name = "rootcanal_rs",
-    edition = "2018",
-    crate_root = "rust/src/lib.rs",
-    rustc_env = {
-        "HCI_PACKETS_PREBUILT": "$(location hci_packets.rs)",
-        "LMP_PACKETS_PREBUILT": "$(location lmp_packets.rs)",
-        "LLCP_PACKETS_PREBUILT": "$(location llcp_packets.rs)",
-    },
-    srcs = [
-        "rust/src/either.rs",
-        "rust/src/ffi.rs",
-        "rust/src/future.rs",
-        "rust/src/lib.rs",
-        "rust/src/llcp/iso.rs",
-        "rust/src/llcp/manager.rs",
-        "rust/src/llcp/mod.rs",
-        "rust/src/lmp/ec.rs",
-        "rust/src/lmp/manager.rs",
-        "rust/src/lmp/mod.rs",
-        "rust/src/lmp/procedure/authentication.rs",
-        "rust/src/lmp/procedure/encryption.rs",
-        "rust/src/lmp/procedure/features.rs",
-        "rust/src/lmp/procedure/legacy_pairing.rs",
-        "rust/src/lmp/procedure/mod.rs",
-        "rust/src/lmp/procedure/secure_simple_pairing.rs",
-        "rust/src/packets.rs",
-    ],
-    compile_data = [
-        "hci_packets.rs",
-        "llcp_packets.rs",
-        "lmp_packets.rs",
-    ],
-    proc_macro_deps = [
-        "@crates//:num-derive",
-        "@crates//:paste",
-    ],
-    deps = [
-        "@crates//:bytes",
-        "@crates//:num-bigint",
-        "@crates//:num-integer",
-        "@crates//:num-traits",
-        "@crates//:pdl-runtime",
-        "@crates//:pin-utils",
-        "@crates//:rand",
-        "@crates//:thiserror",
-    ],
 )
 
 cc_binary(
@@ -137,7 +65,7 @@ cc_binary(
         "model/controller/ffi.h",
         "model/devices/device.cc",
         "model/devices/device.h",
-        "rust/include/rootcanal_rs.h",
+        "//rust:include/rootcanal_rs.h",
     ],
     copts = [
         "-std=c++17",
@@ -161,7 +89,7 @@ cc_binary(
     deps = [
         ":rootcanal_config",
         ":rootcanal_log",
-        ":rootcanal_rs",
+        "//rust:rootcanal_rs",
         "//packets:generated",
         "@pdl//:packet_runtime",
         "@fmtlib",
@@ -247,7 +175,7 @@ cc_binary(
         "net/posix/posix_async_socket_connector.h",
         "net/posix/posix_async_socket_server.cc",
         "net/posix/posix_async_socket_server.h",
-        "rust/include/rootcanal_rs.h",
+        "//rust:include/rootcanal_rs.h",
     ],
     copts = [
         "-std=c++17",
@@ -271,7 +199,7 @@ cc_binary(
     deps = [
         ":rootcanal_config",
         ":rootcanal_log",
-        ":rootcanal_rs",
+        "//rust:rootcanal_rs",
         "//packets:generated",
         "@gflags",
         "@fmtlib",

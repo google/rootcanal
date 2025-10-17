@@ -18,7 +18,7 @@ pub mod hci {
     #![allow(missing_docs)]
     #![allow(non_camel_case_types)]
 
-    include!(env!("HCI_PACKETS_PREBUILT"));
+    include!(concat!(env!("OUT_DIR"), "/hci_packets.rs"));
 
     pub const EMPTY_ADDRESS: Address = Address(0x000000000000);
     pub const ANY_ADDRESS: Address = Address(0xffffffffffff);
@@ -96,7 +96,7 @@ pub mod lmp {
     #![allow(unused)]
     #![allow(missing_docs)]
 
-    include!(env!("LMP_PACKETS_PREBUILT"));
+    include!(concat!(env!("OUT_DIR"), "/lmp_packets.rs"));
 }
 
 pub mod llcp {
@@ -104,5 +104,5 @@ pub mod llcp {
     #![allow(unused)]
     #![allow(missing_docs)]
 
-    include!(env!("LLCP_PACKETS_PREBUILT"));
+    include!(concat!(env!("OUT_DIR"), "/llcp_packets.rs"));
 }
