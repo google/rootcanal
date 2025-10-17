@@ -31,7 +31,7 @@ namespace rootcanal {
 HciDevice::HciDevice(std::shared_ptr<HciTransport> transport,
                      ControllerProperties const& properties)
     : DualModeController(ControllerProperties(properties)), transport_(transport) {
-  link_layer_controller_.SetLocalName(std::vector<uint8_t>({
+  bredr_controller_.SetLocalName(std::vector<uint8_t>({
           'g',
           'D',
           'e',
@@ -44,7 +44,7 @@ HciDevice::HciDevice(std::shared_ptr<HciTransport> transport,
           'C',
           'I',
   }));
-  link_layer_controller_.SetExtendedInquiryResponse(std::vector<uint8_t>({
+  bredr_controller_.SetExtendedInquiryResponse(std::vector<uint8_t>({
           12,  // Length
           9,   // Type: Device Name
           'g',

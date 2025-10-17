@@ -33,7 +33,7 @@ class Test(ControllerTest):
     async def test(self):
         # Test parameters.
         controller = self.controller
-        acl_connection_handle = 0xefe
+        acl_connection_handle = None
         peer_address = Address('11:22:33:44:55:66')
 
         # Prelude: Establish an ACL connection as central with the IUT.
@@ -86,10 +86,10 @@ class Test(ControllerTest):
                                  conn_peripheral_latency=0x6,
                                  conn_supervision_timeout=0xc80))
 
-        await self.expect_evt(
+        evt = await self.expect_evt(
             hci.LeEnhancedConnectionCompleteV1(
                 status=ErrorCode.SUCCESS,
-                connection_handle=acl_connection_handle,
+                connection_handle=self.Any,
                 role=hci.Role.CENTRAL,
                 peer_address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
                 peer_address=peer_address,
@@ -97,6 +97,8 @@ class Test(ControllerTest):
                 peripheral_latency=0x6,
                 supervision_timeout=0xc80,
                 central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+
+        acl_connection_handle = evt.connection_handle
 
         await self.expect_evt(
             hci.LeChannelSelectionAlgorithm(

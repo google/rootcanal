@@ -27,8 +27,9 @@
 #include <vector>
 
 #include "hci/address.h"
+#include "model/controller/bredr_controller.h"
 #include "model/controller/controller_properties.h"
-#include "model/controller/link_layer_controller.h"
+#include "model/controller/le_controller.h"
 #include "model/controller/vendor_commands/csr.h"
 #include "model/devices/device.h"
 #include "packets/hci_packets.h"
@@ -550,7 +551,8 @@ protected:
   ControllerProperties properties_;
 
   // Link Layer state.
-  LinkLayerController link_layer_controller_{address_, properties_, id_};
+  BrEdrController bredr_controller_{address_, properties_, id_};
+  LeController le_controller_{address_, properties_, id_};
 
 private:
   // Send a HCI_Command_Complete event for the specified op_code with

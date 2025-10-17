@@ -84,8 +84,7 @@ class Test(ControllerTest):
 
         # 3. Lower Tester address type is set to Public Address type.
         await self.steps_4_14(peer_address=public_peer_address,
-                              peer_address_type=ll.AddressType.PUBLIC,
-                              connection_handle=0xefe)
+                              peer_address_type=ll.AddressType.PUBLIC)
 
         # 15. Upper Tester enables undirected advertising in the IUT using public address type, all supported
         # advertising channels and filtering policy set to ‘Allow Scan Request from Filter Accept List, Allow
@@ -98,8 +97,7 @@ class Test(ControllerTest):
         # 16. Lower Tester address type is set to Random Address type.
         # 17. Repeat steps 4–14.
         await self.steps_4_14(peer_address=random_peer_address,
-                              peer_address_type=ll.AddressType.RANDOM,
-                              connection_handle=0xeff)
+                              peer_address_type=ll.AddressType.RANDOM)
 
         # 18. Upper Tester enables undirected advertising in the IUT using public address type, all supported
         # advertising channels and filtering policy set to ‘Allow Scan Request from Any, Allow Connect
@@ -125,8 +123,7 @@ class Test(ControllerTest):
         # 19. Lower Tester address type is set to Public Address type.
         # 20. Repeat steps 4–14.
         await self.steps_4_14(peer_address=public_peer_address,
-                              peer_address_type=ll.AddressType.PUBLIC,
-                              connection_handle=0x000)
+                              peer_address_type=ll.AddressType.PUBLIC)
 
         # 21. Upper Tester enables undirected advertising in the IUT using public address type, all supported
         # advertising channels and filtering policy set to ‘Allow Scan Request from Any, Allow Connect
@@ -139,8 +136,7 @@ class Test(ControllerTest):
         # 22. Lower Tester address type is set to Random Address type.
         # 23. Repeat steps 4–14.
         await self.steps_4_14(peer_address=random_peer_address,
-                              peer_address_type=ll.AddressType.RANDOM,
-                              connection_handle=0x001)
+                              peer_address_type=ll.AddressType.RANDOM)
 
         # 24. Upper Tester enables undirected advertising in the IUT using all supported advertising channels,
         # minimum advertising interval and filtering policy set to ‘Allow Scan Request from Any, Allow
@@ -164,8 +160,7 @@ class Test(ControllerTest):
             hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         await self.steps_24_29(peer_address=public_peer_address,
-                               peer_address_type=ll.AddressType.PUBLIC,
-                               connection_handle=0x002)
+                               peer_address_type=ll.AddressType.PUBLIC)
 
         # 30. Repeat steps 24–29, except that in step 25, configure Lower Tester to use a device address not
         # on the IUT’s Filter Accept List as the address parameter of the CONNECT_IND PDU; the address
@@ -177,8 +172,7 @@ class Test(ControllerTest):
             hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
 
         await self.steps_24_29(peer_address=invalid_peer_address,
-                               peer_address_type=ll.AddressType.PUBLIC,
-                               connection_handle=0x003)
+                               peer_address_type=ll.AddressType.PUBLIC)
 
         # 31. Repeat steps 24–29, except that in step 25, configure Lower Tester to use a device address not
         # on the IUT’s Filter Accept List as the address parameter of the CONNECT_IND PDU; the address
@@ -225,12 +219,10 @@ class Test(ControllerTest):
 
         # 36. Repeat steps 25–29.
         await self.steps_24_29(peer_address=public_peer_address,
-                               peer_address_type=ll.AddressType.PUBLIC,
-                               connection_handle=0x004)
+                               peer_address_type=ll.AddressType.PUBLIC)
 
     # Subroutine for steps 4-14.
-    async def steps_4_14(self, peer_address: Address, peer_address_type: ll.AddressType,
-                         connection_handle: int):
+    async def steps_4_14(self, peer_address: Address, peer_address_type: ll.AddressType):
         # 4. Configure Lower Tester to monitor the advertising and connection procedures of the IUT and
         # send a CONNECT_IND packet on the selected supported advertising channel (defined as an
         # IXIT) in response to connectable advertisements. The initiator’s address in the CONNECT_IND
@@ -323,10 +315,10 @@ class Test(ControllerTest):
 
         # 13. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT.
-        await self.expect_evt(
+        evt = await self.expect_evt(
             hci.LeEnhancedConnectionCompleteV1(
                 status=ErrorCode.SUCCESS,
-                connection_handle=connection_handle,
+                connection_handle=self.Any,
                 role=hci.Role.PERIPHERAL,
                 peer_address_type=(hci.AddressType.PUBLIC_DEVICE_ADDRESS
                                    if peer_address_type == ll.AddressType.PUBLIC else
@@ -336,6 +328,8 @@ class Test(ControllerTest):
                 peripheral_latency=self.LL_initiator_connPeripheralLatency,
                 supervision_timeout=self.LL_initiator_connSupervisionTimeout,
                 central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+
+        connection_handle = evt.connection_handle
 
         # 14. Peripheral Connection Terminated (connection interval, Peripheral latency, timeout, channel map,
         # un-encrypted, connection handle).
@@ -350,8 +344,7 @@ class Test(ControllerTest):
                                       reason=hci.ErrorCode.REMOTE_USER_TERMINATED_CONNECTION))
 
     # Subroutine for steps 24-29.
-    async def steps_24_29(self, peer_address: Address, peer_address_type: ll.AddressType,
-                          connection_handle: int):
+    async def steps_24_29(self, peer_address: Address, peer_address_type: ll.AddressType):
         # 25. Configure Lower Tester to monitor the advertising and connection procedures of the IUT and
         # send a CONNECT_IND packet on the first supported advertising channel in response to
         # connectable advertisements. The initiator’s address in the CONNECT_IND PDU shall be an
@@ -396,10 +389,10 @@ class Test(ControllerTest):
         # 29. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT in step 25 and as postamble: Peripheral Connection Terminated
         # (connection interval, Peripheral latency, timeout, channel map, un-encrypted, connection handle).
-        await self.expect_evt(
+        evt = await self.expect_evt(
             hci.LeEnhancedConnectionCompleteV1(
                 status=ErrorCode.SUCCESS,
-                connection_handle=connection_handle,
+                connection_handle=self.Any,
                 role=hci.Role.PERIPHERAL,
                 peer_address_type=(hci.AddressType.PUBLIC_DEVICE_ADDRESS
                                    if peer_address_type == ll.AddressType.PUBLIC else
@@ -409,6 +402,8 @@ class Test(ControllerTest):
                 peripheral_latency=self.LL_initiator_connPeripheralLatency,
                 supervision_timeout=self.LL_initiator_connSupervisionTimeout,
                 central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+
+        connection_handle = evt.connection_handle
 
         controller.send_ll(
             ll.Disconnect(source_address=peer_address,
