@@ -24,7 +24,9 @@ use hci::LMPFeaturesPage2Bits::SecureConnectionsControllerSupport;
 
 pub async fn initiate(ctx: &impl Context) {
     // TODO: handle turn off
-    let _ = ctx.receive_hci_command::<hci::SetConnectionEncryption>().await;
+    let _ = ctx
+        .receive_hci_command::<hci::SetConnectionEncryption>()
+        .await;
     ctx.send_hci_event(hci::SetConnectionEncryptionStatus {
         num_hci_command_packets,
         status: hci::ErrorCode::Success,

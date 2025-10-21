@@ -144,7 +144,9 @@ impl CisParameters {
         let bn_p_to_c: u8 = cis_config
             .bn_p_to_c
             .unwrap_or_else(|| cis_config.max_sdu_p_to_c.div_ceil(251).try_into().unwrap());
-        let nse = cis_config.nse.unwrap_or(std::cmp::max(bn_c_to_p, bn_p_to_c));
+        let nse = cis_config
+            .nse
+            .unwrap_or(std::cmp::max(bn_c_to_p, bn_p_to_c));
         let max_pdu_c_to_p = cis_config.max_pdu_c_to_p.unwrap_or(251);
         let max_pdu_p_to_c = cis_config.max_pdu_p_to_c.unwrap_or(251);
         let sub_interval = (cig_config.iso_interval as u32 * 1250) / nse as u32;
@@ -381,7 +383,9 @@ impl IsoManager {
 
     // Returns the first unused handle in the range 0xe00..0xefe.
     fn new_cis_connection_handle(&self) -> u16 {
-        (0xe00..0xefe).find(|handle| !self.cis_connections.contains_key(handle)).unwrap()
+        (0xe00..0xefe)
+            .find(|handle| !self.cis_connections.contains_key(handle))
+            .unwrap()
     }
 
     // Insert a new CIS connection, optionally allocating an handle for the
@@ -424,7 +428,8 @@ impl IsoManager {
         acl_connection_handle: u16,
         packet: P,
     ) {
-        self.ops.send_llcp_packet(acl_connection_handle, &packet.encode_to_vec().unwrap())
+        self.ops
+            .send_llcp_packet(acl_connection_handle, &packet.encode_to_vec().unwrap())
     }
 
     fn get_le_features(&self) -> u64 {
@@ -467,7 +472,10 @@ impl IsoManager {
     /// Start the next CIS connection request, if any.
     fn deque_cis_connection_request(&mut self) {
         if let Some(request) = self.cis_connection_requests.pop() {
-            let cis_config = self.cis_config.get(&(request.cig_id, request.cis_id)).unwrap();
+            let cis_config = self
+                .cis_config
+                .get(&(request.cig_id, request.cis_id))
+                .unwrap();
             let cig_config = self.cig_config.get(&request.cig_id).unwrap();
             let parameters = CisParameters::new(cig_config, cis_config);
 
@@ -498,7 +506,10 @@ impl IsoManager {
                 },
             );
 
-            let cis = self.cis_connections.get_mut(&request.cis_connection_handle).unwrap();
+            let cis = self
+                .cis_connections
+                .get_mut(&request.cis_connection_handle)
+                .unwrap();
             cis.acl_connection_handle = Some(request.acl_connection_handle);
             cis.state = CisState::PendingRsp;
             cis.parameters = Some(parameters);
@@ -524,7 +535,12 @@ impl IsoManager {
         // If the Host issues this command when the CIG is not in the configurable
         // state, the Controller shall return the error code
         // Command Disallowed (0x0C).
-        if !self.cig_config.get(&cig_id).map(|cig| cig.configurable).unwrap_or(true) {
+        if !self
+            .cig_config
+            .get(&cig_id)
+            .map(|cig| cig.configurable)
+            .unwrap_or(true)
+        {
             println!("CIG ({}) is no longer in the configurable state", cig_id);
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
@@ -713,7 +729,12 @@ impl IsoManager {
         // If the Host issues this command when the CIG is not in the configurable
         // state, the Controller shall return the error code
         // Command Disallowed (0x0C).
-        if !self.cig_config.get(&cig_id).map(|cig| cig.configurable).unwrap_or(true) {
+        if !self
+            .cig_config
+            .get(&cig_id)
+            .map(|cig| cig.configurable)
+            .unwrap_or(true)
+        {
             println!("CIG ({}) is no longer in the configurable state", cig_id);
             return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
         }
@@ -1394,7 +1415,10 @@ impl IsoManager {
         });
 
         if let Some(cis_connection_handle) = cis_connection_handle {
-            let cis = self.cis_connections.get_mut(&cis_connection_handle).unwrap();
+            let cis = self
+                .cis_connections
+                .get_mut(&cis_connection_handle)
+                .unwrap();
             cis.state = CisState::Configuration;
             cis.parameters = None;
             self.send_hci_event(hci::LeCisEstablishedV1 {
@@ -1430,12 +1454,14 @@ impl IsoManager {
         });
 
         if let Some(cis_connection_handle) = cis_connection_handle {
-            self.cis_connections.entry(cis_connection_handle).and_modify(|cis| {
-                cis.state = CisState::Connected;
-                let parameters = cis.parameters.as_mut().unwrap();
-                parameters.cig_sync_delay = packet.cig_sync_delay();
-                parameters.cis_sync_delay = packet.cis_sync_delay();
-            });
+            self.cis_connections
+                .entry(cis_connection_handle)
+                .and_modify(|cis| {
+                    cis.state = CisState::Connected;
+                    let parameters = cis.parameters.as_mut().unwrap();
+                    parameters.cig_sync_delay = packet.cig_sync_delay();
+                    parameters.cis_sync_delay = packet.cis_sync_delay();
+                });
             let cis = self.cis_connections.get(&cis_connection_handle).unwrap();
             let parameters = cis.parameters.as_ref().unwrap();
             self.send_hci_event(hci::LeCisEstablishedV1 {

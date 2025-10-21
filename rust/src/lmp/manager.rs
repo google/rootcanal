@@ -69,7 +69,9 @@ impl Link {
 
     fn poll_lmp_packet<P: TryFrom<lmp::LmpPacket>>(&self) -> Poll<P> {
         let mut queue = self.lmp.borrow_mut();
-        let packet = queue.front().and_then(|packet| packet.clone().try_into().ok());
+        let packet = queue
+            .front()
+            .and_then(|packet| packet.clone().try_into().ok());
 
         if let Some(packet) = packet {
             queue.pop_front();
@@ -250,7 +252,10 @@ impl LinkManager {
     }
 
     pub fn add_link(self: &Rc<Self>, peer: hci::Address) -> Result<(), LinkManagerError> {
-        let index = self.links.iter().position(|link| link.peer.get().is_empty());
+        let index = self
+            .links
+            .iter()
+            .position(|link| link.peer.get().is_empty());
 
         if let Some(index) = index {
             self.links[index].peer.set(peer);
@@ -283,7 +288,12 @@ impl LinkManager {
     pub fn tick(&self) {
         let waker = noop_waker();
 
-        for procedures in self.procedures.borrow_mut().iter_mut().filter_map(Option::as_mut) {
+        for procedures in self
+            .procedures
+            .borrow_mut()
+            .iter_mut()
+            .filter_map(Option::as_mut)
+        {
             let _ = procedures.as_mut().poll(&mut Context::from_waker(&waker));
         }
     }
@@ -323,7 +333,9 @@ impl procedure::Context for LinkContext {
 
     fn send_lmp_packet<P: TryInto<lmp::LmpPacket> + pdl_runtime::Packet>(&self, packet: P) {
         if let Some(manager) = self.manager.upgrade() {
-            manager.ops.send_lmp_packet(self.peer_address(), &packet.encode_to_vec().unwrap())
+            manager
+                .ops
+                .send_lmp_packet(self.peer_address(), &packet.encode_to_vec().unwrap())
         }
     }
 

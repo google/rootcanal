@@ -65,8 +65,11 @@ impl TestContext {
 
 impl Context for TestContext {
     fn poll_hci_command<C: TryFrom<hci::Command>>(&self) -> Poll<C> {
-        let command =
-            self.hci_commands.borrow().front().and_then(|command| command.clone().try_into().ok());
+        let command = self
+            .hci_commands
+            .borrow()
+            .front()
+            .and_then(|command| command.clone().try_into().ok());
 
         if let Some(command) = command {
             self.hci_commands.borrow_mut().pop_front();
@@ -77,8 +80,11 @@ impl Context for TestContext {
     }
 
     fn poll_lmp_packet<P: TryFrom<lmp::LmpPacket>>(&self) -> Poll<P> {
-        let packet =
-            self.in_lmp_packets.borrow().front().and_then(|packet| packet.clone().try_into().ok());
+        let packet = self
+            .in_lmp_packets
+            .borrow()
+            .front()
+            .and_then(|packet| packet.clone().try_into().ok());
 
         if let Some(packet) = packet {
             self.in_lmp_packets.borrow_mut().pop_front();

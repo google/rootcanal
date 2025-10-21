@@ -25,7 +25,11 @@ pub async fn initiate(ctx: &impl Context, features_page: u8) -> u64 {
         extended_features: ctx.extended_features(features_page).to_le_bytes(),
     });
 
-    u64::from_le_bytes(*ctx.receive_lmp_packet::<lmp::FeaturesResExt>().await.extended_features())
+    u64::from_le_bytes(
+        *ctx.receive_lmp_packet::<lmp::FeaturesResExt>()
+            .await
+            .extended_features(),
+    )
 }
 
 pub async fn respond(ctx: &impl Context) {

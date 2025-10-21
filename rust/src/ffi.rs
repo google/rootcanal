@@ -240,7 +240,10 @@ pub unsafe extern "C" fn link_layer_add_link(
     let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
     let ll = Rc::get_mut(&mut ll).unwrap();
     let role = hci::Role::try_from(role).unwrap_or(hci::Role::Peripheral);
-    unsafe { ll.add_link(handle, hci::Address::from(&*peer_address), role).is_ok() }
+    unsafe {
+        ll.add_link(handle, hci::Address::from(&*peer_address), role)
+            .is_ok()
+    }
 }
 
 /// Unregister a link with a peer inside the link layer

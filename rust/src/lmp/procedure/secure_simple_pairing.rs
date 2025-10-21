@@ -114,8 +114,11 @@ async fn send_public_key(ctx: &impl Context, transaction_id: u8, public_key: Pub
 }
 
 async fn receive_public_key(ctx: &impl Context, transaction_id: u8) -> PublicKey {
-    let key_size: usize =
-        ctx.receive_lmp_packet::<lmp::EncapsulatedHeader>().await.payload_length().into();
+    let key_size: usize = ctx
+        .receive_lmp_packet::<lmp::EncapsulatedHeader>()
+        .await
+        .payload_length()
+        .into();
     let mut key = PublicKey::new(key_size).unwrap();
 
     ctx.send_lmp_packet(lmp::Accepted {
@@ -162,8 +165,9 @@ async fn receive_commitment(ctx: &impl Context, confirm: Option<lmp::SimplePairi
     let nonce = [0; NONCE_SIZE];
 
     // TODO: handle error
-    let _ =
-        ctx.send_accepted_lmp_packet(lmp::SimplePairingNumber { transaction_id: 0, nonce }).await;
+    let _ = ctx
+        .send_accepted_lmp_packet(lmp::SimplePairingNumber { transaction_id: 0, nonce })
+        .await;
 }
 
 async fn send_commitment(ctx: &impl Context, confirm: lmp::SimplePairingConfirm) {
@@ -175,8 +179,9 @@ async fn send_commitment(ctx: &impl Context, confirm: lmp::SimplePairingConfirm)
     let nonce = [0; NONCE_SIZE];
 
     // TODO: handle error
-    let _ =
-        ctx.send_accepted_lmp_packet(lmp::SimplePairingNumber { transaction_id: 0, nonce }).await;
+    let _ = ctx
+        .send_accepted_lmp_packet(lmp::SimplePairingNumber { transaction_id: 0, nonce })
+        .await;
 
     let _pairing_number = ctx.receive_lmp_packet::<lmp::SimplePairingNumber>().await;
     // TODO: check pairing number
