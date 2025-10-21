@@ -27,19 +27,27 @@ pub async fn send_challenge(
     let random_number = [0; 16];
     ctx.send_lmp_packet(lmp::AuRand { transaction_id, random_number });
 
-    match ctx.receive_lmp_packet::<Either<lmp::Sres, lmp::NotAccepted>>().await {
+    match ctx
+        .receive_lmp_packet::<Either<lmp::Sres, lmp::NotAccepted>>()
+        .await
+    {
         Either::Left(_response) => Ok(()),
         Either::Right(_) => Err(()),
     }
 }
 
 pub async fn receive_challenge(ctx: &impl Context, _link_key: [u8; 16]) {
-    let _random_number = *ctx.receive_lmp_packet::<lmp::AuRand>().await.random_number();
+    let _random_number = *ctx
+        .receive_lmp_packet::<lmp::AuRand>()
+        .await
+        .random_number();
     ctx.send_lmp_packet(lmp::Sres { transaction_id: 0, authentication_rsp: [0; 4] });
 }
 
 pub async fn initiate(ctx: &impl Context) {
-    let _ = ctx.receive_hci_command::<hci::AuthenticationRequested>().await;
+    let _ = ctx
+        .receive_hci_command::<hci::AuthenticationRequested>()
+        .await;
     ctx.send_hci_event(hci::AuthenticationRequestedStatus {
         num_hci_command_packets,
         status: hci::ErrorCode::Success,

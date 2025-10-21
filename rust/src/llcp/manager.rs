@@ -60,7 +60,8 @@ impl LinkLayer {
             return Err(LinkLayerError::LinkAlreadyExists);
         }
 
-        self.links.insert(acl_connection_handle, Link { acl_connection_handle, role });
+        self.links
+            .insert(acl_connection_handle, Link { acl_connection_handle, role });
         self.iso.add_acl_connection(acl_connection_handle, role);
         Ok(())
     }
@@ -76,7 +77,8 @@ impl LinkLayer {
 
         let reason = hci::ErrorCode::try_from(reason)
             .unwrap_or(hci::ErrorCode::RemoteUserTerminatedConnection);
-        self.iso.remove_acl_connection(acl_connection_handle, reason);
+        self.iso
+            .remove_acl_connection(acl_connection_handle, reason);
         Ok(())
     }
 
@@ -124,7 +126,8 @@ impl LinkLayer {
     }
 
     pub fn get_cis_connection_handle(&self, cig_id: u8, cis_id: u8) -> Option<u16> {
-        self.iso.get_cis_connection_handle(|cis| cis.cig_id == cig_id && cis.cis_id == cis_id)
+        self.iso
+            .get_cis_connection_handle(|cis| cis.cig_id == cig_id && cis.cis_id == cis_id)
     }
 
     pub fn get_cis(&self, cis_connection_handle: u16) -> Option<&iso::Cis> {
