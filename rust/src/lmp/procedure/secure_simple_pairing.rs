@@ -194,7 +194,10 @@ async fn send_commitment(ctx: &impl Context, confirm: lmp::SimplePairingConfirm)
 async fn user_confirmation_request(ctx: &impl Context) -> Result<(), ()> {
     ctx.send_hci_event(hci::UserConfirmationRequest {
         bd_addr: ctx.peer_address(),
-        numeric_value: 0,
+        // We are using a fixed numeric value here, but in a proper controller the
+        // value would be randomly generated. For the purpose of automated virtual
+        // testing it is not that important to do that.
+        numeric_value: 27,
     });
 
     match ctx
@@ -502,7 +505,7 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     });
 
     // Link Key Calculation
-    let link_key = [0; 16];
+    let link_key = [1; 16];
     let auth_result = authentication::send_challenge(ctx, 0, link_key).await;
     authentication::receive_challenge(ctx, link_key).await;
 
@@ -730,7 +733,7 @@ pub async fn respond(ctx: &impl Context, request: lmp::IoCapabilityReq) -> Resul
     });
 
     // Link Key Calculation
-    let link_key = [0; 16];
+    let link_key = [1; 16];
     authentication::receive_challenge(ctx, link_key).await;
     let auth_result = authentication::send_challenge(ctx, 0, link_key).await;
 

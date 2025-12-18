@@ -65,7 +65,7 @@ type microseconds = u32;
 type slots = u16;
 
 /// CIG configuration.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 struct CigConfig {
     // CIG parameters.
     iso_interval: slots,
@@ -134,6 +134,21 @@ struct CisParameters {
     iso_interval: slots,
     sub_interval: microseconds,
     framed: bool,
+}
+
+impl Default for CigConfig {
+    fn default() -> Self {
+        CigConfig {
+            iso_interval: 0,
+            sdu_interval_c_to_p: 0,
+            sdu_interval_p_to_c: 0,
+            ft_c_to_p: 0,
+            ft_p_to_c: 0,
+            framed: false,
+            // The CIG is initially configurable.
+            configurable: true,
+        }
+    }
 }
 
 impl CisParameters {
@@ -1007,6 +1022,14 @@ impl IsoManager {
         if !self.connected_isochronous_stream_host_support() {
             println!("the feature bit Connected Isochronous Stream (Host Support) is not set");
             return self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
+        }
+
+        // Tag the CIG as no longer configurable.
+        for cis_request in &cis_connection_requests {
+            self.cig_config
+                .get_mut(&cis_request.cig_id)
+                .unwrap()
+                .configurable = false;
         }
 
         // Update the pending CIS request list.

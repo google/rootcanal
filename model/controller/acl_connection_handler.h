@@ -63,7 +63,8 @@ public:
   uint16_t CreateLeConnection(bluetooth::hci::AddressWithType addr,
                               bluetooth::hci::AddressWithType resolved_addr,
                               bluetooth::hci::AddressWithType own_addr, bluetooth::hci::Role role,
-                              LeAclConnectionParameters connection_parameters);
+                              LeAclConnectionParameters connection_parameters,
+                              LeAclSubrateParameters subrate_parameters);
 
   bool Disconnect(uint16_t handle, std::function<void(TaskId)> stopStream);
 

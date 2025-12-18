@@ -37,6 +37,7 @@ message ControllerFeatures {
   // Enable the support for both LL Connected Isochronous Stream Central
   // and LL Connected Isochronous Stream Peripheral.
   optional bool le_connected_isochronous_stream = 6;
+  optional bool le_connection_subrating = 7;
 }
 
 message ControllerQuirks {

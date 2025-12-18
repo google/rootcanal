@@ -151,8 +151,6 @@ public:
   void LeScanning();
   void LeSynchronization();
 
-  void LeConnectionUpdateComplete(uint16_t handle, uint16_t interval_min, uint16_t interval_max,
-                                  uint16_t latency, uint16_t supervision_timeout);
   ErrorCode LeConnectionUpdate(uint16_t handle, uint16_t interval_min, uint16_t interval_max,
                                uint16_t latency, uint16_t supervision_timeout);
   ErrorCode LeRemoteConnectionParameterRequestReply(uint16_t connection_handle,
@@ -471,6 +469,15 @@ public:
   // HCI LE Clear Periodic Advertiser List command (Vol 4, Part E § 7.8.72).
   ErrorCode LeClearPeriodicAdvertiserList();
 
+  // HCI LE Set Default Subrate command (Vol 4, Part E § 7.8.123).
+  ErrorCode LeSetDefaultSubrate(uint16_t subrate_min, uint16_t subrate_max, uint16_t max_latency,
+                                uint16_t continuation_number, uint16_t supervision_timeout);
+
+  // HCI LE Subrate Request command (Vol 4, Part E § 7.8.124).
+  ErrorCode LeSubrateRequest(uint16_t connection_handle, uint16_t subrate_min, uint16_t subrate_max,
+                             uint16_t max_latency, uint16_t continuation_number,
+                             uint16_t supervision_timeout);
+
   // LE APCF
 
   ErrorCode LeApcfEnable(bool apcf_enable);
@@ -582,6 +589,11 @@ protected:
   void IncomingLlPhyUpdateInd(LeAclConnection& connection,
                               model::packets::LinkLayerPacketView incoming);
 
+  void IncomingLlSubrateReq(LeAclConnection& connection,
+                            model::packets::LinkLayerPacketView incoming);
+  void IncomingLlSubrateInd(LeAclConnection& connection,
+                            model::packets::LinkLayerPacketView incoming);
+
 public:
   bool IsEventUnmasked(bluetooth::hci::EventCode event) const;
   bool IsLeEventUnmasked(bluetooth::hci::SubeventCode subevent) const;
@@ -660,6 +672,9 @@ private:
   // Suggested Default Data Length (Vol 4, Part E § 7.8.34).
   uint16_t le_suggested_max_tx_octets_{0x001b};
   uint16_t le_suggested_max_tx_time_{0x0148};
+
+  // LE Default Subrate parameters (Vol 4, Part E § 7.8.123).
+  LeAclSubrateParameters default_subrate_parameters_{};
 
   // Resolvable Private Address Timeout (Vol 4, Part E § 7.8.45).
   std::chrono::seconds resolvable_private_address_timeout_{0x0384};

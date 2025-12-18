@@ -1512,8 +1512,8 @@ packet EnhancedSetupSynchronousConnection : Command (op_code = ENHANCED_SETUP_SY
   output_coding_format : ScoCodingFormat,
   // Next two items
   // Size, in bits, of the sample or framed data
-  input_coded_data_bits : 16,
-  output_coded_data_bits : 16,
+  input_coded_data_size : 16,
+  output_coded_data_size : 16,
   input_pcm_data_format : ScoPcmDataFormat,
   output_pcm_data_format : ScoPcmDataFormat,
   // Next two items
@@ -1527,8 +1527,8 @@ packet EnhancedSetupSynchronousConnection : Command (op_code = ENHANCED_SETUP_SY
   // [1, 255] The number of bits in each unit of data received from the Host
   //          over the audio data transport.
   // [0] Not applicable (implied by the choice of audio data transport)
-  input_transport_unit_bits : 8,
-  output_transport_unit_bits : 8,
+  input_transport_unit_size : 8,
+  output_transport_unit_size : 8,
   // [0x0004, 0xFFFE]: in milliseconds
   //     Upper limit represent the sum of the synchronous interval and the size
   //     of the eSCO window, where the eSCO window is reserved slots plus the
@@ -1568,8 +1568,8 @@ packet EnhancedAcceptSynchronousConnection : Command (op_code = ENHANCED_ACCEPT_
   output_coding_format : ScoCodingFormat,
   // Next two items
   // Size, in bits, of the sample or framed data
-  input_coded_data_bits : 16,
-  output_coded_data_bits : 16,
+  input_coded_data_size : 16,
+  output_coded_data_size : 16,
   input_pcm_data_format : ScoPcmDataFormat,
   output_pcm_data_format : ScoPcmDataFormat,
   // Next two items
@@ -1583,8 +1583,8 @@ packet EnhancedAcceptSynchronousConnection : Command (op_code = ENHANCED_ACCEPT_
   // [1, 255] The number of bits in each unit of data received from the Host
   //          over the audio data transport.
   // [0] Not applicable (implied by the choice of audio data transport)
-  input_transport_unit_bits : 8,
-  output_transport_unit_bits : 8,
+  input_transport_unit_size : 8,
+  output_transport_unit_size : 8,
   // [0x0004, 0xFFFE]: in milliseconds
   //     Upper limit represent the sum of the synchronous interval and the size
   //     of the eSCO window, where the eSCO window is reserved slots plus the
@@ -1761,9 +1761,9 @@ packet FlowSpecificationStatus : CommandStatus (command_op_code = FLOW_SPECIFICA
 packet SniffSubrating : Command (op_code = SNIFF_SUBRATING) {
   connection_handle : 12,
   _reserved_ : 4,
-  maximum_latency : 16,  // 0x0002-0xFFFE (1.25ms-40.9s)
-  minimum_remote_timeout : 16, // 0x0000-0xFFFE (0-40.9s)
-  minimum_local_timeout: 16, // 0x0000-0xFFFE (0-40.9s)
+  max_latency : 16,  // 0x0002-0xFFFE (1.25ms-40.9s)
+  min_remote_timeout : 16, // 0x0000-0xFFFE (0-40.9s)
+  min_local_timeout: 16, // 0x0000-0xFFFE (0-40.9s)
 }
 
 packet SniffSubratingComplete : CommandComplete (command_op_code = SNIFF_SUBRATING) {
@@ -4824,16 +4824,11 @@ packet LeSetDataRelatedAddressChangesComplete : CommandComplete (command_op_code
 }
 
 packet LeSetDefaultSubrate : Command (op_code = LE_SET_DEFAULT_SUBRATE) {
-  subrate_min : 9,
-  _reserved_ : 7,
-  subrate_max : 9,
-  _reserved_ : 7,
-  max_latency : 9,
-  _reserved_ : 7,
-  continuation_number : 9,
-  _reserved_ : 7,
-  supervision_timeout: 12,
-  _reserved_ : 4,
+  subrate_min : 16,
+  subrate_max : 16,
+  max_latency : 16,
+  continuation_number : 16,
+  supervision_timeout : 16,
 }
 
 packet LeSetDefaultSubrateComplete : CommandComplete (command_op_code = LE_SET_DEFAULT_SUBRATE) {
@@ -4843,16 +4838,11 @@ packet LeSetDefaultSubrateComplete : CommandComplete (command_op_code = LE_SET_D
 packet LeSubrateRequest : Command (op_code = LE_SUBRATE_REQUEST) {
   connection_handle : 12,
   _reserved_ : 4,
-  subrate_min : 9,
-  _reserved_ : 7,
-  subrate_max : 9,
-  _reserved_ : 7,
-  max_latency : 9,
-  _reserved_ : 7,
-  continuation_number : 9,
-  _reserved_ : 7,
-  supervision_timeout: 12,
-  _reserved_ : 4,
+  subrate_min : 16,
+  subrate_max : 16,
+  max_latency : 16,
+  continuation_number : 16,
+  supervision_timeout : 16,
 }
 
 packet LeSubrateRequestStatus : CommandStatus (command_op_code = LE_SUBRATE_REQUEST) {

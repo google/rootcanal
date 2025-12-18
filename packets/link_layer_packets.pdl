@@ -57,6 +57,9 @@ enum PacketType : 8 {
     LL_PHY_REQ = 0x50,
     LL_PHY_RSP = 0x51,
     LL_PHY_UPDATE_IND = 0x52,
+
+    LL_SUBRATE_REQ = 0x53,
+    LL_SUBRATE_IND = 0x54,
 }
 
 packet LinkLayerPacket {
@@ -375,4 +378,22 @@ packet LlPhyUpdateInd : LinkLayerPacket (type = LL_PHY_UPDATE_IND) {
   phy_c_to_p: 8,
   phy_p_to_c: 8,
   instant: 16,
+}
+
+packet LlSubrateReq : LinkLayerPacket (type = LL_SUBRATE_REQ) {
+  subrate_factor_min: 16,
+  subrate_factor_max: 16,
+  max_latency: 16,
+  continuation_number: 16,
+  timeout: 16,
+}
+
+packet LlSubrateInd : LinkLayerPacket (type = LL_SUBRATE_IND) {
+  // Not part of the LL PDU, added to emulate LL_REJECT_EXT_IND.
+  status: 8,
+  subrate_factor: 16,
+  subrate_base_event: 16,
+  latency: 16,
+  continuation_number: 16,
+  timeout: 16,
 }

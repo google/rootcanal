@@ -1875,6 +1875,343 @@ ErrorCode LeController::LeExtendedCreateConnection(
   return ErrorCode::SUCCESS;
 }
 
+// =============================================================================
+//  LE Connection Subrating
+// =============================================================================
+
+// HCI LE Set Default Subrate command (Vol 4, Part E § 7.8.123).
+ErrorCode LeController::LeSetDefaultSubrate(uint16_t subrate_min, uint16_t subrate_max,
+                                            uint16_t max_latency, uint16_t continuation_number,
+                                            uint16_t supervision_timeout) {
+  // Note: no explicit error code stated for invalid values but assuming
+  // Unsupported Feature or Parameter Value (0x11) error code based on similar commands.
+
+  if (subrate_min < 0x0001 || subrate_min > 0x01f4) {
+    INFO(id_,
+         "subrate_min (0x{:04x}) is outside the range"
+         " of supported values (0x0001 - 0x01f4)",
+         subrate_min);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  if (subrate_max < 0x0001 || subrate_max > 0x01f4) {
+    INFO(id_,
+         "subrate_max (0x{:04x}) is outside the range"
+         " of supported values (0x0001 - 0x01f4)",
+         subrate_max);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  if (subrate_min > subrate_max) {
+    INFO(id_, "subrate_min (0x{:04x}) is larger than subrate_max (0x{:04x})", subrate_min,
+         subrate_max);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  if (max_latency > 0x01f3) {
+    INFO(id_,
+         "max_latency (0x{:04x}) is outside the range"
+         " of supported values (0x0000 - 0x01f3)",
+         max_latency);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  if (continuation_number > 0x01f3) {
+    INFO(id_,
+         "continuation_number (0x{:04x}) is outside the range"
+         " of supported values (0x0000 - 0x01f3)",
+         continuation_number);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  if (supervision_timeout < 0x000a || supervision_timeout > 0x0c80) {
+    INFO(id_,
+         "supervision_timeout (0x{:04x}) is outside the range"
+         " of supported values (0x000a - 0x0c80)",
+         supervision_timeout);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  default_subrate_parameters_ = LeAclSubrateParameters{
+          .subrate_min = subrate_min,
+          .subrate_max = subrate_max,
+          .max_latency = max_latency,
+          .continuation_number = continuation_number,
+          .supervision_timeout = supervision_timeout,
+  };
+
+  return ErrorCode::SUCCESS;
+}
+
+// HCI LE Subrate Request command (Vol 4, Part E § 7.8.124).
+ErrorCode LeController::LeSubrateRequest(uint16_t connection_handle, uint16_t subrate_min,
+                                         uint16_t subrate_max, uint16_t max_latency,
+                                         uint16_t continuation_number,
+                                         uint16_t supervision_timeout) {
+  // If the Connection_Handle parameter does not identify a current ACL connection, the
+  // Controller shall return the error code Unknown Connection Identifier (0x02).
+  if (!connections_.HasLeAclHandle(connection_handle)) {
+    INFO(id_, "unknown connection_handle (0x{:06x})", connection_handle);
+    return ErrorCode::UNKNOWN_CONNECTION;
+  }
+
+  auto& connection = connections_.GetLeAclConnection(connection_handle);
+
+  // Note: no explicit error code stated for invalid values but assuming
+  // Unsupported Feature or Parameter Value (0x11) error code based on similar commands.
+
+  if (subrate_min < 0x0001 || subrate_min > 0x01f4) {
+    INFO(id_,
+         "subrate_min (0x{:04x}) is outside the range"
+         " of supported values (0x0001 - 0x01f4)",
+         subrate_min);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  if (subrate_max < 0x0001 || subrate_max > 0x01f4) {
+    INFO(id_,
+         "subrate_max (0x{:04x}) is outside the range"
+         " of supported values (0x0001 - 0x01f4)",
+         subrate_max);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  // If the Host issues this command with Subrate_Max less than Subrate_Min, the
+  // Controller shall return the error code Invalid HCI Command Parameters (0x12).
+  if (subrate_min > subrate_max) {
+    INFO(id_, "subrate_min (0x{:04x}) is larger than subrate_max (0x{:04x})", subrate_min,
+         subrate_max);
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  if (max_latency > 0x01f3) {
+    INFO(id_,
+         "max_latency (0x{:04x}) is outside the range"
+         " of supported values (0x0000 - 0x01f3)",
+         max_latency);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  if (continuation_number > 0x01f3) {
+    INFO(id_,
+         "continuation_number (0x{:04x}) is outside the range"
+         " of supported values (0x0000 - 0x01f3)",
+         continuation_number);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  if (supervision_timeout < 0x000a || supervision_timeout > 0x0c80) {
+    INFO(id_,
+         "supervision_timeout (0x{:04x}) is outside the range"
+         " of supported values (0x000a - 0x0c80)",
+         supervision_timeout);
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  // If the Host issues this command with parameters such that
+  // Subrate_Max × (Max_Latency + 1) is greater than 500 or the current connection interval
+  // × Subrate_Max × (Max_Latency + 1) is greater than or equal to half the
+  // Supervision_Timeout parameter, the Controller shall return the error code
+  // Invalid HCI Command Parameters (0x12).
+  if (subrate_max * (max_latency + 1) > 500) {
+    INFO(id_, "subrate_max (0x{:04x}) x (max_latency (0x{:04x}) + 1) is greater than 500",
+         subrate_max, max_latency);
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  if (connection.parameters.conn_interval * subrate_max * (max_latency + 1) >=
+      supervision_timeout / 2) {
+    INFO(id_,
+         "connInterval (0x{:04x}) x subrate_max (0x{:04x}) x (max_latency (0x{:04x}) + 1)"
+         " is greater than or equal to supervision_timeout (0x{:04x}) / 2",
+         connection.parameters.conn_interval, subrate_max, max_latency, supervision_timeout);
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  // If the Host issues this command with Continuation_Number greater than or equal to
+  // Subrate_Max, then the Controller shall return the error code Invalid HCI Command
+  // Parameters (0x12).
+  if (continuation_number >= subrate_max) {
+    INFO(id_, "continuation_number (0x{:04x}) is larger than subrate_max (0x{:04x})",
+         continuation_number, subrate_max);
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  if (connection.role == bluetooth::hci::Role::CENTRAL) {
+    // If the Central's Host issues this command when the Connection Subrating
+    // (Host Support) bit is not set in the Peripheral's FeatureSet, the Controller
+    // shall return the error code Unsupported Remote Feature (0x1A).
+    // TODO: implement when the peripheral feature set is tracked in the ACL connection object.
+
+    // If this command is issued on the Central, the following rules shall apply
+    // when the Controller initiates the Connection Subrate Update procedure
+    // (see [Vol 6] Part B, Section 5.1.19):
+    //     - The Peripheral latency shall be less than or equal to Max_Latency.
+    //     - The subrate factor shall be between Subrate_Min and Subrate_Max.
+    //     - The continuation number shall be equal to the lesser of
+    //       Continuation_Number and (subrate factor - 1).
+    //     - The connection supervision timeout shall be equal to Supervision_Timeout.
+
+    // As Central, it is allowed to directly send
+    // LL_SUBRATE_IND to update the parameters.
+    SendLeLinkLayerPacket(LlSubrateIndBuilder::Create(
+            connection.own_address.GetAddress(), connection.address.GetAddress(),
+            static_cast<uint8_t>(ErrorCode::SUCCESS), subrate_max,
+            /* subrate_base_event */ 0, max_latency, continuation_number, supervision_timeout));
+
+    // Update the connection parameters.
+    connection.parameters.conn_subrate_factor = subrate_max;
+    connection.parameters.conn_continuation_number = continuation_number;
+    connection.parameters.conn_peripheral_latency = max_latency;
+    connection.parameters.conn_supervision_timeout = supervision_timeout;
+
+    // If this command is issued on the Central, it also sets the acceptable parameters
+    // for requests from the Peripheral (see [Vol 6] Part B, Section 5.1.20). The acceptable
+    // parameters set by this command override those provided via the HCI_LE_Set_Default_Subrate
+    // command or any values set by previous uses of this command on the same connection.
+    connection.subrate_parameters = LeAclSubrateParameters{
+            .subrate_min = subrate_min,
+            .subrate_max = subrate_max,
+            .max_latency = max_latency,
+            .continuation_number = continuation_number,
+            .supervision_timeout = supervision_timeout,
+    };
+
+    if (IsLeEventUnmasked(SubeventCode::LE_SUBRATE_CHANGE)) {
+      ScheduleTask(kNoDelayMs, [=, this]() {
+        send_event_(bluetooth::hci::LeSubrateChangeBuilder::Create(
+                ErrorCode::SUCCESS, connection_handle, subrate_max, max_latency,
+                continuation_number, supervision_timeout));
+      });
+    }
+  } else {
+    // Send LL_SUBRATE_REQ and wait for LL_SUBRATE_IND in return.
+    SendLeLinkLayerPacket(LlSubrateReqBuilder::Create(
+            connection.own_address.GetAddress(), connection.address.GetAddress(), subrate_min,
+            subrate_max, max_latency, continuation_number, supervision_timeout));
+  }
+
+  return ErrorCode::SUCCESS;
+}
+
+void LeController::IncomingLlSubrateReq(LeAclConnection& connection,
+                                        model::packets::LinkLayerPacketView incoming) {
+  auto subrate_req = model::packets::LlSubrateReqView::Create(incoming);
+  ASSERT(subrate_req.IsValid());
+  ASSERT(connection.role == bluetooth::hci::Role::CENTRAL);
+
+  LeAclSubrateParameters subrate_parameters = connection.subrate_parameters;
+  uint16_t subrate_factor_min = subrate_req.GetSubrateFactorMin();
+  uint16_t subrate_factor_max = subrate_req.GetSubrateFactorMax();
+  uint16_t max_latency = subrate_req.GetMaxLatency();
+  uint16_t continuation_number = subrate_req.GetContinuationNumber();
+  uint16_t timeout = subrate_req.GetTimeout();
+
+  ErrorCode status = ErrorCode::SUCCESS;
+
+  // Validate parameters according to the rules set in
+  // section 5.1.20. Connection Subrate Request procedure.
+  if (subrate_factor_max < subrate_parameters.subrate_min ||
+      subrate_factor_min > subrate_parameters.subrate_max) {
+    INFO(id_, "rejecting LL_Subrate_Req because of incompatible subrate_factor requirement");
+    status = ErrorCode::INVALID_LMP_OR_LL_PARAMETERS;
+  }
+
+  if (max_latency > subrate_parameters.max_latency) {
+    INFO(id_, "rejecting LL_Subrate_Req because of incompatible max_latency requirement");
+    status = ErrorCode::INVALID_LMP_OR_LL_PARAMETERS;
+  }
+
+  if (timeout > subrate_parameters.supervision_timeout) {
+    INFO(id_, "rejecting LL_Subrate_Req because of incompatible timeout requirement");
+    status = ErrorCode::INVALID_LMP_OR_LL_PARAMETERS;
+  }
+
+  if (max_latency > subrate_parameters.max_latency) {
+    INFO(id_, "rejecting LL_Subrate_Req because of incompatible max_latency requirement");
+    status = ErrorCode::INVALID_LMP_OR_LL_PARAMETERS;
+  }
+
+  if (connection.parameters.conn_interval * subrate_factor_min * (max_latency + 1) * 2 < timeout) {
+    INFO(id_, "rejecting LL_Subrate_Req because of incompatible timeout requirement");
+    status = ErrorCode::INVALID_LMP_OR_LL_PARAMETERS;
+  }
+
+  if (status != ErrorCode::SUCCESS) {
+    SendLeLinkLayerPacket(LlSubrateIndBuilder::Create(connection.own_address.GetAddress(),
+                                                      connection.address.GetAddress(),
+                                                      static_cast<uint8_t>(status), 0, 0, 0, 0, 0));
+    return;
+  }
+
+  // If the Central accepts the Peripheral’s request, then the new connSubrateFactor shall be
+  // between Subrate_Min_acc and Subrate_Max_acc and shall also be between SubrateFactorMin_req and
+  // SubrateFactorMax_req.
+  uint16_t subrate_factor = std::min(subrate_factor_max, subrate_parameters.subrate_max);
+
+  // If the Central accepts the Peripheral’s request, then the new connContinuationNumber shall
+  // equal
+  //  min(max(Continuation_Number_acc, ContinuationNumber_req), (new connSubrateFactor) - 1).
+  continuation_number =
+          std::min<uint16_t>(std::max(continuation_number, subrate_parameters.continuation_number),
+                             subrate_factor - 1);
+
+  // If the Central accepts the Peripheral’s request, then the new connPeripheralLatency shall be
+  // less than or equal to min(Max_Latency_req, Max_Latency_acc),
+  uint16_t perihperal_latency = std::min(max_latency, subrate_parameters.max_latency);
+
+  // If the Central accepts the Peripheral’s request, then the new connSupervisionTimeout shall
+  // equal min(Timeout_req, Supervision_Timeout_acc).
+  uint16_t supervision_timeout = std::min(timeout, subrate_parameters.supervision_timeout);
+
+  // Update the local connection parameters.
+  connection.parameters.conn_subrate_factor = subrate_factor;
+  connection.parameters.conn_continuation_number = continuation_number;
+  connection.parameters.conn_peripheral_latency = perihperal_latency;
+  connection.parameters.conn_supervision_timeout = supervision_timeout;
+
+  if (IsLeEventUnmasked(SubeventCode::LE_SUBRATE_CHANGE)) {
+    ScheduleTask(kNoDelayMs, [=, this]() {
+      send_event_(bluetooth::hci::LeSubrateChangeBuilder::Create(
+              ErrorCode::SUCCESS, connection.handle, subrate_factor, perihperal_latency,
+              continuation_number, supervision_timeout));
+    });
+  }
+
+  SendLeLinkLayerPacket(LlSubrateIndBuilder::Create(
+          connection.own_address.GetAddress(), connection.address.GetAddress(),
+          static_cast<uint8_t>(status), subrate_factor, /* subrate_base_event */ 0,
+          perihperal_latency, continuation_number, supervision_timeout));
+}
+
+void LeController::IncomingLlSubrateInd(LeAclConnection& connection,
+                                        model::packets::LinkLayerPacketView incoming) {
+  auto subrate_ind = model::packets::LlSubrateIndView::Create(incoming);
+  ASSERT(subrate_ind.IsValid());
+  ASSERT(connection.role == bluetooth::hci::Role::PERIPHERAL);
+
+  uint16_t subrate_factor = subrate_ind.GetSubrateFactor();
+  uint16_t latency = subrate_ind.GetLatency();
+  uint16_t continuation_number = subrate_ind.GetContinuationNumber();
+  uint16_t timeout = subrate_ind.GetTimeout();
+  ErrorCode status = static_cast<ErrorCode>(subrate_ind.GetStatus());
+
+  if (status == ErrorCode::SUCCESS) {
+    // Update the local connection parameters on success.
+    connection.parameters.conn_subrate_factor = subrate_factor;
+    connection.parameters.conn_continuation_number = continuation_number;
+    connection.parameters.conn_peripheral_latency = latency;
+    connection.parameters.conn_supervision_timeout = timeout;
+  }
+
+  if (IsLeEventUnmasked(SubeventCode::LE_SUBRATE_CHANGE)) {
+    ScheduleTask(kNoDelayMs, [=, this]() {
+      send_event_(bluetooth::hci::LeSubrateChangeBuilder::Create(
+              status, connection.handle, subrate_factor, latency, continuation_number, timeout));
+    });
+  }
+}
+
 void LeController::SetSecureSimplePairingSupport(bool enable) {
   uint64_t bit = 0x1;
   secure_simple_pairing_host_support_ = enable;
@@ -2105,6 +2442,12 @@ void LeController::IncomingPacket(model::packets::LinkLayerPacketView incoming, 
       break;
     case model::packets::PacketType::LL_PHY_UPDATE_IND:
       IncomingLlPhyUpdateInd(connection, incoming);
+      break;
+    case model::packets::PacketType::LL_SUBRATE_REQ:
+      IncomingLlSubrateReq(connection, incoming);
+      break;
+    case model::packets::PacketType::LL_SUBRATE_IND:
+      IncomingLlSubrateInd(connection, incoming);
       break;
     default:
       WARNING(id_, "Dropping unhandled packet of type {}",
@@ -3404,12 +3747,14 @@ uint16_t LeController::HandleLeConnection(AddressWithType address, AddressWithTy
 
   INFO(id_, "Creating LE connection with peer {}|{} and local address {}", address,
        resolved_address, own_address);
+
   uint16_t handle = connections_.CreateLeConnection(
           address, resolved_address, own_address, role,
           LeAclConnectionParameters{.conn_interval = connection_interval,
                                     .conn_subrate_factor = 1,
                                     .conn_peripheral_latency = connection_latency,
-                                    .conn_supervision_timeout = supervision_timeout});
+                                    .conn_supervision_timeout = supervision_timeout},
+          default_subrate_parameters_);
 
   if (IsLeEventUnmasked(SubeventCode::LE_ENHANCED_CONNECTION_COMPLETE_V1)) {
     AddressWithType peer_resolved_address = resolved_address;
@@ -3748,11 +4093,25 @@ void LeController::IncomingLeConnectionParameterUpdate(
         LeAclConnection& connection, model::packets::LinkLayerPacketView incoming) {
   auto update = model::packets::LeConnectionParameterUpdateView::Create(incoming);
   ASSERT(update.IsValid());
+  ErrorCode status = static_cast<ErrorCode>(update.GetStatus());
+
+  if (status == ErrorCode::SUCCESS) {
+    // Update local connection parameters on success.
+    // If this command completes successfully and the connection interval has changed, then the
+    // subrating factor shall be set to 1 and the continuation number to 0.
+    connection.parameters = LeAclConnectionParameters{
+            .conn_interval = update.GetInterval(),
+            .conn_subrate_factor = 1,
+            .conn_continuation_number = 0,
+            .conn_peripheral_latency = update.GetLatency(),
+            .conn_supervision_timeout = update.GetTimeout(),
+    };
+  }
 
   if (IsLeEventUnmasked(SubeventCode::LE_CONNECTION_UPDATE_COMPLETE)) {
     send_event_(bluetooth::hci::LeConnectionUpdateCompleteBuilder::Create(
-            static_cast<ErrorCode>(update.GetStatus()), connection.handle, update.GetInterval(),
-            update.GetLatency(), update.GetTimeout()));
+            status, connection.handle, update.GetInterval(), update.GetLatency(),
+            update.GetTimeout()));
   }
 }
 
@@ -4241,36 +4600,6 @@ ErrorCode LeController::ReadRemoteVersionInformation(uint16_t connection_handle)
   return ErrorCode::UNKNOWN_CONNECTION;
 }
 
-void LeController::LeConnectionUpdateComplete(uint16_t handle, uint16_t interval_min,
-                                              uint16_t interval_max, uint16_t latency,
-                                              uint16_t supervision_timeout) {
-  ErrorCode status = ErrorCode::SUCCESS;
-  if (!connections_.HasLeAclHandle(handle)) {
-    status = ErrorCode::UNKNOWN_CONNECTION;
-  }
-
-  auto const& connection = connections_.GetLeAclConnection(handle);
-
-  if (interval_min < 6 || interval_max > 0xC80 || interval_min > interval_max ||
-      interval_max < interval_min || latency > 0x1F3 || supervision_timeout < 0xA ||
-      supervision_timeout > 0xC80 ||
-      // The Supervision_Timeout in milliseconds (*10) shall be larger than (1 +
-      // Connection_Latency) * Connection_Interval_Max (* 5/4) * 2
-      supervision_timeout <= ((((1 + latency) * interval_max * 10) / 4) / 10)) {
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-  uint16_t interval = (interval_min + interval_max) / 2;
-
-  SendLeLinkLayerPacket(LeConnectionParameterUpdateBuilder::Create(
-          connection.own_address.GetAddress(), connection.address.GetAddress(),
-          static_cast<uint8_t>(ErrorCode::SUCCESS), interval, latency, supervision_timeout));
-
-  if (IsLeEventUnmasked(SubeventCode::LE_CONNECTION_UPDATE_COMPLETE)) {
-    send_event_(bluetooth::hci::LeConnectionUpdateCompleteBuilder::Create(
-            status, handle, interval, latency, supervision_timeout));
-  }
-}
-
 ErrorCode LeController::LeConnectionUpdate(uint16_t handle, uint16_t interval_min,
                                            uint16_t interval_max, uint16_t latency,
                                            uint16_t supervision_timeout) {
@@ -4288,6 +4617,7 @@ ErrorCode LeController::LeConnectionUpdate(uint16_t handle, uint16_t interval_mi
             static_cast<uint8_t>(ErrorCode::SUCCESS), interval_max, latency, supervision_timeout));
 
     if (IsLeEventUnmasked(SubeventCode::LE_CONNECTION_UPDATE_COMPLETE)) {
+      // TODO: should be delayed after the command status.
       send_event_(bluetooth::hci::LeConnectionUpdateCompleteBuilder::Create(
               ErrorCode::SUCCESS, handle, interval_max, latency, supervision_timeout));
     }
@@ -4303,20 +4633,49 @@ ErrorCode LeController::LeConnectionUpdate(uint16_t handle, uint16_t interval_mi
 }
 
 ErrorCode LeController::LeRemoteConnectionParameterRequestReply(
-        uint16_t connection_handle, uint16_t interval_min, uint16_t interval_max, uint16_t timeout,
-        uint16_t latency, uint16_t minimum_ce_length, uint16_t maximum_ce_length) {
+        uint16_t connection_handle, uint16_t interval_min, uint16_t interval_max,
+        uint16_t supervision_timeout, uint16_t latency, uint16_t minimum_ce_length,
+        uint16_t maximum_ce_length) {
   if (!connections_.HasLeAclHandle(connection_handle)) {
     return ErrorCode::UNKNOWN_CONNECTION;
   }
 
-  if ((interval_min > interval_max) || (minimum_ce_length > maximum_ce_length)) {
+  auto& connection = connections_.GetLeAclConnection(connection_handle);
+
+  if (interval_min < 6 || interval_max > 0xC80 || interval_min > interval_max ||
+      interval_max < interval_min || latency > 0x1F3 || supervision_timeout < 0xA ||
+      supervision_timeout > 0xC80 ||
+      // The Supervision_Timeout in milliseconds (*10) shall be larger than (1 +
+      // Connection_Latency) * Connection_Interval_Max (* 5/4) * 2
+      supervision_timeout <= ((((1 + latency) * interval_max * 10) / 4) / 10)) {
     return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
   }
 
-  ScheduleTask(kNoDelayMs, [this, connection_handle, interval_min, interval_max, latency,
-                            timeout]() {
-    LeConnectionUpdateComplete(connection_handle, interval_min, interval_max, latency, timeout);
-  });
+  if (minimum_ce_length > maximum_ce_length) {
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  // Update local connection parameters.
+  // If this command completes successfully and the connection interval has changed, then the
+  // subrating factor shall be set to 1 and the continuation number to 0.
+  connection.parameters = LeAclConnectionParameters{
+          .conn_interval = interval_min,
+          .conn_subrate_factor = 1,
+          .conn_continuation_number = 0,
+          .conn_peripheral_latency = latency,
+          .conn_supervision_timeout = supervision_timeout,
+  };
+
+  SendLeLinkLayerPacket(LeConnectionParameterUpdateBuilder::Create(
+          connection.own_address.GetAddress(), connection.address.GetAddress(),
+          static_cast<uint8_t>(ErrorCode::SUCCESS), interval_min, latency, supervision_timeout));
+
+  if (IsLeEventUnmasked(SubeventCode::LE_CONNECTION_UPDATE_COMPLETE)) {
+    // TODO: should be delayed after the command status.
+    send_event_(bluetooth::hci::LeConnectionUpdateCompleteBuilder::Create(
+            ErrorCode::SUCCESS, connection.handle, interval_min, latency, supervision_timeout));
+  }
+
   return ErrorCode::SUCCESS;
 }
 
@@ -4327,12 +4686,10 @@ ErrorCode LeController::LeRemoteConnectionParameterRequestNegativeReply(
   }
 
   auto const& connection = connections_.GetLeAclConnection(connection_handle);
-  uint16_t interval = 0;
-  uint16_t latency = 0;
-  uint16_t timeout = 0;
   SendLeLinkLayerPacket(LeConnectionParameterUpdateBuilder::Create(
           connection.own_address.GetAddress(), connection.address.GetAddress(),
-          static_cast<uint8_t>(reason), interval, latency, timeout));
+          static_cast<uint8_t>(reason), 0, 0, 0));
+
   return ErrorCode::SUCCESS;
 }
 
@@ -4460,6 +4817,7 @@ void LeController::Reset() {
   synchronized_ = {};
   default_tx_phys_ = properties_.LeSupportedPhys();
   default_rx_phys_ = properties_.LeSupportedPhys();
+  default_subrate_parameters_ = LeAclSubrateParameters{};
 
   ll_.reset(link_layer_create(controller_ops_));
 }

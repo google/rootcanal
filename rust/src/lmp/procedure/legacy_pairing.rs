@@ -40,7 +40,7 @@ pub async fn initiate(ctx: &impl Context) -> Result<(), ()> {
     let _ = ctx.receive_lmp_packet::<lmp::CombKey>().await;
 
     // Post pairing authentication
-    let link_key = [0; 16];
+    let link_key = [1; 16];
     let auth_result = authentication::send_challenge(ctx, 0, link_key).await;
     authentication::receive_challenge(ctx, link_key).await;
 
@@ -74,7 +74,7 @@ pub async fn respond(ctx: &impl Context, _request: lmp::InRand) -> Result<(), ()
     ctx.send_lmp_packet(lmp::CombKey { transaction_id: 0, random_number: [0; 16] });
 
     // Post pairing authentication
-    let link_key = [0; 16];
+    let link_key = [1; 16];
     authentication::receive_challenge(ctx, link_key).await;
     let auth_result = authentication::send_challenge(ctx, 0, link_key).await;
 

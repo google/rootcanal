@@ -94,7 +94,7 @@ sequence! { procedure, context,
         transaction_id: 0,
         accepted_opcode: Opcode::SimplePairingNumber,
     }
-    IUT -> Upper Tester: UserConfirmationRequest { bd_addr: context.peer_address(), numeric_value: 0 }
+    IUT -> Upper Tester: UserConfirmationRequest { bd_addr: context.peer_address(), numeric_value: 27 }
     Upper Tester -> IUT: UserConfirmationRequestNegativeReply { bd_addr: context.peer_address() }
     IUT -> Upper Tester: UserConfirmationRequestNegativeReplyComplete {
         num_hci_command_packets: 1,
