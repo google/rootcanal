@@ -54,6 +54,16 @@ struct LeAclConnectionParameters {
   uint16_t conn_supervision_timeout{};
 };
 
+/// Ranges for acceptable subrate parameters.
+/// LE Default Subrate parameters (Vol 4, Part E § 7.8.123).
+struct LeAclSubrateParameters {
+  uint16_t subrate_min{1};
+  uint16_t subrate_max{1};
+  uint16_t max_latency{0};
+  uint16_t continuation_number{0};
+  uint16_t supervision_timeout{0x0c80};
+};
+
 // Model the LE connection of a device to the controller.
 class LeAclConnection final {
 public:
@@ -64,10 +74,11 @@ public:
   const bluetooth::hci::Role role;
 
   LeAclConnectionParameters parameters;
+  LeAclSubrateParameters subrate_parameters;
 
   LeAclConnection(uint16_t handle, AddressWithType address, AddressWithType own_address,
                   AddressWithType resolved_address, bluetooth::hci::Role role,
-                  LeAclConnectionParameters parameters);
+                  LeAclConnectionParameters parameters, LeAclSubrateParameters subrate_parameters);
   ~LeAclConnection() = default;
 
   void Encrypt();

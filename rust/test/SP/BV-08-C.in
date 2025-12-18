@@ -108,7 +108,7 @@ sequence! { procedure, context,
         transaction_id: 0,
         nonce: [0; 16],
     }
-    IUT -> Upper Tester: UserConfirmationRequest { bd_addr: context.peer_address(), numeric_value: 0 }
+    IUT -> Upper Tester: UserConfirmationRequest { bd_addr: context.peer_address(), numeric_value: 27 }
     IUT -> Lower Tester: Accepted {
         transaction_id: 0,
         accepted_opcode: Opcode::SimplePairingNumber,

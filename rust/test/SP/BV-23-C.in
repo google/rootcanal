@@ -144,6 +144,6 @@ sequence! { procedure, context,
     IUT -> Upper Tester: LinkKeyNotification {
         bd_addr: context.peer_address(),
         key_type: KeyType::AuthenticatedP192,
-        link_key: [0; 16],
+        link_key: [1; 16],
     }
 }

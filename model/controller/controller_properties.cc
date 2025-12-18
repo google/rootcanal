@@ -117,6 +117,7 @@ static constexpr uint64_t LlFeatures() {
 
           LLFeaturesBits::CONNECTED_ISOCHRONOUS_STREAM_CENTRAL,
           LLFeaturesBits::CONNECTED_ISOCHRONOUS_STREAM_PERIPHERAL,
+          LLFeaturesBits::CONNECTION_SUBRATING,
   };
 
   uint64_t value = 0;
@@ -441,8 +442,8 @@ static std::array<uint8_t, 64> SupportedCommands() {
           // OpCodeIndex::LE_SET_TRANSMIT_POWER_REPORTING_ENABLE,
           // OpCodeIndex::LE_TRANSMITTER_TEST_V4,
           // OpCodeIndex::LE_SET_DATA_RELATED_ADDRESS_CHANGES,
-          // OpCodeIndex::LE_SET_DEFAULT_SUBRATE,
-          // OpCodeIndex::LE_SUBRATE_REQUEST,
+          OpCodeIndex::LE_SET_DEFAULT_SUBRATE,
+          OpCodeIndex::LE_SUBRATE_REQUEST,
   };
 
   std::array<uint8_t, 64> value{};
@@ -1717,14 +1718,21 @@ static std::vector<OpCodeIndex> ll_privacy_commands_ = {
         OpCodeIndex::LE_SET_RESOLVABLE_PRIVATE_ADDRESS_TIMEOUT,
 };
 
-// Commands enabled by the LL Connected Isochronous Stream feature bit.
+// Commands enabled by the Connected Isochronous Stream feature bit.
 // Central and Peripheral support bits are enabled together.
-static std::vector<OpCodeIndex> ll_connected_isochronous_stream_commands_ = {
+static std::vector<OpCodeIndex> connected_isochronous_stream_commands_ = {
         OpCodeIndex::LE_SET_CIG_PARAMETERS,  OpCodeIndex::LE_SET_CIG_PARAMETERS_TEST,
         OpCodeIndex::LE_CREATE_CIS,          OpCodeIndex::LE_REMOVE_CIG,
         OpCodeIndex::LE_ACCEPT_CIS_REQUEST,  OpCodeIndex::LE_REJECT_CIS_REQUEST,
         OpCodeIndex::LE_SETUP_ISO_DATA_PATH, OpCodeIndex::LE_REMOVE_ISO_DATA_PATH,
         OpCodeIndex::LE_REQUEST_PEER_SCA,
+};
+
+// Commands enabled by the Connection Subrating feature bit.
+// Central and Peripheral support bits are enabled together.
+static std::vector<OpCodeIndex> connection_subrating_commands_ = {
+        OpCodeIndex::LE_SET_DEFAULT_SUBRATE,
+        OpCodeIndex::LE_SUBRATE_REQUEST,
 };
 
 static void SetLLFeatureBit(uint64_t& le_features, LLFeaturesBits bit, bool set) {
@@ -1889,8 +1897,14 @@ ControllerProperties::ControllerProperties(rootcanal::configuration::Controller 
                       features.le_connected_isochronous_stream());
       SetLLFeatureBit(le_features, LLFeaturesBits::CONNECTED_ISOCHRONOUS_STREAM_PERIPHERAL,
                       features.le_connected_isochronous_stream());
-      SetSupportedCommandBits(supported_commands, ll_connected_isochronous_stream_commands_,
+      SetSupportedCommandBits(supported_commands, connected_isochronous_stream_commands_,
                               features.le_connected_isochronous_stream());
+    }
+    if (features.has_le_connection_subrating()) {
+      SetLLFeatureBit(le_features, LLFeaturesBits::CONNECTION_SUBRATING,
+                      features.le_connected_isochronous_stream());
+      SetSupportedCommandBits(supported_commands, connection_subrating_commands_,
+                              features.le_connection_subrating());
     }
   }
 

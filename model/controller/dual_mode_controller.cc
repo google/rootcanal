@@ -392,13 +392,15 @@ void DualModeController::ReadRssi(CommandView command) {
 void DualModeController::ReadEncryptionKeySize(CommandView command) {
   auto command_view = bluetooth::hci::ReadEncryptionKeySizeView::Create(command);
   CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
 
   DEBUG(id_, "<< Read Encryption Key Size");
-  DEBUG(id_, "   connection_handle=0x{:x}", command_view.GetConnectionHandle());
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
 
+  uint8_t key_size = 0;
+  auto status = bredr_controller_.ReadEncryptionKeySize(connection_handle, &key_size);
   send_event_(bluetooth::hci::ReadEncryptionKeySizeCompleteBuilder::Create(
-          kNumCommandPackets, ErrorCode::SUCCESS, command_view.GetConnectionHandle(),
-          bredr_controller_.GetEncryptionKeySize()));
+          kNumCommandPackets, status, connection_handle, key_size));
 }
 
 void DualModeController::HostBufferSize(CommandView command) {
@@ -505,15 +507,14 @@ void DualModeController::ReadLocalExtendedFeatures(CommandView command) {
 void DualModeController::ReadRemoteExtendedFeatures(CommandView command) {
   auto command_view = bluetooth::hci::ReadRemoteExtendedFeaturesView::Create(command);
   CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+  uint8_t page_number = command_view.GetPageNumber();
 
   DEBUG(id_, "<< Read Remote Extended Features");
-  DEBUG(id_, "   connection_handle=0x{:x}", command_view.GetConnectionHandle());
-  DEBUG(id_, "   page_number={}", command_view.GetPageNumber());
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+  DEBUG(id_, "   page_number={}", page_number);
 
-  auto status = bredr_controller_.SendCommandToRemoteByHandle(OpCode::READ_REMOTE_EXTENDED_FEATURES,
-                                                              command_view.bytes(),
-                                                              command_view.GetConnectionHandle());
-
+  auto status = bredr_controller_.ReadRemoteExtendedFeatures(connection_handle, page_number);
   send_event_(bluetooth::hci::ReadRemoteExtendedFeaturesStatusBuilder::Create(status,
                                                                               kNumCommandPackets));
 }
@@ -534,14 +535,12 @@ void DualModeController::SwitchRole(CommandView command) {
 void DualModeController::ReadRemoteSupportedFeatures(CommandView command) {
   auto command_view = bluetooth::hci::ReadRemoteSupportedFeaturesView::Create(command);
   CHECK_PACKET_VIEW(command_view);
+  auto connection_handle = command_view.GetConnectionHandle();
 
   DEBUG(id_, "<< Read Remote Supported Features");
-  DEBUG(id_, "   connection_handle=0x{:x}", command_view.GetConnectionHandle());
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
 
-  auto status = bredr_controller_.SendCommandToRemoteByHandle(
-          OpCode::READ_REMOTE_SUPPORTED_FEATURES, command_view.bytes(),
-          command_view.GetConnectionHandle());
-
+  auto status = bredr_controller_.ReadRemoteSupportedFeatures(connection_handle);
   send_event_(bluetooth::hci::ReadRemoteSupportedFeaturesStatusBuilder::Create(status,
                                                                                kNumCommandPackets));
 }
@@ -549,15 +548,12 @@ void DualModeController::ReadRemoteSupportedFeatures(CommandView command) {
 void DualModeController::ReadClockOffset(CommandView command) {
   auto command_view = bluetooth::hci::ReadClockOffsetView::Create(command);
   CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
 
   DEBUG(id_, "<< Read Clock Offset");
-  DEBUG(id_, "   connection_handle=0x{:x}", command_view.GetConnectionHandle());
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
 
-  uint16_t handle = command_view.GetConnectionHandle();
-
-  auto status = bredr_controller_.SendCommandToRemoteByHandle(OpCode::READ_CLOCK_OFFSET,
-                                                              command_view.bytes(), handle);
-
+  auto status = bredr_controller_.ReadClockOffset(connection_handle);
   send_event_(bluetooth::hci::ReadClockOffsetStatusBuilder::Create(status, kNumCommandPackets));
 }
 
@@ -571,8 +567,8 @@ void DualModeController::AddScoConnection(CommandView command) {
   DEBUG(id_, "   connection_handle=0x{:x}", command_view.GetConnectionHandle());
   DEBUG(id_, "   packet_type=0x{:x}", command_view.GetPacketType());
 
-  auto status = bredr_controller_.AddScoConnection(
-          command_view.GetConnectionHandle(), command_view.GetPacketType(), ScoDatapath::NORMAL);
+  auto status = bredr_controller_.AddScoConnection(command_view.GetConnectionHandle(),
+                                                   command_view.GetPacketType());
 
   send_event_(bluetooth::hci::AddScoConnectionStatusBuilder::Create(status, kNumCommandPackets));
 }
@@ -617,265 +613,50 @@ void DualModeController::AcceptSynchronousConnection(CommandView command) {
 
 void DualModeController::EnhancedSetupSynchronousConnection(CommandView command) {
   auto command_view = bluetooth::hci::EnhancedSetupSynchronousConnectionView::Create(command);
-  auto status = ErrorCode::SUCCESS;
   CHECK_PACKET_VIEW(command_view);
 
   DEBUG(id_, "<< Enhanced Setup Synchronous Connection");
   DEBUG(id_, "   connection_handle=0x{:x}", command_view.GetConnectionHandle());
   DEBUG(id_, "   packet_type=0x{:x}", command_view.GetPacketType());
 
-  // The Host shall set the Transmit_Coding_Format and Receive_Coding_Formats
-  // to be equal.
-  auto transmit_coding_format = command_view.GetTransmitCodingFormat();
-  auto receive_coding_format = command_view.GetReceiveCodingFormat();
-  if (transmit_coding_format.coding_format_ != receive_coding_format.coding_format_ ||
-      transmit_coding_format.company_id_ != receive_coding_format.company_id_ ||
-      transmit_coding_format.vendor_specific_codec_id_ !=
-              receive_coding_format.vendor_specific_codec_id_) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Transmit_Coding_Format "
-         "({}) and Receive_Coding_Format ({}) as they are not equal",
-         transmit_coding_format.ToString(), receive_coding_format.ToString());
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-
-  // The Host shall either set the Input_Bandwidth and Output_Bandwidth
-  // to be equal, or shall set one of them to be zero and the other non-zero.
-  auto input_bandwidth = command_view.GetInputBandwidth();
-  auto output_bandwidth = command_view.GetOutputBandwidth();
-  if (input_bandwidth != output_bandwidth && input_bandwidth != 0 && output_bandwidth != 0) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Input_Bandwidth ({})"
-         " and Output_Bandwidth ({}) as they are not equal and different from 0",
-         input_bandwidth, output_bandwidth);
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-
-  // The Host shall set the Input_Coding_Format and Output_Coding_Format
-  // to be equal.
-  auto input_coding_format = command_view.GetInputCodingFormat();
-  auto output_coding_format = command_view.GetOutputCodingFormat();
-  if (input_coding_format.coding_format_ != output_coding_format.coding_format_ ||
-      input_coding_format.company_id_ != output_coding_format.company_id_ ||
-      input_coding_format.vendor_specific_codec_id_ !=
-              output_coding_format.vendor_specific_codec_id_) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Input_Coding_Format ({})"
-         " and Output_Coding_Format ({}) as they are not equal",
-         input_coding_format.ToString(), output_coding_format.ToString());
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-
-  // Root-Canal does not implement audio data transport paths other than the
-  // default HCI transport - other transports will receive spoofed data
-  ScoDatapath datapath = ScoDatapath::NORMAL;
-  if (command_view.GetInputDataPath() != bluetooth::hci::ScoDataPath::HCI ||
-      command_view.GetOutputDataPath() != bluetooth::hci::ScoDataPath::HCI) {
-    WARNING(id_,
-            "EnhancedSetupSynchronousConnection: Input_Data_Path ({})"
-            " and/or Output_Data_Path ({}) are not over HCI, so data will be "
-            "spoofed",
-            static_cast<unsigned>(command_view.GetInputDataPath()),
-            static_cast<unsigned>(command_view.GetOutputDataPath()));
-    datapath = ScoDatapath::SPOOFED;
-  }
-
-  // Either both the Transmit_Coding_Format and Input_Coding_Format shall be
-  // “transparent” or neither shall be. If both are “transparent”, the
-  // Transmit_Bandwidth and the Input_Bandwidth shall be the same and the
-  // Controller shall not modify the data sent to the remote device.
-  auto transmit_bandwidth = command_view.GetTransmitBandwidth();
-  auto receive_bandwidth = command_view.GetReceiveBandwidth();
-  if (transmit_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      input_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      transmit_bandwidth != input_bandwidth) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Transmit_Bandwidth ({})"
-         " and Input_Bandwidth ({}) as they are not equal",
-         transmit_bandwidth, input_bandwidth);
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: the Transmit_Bandwidth and "
-         "Input_Bandwidth shall be equal when both Transmit_Coding_Format "
-         "and Input_Coding_Format are 'transparent'");
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-  if ((transmit_coding_format.coding_format_ ==
-       bluetooth::hci::ScoCodingFormatValues::TRANSPARENT) !=
-      (input_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT)) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Transmit_Coding_Format "
-         "({}) and Input_Coding_Format ({}) as they are incompatible",
-         transmit_coding_format.ToString(), input_coding_format.ToString());
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-
-  // Either both the Receive_Coding_Format and Output_Coding_Format shall
-  // be “transparent” or neither shall be. If both are “transparent”, the
-  // Receive_Bandwidth and the Output_Bandwidth shall be the same and the
-  // Controller shall not modify the data sent to the Host.
-  if (receive_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      output_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      receive_bandwidth != output_bandwidth) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Receive_Bandwidth ({})"
-         " and Output_Bandwidth ({}) as they are not equal",
-         receive_bandwidth, output_bandwidth);
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: the Receive_Bandwidth and "
-         "Output_Bandwidth shall be equal when both Receive_Coding_Format "
-         "and Output_Coding_Format are 'transparent'");
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-  if ((receive_coding_format.coding_format_ ==
-       bluetooth::hci::ScoCodingFormatValues::TRANSPARENT) !=
-      (output_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT)) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Receive_Coding_Format "
-         "({}) and Output_Coding_Format ({}) as they are incompatible",
-         receive_coding_format.ToString(), output_coding_format.ToString());
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-
-  if (status == ErrorCode::SUCCESS) {
-    status = bredr_controller_.SetupSynchronousConnection(
-            command_view.GetConnectionHandle(), transmit_bandwidth, receive_bandwidth,
-            command_view.GetMaxLatency(), bredr_controller_.GetVoiceSetting(),
-            static_cast<uint8_t>(command_view.GetRetransmissionEffort()),
-            command_view.GetPacketType(), datapath);
-  }
-
+  auto status = bredr_controller_.EnhancedSetupSynchronousConnection(
+          command_view.GetConnectionHandle(), command_view.GetTransmitBandwidth(),
+          command_view.GetReceiveBandwidth(), command_view.GetTransmitCodingFormat(),
+          command_view.GetReceiveCodingFormat(), command_view.GetTransmitCodecFrameSize(),
+          command_view.GetReceiveCodecFrameSize(), command_view.GetInputBandwidth(),
+          command_view.GetOutputBandwidth(), command_view.GetInputCodingFormat(),
+          command_view.GetOutputCodingFormat(), command_view.GetInputCodedDataSize(),
+          command_view.GetOutputCodedDataSize(), command_view.GetInputPcmDataFormat(),
+          command_view.GetOutputPcmDataFormat(), command_view.GetInputPcmSamplePayloadMsbPosition(),
+          command_view.GetOutputPcmSamplePayloadMsbPosition(), command_view.GetInputDataPath(),
+          command_view.GetOutputDataPath(), command_view.GetInputTransportUnitSize(),
+          command_view.GetOutputTransportUnitSize(), command_view.GetMaxLatency(),
+          command_view.GetPacketType(), command_view.GetRetransmissionEffort());
   send_event_(bluetooth::hci::EnhancedSetupSynchronousConnectionStatusBuilder::Create(
           status, kNumCommandPackets));
 }
 
 void DualModeController::EnhancedAcceptSynchronousConnection(CommandView command) {
   auto command_view = bluetooth::hci::EnhancedAcceptSynchronousConnectionView::Create(command);
-  auto status = ErrorCode::SUCCESS;
   CHECK_PACKET_VIEW(command_view);
 
   DEBUG(id_, "<< Enhanced Accept Synchronous Connection");
   DEBUG(id_, "   bd_addr={}", command_view.GetBdAddr());
   DEBUG(id_, "   packet_type=0x{:x}", command_view.GetPacketType());
 
-  // The Host shall set the Transmit_Coding_Format and Receive_Coding_Formats
-  // to be equal.
-  auto transmit_coding_format = command_view.GetTransmitCodingFormat();
-  auto receive_coding_format = command_view.GetReceiveCodingFormat();
-  if (transmit_coding_format.coding_format_ != receive_coding_format.coding_format_ ||
-      transmit_coding_format.company_id_ != receive_coding_format.company_id_ ||
-      transmit_coding_format.vendor_specific_codec_id_ !=
-              receive_coding_format.vendor_specific_codec_id_) {
-    INFO(id_,
-         "EnhancedAcceptSynchronousConnection: rejected Transmit_Coding_Format "
-         "({})"
-         " and Receive_Coding_Format ({}) as they are not equal",
-         transmit_coding_format.ToString(), receive_coding_format.ToString());
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-
-  // The Host shall either set the Input_Bandwidth and Output_Bandwidth
-  // to be equal, or shall set one of them to be zero and the other non-zero.
-  auto input_bandwidth = command_view.GetInputBandwidth();
-  auto output_bandwidth = command_view.GetOutputBandwidth();
-  if (input_bandwidth != output_bandwidth && input_bandwidth != 0 && output_bandwidth != 0) {
-    INFO(id_,
-         "EnhancedAcceptSynchronousConnection: rejected Input_Bandwidth ({})"
-         " and Output_Bandwidth ({}) as they are not equal and different from 0",
-         input_bandwidth, output_bandwidth);
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-
-  // The Host shall set the Input_Coding_Format and Output_Coding_Format
-  // to be equal.
-  auto input_coding_format = command_view.GetInputCodingFormat();
-  auto output_coding_format = command_view.GetOutputCodingFormat();
-  if (input_coding_format.coding_format_ != output_coding_format.coding_format_ ||
-      input_coding_format.company_id_ != output_coding_format.company_id_ ||
-      input_coding_format.vendor_specific_codec_id_ !=
-              output_coding_format.vendor_specific_codec_id_) {
-    INFO(id_,
-         "EnhancedAcceptSynchronousConnection: rejected Input_Coding_Format ({})"
-         " and Output_Coding_Format ({}) as they are not equal",
-         input_coding_format.ToString(), output_coding_format.ToString());
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-
-  // Root-Canal does not implement audio data transport paths other than the
-  // default HCI transport.
-  if (command_view.GetInputDataPath() != bluetooth::hci::ScoDataPath::HCI ||
-      command_view.GetOutputDataPath() != bluetooth::hci::ScoDataPath::HCI) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: Input_Data_Path ({})"
-         " and/or Output_Data_Path ({}) are not over HCI, so data will be "
-         "spoofed",
-         static_cast<unsigned>(command_view.GetInputDataPath()),
-         static_cast<unsigned>(command_view.GetOutputDataPath()));
-  }
-
-  // Either both the Transmit_Coding_Format and Input_Coding_Format shall be
-  // “transparent” or neither shall be. If both are “transparent”, the
-  // Transmit_Bandwidth and the Input_Bandwidth shall be the same and the
-  // Controller shall not modify the data sent to the remote device.
-  auto transmit_bandwidth = command_view.GetTransmitBandwidth();
-  auto receive_bandwidth = command_view.GetReceiveBandwidth();
-  if (transmit_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      input_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      transmit_bandwidth != input_bandwidth) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Transmit_Bandwidth ({})"
-         " and Input_Bandwidth ({}) as they are not equal",
-         transmit_bandwidth, input_bandwidth);
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: the Transmit_Bandwidth and "
-         "Input_Bandwidth shall be equal when both Transmit_Coding_Format "
-         "and Input_Coding_Format are 'transparent'");
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-  if ((transmit_coding_format.coding_format_ ==
-       bluetooth::hci::ScoCodingFormatValues::TRANSPARENT) !=
-      (input_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT)) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Transmit_Coding_Format "
-         "({}) and Input_Coding_Format ({}) as they are incompatible",
-         transmit_coding_format.ToString(), input_coding_format.ToString());
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-
-  // Either both the Receive_Coding_Format and Output_Coding_Format shall
-  // be “transparent” or neither shall be. If both are “transparent”, the
-  // Receive_Bandwidth and the Output_Bandwidth shall be the same and the
-  // Controller shall not modify the data sent to the Host.
-  if (receive_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      output_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT &&
-      receive_bandwidth != output_bandwidth) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Receive_Bandwidth ({})"
-         " and Output_Bandwidth ({}) as they are not equal",
-         receive_bandwidth, output_bandwidth);
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: the Receive_Bandwidth and "
-         "Output_Bandwidth shall be equal when both Receive_Coding_Format "
-         "and Output_Coding_Format are 'transparent'");
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-  if ((receive_coding_format.coding_format_ ==
-       bluetooth::hci::ScoCodingFormatValues::TRANSPARENT) !=
-      (output_coding_format.coding_format_ == bluetooth::hci::ScoCodingFormatValues::TRANSPARENT)) {
-    INFO(id_,
-         "EnhancedSetupSynchronousConnection: rejected Receive_Coding_Format "
-         "({}) and Output_Coding_Format ({}) as they are incompatible",
-         receive_coding_format.ToString(), output_coding_format.ToString());
-    status = ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
-  }
-
-  if (status == ErrorCode::SUCCESS) {
-    status = bredr_controller_.AcceptSynchronousConnection(
-            command_view.GetBdAddr(), transmit_bandwidth, receive_bandwidth,
-            command_view.GetMaxLatency(), bredr_controller_.GetVoiceSetting(),
-            static_cast<uint8_t>(command_view.GetRetransmissionEffort()),
-            command_view.GetPacketType());
-  }
-
+  auto status = bredr_controller_.EnhancedAcceptSynchronousConnection(
+          command_view.GetBdAddr(), command_view.GetTransmitBandwidth(),
+          command_view.GetReceiveBandwidth(), command_view.GetTransmitCodingFormat(),
+          command_view.GetReceiveCodingFormat(), command_view.GetTransmitCodecFrameSize(),
+          command_view.GetReceiveCodecFrameSize(), command_view.GetInputBandwidth(),
+          command_view.GetOutputBandwidth(), command_view.GetInputCodingFormat(),
+          command_view.GetOutputCodingFormat(), command_view.GetInputCodedDataSize(),
+          command_view.GetOutputCodedDataSize(), command_view.GetInputPcmDataFormat(),
+          command_view.GetOutputPcmDataFormat(), command_view.GetInputPcmSamplePayloadMsbPosition(),
+          command_view.GetOutputPcmSamplePayloadMsbPosition(), command_view.GetInputDataPath(),
+          command_view.GetOutputDataPath(), command_view.GetInputTransportUnitSize(),
+          command_view.GetOutputTransportUnitSize(), command_view.GetMaxLatency(),
+          command_view.GetPacketType(), command_view.GetRetransmissionEffort());
   send_event_(bluetooth::hci::EnhancedAcceptSynchronousConnectionStatusBuilder::Create(
           status, kNumCommandPackets));
 }
@@ -943,7 +724,11 @@ void DualModeController::ReadLocalOobData(CommandView command) {
 
   DEBUG(id_, "<< Read Local Oob Data");
 
-  bredr_controller_.ReadLocalOobData();
+  std::array<uint8_t, 16> c{};
+  std::array<uint8_t, 16> r{};
+  bredr_controller_.ReadLocalOobData(&c, &r);
+  send_event_(bluetooth::hci::ReadLocalOobDataCompleteBuilder::Create(kNumCommandPackets,
+                                                                      ErrorCode::SUCCESS, c, r));
 }
 
 void DualModeController::ReadLocalOobExtendedData(CommandView command) {
@@ -951,7 +736,13 @@ void DualModeController::ReadLocalOobExtendedData(CommandView command) {
 
   DEBUG(id_, "<< Read Local Oob Extended Data");
 
-  bredr_controller_.ReadLocalOobExtendedData();
+  std::array<uint8_t, 16> c_192{};
+  std::array<uint8_t, 16> r_192{};
+  std::array<uint8_t, 16> c_256{};
+  std::array<uint8_t, 16> r_256{};
+  bredr_controller_.ReadLocalOobExtendedData(&c_192, &r_192, &c_256, &r_256);
+  send_event_(bluetooth::hci::ReadLocalOobExtendedDataCompleteBuilder::Create(
+          kNumCommandPackets, ErrorCode::SUCCESS, c_192, r_192, c_256, r_256));
 }
 
 void DualModeController::SetMinEncryptionKeySize(CommandView command) {
@@ -1288,9 +1079,10 @@ void DualModeController::ReadDefaultLinkPolicySettings(CommandView command) {
 
   DEBUG(id_, "<< Read Default Link Policy Settings");
 
-  uint16_t settings = bredr_controller_.ReadDefaultLinkPolicySettings();
+  uint16_t settings = 0;
+  auto status = bredr_controller_.ReadDefaultLinkPolicySettings(&settings);
   send_event_(bluetooth::hci::ReadDefaultLinkPolicySettingsCompleteBuilder::Create(
-          kNumCommandPackets, ErrorCode::SUCCESS, settings));
+          kNumCommandPackets, status, settings));
 }
 
 void DualModeController::WriteDefaultLinkPolicySettings(CommandView command) {
@@ -1314,8 +1106,11 @@ void DualModeController::SniffSubrating(CommandView command) {
   DEBUG(id_, "<< Sniff Subrating");
   DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
 
-  send_event_(bluetooth::hci::SniffSubratingCompleteBuilder::Create(
-          kNumCommandPackets, ErrorCode::SUCCESS, connection_handle));
+  auto status = bredr_controller_.SniffSubrating(connection_handle, command_view.GetMaxLatency(),
+                                                 command_view.GetMinRemoteTimeout(),
+                                                 command_view.GetMinLocalTimeout());
+  send_event_(bluetooth::hci::SniffSubratingCompleteBuilder::Create(kNumCommandPackets, status,
+                                                                    connection_handle));
 }
 
 void DualModeController::FlowSpecification(CommandView command) {
@@ -1401,7 +1196,7 @@ void DualModeController::WriteLocalName(CommandView command) {
 
   DEBUG(id_, "<< Write Local Name");
 
-  bredr_controller_.SetLocalName(command_view.GetLocalName());
+  bredr_controller_.WriteLocalName(command_view.GetLocalName());
   send_event_(bluetooth::hci::WriteLocalNameCompleteBuilder::Create(kNumCommandPackets,
                                                                     ErrorCode::SUCCESS));
 }
@@ -1412,7 +1207,9 @@ void DualModeController::WriteExtendedInquiryResponse(CommandView command) {
 
   DEBUG(id_, "<< Write Extended Inquiry Response");
 
-  bredr_controller_.SetExtendedInquiryResponse(command_view.GetExtendedInquiryResponse());
+  bredr_controller_.WriteExtendedInquiryResponse(
+          command_view.GetFecRequired() == bluetooth::hci::FecRequired::REQUIRED,
+          command_view.GetExtendedInquiryResponse());
   send_event_(bluetooth::hci::WriteExtendedInquiryResponseCompleteBuilder::Create(
           kNumCommandPackets, ErrorCode::SUCCESS));
 }
@@ -1536,14 +1333,8 @@ void DualModeController::ReadScanEnable(CommandView command) {
 
   DEBUG(id_, "<< Read Scan Enable");
 
-  bool inquiry_scan = bredr_controller_.GetInquiryScanEnable();
-  bool page_scan = bredr_controller_.GetPageScanEnable();
-
-  bluetooth::hci::ScanEnable scan_enable =
-          inquiry_scan && page_scan ? bluetooth::hci::ScanEnable::INQUIRY_AND_PAGE_SCAN
-          : inquiry_scan            ? bluetooth::hci::ScanEnable::INQUIRY_SCAN_ONLY
-          : page_scan               ? bluetooth::hci::ScanEnable::PAGE_SCAN_ONLY
-                                    : bluetooth::hci::ScanEnable::NO_SCANS;
+  bluetooth::hci::ScanEnable scan_enable = bluetooth::hci::ScanEnable::NO_SCANS;
+  bredr_controller_.ReadScanEnable(&scan_enable);
 
   send_event_(bluetooth::hci::ReadScanEnableCompleteBuilder::Create(
           kNumCommandPackets, ErrorCode::SUCCESS, scan_enable));
@@ -1553,16 +1344,11 @@ void DualModeController::WriteScanEnable(CommandView command) {
   auto command_view = bluetooth::hci::WriteScanEnableView::Create(command);
   CHECK_PACKET_VIEW(command_view);
   bluetooth::hci::ScanEnable scan_enable = command_view.GetScanEnable();
-  bool inquiry_scan = scan_enable == bluetooth::hci::ScanEnable::INQUIRY_AND_PAGE_SCAN ||
-                      scan_enable == bluetooth::hci::ScanEnable::INQUIRY_SCAN_ONLY;
-  bool page_scan = scan_enable == bluetooth::hci::ScanEnable::INQUIRY_AND_PAGE_SCAN ||
-                   scan_enable == bluetooth::hci::ScanEnable::PAGE_SCAN_ONLY;
 
   DEBUG(id_, "<< Write Scan Enable");
   DEBUG(id_, "   scan_enable={}", bluetooth::hci::ScanEnableText(scan_enable));
 
-  bredr_controller_.SetInquiryScanEnable(inquiry_scan);
-  bredr_controller_.SetPageScanEnable(page_scan);
+  bredr_controller_.WriteScanEnable(scan_enable);
   send_event_(bluetooth::hci::WriteScanEnableCompleteBuilder::Create(kNumCommandPackets,
                                                                      ErrorCode::SUCCESS));
 }
@@ -1645,23 +1431,17 @@ void DualModeController::SetEventFilter(CommandView command) {
 void DualModeController::Inquiry(CommandView command) {
   auto command_view = bluetooth::hci::InquiryView::Create(command);
   CHECK_PACKET_VIEW(command_view);
-  auto max_responses = command_view.GetNumResponses();
-  auto length = command_view.GetInquiryLength();
+  auto lap = command_view.GetLap().lap_;
+  auto inquiry_length = command_view.GetInquiryLength();
+  auto num_responses = command_view.GetNumResponses();
 
   DEBUG(id_, "<< Inquiry");
-  DEBUG(id_, "   num_responses={}", max_responses);
-  DEBUG(id_, "   inquiry_length={}", length);
+  DEBUG(id_, "   LAP={}", lap);
+  DEBUG(id_, "   inquiry_length={}", inquiry_length);
+  DEBUG(id_, "   num_responses={}", num_responses);
 
-  if (max_responses > 0xff || length < 1 || length > 0x30) {
-    send_event_(bluetooth::hci::InquiryStatusBuilder::Create(
-            ErrorCode::INVALID_HCI_COMMAND_PARAMETERS, kNumCommandPackets));
-    return;
-  }
-  bredr_controller_.SetInquiryLAP(command_view.GetLap().lap_);
-  bredr_controller_.SetInquiryMaxResponses(max_responses);
-  bredr_controller_.StartInquiry(std::chrono::milliseconds(length * 1280));
-
-  send_event_(bluetooth::hci::InquiryStatusBuilder::Create(ErrorCode::SUCCESS, kNumCommandPackets));
+  auto status = bredr_controller_.Inquiry(lap, inquiry_length, num_responses);
+  send_event_(bluetooth::hci::InquiryStatusBuilder::Create(status, kNumCommandPackets));
 }
 
 void DualModeController::InquiryCancel(CommandView command) {
@@ -1670,9 +1450,8 @@ void DualModeController::InquiryCancel(CommandView command) {
 
   DEBUG(id_, "<< Inquiry Cancel");
 
-  bredr_controller_.InquiryCancel();
-  send_event_(bluetooth::hci::InquiryCancelCompleteBuilder::Create(kNumCommandPackets,
-                                                                   ErrorCode::SUCCESS));
+  auto status = bredr_controller_.InquiryCancel();
+  send_event_(bluetooth::hci::InquiryCancelCompleteBuilder::Create(kNumCommandPackets, status));
 }
 
 void DualModeController::AcceptConnectionRequest(CommandView command) {
@@ -1720,13 +1499,14 @@ void DualModeController::RemoteNameRequest(CommandView command) {
   auto command_view = bluetooth::hci::RemoteNameRequestView::Create(command);
   CHECK_PACKET_VIEW(command_view);
   Address bd_addr = command_view.GetBdAddr();
+  uint8_t page_scan_repetition_mode =
+          static_cast<uint8_t>(command_view.GetPageScanRepetitionMode());
 
   DEBUG(id_, "<< Remote Name Request");
   DEBUG(id_, "   bd_addr={}", bd_addr);
+  DEBUG(id_, "   page_scan_repetition_mode={}", page_scan_repetition_mode);
 
-  auto status = bredr_controller_.SendCommandToRemoteByAddress(
-          OpCode::REMOTE_NAME_REQUEST, command_view.bytes(), GetAddress(), bd_addr);
-
+  auto status = bredr_controller_.RemoteNameRequest(bd_addr, page_scan_repetition_mode, 0);
   send_event_(bluetooth::hci::RemoteNameRequestStatusBuilder::Create(status, kNumCommandPackets));
 }
 
@@ -1817,6 +1597,33 @@ void DualModeController::LeReadBufferSizeV2(CommandView command) {
 
   send_event_(bluetooth::hci::LeReadBufferSizeV2CompleteBuilder::Create(
           kNumCommandPackets, ErrorCode::SUCCESS, le_buffer_size, iso_buffer_size));
+}
+
+void DualModeController::LeSetDefaultSubrate(CommandView command) {
+  auto command_view = bluetooth::hci::LeSetDefaultSubrateView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+
+  DEBUG(id_, "<< LE Default Subrate");
+
+  auto status = le_controller_.LeSetDefaultSubrate(
+          command_view.GetSubrateMin(), command_view.GetSubrateMax(), command_view.GetMaxLatency(),
+          command_view.GetContinuationNumber(), command_view.GetSupervisionTimeout());
+  send_event_(
+          bluetooth::hci::LeSetDefaultSubrateCompleteBuilder::Create(kNumCommandPackets, status));
+}
+
+void DualModeController::LeSubrateRequest(CommandView command) {
+  auto command_view = bluetooth::hci::LeSubrateRequestView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+
+  DEBUG(id_, "<< LE Subrate Request");
+  DEBUG(id_, "   connection_handle=0x{:x}", command_view.GetConnectionHandle());
+
+  auto status = le_controller_.LeSubrateRequest(
+          command_view.GetConnectionHandle(), command_view.GetSubrateMin(),
+          command_view.GetSubrateMax(), command_view.GetMaxLatency(),
+          command_view.GetContinuationNumber(), command_view.GetSupervisionTimeout());
+  send_event_(bluetooth::hci::LeSubrateRequestStatusBuilder::Create(status, kNumCommandPackets));
 }
 
 void DualModeController::LeSetAddressResolutionEnable(CommandView command) {
@@ -4348,9 +4155,8 @@ DualModeController::GetHciCommandHandlers() {
           //&DualModeController::LeTransmitterTestV4},
           //{OpCode::LE_SET_DATA_RELATED_ADDRESS_CHANGES,
           //&DualModeController::LeSetDataRelatedAddressChanges},
-          //{OpCode::LE_SET_DEFAULT_SUBRATE,
-          //&DualModeController::LeSetDefaultSubrate},
-          //{OpCode::LE_SUBRATE_REQUEST, &DualModeController::LeSubrateRequest},
+          {OpCode::LE_SET_DEFAULT_SUBRATE, &DualModeController::LeSetDefaultSubrate},
+          {OpCode::LE_SUBRATE_REQUEST, &DualModeController::LeSubrateRequest},
           //{OpCode::LE_SET_EXTENDED_ADVERTISING_PARAMETERS_V2,
           //&DualModeController::LeSetExtendedAdvertisingParametersV2},
           //{OpCode::LE_SET_DECISION_DATA, &DualModeController::LeSetDecisionData},
