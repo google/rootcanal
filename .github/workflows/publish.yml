@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Set VERSION
         run: |
-          TAG=${{ github.ref_name }}
+          TAG=${GITHUB_REF_NAME}
           echo "VERSION=${TAG#v}" >> $GITHUB_ENV
       - name: Fetch Python Wheel
         uses: robinraju/release-downloader@v1.8

@@ -68,7 +68,7 @@ jobs:
 
       - name: Set VERSION
         run: |
-          TAG=${{ github.ref_name }}
+          TAG=${GITHUB_REF_NAME}
           echo "VERSION=${TAG#v}" >> $GITHUB_ENV
 
       - name: Create Release
@@ -93,7 +93,7 @@ jobs:
           name: rootcanal-macos-arm64
 
       - name: Build Python Wheel
-        run: bash py/make_wheel.sh ${{ env.VERSION }}
+        run: bash py/make_wheel.sh ${VERSION}
 
       - name: Upload Python Wheel
         uses: actions/upload-release-asset@v1
