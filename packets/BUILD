@@ -1,29 +1,39 @@
 # Copyright 2023 Google Inc. All Rights Reserved.
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 
 package(default_visibility = ["//visibility:public"])
 exports_files(["hci_packets.pdl"])
 
+alias(
+    name = "pdlc",
+    actual = "@crates//:pdl-compiler__pdlc",
+    visibility = ["//visibility:public"],
+)
+
 genrule(
     name = "hci_packets_json",
-    cmd = "pdlc $(location hci_packets.pdl) > $(location hci_packets.json)",
+    cmd = "$(location :pdlc) $(location hci_packets.pdl) > $(location hci_packets.json)",
     outs = ["hci_packets.json"],
     srcs = ["hci_packets.pdl"],
+    tools = [":pdlc"],
 )
 
 genrule(
     name = "bredr_bb_packets_json",
-    cmd = "pdlc $(location bredr_bb_packets.pdl) > $(location bredr_bb_packets.json)",
+    cmd = "$(location :pdlc) $(location bredr_bb_packets.pdl) > $(location bredr_bb_packets.json)",
     outs = ["bredr_bb_packets.json"],
     srcs = ["bredr_bb_packets.pdl"],
+    tools = [":pdlc"],
 )
 
 genrule(
     name = "link_layer_packets_json",
-    cmd = "pdlc $(location link_layer_packets.pdl) > $(location link_layer_packets.json)",
+    cmd = "$(location :pdlc) $(location link_layer_packets.pdl) > $(location link_layer_packets.json)",
     outs = ["link_layer_packets.json"],
     srcs = ["link_layer_packets.pdl"],
+    tools = [":pdlc"],
 )
 
 run_binary(
