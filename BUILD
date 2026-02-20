@@ -2,6 +2,7 @@
 
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(default_visibility = ["//visibility:private"])
@@ -188,7 +189,6 @@ cc_binary(
         "//rust:include/rootcanal_rs.h",
     ],
     copts = [
-        "-std=c++17",
         "-Wno-c99-designator",
         "-Wno-google3-literal-operator",
         "-Wno-pessimizing-move",

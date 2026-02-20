@@ -1,0 +1,2 @@
+# build --cxxopt=-std=c++17 --copt=-Wa,-gsframe=no
+build --cxxopt=-std=c++17
