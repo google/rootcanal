@@ -32,8 +32,9 @@ librootcanal_ffi_path = binaries.get_package_binary_resource_path("librootcanal_
 rootcanal = cdll.LoadLibrary(librootcanal_ffi_path)
 rootcanal.ffi_controller_new.restype = c_void_p
 
-SEND_HCI_FUNC = CFUNCTYPE(None, c_int, POINTER(c_ubyte), c_size_t)
-SEND_LL_FUNC = CFUNCTYPE(None, POINTER(c_ubyte), c_size_t, c_int, c_int)
+SEND_HCI_FUNC = CFUNCTYPE(None, c_void_p, c_int, POINTER(c_ubyte), c_size_t)
+SEND_LL_FUNC = CFUNCTYPE(None, c_void_p, POINTER(c_ubyte), c_size_t, c_int, c_int)
+RANGING_ESTIMATOR_FUNC = CFUNCTYPE(c_uint, c_void_p, c_void_p)
 
 
 class Idc(enum.IntEnum):
@@ -47,6 +48,12 @@ class Idc(enum.IntEnum):
 class Phy(enum.IntEnum):
     LowEnergy = 0
     BrEdr = 1
+
+
+class RangingMode(enum.Enum):
+    FIXED = "fixed"
+    RANDOM = "random"
+    COOKIE_BASED = "cookie_based"
 
 
 class LeFeatures:
@@ -87,10 +94,24 @@ class Controller:
     packets into the controller, and receive_hci, receive_ll to
     catch outgoing HCI packets of LL pdus."""
 
-    def __init__(self, address: hci.Address):
+    def __init__(
+        self,
+        address: hci.Address,
+        ranging_mode: RangingMode = RangingMode.FIXED,
+        fixed_distance_cm: int = 100,
+        min_random_distance_cm: int = 30,
+        max_random_distance_cm: int = 500,
+    ):
+        self.ranging_mode = ranging_mode
+        self.fixed_distance_cm = fixed_distance_cm
+        self.min_random_distance_cm = min_random_distance_cm
+        self.max_random_distance_cm = max_random_distance_cm
+
         # Write the callbacks for handling HCI and LL send events.
         @SEND_HCI_FUNC
-        def send_hci(idc: c_int, data: POINTER(c_ubyte), data_len: c_size_t):
+        def send_hci(
+            cookie: c_void_p, idc: c_int, data: POINTER(c_ubyte), data_len: c_size_t
+        ):
             packet = []
             for n in range(data_len):
                 packet.append(data[n])
@@ -98,19 +119,63 @@ class Controller:
 
         @SEND_LL_FUNC
         def send_ll(
-            data: POINTER(c_ubyte), data_len: c_size_t, phy: c_int, tx_power: c_int
+            cookie: c_void_p,
+            data: POINTER(c_ubyte),
+            data_len: c_size_t,
+            phy: c_int,
+            tx_power: c_int,
         ):
             packet = []
             for n in range(data_len):
                 packet.append(data[n])
             self.receive_ll_(bytes(packet), int(phy), int(tx_power))
 
+        @RANGING_ESTIMATOR_FUNC
+        def ranging_estimator(cookie1: c_void_p, cookie2: c_void_p) -> int:
+            """
+            Simulates a distance estimation for Channel Sounding.
+            Returns a fixed or random distance in cm based on the Controller's settings.
+
+            Args:
+                cookie1: Opaque pointer to the first controller instance.
+                cookie2: Opaque pointer to the second controller instance.
+
+            Returns:
+                An unsigned integer representing the estimated distance in cm.
+            """
+            if self.ranging_mode == RangingMode.FIXED:
+                return self.fixed_distance_cm
+            elif self.ranging_mode == RangingMode.RANDOM:
+                return random.randint(
+                    self.min_random_distance_cm, self.max_random_distance_cm
+                )
+            elif self.ranging_mode == RangingMode.COOKIE_BASED:
+                # Base the distance on the memory addresses of the controllers.
+                # This is arbitrary but makes the result dependent on the pair.
+                addr1 = cookie1.value if cookie1 else 0
+                addr2 = cookie2.value if cookie2 else 0
+                seed = addr1 ^ addr2
+                random.seed(seed)
+                return random.randint(
+                    self.min_random_distance_cm, self.max_random_distance_cm
+                )
+            else:
+                return 100  # Default fallback
+
         self.send_hci_callback = SEND_HCI_FUNC(send_hci)
         self.send_ll_callback = SEND_LL_FUNC(send_ll)
+        self.ranging_estimator_callback = RANGING_ESTIMATOR_FUNC(ranging_estimator)
 
         # Create a c++ controller instance.
         self.instance = rootcanal.ffi_controller_new(
-            c_char_p(address.address), self.send_hci_callback, self.send_ll_callback
+            c_char_p(address.address),
+            self.send_hci_callback,
+            self.send_ll_callback,
+            None,
+            self.ranging_estimator_callback,
+            None,
+            None,
+            0,
         )
 
         self.address = address
