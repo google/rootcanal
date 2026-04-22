@@ -26,6 +26,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "log.h"
 #include "hci/address.h"
 #include "model/controller/bredr_controller.h"
 #include "model/controller/controller_properties.h"
@@ -105,6 +106,9 @@ public:
 
   void RegisterIsoChannel(
           const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>& send_iso);
+
+  void RegisterRangingEstimator(
+          std::function<unsigned(void const* cookie1, void const* cookie2)> const& callback);
 
   // Controller commands. For error codes, see the Bluetooth Core Specification,
   // Version 4.2, Volume 2, Part D (page 370).
@@ -514,6 +518,9 @@ public:
   // 7.8.66
   void LeExtendedCreateConnectionV1(CommandView command);
 
+  // 7.8.74
+  void LeReadTransmitPower(CommandView command);
+
   // 7.8.77
   void LeSetPrivacyMode(CommandView command);
 
@@ -523,11 +530,35 @@ public:
   // 7.8.115
   void LeSetHostFeatureV1(CommandView command);
 
+  // 7.8.117
+  void LeEnhancedReadTransmitPowerLevel(CommandView command);
+
+  // 7.8.118
+  void LeReadRemoteTransmitPowerLevel(CommandView command);
+
+  // 7.8.121
+  void LeSetTransmitPowerReportingEnable(CommandView command);
+
   // 7.8.123 - 7.8.124
   void LeSetDefaultSubrate(CommandView command);
   void LeSubrateRequest(CommandView command);
 
+  // 7.8.130 - 7.8.141
+  void LeCsReadLocalSupportedCapabilities(CommandView command);
+  void LeCsReadRemoteSupportedCapabilities(CommandView command);
+  void LeCsWriteCachedRemoteSupportedCapabilities(CommandView command);
+  void LeCsSecurityEnable(CommandView command);
+  void LeCsSetDefaultSettings(CommandView command);
+  void LeCsReadRemoteFaeTable(CommandView command);
+  void LeCsWriteCachedRemoteFaeTable(CommandView command);
+  void LeCsCreateConfig(CommandView command);
+  void LeCsRemoveConfig(CommandView command);
+  void LeCsSetChannelClassification(CommandView command);
+  void LeCsSetProcedureParameters(CommandView command);
+  void LeCsProcedureEnable(CommandView command);
+
   // Vendor-specific Commands
+  void RootcanalCommand(CommandView command);
   void LeGetVendorCapabilities(CommandView command);
   void LeBatchScan(CommandView command);
   void LeApcf(CommandView command);
@@ -572,6 +603,8 @@ private:
     if (view.IsValid()) {
       return true;
     }
+
+    WARNING(id_, "{}", reason);
 
     // Send a hardware error to reset the host, and report the packet
     // for tracing.

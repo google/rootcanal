@@ -116,7 +116,7 @@ pub mod secure_simple_pairing;
 
 macro_rules! run_procedures {
     ($(
-        $idx:tt { $procedure:expr }
+        $idx:tt { $procedure:expr_2021 }
     )+) => {{
         $(
             let $idx = async { loop { $procedure.await; } };

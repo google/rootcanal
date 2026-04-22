@@ -269,6 +269,11 @@ void DualModeController::RegisterInvalidPacketHandler(
   invalid_packet_handler_ = handler;
 }
 
+void DualModeController::RegisterRangingEstimator(
+        std::function<unsigned(void const* cookie1, void const* cookie2)> const& callback) {
+  le_controller_.RegisterRangingEstimator(callback);
+}
+
 void DualModeController::RegisterEventChannel(
         const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>& send_event) {
   send_event_ = [send_event](std::shared_ptr<bluetooth::hci::EventBuilder> event) {
@@ -1599,6 +1604,56 @@ void DualModeController::LeReadBufferSizeV2(CommandView command) {
           kNumCommandPackets, ErrorCode::SUCCESS, le_buffer_size, iso_buffer_size));
 }
 
+void DualModeController::LeEnhancedReadTransmitPowerLevel(CommandView command) {
+  auto command_view = bluetooth::hci::LeEnhancedReadTransmitPowerLevelView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE Enhanced Read Transmit Power Level");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+  DEBUG(id_, "   phy={}", command_view.GetPhy());
+
+  ErrorCode status = le_controller_.HasLeAclConnection(connection_handle)
+                             ? ErrorCode::SUCCESS
+                             : ErrorCode::UNKNOWN_CONNECTION;
+
+  send_event_(bluetooth::hci::LeEnhancedReadTransmitPowerLevelCompleteBuilder::Create(
+          kNumCommandPackets, status, connection_handle,
+          static_cast<bluetooth::hci::PhyWithCodedSpecified>(command_view.GetPhy()),
+          kTransmitPowerLevel, kTransmitPowerLevel));
+}
+
+void DualModeController::LeReadRemoteTransmitPowerLevel(CommandView command) {
+  auto command_view = bluetooth::hci::LeReadRemoteTransmitPowerLevelView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE Read Remote Transmit Power Level");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+  DEBUG(id_, "   phy={}", command_view.GetPhy());
+
+  auto status =
+          le_controller_.LeReadRemoteTransmitPowerLevel(connection_handle, command_view.GetPhy());
+  send_event_(bluetooth::hci::LeReadRemoteTransmitPowerLevelStatusBuilder::Create(
+          status, kNumCommandPackets));
+}
+
+void DualModeController::LeSetTransmitPowerReportingEnable(CommandView command) {
+  auto command_view = bluetooth::hci::LeSetTransmitPowerReportingEnableView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE Set Transmit Power Reporting Enable");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+  DEBUG(id_, "   local_enable={}", command_view.GetLocalEnable());
+  DEBUG(id_, "   remote_enable={}", command_view.GetRemoteEnable());
+
+  auto status = le_controller_.LeSetTransmitPowerReportingEnable(
+          connection_handle, command_view.GetLocalEnable(), command_view.GetRemoteEnable());
+  send_event_(bluetooth::hci::LeSetTransmitPowerReportingEnableCompleteBuilder::Create(
+          kNumCommandPackets, status, connection_handle));
+}
+
 void DualModeController::LeSetDefaultSubrate(CommandView command) {
   auto command_view = bluetooth::hci::LeSetDefaultSubrateView::Create(command);
   CHECK_PACKET_VIEW(command_view);
@@ -1624,6 +1679,207 @@ void DualModeController::LeSubrateRequest(CommandView command) {
           command_view.GetSubrateMax(), command_view.GetMaxLatency(),
           command_view.GetContinuationNumber(), command_view.GetSupervisionTimeout());
   send_event_(bluetooth::hci::LeSubrateRequestStatusBuilder::Create(status, kNumCommandPackets));
+}
+
+void DualModeController::LeCsReadLocalSupportedCapabilities(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsReadLocalSupportedCapabilitiesView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+
+  DEBUG(id_, "<< LE CS Read Local Supported Capabilities");
+
+  send_event_(bluetooth::hci::LeCsReadLocalSupportedCapabilitiesCompleteBuilder::Create(
+          kNumCommandPackets, ErrorCode::SUCCESS,
+          properties_.cs_local_supported_capabilities.num_config_supported,
+          properties_.cs_local_supported_capabilities.max_consecutive_procedures_supported,
+          properties_.cs_local_supported_capabilities.num_antennae_supported,
+          properties_.cs_local_supported_capabilities.max_antenna_paths_supported,
+          properties_.cs_local_supported_capabilities.roles_supported,
+          properties_.cs_local_supported_capabilities.modes_supported,
+          properties_.cs_local_supported_capabilities.rtt_capability,
+          properties_.cs_local_supported_capabilities.rtt_aa_only_n,
+          properties_.cs_local_supported_capabilities.rtt_sounding_n,
+          properties_.cs_local_supported_capabilities.rtt_random_sequence_n,
+          properties_.cs_local_supported_capabilities.nadm_sounding_capability,
+          properties_.cs_local_supported_capabilities.nadm_random_capability,
+          properties_.cs_local_supported_capabilities.cs_sync_phys_supported,
+          properties_.cs_local_supported_capabilities.subfeatures_supported,
+          properties_.cs_local_supported_capabilities.t_ip1_times_supported,
+          properties_.cs_local_supported_capabilities.t_ip2_times_supported,
+          properties_.cs_local_supported_capabilities.t_fcs_times_supported,
+          properties_.cs_local_supported_capabilities.t_pm_times_supported,
+          properties_.cs_local_supported_capabilities.t_sw_time_supported,
+          properties_.cs_local_supported_capabilities.tx_snr_capability));
+}
+
+void DualModeController::LeCsReadRemoteSupportedCapabilities(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsReadRemoteSupportedCapabilitiesView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE CS Read Remote Supported Capabilities");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  auto status = le_controller_.LeCsReadRemoteSupportedCapabilities(connection_handle);
+  send_event_(bluetooth::hci::LeCsReadRemoteSupportedCapabilitiesStatusBuilder::Create(
+          status, kNumCommandPackets));
+}
+
+void DualModeController::LeCsWriteCachedRemoteSupportedCapabilities(CommandView command) {
+  auto command_view =
+          bluetooth::hci::LeCsWriteCachedRemoteSupportedCapabilitiesView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE CS Write Cached Remote Supported Capabilities");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  auto status = le_controller_.LeCsWriteCachedRemoteSupportedCapabilities(
+          connection_handle, command_view.GetNumConfigSupported(),
+          command_view.GetMaxConsecutiveProceduresSupported(),
+          command_view.GetNumAntennaeSupported(), command_view.GetMaxAntennaPathsSupported(),
+          command_view.GetRolesSupported(), command_view.GetModesSupported(),
+          command_view.GetRttCapability(), command_view.GetRttAaOnlyN(),
+          command_view.GetRttSoundingN(), command_view.GetRttRandomSequenceN(),
+          command_view.GetNadmSoundingCapability(), command_view.GetNadmRandomCapability(),
+          command_view.GetCsSyncPhysSupported(), command_view.GetSubfeaturesSupported(),
+          command_view.GetTIp1TimesSupported(), command_view.GetTIp2TimesSupported(),
+          command_view.GetTFcsTimesSupported(), command_view.GetTPmTimesSupported(),
+          command_view.GetTSwTimeSupported(), command_view.GetTxSnrCapability());
+
+  send_event_(bluetooth::hci::LeCsWriteCachedRemoteSupportedCapabilitiesCompleteBuilder::Create(
+          kNumCommandPackets, status, connection_handle));
+}
+
+void DualModeController::LeCsSetDefaultSettings(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsSetDefaultSettingsView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE CS Default Settings");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  auto status = le_controller_.LeCsSetDefaultSettings(
+          connection_handle, command_view.GetRoleEnable(),
+          static_cast<uint8_t>(command_view.GetCsSyncAntennaSelection()),
+          command_view.GetMaxTxPower());
+  send_event_(bluetooth::hci::LeCsSetDefaultSettingsCompleteBuilder::Create(
+          kNumCommandPackets, status, connection_handle));
+}
+
+void DualModeController::LeCsReadRemoteFaeTable(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsReadRemoteFaeTableView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE CS Read Remote Fae Table");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  auto status = le_controller_.LeCsReadRemoteFaeTable(connection_handle);
+  send_event_(
+          bluetooth::hci::LeCsReadRemoteFaeTableStatusBuilder::Create(status, kNumCommandPackets));
+}
+
+void DualModeController::LeCsWriteCachedRemoteFaeTable(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsWriteCachedRemoteFaeTableView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE CS Write Cached Remote Fae Table");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  auto status = le_controller_.LeCsWriteCachedRemoteFaeTable(connection_handle,
+                                                             command_view.GetRemoteFaeTable());
+  send_event_(bluetooth::hci::LeCsWriteCachedRemoteFaeTableCompleteBuilder::Create(
+          kNumCommandPackets, status, connection_handle));
+}
+
+void DualModeController::LeCsCreateConfig(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsCreateConfigView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE CS Create Config");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  auto status = le_controller_.LeCsCreateConfig(
+          connection_handle, command_view.GetConfigId(), command_view.GetCreateContext(),
+          command_view.GetMainModeType(), command_view.GetSubModeType(),
+          command_view.GetMinMainModeSteps(), command_view.GetMaxMainModeSteps(),
+          command_view.GetMainModeRepetition(), command_view.GetMode0Steps(),
+          command_view.GetRole(), command_view.GetRttType(), command_view.GetCsSyncPhy(),
+          command_view.GetChannelMap(), command_view.GetChannelMapRepetition(),
+          command_view.GetChannelSelectionType(), command_view.GetCh3CShape(),
+          command_view.GetCh3CJump(), command_view.GetReserved());
+  send_event_(bluetooth::hci::LeCsCreateConfigStatusBuilder::Create(status, kNumCommandPackets));
+}
+
+void DualModeController::LeCsRemoveConfig(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsRemoveConfigView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE CS Remove Config");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  auto status = le_controller_.LeCsRemoveConfig(connection_handle, command_view.GetConfigId());
+  send_event_(bluetooth::hci::LeCsRemoveConfigStatusBuilder::Create(status, kNumCommandPackets));
+}
+
+void DualModeController::LeCsSetChannelClassification(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsSetChannelClassificationView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+
+  DEBUG(id_, "<< LE CS Set Channel Classification");
+
+  auto status =
+          le_controller_.LeCsSetChannelClassification(command_view.GetChannelClassification());
+  send_event_(bluetooth::hci::LeCsSetChannelClassificationCompleteBuilder::Create(
+          kNumCommandPackets, status));
+}
+
+void DualModeController::LeCsSecurityEnable(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsSecurityEnableView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE CS Security Enable");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  auto status = le_controller_.LeCsSecurityEnable(connection_handle);
+  send_event_(bluetooth::hci::LeCsSecurityEnableStatusBuilder::Create(status, kNumCommandPackets));
+}
+
+void DualModeController::LeCsSetProcedureParameters(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsSetProcedureParametersView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE CS Set Procedure Parameters");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  auto status = le_controller_.LeCsSetProcedureParameters(
+          connection_handle, command_view.GetConfigId(), command_view.GetMaxProcedureLen(),
+          command_view.GetMinProcedureInterval(), command_view.GetMaxProcedureInterval(),
+          command_view.GetMaxProcedureCount(), command_view.GetMinSubeventLen(),
+          command_view.GetMaxSubeventLen(), command_view.GetToneAntennaConfigSelection(),
+          command_view.GetPhy(), command_view.GetTxPowerDelta(),
+          command_view.GetPreferredPeerAntenna(), command_view.GetSnrControlInitiator(),
+          command_view.GetSnrControlReflector());
+  send_event_(bluetooth::hci::LeCsSetProcedureParametersCompleteBuilder::Create(
+          kNumCommandPackets, status, connection_handle));
+}
+
+void DualModeController::LeCsProcedureEnable(CommandView command) {
+  auto command_view = bluetooth::hci::LeCsProcedureEnableView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+  uint16_t connection_handle = command_view.GetConnectionHandle();
+
+  DEBUG(id_, "<< LE CS Procedure Enable");
+  DEBUG(id_, "   connection_handle=0x{:x}", connection_handle);
+
+  auto status = le_controller_.LeCsProcedureEnable(connection_handle, command_view.GetConfigId(),
+                                                   command_view.GetProcedureEnable());
+  send_event_(bluetooth::hci::LeCsProcedureEnableStatusBuilder::Create(status, kNumCommandPackets));
 }
 
 void DualModeController::LeSetAddressResolutionEnable(CommandView command) {
@@ -2394,6 +2650,16 @@ void DualModeController::LeExtendedCreateConnectionV1(CommandView command) {
           status, kNumCommandPackets));
 }
 
+void DualModeController::LeReadTransmitPower(CommandView command) {
+  auto command_view = bluetooth::hci::LeReadTransmitPowerView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+
+  DEBUG(id_, "<< LE Read Transmit Power");
+
+  send_event_(bluetooth::hci::LeReadTransmitPowerCompleteBuilder::Create(
+          kNumCommandPackets, ErrorCode::SUCCESS, kTransmitPowerLevel, kTransmitPowerLevel));
+}
+
 void DualModeController::LeSetPrivacyMode(CommandView command) {
   auto command_view = bluetooth::hci::LeSetPrivacyModeView::Create(command);
   CHECK_PACKET_VIEW(command_view);
@@ -2487,6 +2753,53 @@ void DualModeController::LeRemoteConnectionParameterRequestNegativeReply(Command
                   kNumCommandPackets, status, command_view.GetConnectionHandle()));
 }
 
+void DualModeController::RootcanalCommand(CommandView command) {
+  auto command_view = bluetooth::hci::RootcanalCommandView::Create(command);
+  CHECK_PACKET_VIEW(command_view);
+
+  using bluetooth::hci::RootcanalOpCode;
+  auto subop_code = command_view.GetSubopCode();
+  auto status = ErrorCode::SUCCESS;
+
+  switch (subop_code) {
+    case RootcanalOpCode::SEND_HCI_EVENT: {
+      auto subcommand_view = bluetooth::hci::RootcanalSendHciEventView::Create(command_view);
+      CHECK_PACKET_VIEW(subcommand_view);
+
+      auto event_code = subcommand_view.GetEventCode();
+      auto payload = subcommand_view.GetPayload();
+      bredr_controller_.ScheduleTask(
+              std::chrono::milliseconds(5), [=, this, payload = std::move(payload)]() {
+                send_event_(bluetooth::hci::EventBuilder::Create(event_code, std::move(payload)));
+              });
+      break;
+    }
+    case RootcanalOpCode::SEND_HCI_ACL_DATA: {
+      auto subcommand_view = bluetooth::hci::RootcanalSendHciAclDataView::Create(command_view);
+      CHECK_PACKET_VIEW(subcommand_view);
+
+      auto handle = subcommand_view.GetHandle();
+      auto packet_boundary_flag = subcommand_view.GetPacketBoundaryFlag();
+      auto broadcast_flag = subcommand_view.GetBroadcastFlag();
+      auto payload = subcommand_view.GetPayload();
+      bredr_controller_.ScheduleTask(
+              std::chrono::milliseconds(5), [=, this, payload = std::move(payload)]() {
+                send_acl_(bluetooth::hci::AclBuilder::Create(handle, packet_boundary_flag,
+                                                             broadcast_flag, std::move(payload)));
+              });
+
+      break;
+    }
+    default: {
+      status = ErrorCode::UNKNOWN_HCI_COMMAND;
+      break;
+    }
+  }
+
+  send_event_(bluetooth::hci::RootcanalCommandCompleteBuilder::Create(kNumCommandPackets, status,
+                                                                      subop_code));
+}
+
 void DualModeController::LeGetVendorCapabilities(CommandView command) {
   auto command_view = bluetooth::hci::LeGetVendorCapabilitiesView::Create(command);
   CHECK_PACKET_VIEW(command_view);
@@ -2498,7 +2811,7 @@ void DualModeController::LeGetVendorCapabilities(CommandView command) {
 
   DEBUG(id_, "<< LE Get Vendor Capabilities");
 
-  bluetooth::hci::VendorCapabilities_V_0_98 vendor_capabilities;
+  bluetooth::hci::VendorCapabilities_V_1_06 vendor_capabilities;
   vendor_capabilities.total_scan_results_storage_ = 0;
   vendor_capabilities.max_irk_list_sz_ = 16;
   vendor_capabilities.filtering_support_ = properties_.supports_le_apcf_vendor_command;
@@ -2509,6 +2822,16 @@ void DualModeController::LeGetVendorCapabilities(CommandView command) {
   vendor_capabilities.debug_logging_supported_ = 0;
   vendor_capabilities.a2dp_source_offload_capability_mask_ = 0;
   vendor_capabilities.bluetooth_quality_report_support_ = 0;
+  vendor_capabilities.dynamic_audio_buffer_support_ = 0;
+  vendor_capabilities.a2dp_offload_v2_support_ = 0;
+  vendor_capabilities.iso_link_feedback_support_ = 0;
+  vendor_capabilities.sniff_offload_support_ = 0;
+  vendor_capabilities.big_set_channel_map_classification_support_ = 0x0000;
+  vendor_capabilities.vendor_connection_handle_min_ =
+          ConnectionHandle::kVendorSpecificEventRangeStart;
+  vendor_capabilities.vendor_connection_handle_max_ =
+          ConnectionHandle::kVendorSpecificEventRangeEnd;
+  vendor_capabilities.connection_proximity_threshold_support_ = 0x00;
 
   send_event_(bluetooth::hci::LeGetVendorCapabilitiesCompleteBuilder::Create(
           kNumCommandPackets, ErrorCode::SUCCESS, vendor_capabilities.SerializeToBytes()));
@@ -2802,7 +3125,7 @@ void DualModeController::GetControllerDebugInfo(CommandView command) {
 // used specifically by the PTS tool to pass certification tests.
 void DualModeController::CsrVendorCommand(CommandView command) {
   if (!properties_.supports_csr_vendor_command) {
-    SendCommandCompleteUnknownOpCodeEvent(OpCode(CSR_VENDOR));
+    SendCommandCompleteUnknownOpCodeEvent(OpCode::CSR_OPCODE);
     return;
   }
 
@@ -4075,9 +4398,9 @@ DualModeController::GetHciCommandHandlers() {
            &DualModeController::LeClearPeriodicAdvertiserList},
           {OpCode::LE_READ_PERIODIC_ADVERTISER_LIST_SIZE,
            &DualModeController::LeReadPeriodicAdvertiserListSize},
-          //{OpCode::LE_READ_TRANSMIT_POWER,
-          //&DualModeController::LeReadTransmitPower},
+          {OpCode::LE_READ_TRANSMIT_POWER, &DualModeController::LeReadTransmitPower},
           //{OpCode::LE_READ_RF_PATH_COMPENSATION_POWER,
+
           //&DualModeController::LeReadRfPathCompensationPower},
           //{OpCode::LE_WRITE_RF_PATH_COMPENSATION_POWER,
           //&DualModeController::LeWriteRfPathCompensationPower},
@@ -4123,12 +4446,11 @@ DualModeController::GetHciCommandHandlers() {
           {OpCode::LE_REMOVE_CIG, &DualModeController::ForwardToLl},
           {OpCode::LE_ACCEPT_CIS_REQUEST, &DualModeController::ForwardToLl},
           {OpCode::LE_REJECT_CIS_REQUEST, &DualModeController::ForwardToLl},
-          //{OpCode::LE_CREATE_BIG, &DualModeController::LeCreateBig},
-          //{OpCode::LE_CREATE_BIG_TEST, &DualModeController::LeCreateBigTest},
-          //{OpCode::LE_TERMINATE_BIG, &DualModeController::LeTerminateBig},
-          //{OpCode::LE_BIG_CREATE_SYNC, &DualModeController::LeBigCreateSync},
-          //{OpCode::LE_BIG_TERMINATE_SYNC,
-          //&DualModeController::LeBigTerminateSync},
+          {OpCode::LE_CREATE_BIG, &DualModeController::ForwardToLl},
+          //{OpCode::LE_CREATE_BIG_TEST, &DualModeController::ForwardToLl},
+          {OpCode::LE_TERMINATE_BIG, &DualModeController::ForwardToLl},
+          //{OpCode::LE_BIG_CREATE_SYNC, &DualModeController::ForwardToLl},
+          //{OpCode::LE_BIG_TERMINATE_SYNC, &DualModeController::ForwardToLl},
           {OpCode::LE_REQUEST_PEER_SCA, &DualModeController::LeRequestPeerSca},
           {OpCode::LE_SETUP_ISO_DATA_PATH, &DualModeController::ForwardToLl},
           {OpCode::LE_REMOVE_ISO_DATA_PATH, &DualModeController::ForwardToLl},
@@ -4141,16 +4463,17 @@ DualModeController::GetHciCommandHandlers() {
           {OpCode::LE_SET_HOST_FEATURE_V1, &DualModeController::LeSetHostFeatureV1},
           //{OpCode::LE_READ_ISO_LINK_QUALITY,
           //&DualModeController::LeReadIsoLinkQuality},
-          //{OpCode::LE_ENHANCED_READ_TRANSMIT_POWER_LEVEL,
-          //&DualModeController::LeEnhancedReadTransmitPowerLevel},
-          //{OpCode::LE_READ_REMOTE_TRANSMIT_POWER_LEVEL,
-          //&DualModeController::LeReadRemoteTransmitPowerLevel},
+          {OpCode::LE_ENHANCED_READ_TRANSMIT_POWER_LEVEL,
+           &DualModeController::LeEnhancedReadTransmitPowerLevel},
+          {OpCode::LE_READ_REMOTE_TRANSMIT_POWER_LEVEL,
+           &DualModeController::LeReadRemoteTransmitPowerLevel},
+
           //{OpCode::LE_SET_PATH_LOSS_REPORTING_PARAMETERS,
           //&DualModeController::LeSetPathLossReportingParameters},
           //{OpCode::LE_SET_PATH_LOSS_REPORTING_ENABLE,
           //&DualModeController::LeSetPathLossReportingEnable},
-          //{OpCode::LE_SET_TRANSMIT_POWER_REPORTING_ENABLE,
-          //&DualModeController::LeSetTransmitPowerReportingEnable},
+          {OpCode::LE_SET_TRANSMIT_POWER_REPORTING_ENABLE,
+           &DualModeController::LeSetTransmitPowerReportingEnable},
           //{OpCode::LE_TRANSMITTER_TEST_V4,
           //&DualModeController::LeTransmitterTestV4},
           //{OpCode::LE_SET_DATA_RELATED_ADDRESS_CHANGES,
@@ -4176,25 +4499,23 @@ DualModeController::GetHciCommandHandlers() {
           //&DualModeController::LeReadAllLocalSupportedFeatures},
           //{OpCode::LE_READ_ALL_REMOTE_FEATURES,
           //&DualModeController::LeReadAllRemoteFeatures},
-          //{OpCode::LE_CS_READ_LOCAL_SUPPORTED_CAPABILITIES,
-          //&DualModeController::LeCsReadLocalSupportedCapabilities},
-          //{OpCode::LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES,
-          //&DualModeController::LeCsReadRemoteSupportedCapabilities},
-          //{OpCode::LE_CS_WRITE_CACHED_REMOTE_SUPPORTED_CAPABILITIES,
-          //&DualModeController::LeCsWriteCachedRemoteSupportedCapabilities},
-          //{OpCode::LE_CS_SECURITY_ENABLE, &DualModeController::LeCsSecurityEnable},
-          //{OpCode::LE_CS_SET_DEFAULT_SETTINGS, &DualModeController::LeCsSetDefaultSettings},
-          //{OpCode::LE_CS_READ_REMOTE_FAE_TABLE,
-          //&DualModeController::LeCsReadRemoteFaeTable},
-          //{OpCode::LE_CS_WRITE_CACHED_REMOTE_FAE_TABLE,
-          //&DualModeController::LeCsWriteCachedRemoteFaeTable},
-          //{OpCode::LE_CS_CREATE_CONFIG, &DualModeController::LeCsCreateConfig},
-          //{OpCode::LE_CS_REMOVE_CONFIG, &DualModeController::LeCsRemoveConfig},
-          //{OpCode::LE_CS_SET_CHANNEL_CLASSIFICATION,
-          //&DualModeController::LeCsSetChannelClassification},
-          //{OpCode::LE_CS_SET_PROCEDURE_PARAMETERS,
-          //&DualModeController::LeCsSetProcedureParameters},
-          //{OpCode::LE_CS_PROCEDURE_ENABLE, &DualModeController::LeCsProcedureEnable},
+          {OpCode::LE_CS_READ_LOCAL_SUPPORTED_CAPABILITIES,
+           &DualModeController::LeCsReadLocalSupportedCapabilities},
+          {OpCode::LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES,
+           &DualModeController::LeCsReadRemoteSupportedCapabilities},
+          {OpCode::LE_CS_WRITE_CACHED_REMOTE_SUPPORTED_CAPABILITIES,
+           &DualModeController::LeCsWriteCachedRemoteSupportedCapabilities},
+          {OpCode::LE_CS_SECURITY_ENABLE, &DualModeController::LeCsSecurityEnable},
+          {OpCode::LE_CS_SET_DEFAULT_SETTINGS, &DualModeController::LeCsSetDefaultSettings},
+          {OpCode::LE_CS_READ_REMOTE_FAE_TABLE, &DualModeController::LeCsReadRemoteFaeTable},
+          {OpCode::LE_CS_WRITE_CACHED_REMOTE_FAE_TABLE,
+           &DualModeController::LeCsWriteCachedRemoteFaeTable},
+          {OpCode::LE_CS_CREATE_CONFIG, &DualModeController::LeCsCreateConfig},
+          {OpCode::LE_CS_REMOVE_CONFIG, &DualModeController::LeCsRemoveConfig},
+          {OpCode::LE_CS_SET_CHANNEL_CLASSIFICATION,
+           &DualModeController::LeCsSetChannelClassification},
+          {OpCode::LE_CS_SET_PROCEDURE_PARAMETERS, &DualModeController::LeCsSetProcedureParameters},
+          {OpCode::LE_CS_PROCEDURE_ENABLE, &DualModeController::LeCsProcedureEnable},
           //{OpCode::LE_CS_TEST, &DualModeController::LeCsTest},
           //{OpCode::LE_CS_TEST_END, &DualModeController::LeCsTestEnd},
           //{OpCode::LE_ADD_DEVICE_TO_MONITORED_ADVERTISERS_LIST,
@@ -4210,7 +4531,8 @@ DualModeController::GetHciCommandHandlers() {
           //{OpCode::LE_FRAME_SPACE_UPDATE, &DualModeController::LeFrameSpaceUpdate},
 
           // VENDOR
-          {OpCode(CSR_VENDOR), &DualModeController::CsrVendorCommand},
+          {OpCode::CSR_OPCODE, &DualModeController::CsrVendorCommand},
+          {OpCode::ROOTCANAL_OPCODE, &DualModeController::RootcanalCommand},
           {OpCode::LE_GET_VENDOR_CAPABILITIES, &DualModeController::LeGetVendorCapabilities},
           {OpCode::LE_BATCH_SCAN, &DualModeController::LeBatchScan},
           {OpCode::LE_APCF, &DualModeController::LeApcf},

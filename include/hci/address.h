@@ -122,7 +122,7 @@ struct fmt::formatter<bluetooth::hci::Address> {
 
     // Check if reached the end of the range:
     if (it != end && *it != '}') {
-      throw_format_error("invalid format");
+      std::terminate();
     }
 
     // Return an iterator past the end of the parsed range:

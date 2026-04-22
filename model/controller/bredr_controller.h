@@ -198,7 +198,6 @@ public:
 
 private:
   void SendDisconnectionCompleteEvent(uint16_t handle, ErrorCode reason);
-  void MakePeripheralConnection(const Address& addr, bool try_role_switch);
   void RejectPeripheralConnection(const Address& addr, uint8_t reason);
 
 public:

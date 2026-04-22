@@ -45,6 +45,10 @@ enum ConnectionHandle : uint16_t {
   kScoRangeEnd = 0x1FF,
   kLeAclRangeStart = 0x200,
   kLeAclRangeEnd = 0x2FF,
+  kVendorSpecificEventRangeStart = 0x300,
+  kVendorSpecificEventRangeEnd = 0x3FF,
+  kBisRangeStart = 0xD00,
+  kBisRangeEnd = 0xDFF,
   kCisRangeStart = 0xE00,
   kCisRangeEnd = 0xEFF,
 };
@@ -65,6 +69,12 @@ static bool IsScoConnectionHandle(uint16_t connection_handle) {
 static bool IsLeAclConnectionHandle(uint16_t connection_handle) {
   return connection_handle >= ConnectionHandle::kLeAclRangeStart &&
          connection_handle <= ConnectionHandle::kLeAclRangeEnd;
+}
+
+[[maybe_unused]]
+static bool IsBisConnectionHandle(uint16_t connection_handle) {
+  return connection_handle >= ConnectionHandle::kBisRangeStart &&
+         connection_handle <= ConnectionHandle::kBisRangeEnd;
 }
 
 [[maybe_unused]]

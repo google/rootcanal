@@ -96,6 +96,8 @@ impl LinkLayer {
             Ok(LeRejectCisRequest(packet)) => self.iso.hci_le_reject_cis_request(packet),
             Ok(LeSetupIsoDataPath(packet)) => self.iso.hci_le_setup_iso_data_path(packet),
             Ok(LeRemoveIsoDataPath(packet)) => self.iso.hci_le_remove_iso_data_path(packet),
+            Ok(LeCreateBig(packet)) => self.iso.hci_le_create_big(packet),
+            Ok(LeTerminateBig(packet)) => self.iso.hci_le_terminate_big(packet),
             _ => Err(LinkLayerError::UnhandledHciPacket)?,
         };
         Ok(())

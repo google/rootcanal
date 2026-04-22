@@ -13,6 +13,7 @@ cargo_build_script(
     ],
     data = [
         "hci_packets.pdl",
+        "link_layer_packets.pdl",
         "llcp_packets.pdl",
         "lmp_packets.pdl",
     ],
