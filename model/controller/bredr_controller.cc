@@ -226,10 +226,75 @@ ErrorCode BrEdrController::CreateConnectionCancel(Address bd_addr) {
 ErrorCode BrEdrController::AcceptConnectionRequest(Address bd_addr, bool try_role_switch) {
   if (page_scan_.has_value() && page_scan_->bd_addr == bd_addr) {
     INFO(id_, "Accepting connection request from {}", bd_addr);
-    ScheduleTask(kNoDelayMs, [this, bd_addr, try_role_switch]() {
-      INFO(id_, "Accepted connection from {}", bd_addr);
-      MakePeripheralConnection(bd_addr, try_role_switch);
-    });
+
+    // Check if the connection was already established as the result
+    // of a concurrent connection initiated by the peer device.
+    if (connections_.GetAclConnectionHandle(bd_addr).has_value()) {
+      INFO(id_,
+           "Connection collision with {} resolved with the peer accepting the connection request",
+           bd_addr);
+
+      // TODO: the core specification is very unclear as to what behavior
+      // is expected when two connections are established simultaneously.
+      // This implementation considers that a unique HCI Connection Complete
+      // event is expected for both the HCI Create Connection and HCI Accept
+      // Connection Request commands.
+      return ErrorCode::SUCCESS;
+    }
+
+    auto connection_handle = connections_.CreateConnection(bd_addr, GetAddress());
+    AclConnection& connection = connections_.GetAclConnection(connection_handle);
+
+    bluetooth::hci::Role role = try_role_switch && page_scan_->allow_role_switch
+                                        ? bluetooth::hci::Role::CENTRAL
+                                        : bluetooth::hci::Role::PERIPHERAL;
+
+    CheckExpiringConnection(connection_handle);
+    connection.SetLinkPolicySettings(default_link_policy_settings_);
+    connection.SetRole(role);
+
+    // Role change event before connection complete generates an HCI Role Change
+    // event on the acceptor side if accepted; the event is sent before the
+    // HCI Connection Complete event.
+    if (role == bluetooth::hci::Role::CENTRAL && IsEventUnmasked(EventCode::ROLE_CHANGE)) {
+      INFO(id_, "Role at connection setup accepted");
+      ScheduleTask(kNoDelayMs, [=, this]() {
+        send_event_(bluetooth::hci::RoleChangeBuilder::Create(ErrorCode::SUCCESS, bd_addr, role));
+      });
+    }
+
+    ASSERT(link_manager_add_link(lm_.get(),
+                                 reinterpret_cast<const uint8_t (*)[6]>(bd_addr.data())));
+
+    if (IsEventUnmasked(EventCode::CONNECTION_COMPLETE)) {
+      ScheduleTask(kNoDelayMs, [=, this]() {
+        send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
+                ErrorCode::SUCCESS, connection_handle, bd_addr, bluetooth::hci::LinkType::ACL,
+                bluetooth::hci::Enable::DISABLED));
+      });
+    }
+
+    INFO(id_, "Sending page response to {}", bd_addr.ToString());
+    SendLinkLayerPacket(
+            model::packets::PageResponseBuilder::Create(GetAddress(), bd_addr, try_role_switch));
+
+    // If the current Host was initiating a connection to the same bd_addr,
+    // send a connection complete event for the pending Create Connection
+    // command and cancel the paging.
+    if (page_.has_value() && page_->bd_addr == bd_addr) {
+      INFO(id_, "Connection collision with {} resolved by accepting the peer connection request",
+           bd_addr);
+
+      // TODO: the core specification is very unclear as to what behavior
+      // is expected when two connections are established simultaneously.
+      // This implementation considers that a unique HCI Connection Complete
+      // event is expected for both the HCI Create Connection and HCI Accept
+      // Connection Request commands.
+      page_ = {};
+    }
+
+    // Reset the page scan state.
+    page_scan_ = {};
 
     return ErrorCode::SUCCESS;
   }
@@ -2041,54 +2106,6 @@ void BrEdrController::WriteCurrentIacLap(std::vector<bluetooth::hci::Lap> iac_la
   if (current_iac_lap_list_.size() > properties_.num_supported_iac) {
     current_iac_lap_list_.resize(properties_.num_supported_iac);
   }
-}
-
-void BrEdrController::MakePeripheralConnection(const Address& bd_addr, bool try_role_switch) {
-  uint16_t connection_handle = connections_.CreateConnection(bd_addr, GetAddress());
-
-  bluetooth::hci::Role role = try_role_switch && page_scan_->allow_role_switch
-                                      ? bluetooth::hci::Role::CENTRAL
-                                      : bluetooth::hci::Role::PERIPHERAL;
-
-  AclConnection& connection = connections_.GetAclConnection(connection_handle);
-  CheckExpiringConnection(connection_handle);
-  connection.SetLinkPolicySettings(default_link_policy_settings_);
-  connection.SetRole(role);
-
-  ASSERT(link_manager_add_link(lm_.get(), reinterpret_cast<const uint8_t (*)[6]>(bd_addr.data())));
-
-  // Role change event before connection complete generates an HCI Role Change
-  // event on the acceptor side if accepted; the event is sent before the
-  // HCI Connection Complete event.
-  if (role == bluetooth::hci::Role::CENTRAL && IsEventUnmasked(EventCode::ROLE_CHANGE)) {
-    INFO(id_, "Role at connection setup accepted");
-    send_event_(bluetooth::hci::RoleChangeBuilder::Create(ErrorCode::SUCCESS, bd_addr, role));
-  }
-
-  if (IsEventUnmasked(EventCode::CONNECTION_COMPLETE)) {
-    send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
-            ErrorCode::SUCCESS, connection_handle, bd_addr, bluetooth::hci::LinkType::ACL,
-            bluetooth::hci::Enable::DISABLED));
-  }
-
-  // If the current Host was initiating a connection to the same bd_addr,
-  // send a connection complete event for the pending Create Connection
-  // command and cancel the paging.
-  if (page_.has_value() && page_->bd_addr == bd_addr) {
-    // TODO: the core specification is very unclear as to what behavior
-    // is expected when two connections are established simultaneously.
-    // This implementation considers that a unique HCI Connection Complete
-    // event is expected for both the HCI Create Connection and HCI Accept
-    // Connection Request commands.
-    page_ = {};
-  }
-
-  // Reset the page scan state.
-  page_scan_ = {};
-
-  INFO(id_, "Sending page response to {}", bd_addr.ToString());
-  SendLinkLayerPacket(
-          model::packets::PageResponseBuilder::Create(GetAddress(), bd_addr, try_role_switch));
 }
 
 void BrEdrController::RejectPeripheralConnection(const Address& addr, uint8_t reason) {

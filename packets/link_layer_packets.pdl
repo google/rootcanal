@@ -60,6 +60,21 @@ enum PacketType : 8 {
 
     LL_SUBRATE_REQ = 0x53,
     LL_SUBRATE_IND = 0x54,
+
+    LL_CS_CAPABILITIES_REQ = 0xF0,
+    LL_CS_CAPABILITIES_RSP = 0xF1,
+    LL_CS_FAE_REQ = 0xF2,
+    LL_CS_FAE_RSP = 0xF3,
+    LL_CS_CONFIG_REQ = 0xF4,
+    LL_CS_CONFIG_RSP = 0xF5,
+    LL_CS_SEC_REQ = 0xF6,
+    LL_CS_SEC_RSP = 0xF7,
+    LL_CS_REQ = 0xF8,
+    LL_CS_RSP = 0xF9,
+    LL_CS_IND = 0xFA,
+    LL_CS_TERMINATE_REQ = 0xFB,
+    LL_CS_TERMINATE_RSP = 0xFC,
+    LL_CS_CHANNEL_MAP_IND = 0xFD,
 }
 
 packet LinkLayerPacket {
@@ -282,6 +297,7 @@ packet LeEncryptConnection : LinkLayerPacket (type = LE_ENCRYPT_CONNECTION) {
 }
 
 packet LeEncryptConnectionResponse : LinkLayerPacket (type = LE_ENCRYPT_CONNECTION_RESPONSE) {
+  status : 8,
   rand : 8[8],
   ediv : 16,
   ltk : 8[16],
@@ -396,4 +412,192 @@ packet LlSubrateInd : LinkLayerPacket (type = LL_SUBRATE_IND) {
   latency: 16,
   continuation_number: 16,
   timeout: 16,
+}
+
+packet LlCsCapabilitiesReq : LinkLayerPacket (type = LL_CS_CAPABILITIES_REQ) {
+  mode_types: 8,
+  rtt_capability: 8,
+  rtt_aa_only_n: 8,
+  rtt_sounding_n: 8,
+  rtt_random_sequence_n: 8,
+  nadm_sounding_capability: 16,
+  nadm_random_capability: 16,
+  cs_sync_phy_capability: 8,
+  num_ant: 4,
+  max_ant_path: 4,
+  role: 2,
+  _reserved_: 1,
+  no_fae: 1,
+  channel_selection_3c: 1,
+  sounding_pct_estimate: 1,
+  _reserved_: 2,
+  num_configs: 8,
+  max_procedures_supported: 16,
+  t_sw: 8,
+  t_ip1_capability: 16,
+  t_ip2_capability: 16,
+  t_fcs_capability: 16,
+  t_pm_capability: 16,
+  _reserved_: 1,
+  tx_snr_capability: 7,
+}
+
+packet LlCsCapabilitiesRsp : LinkLayerPacket (type = LL_CS_CAPABILITIES_RSP) {
+  // Not part of the LL PDU, added to emulate LL_REJECT_EXT_IND.
+  status: 8,
+  mode_types: 8,
+  rtt_capability: 8,
+  rtt_aa_only_n: 8,
+  rtt_sounding_n: 8,
+  rtt_random_sequence_n: 8,
+  nadm_sounding_capability: 16,
+  nadm_random_capability: 16,
+  cs_sync_phy_capability: 8,
+  num_ant: 4,
+  max_ant_path: 4,
+  role: 2,
+  _reserved_: 1,
+  no_fae: 1,
+  channel_selection_3c: 1,
+  sounding_pct_estimate: 1,
+  _reserved_: 2,
+  num_configs: 8,
+  max_procedures_supported: 16,
+  t_sw: 8,
+  t_ip1_capability: 16,
+  t_ip2_capability: 16,
+  t_fcs_capability: 16,
+  t_pm_capability: 16,
+  _reserved_: 1,
+  tx_snr_capability: 7,
+}
+
+packet LlCsConfigReq : LinkLayerPacket (type = LL_CS_CONFIG_REQ) {
+  config_id: 6,
+  action: 2,
+  channel_map: 8[10],
+  channel_map_repetition: 8,
+  main_mode_type: 8,
+  sub_mode_type: 8,
+  min_main_mode_steps: 8,
+  max_main_mode_steps: 8,
+  main_mode_repetition: 8,
+  mode_0_steps: 8,
+  cs_sync_phy: 8,
+  rtt_type: 4,
+  role: 2,
+  _reserved_: 2,
+  channel_selection_type: 4,
+  ch3c_shape: 4,
+  ch3c_jump: 8,
+  t_ip1: 8,
+  t_ip2: 8,
+  t_fcs: 8,
+  t_pm: 8,
+  _reserved_: 8,
+}
+
+packet LlCsConfigRsp : LinkLayerPacket (type = LL_CS_CONFIG_RSP) {
+  // Not part of the LL PDU, added to emulate LL_REJECT_EXT_IND.
+  status: 8,
+  config_id: 6,
+  _reserved_: 2,
+}
+
+packet LlCsFaeReq : LinkLayerPacket (type = LL_CS_FAE_REQ) {
+}
+
+packet LlCsFaeRsp : LinkLayerPacket (type = LL_CS_FAE_RSP) {
+  // Not part of the LL PDU, added to emulate LL_REJECT_EXT_IND.
+  status: 8,
+  remote_fae_table : 8[72],
+}
+
+packet LlCsSecurityEnableReq : LinkLayerPacket (type = LL_CS_SEC_REQ) {
+  cs_iv_c : 64,
+  cs_in_c : 32,
+  cs_pv_c : 64,
+}
+
+packet LlCsSecurityEnableRsp : LinkLayerPacket (type = LL_CS_SEC_RSP) {
+  // Not part of the LL PDU, added to emulate LL_REJECT_EXT_IND.
+  status: 8,
+  cs_iv_p : 64,
+  cs_in_p : 32,
+  cs_pv_p : 64,
+}
+
+packet LlCsReq : LinkLayerPacket (type = LL_CS_REQ) {
+  config_id: 6,
+  _reserved_: 2,
+  conn_event_count: 16,
+  offset_min: 24,
+  offset_max: 24,
+  max_procedure_len: 16,
+  event_interval: 16,
+  subevents_per_event: 8,
+  subevent_interval: 16,
+  subevent_len: 24,
+  procedure_interval: 16,
+  procedure_count: 16,
+  aci: 8,
+  preferred_peer_ant: 8,
+  phy: 8,
+  pwr_delta: 8,
+  tx_snr_i: 4,
+  tx_snr_r: 4,
+}
+
+packet LlCsRsp : LinkLayerPacket (type = LL_CS_RSP) {
+  // Not part of the LL PDU, added to emulate LL_REJECT_EXT_IND.
+  status: 8,
+  config_id: 6,
+  _reserved_: 2,
+  conn_event_count: 16,
+  offset_min: 24,
+  offset_max: 24,
+  event_interval: 16,
+  subevents_per_event: 8,
+  subevent_interval: 16,
+  subevent_len: 24,
+  aci: 8,
+  phy: 8,
+  pwr_delta: 8,
+  _reserved_: 8,
+}
+
+packet LlCsInd : LinkLayerPacket (type = LL_CS_IND) {
+  // Not part of the LL PDU, added to emulate LL_REJECT_EXT_IND.
+  status: 8,
+  config_id: 6,
+  _reserved_: 2,
+  conn_event_count: 16,
+  offset: 24,
+  event_interval: 16,
+  subevents_per_event: 8,
+  subevent_interval: 16,
+  subevent_len: 24,
+  aci: 8,
+  phy: 8,
+  pwr_delta: 8,
+  _reserved_: 8,
+}
+
+packet LlCsTerminateReq : LinkLayerPacket (type = LL_CS_TERMINATE_REQ) {
+  config_id: 6,
+  _reserved_: 2,
+  procedure_count : 16,
+  error_code : 8,
+}
+
+packet LlCsTerminateRsp : LinkLayerPacket (type = LL_CS_TERMINATE_RSP) {
+  config_id: 6,
+  _reserved_: 2,
+  procedure_count : 16,
+  error_code : 8,
+}
+
+packet LlCsChannelMapInd : LinkLayerPacket (type = LL_CS_CHANNEL_MAP_IND) {
+  channel_map : 8[10],
+  instant : 16,
 }

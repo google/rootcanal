@@ -399,6 +399,17 @@ enum OpCode : 16 {
   LE_FRAME_SPACE_UPDATE = 0x209D,
 
   // VENDOR_SPECIFIC
+
+  // Reserved opcode for sending CSR test commands.
+  // The test commands are used by the PTS tool to control
+  // the local controller capabilities.
+  CSR_OPCODE = 0xFC00,
+
+  // Reserved opcode for sending RootCanal test commands.
+  // The test commands may be used to trigger specific events in the
+  // controller for test purposes.
+  ROOTCANAL_OPCODE = 0xFC01,
+
   // MSFT_OPCODE_xxxx below is needed for the tests.
   MSFT_OPCODE_INTEL = 0xFC1E,
   INTEL_DDC_CONFIG_READ = 0xFC8C,
@@ -412,6 +423,8 @@ enum OpCode : 16 {
   // MSFT_OPCODE_xxxx below are needed for the tests.
   MSFT_OPCODE_MEDIATEK = 0xFD30,
   MSFT_OPCODE_QUALCOMM = 0xFD70,
+
+  UNKNOWN_OPCODE = ..,
 }
 
 // For mapping Local Supported Commands command
@@ -882,6 +895,7 @@ enum VseSubeventCode : 8 {
   LE_ADVERTISEMENT_TRACKING = 0x56,
   CONTROLLER_DEBUG_INFO = 0x57,
   BLUETOOTH_QUALITY_REPORT = 0x58,
+  OTHER = ..
 }
 
 packet Event {
@@ -941,6 +955,7 @@ enum ErrorCode: 8 {
   TRANSACTION_RESPONSE_TIMEOUT = 0x22,
   LINK_LAYER_COLLISION = 0x23,
   ENCRYPTION_MODE_NOT_ACCEPTABLE = 0x25,
+  INSUFFICIENT_SECURITY = 0x2F,
   ROLE_SWITCH_FAILED = 0x35,
   HOST_BUSY = 0x38,
   CONTROLLER_BUSY = 0x3A,
@@ -950,6 +965,7 @@ enum ErrorCode: 8 {
   LIMIT_REACHED = 0x43,
   OPERATION_CANCELLED_BY_HOST = 0x44,
   PACKET_TOO_LONG = 0x45,
+  INSUFFICIENT_CHANNELS = 0x48,
 }
 
 // Events that are defined with their respective commands
@@ -1087,6 +1103,8 @@ enum DisconnectReason : 8 {
   UNSUPPORTED_REMOTE_FEATURE = 0x1A,
   PAIRING_WITH_UNIT_KEY_NOT_SUPPORTED = 0x29,
   UNACCEPTABLE_CONNECTION_PARAMETERS = 0x3B,
+
+  UNKNOWN_REASON = ..,
 }
 
 packet Disconnect : Command (op_code = DISCONNECT) {
@@ -3805,7 +3823,7 @@ packet LeSetDefaultPhyComplete : CommandComplete (command_op_code = LE_SET_DEFAU
   status : ErrorCode,
 }
 
-enum PhyOptions : 8 {
+enum PhyOptions : 16 {
   NO_PREFERENCE = 0x00,
   S_2 = 0x01,
   S_8 = 0x02,
@@ -4713,6 +4731,7 @@ packet LeRemoveIsoDataPathComplete : CommandComplete (command_op_code = LE_REMOV
 enum LeHostFeatureBits : 8 {
   CONNECTED_ISO_STREAM_HOST_SUPPORT = 32,
   CONNECTION_SUBRATING_HOST_SUPPORT = 38,
+  CHANNEL_SOUNDING_HOST_SUPPORT = 47,
 }
 
 packet LeSetHostFeatureV1 : Command (op_code = LE_SET_HOST_FEATURE_V1) {
@@ -4851,120 +4870,108 @@ packet LeSubrateRequestStatus : CommandStatus (command_op_code = LE_SUBRATE_REQU
 packet LeCsReadLocalSupportedCapabilities : Command (op_code = LE_CS_READ_LOCAL_SUPPORTED_CAPABILITIES) {
 }
 
-struct CsRolesSupported {
-  initiator : 1,
-  reflector : 1,
-  _reserved_ : 6,
+enum CsRolesSupported : 8 {
+  INITIATOR = 0x01,
+  REFLECTOR = 0x02,
 }
 
-struct CsModesSupported {
-  mode_3 : 1,
-  _reserved_ : 7,
+enum CsModesSupported : 8 {
+  MODE_3 = 0x01,
 }
 
-struct CsRttCapability {
-  rtt_aa_only_n : 1,
-  rtt_sounding_n : 1,
-  rtt_random_payload_n : 1,
-  _reserved_ : 5,
+enum CsRttCapability : 8 {
+  RTT_AA_ONLY_N = 0x01,
+  RTT_SOUNDING_N = 0x02,
+  RTT_RANDOM_PAYLOAD_N = 0x04,
 }
 
-struct CsNadmSoundingCapability {
-  normalized_attack_detector_metric : 1,
-  _reserved_ : 15,
+enum CsNadmSoundingCapability : 16 {
+  NORMALIZED_ATTACK_DETECTOR_METRIC = 0x0001,
 }
 
-struct CsNadmRandomCapability {
-  normalized_attack_detector_metric : 1,
-  _reserved_ : 15,
+enum CsNadmRandomCapability : 16 {
+  NORMALIZED_ATTACK_DETECTOR_METRIC = 0x0001,
 }
 
-struct CsSyncPhysSupported {
-  le_2m_phy : 1,
-  le_2m_2bt_phy : 1,
-  _reserved_ : 6,
+enum CsSyncPhysSupported : 8 {
+  LE_2M_PHY = 0x01,
+  LE_2M_2BT_PHY = 0x02,
 }
 
-struct CsSubfeaturesSupported {
-  companion_signal : 1,
-  frequency_actuation_error : 1,
-  channel_selection_algorithm : 1,
-  phase_based_ranging : 1,
-  _reserved_ : 12,
+enum CsSubfeaturesSupported : 16 {
+  COMPANION_SIGNAL = 0x0001,
+  FREQUENCY_ACTUATION_ERROR = 0x0002,
+  CHANNEL_SELECTION_ALGORITHM = 0x0004,
+  PHASE_BASED_RANGING = 0x0008,
 }
 
-struct CsTIp1TimesSupported {
-  support_10_microsecond : 1,
-  support_20_microsecond : 1,
-  support_30_microsecond : 1,
-  support_40_microsecond : 1,
-  support_50_microsecond : 1,
-  support_60_microsecond : 1,
-  support_80_microsecond : 1,
-  _reserved_ : 9,
+enum CsTIp1TimesSupported : 16 {
+  SUPPORT_10_MICROSECOND = 0x0001,
+  SUPPORT_20_MICROSECOND = 0x0002,
+  SUPPORT_30_MICROSECOND = 0x0004,
+  SUPPORT_40_MICROSECOND = 0x0008,
+  SUPPORT_50_MICROSECOND = 0x0010,
+  SUPPORT_60_MICROSECOND = 0x0020,
+  SUPPORT_80_MICROSECOND = 0x0040,
 }
 
-struct CsTIp2TimesSupported {
-  support_10_microsecond : 1,
-  support_20_microsecond : 1,
-  support_30_microsecond : 1,
-  support_40_microsecond : 1,
-  support_50_microsecond : 1,
-  support_60_microsecond : 1,
-  support_80_microsecond : 1,
-  _reserved_ : 9,
+enum CsTIp2TimesSupported : 16 {
+  SUPPORT_10_MICROSECOND = 0x0001,
+  SUPPORT_20_MICROSECOND = 0x0002,
+  SUPPORT_30_MICROSECOND = 0x0004,
+  SUPPORT_40_MICROSECOND = 0x0008,
+  SUPPORT_50_MICROSECOND = 0x0010,
+  SUPPORT_60_MICROSECOND = 0x0020,
+  SUPPORT_80_MICROSECOND = 0x0040,
 }
 
-struct CsTFcsTimesSupported {
-  support_15_microsecond : 1,
-  support_20_microsecond : 1,
-  support_30_microsecond : 1,
-  support_40_microsecond : 1,
-  support_50_microsecond : 1,
-  support_60_microsecond : 1,
-  support_80_microsecond : 1,
-  support_100_microsecond : 1,
-  support_120_microsecond : 1,
-  _reserved_ : 7,
+enum CsTFcsTimesSupported : 16 {
+  SUPPORT_15_MICROSECOND = 0x0001,
+  SUPPORT_20_MICROSECOND = 0x0002,
+  SUPPORT_30_MICROSECOND = 0x0004,
+  SUPPORT_40_MICROSECOND = 0x0008,
+  SUPPORT_50_MICROSECOND = 0x0010,
+  SUPPORT_60_MICROSECOND = 0x0020,
+  SUPPORT_80_MICROSECOND = 0x0040,
+  SUPPORT_100_MICROSECOND = 0x0080,
+  SUPPORT_120_MICROSECOND = 0x0100,
 }
 
-struct CsTPmTimesSupported {
-  support_10_microsecond : 1,
-  support_20_microsecond : 1,
-  _reserved_ : 14,
+enum CsTPmTimesSupported : 16 {
+  SUPPORT_10_MICROSECOND = 0x0001,
+  SUPPORT_20_MICROSECOND = 0x0002,
 }
 
-struct CsTxSnrCapability {
-  support_18db : 1,
-  support_21db : 1,
-  support_24db : 1,
-  support_27db : 1,
-  support_30db : 1,
-  _reserved_ : 3,
+enum CsTxSnrCapability : 8 {
+  SUPPORT_18DB = 0x01,
+  SUPPORT_21DB = 0x02,
+  SUPPORT_24DB = 0x04,
+  SUPPORT_27DB = 0x08,
+  SUPPORT_30DB = 0x10,
 }
 
 packet LeCsReadLocalSupportedCapabilitiesComplete : CommandComplete (command_op_code = LE_CS_READ_LOCAL_SUPPORTED_CAPABILITIES) {
   status : ErrorCode,
   num_config_supported : 8,
   max_consecutive_procedures_supported : 16,
-  num_antennas_supported : 8,
+  num_antennae_supported : 8,
   max_antenna_paths_supported : 8,
-  roles_supported : CsRolesSupported,
-  modes_supported : CsModesSupported,
-  rtt_capability : CsRttCapability,
+  roles_supported : 8,
+  modes_supported : 8,
+  rtt_capability : 8,
   rtt_aa_only_n : 8,
   rtt_sounding_n : 8,
-  rtt_random_payload_n : 8,
-  nadm_sounding_capability : CsNadmSoundingCapability,
-  nadm_random_capability : CsNadmRandomCapability,
-  cs_sync_phys_supported : CsSyncPhysSupported,
-  subfeatures_supported : CsSubfeaturesSupported,
-  t_ip1_times_supported : CsTIp1TimesSupported,
-  t_ip2_times_supported : CsTIp2TimesSupported,
-  t_fcs_times_supported : CsTFcsTimesSupported,
-  t_pm_times_supported : CsTPmTimesSupported,
+  rtt_random_sequence_n : 8,
+  nadm_sounding_capability : 16,
+  nadm_random_capability : 16,
+  cs_sync_phys_supported : 8,
+  subfeatures_supported : 16,
+  t_ip1_times_supported : 16,
+  t_ip2_times_supported : 16,
+  t_fcs_times_supported : 16,
+  t_pm_times_supported : 16,
   t_sw_time_supported : 8,
-  tx_snr_capability : CsTxSnrCapability,
+  tx_snr_capability : 8,
 }
 
 packet LeCsReadRemoteSupportedCapabilities : Command (op_code = LE_CS_READ_REMOTE_SUPPORTED_CAPABILITIES) {
@@ -4981,24 +4988,24 @@ packet LeCsReadRemoteSupportedCapabilitiesComplete : LeMetaEvent (subevent_code 
   _reserved_ : 4,
   num_config_supported : 8,
   max_consecutive_procedures_supported : 16,
-  num_antennas_supported : 8,
+  num_antennae_supported : 8,
   max_antenna_paths_supported : 8,
-  roles_supported : CsRolesSupported,
-  modes_supported : CsModesSupported,
-  rtt_capability : CsRttCapability,
+  roles_supported : 8,
+  modes_supported : 8,
+  rtt_capability : 8,
   rtt_aa_only_n : 8,
   rtt_sounding_n : 8,
-  rtt_random_payload_n : 8,
-  nadm_sounding_capability : CsNadmSoundingCapability,
-  nadm_random_capability : CsNadmRandomCapability,
-  cs_sync_phys_supported : CsSyncPhysSupported,
-  subfeatures_supported : CsSubfeaturesSupported,
-  t_ip1_times_supported : CsTIp1TimesSupported,
-  t_ip2_times_supported : CsTIp2TimesSupported,
-  t_fcs_times_supported : CsTFcsTimesSupported,
-  t_pm_times_supported : CsTPmTimesSupported,
+  rtt_random_sequence_n : 8,
+  nadm_sounding_capability : 16,
+  nadm_random_capability : 16,
+  cs_sync_phys_supported : 8,
+  subfeatures_supported : 16,
+  t_ip1_times_supported : 16,
+  t_ip2_times_supported : 16,
+  t_fcs_times_supported : 16,
+  t_pm_times_supported : 16,
   t_sw_time_supported : 8,
-  tx_snr_capability : CsTxSnrCapability,
+  tx_snr_capability : 8,
 }
 
 packet LeCsWriteCachedRemoteSupportedCapabilities : Command (op_code = LE_CS_WRITE_CACHED_REMOTE_SUPPORTED_CAPABILITIES) {
@@ -5006,24 +5013,24 @@ packet LeCsWriteCachedRemoteSupportedCapabilities : Command (op_code = LE_CS_WRI
   _reserved_ : 4,
   num_config_supported : 8,
   max_consecutive_procedures_supported : 16,
-  num_antennas_supported : 8,
+  num_antennae_supported : 8,
   max_antenna_paths_supported : 8,
-  roles_supported : CsRolesSupported,
-  modes_supported : CsModesSupported,
-  rtt_capability : CsRttCapability,
+  roles_supported : 8,
+  modes_supported : 8,
+  rtt_capability : 8,
   rtt_aa_only_n : 8,
   rtt_sounding_n : 8,
-  rtt_random_payload_n : 8,
-  nadm_sounding_capability : CsNadmSoundingCapability,
-  nadm_random_capability : CsNadmRandomCapability,
-  cs_sync_phys_supported : CsSyncPhysSupported,
-  subfeatures_supported : CsSubfeaturesSupported,
-  t_ip1_times_supported : CsTIp1TimesSupported,
-  t_ip2_times_supported : CsTIp2TimesSupported,
-  t_fcs_times_supported : CsTFcsTimesSupported,
-  t_pm_times_supported : CsTPmTimesSupported,
+  rtt_random_sequence_n : 8,
+  nadm_sounding_capability : 16,
+  nadm_random_capability : 16,
+  cs_sync_phys_supported : 8,
+  subfeatures_supported : 16,
+  t_ip1_times_supported : 16,
+  t_ip2_times_supported : 16,
+  t_fcs_times_supported : 16,
+  t_pm_times_supported : 16,
   t_sw_time_supported : 8,
-  tx_snr_capability : CsTxSnrCapability,
+  tx_snr_capability : 8,
 }
 
 packet LeCsWriteCachedRemoteSupportedCapabilitiesComplete : CommandComplete (command_op_code = LE_CS_WRITE_CACHED_REMOTE_SUPPORTED_CAPABILITIES) {
@@ -5046,10 +5053,9 @@ packet LeCsSecurityEnableComplete : LeMetaEvent (subevent_code = LE_CS_SECURITY_
   _reserved_ : 4,
 }
 
-struct CsRoleEnable {
-  initiator : 1,
-  reflector : 1,
-  _reserved_ : 6,
+enum CsRoleEnable : 8 {
+  INITIATOR = 0x01,
+  REFLECTOR = 0x02,
 }
 
 enum CsSyncAntennaSelection : 8 {
@@ -5057,6 +5063,7 @@ enum CsSyncAntennaSelection : 8 {
   ANTENNA_2 = 0x02,
   ANTENNA_3 = 0x03,
   ANTENNA_4 = 0x04,
+  ANTENNAS_IN_REPETITIVE_ORDER = 0xFD,
   ANTENNAS_IN_ORDER = 0xFE,
   NO_RECOMMENDATION = 0xFF,
 }
@@ -5064,7 +5071,7 @@ enum CsSyncAntennaSelection : 8 {
 packet LeCsSetDefaultSettings : Command (op_code = LE_CS_SET_DEFAULT_SETTINGS) {
   connection_handle: 12,
   _reserved_ : 4,
-  role_enable : CsRoleEnable,
+  role_enable : 8,
   cs_sync_antenna_selection : CsSyncAntennaSelection,
   max_tx_power : 8,
 }
@@ -5176,7 +5183,7 @@ packet LeCsConfigComplete : LeMetaEvent (subevent_code = LE_CS_CONFIG_COMPLETE) 
   channel_selection_type : CsChannelSelectionType,
   ch3c_shape : CsCh3cShape,
   ch3c_jump : 8,
-  _reserved_ : 8,
+  reserved : 8,
   t_ip1_time : 8,
   t_ip2_time : 8,
   t_fcs_time : 8,
@@ -5202,7 +5209,7 @@ packet LeCsCreateConfig : Command (op_code = LE_CS_CREATE_CONFIG) {
   channel_selection_type : CsChannelSelectionType,
   ch3c_shape : CsCh3cShape,
   ch3c_jump : 8,
-  _reserved_ : 8,
+  reserved : 8,
 }
 
 packet LeCsCreateConfigStatus : CommandStatus (command_op_code = LE_CS_CREATE_CONFIG) {
@@ -5223,6 +5230,7 @@ packet LeCsSetChannelClassification : Command (op_code = LE_CS_SET_CHANNEL_CLASS
 }
 
 packet LeCsSetChannelClassificationComplete : CommandComplete (command_op_code = LE_CS_SET_CHANNEL_CLASSIFICATION) {
+  status : ErrorCode,
 }
 
 enum CsPhy : 8 {
@@ -5232,12 +5240,11 @@ enum CsPhy : 8 {
   LE_CODED_PHY_S8 = 0x04,
 }
 
-struct CsPreferredPeerAntenna {
-  use_first_ordered_antenna_element : 1,
-  use_second_ordered_antenna_element : 1,
-  use_third_ordered_antenna_element : 1,
-  use_fourth_ordered_antenna_element : 1,
-  _reserved_ : 4,
+enum CsPreferredPeerAntenna : 8 {
+  USE_FIRST_ORDERED_ANTENNA_ELEMENT = 0x01,
+  USE_SECOND_ORDERED_ANTENNA_ELEMENT = 0x02,
+  USE_THIRD_ORDERED_ANTENNA_ELEMENT = 0x04,
+  USE_FOURTH_ORDERED_ANTENNA_ELEMENT = 0x08,
 }
 
 enum CsSnrControl : 8 {
@@ -5341,6 +5348,41 @@ packet LeCsTestEndStatus : CommandStatus (command_op_code = LE_CS_TEST_END) {
 
 packet LeCsTestEndComplete : LeMetaEvent (subevent_code = LE_CS_TEST_END_COMPLETE) {
   status : ErrorCode,
+}
+
+struct CsStepData {
+  step_mode : 8,
+  step_channel : 8,
+  _size_(step_data) : 8,
+  step_data : 8[],
+}
+
+packet LeCsSubeventResult : LeMetaEvent (subevent_code = LE_CS_SUBEVENT_RESULT) {
+  connection_handle : 12,
+  _reserved_ : 4,
+  config_id : 8,
+  start_acl_conn_event_counter : 16,
+  procedure_counter : 16,
+  frequency_compensation : 16,
+  reference_power_level : 8,
+  procedure_done_status : 4,
+  subevent_done_status : 4,
+  abort_reason : 8,
+  num_antenna_paths : 8,
+  _count_(steps) : 8,
+  steps : CsStepData[],
+}
+
+packet LeCsSubeventResultContinue : LeMetaEvent (subevent_code = LE_CS_SUBEVENT_RESULT_CONTINUE) {
+  connection_handle : 12,
+  _reserved_ : 4,
+  config_id : 8,
+  procedure_done_status : 4,
+  subevent_done_status : 4,
+  abort_reason : 8,
+  num_antenna_paths : 8,
+  _count_(steps) : 8,
+  steps : CsStepData[],
 }
 
 // HCI Event Packets
@@ -6376,6 +6418,39 @@ enum GapDataType : 8 {
 }
 
 // -----------------------------------------------------------------------------
+//  RootCanal test commands.
+// -----------------------------------------------------------------------------
+
+enum RootcanalOpCode : 8 {
+  SEND_HCI_EVENT = 0x01,
+  SEND_HCI_ACL_DATA = 0x02,
+}
+
+packet RootcanalCommand : Command (op_code = ROOTCANAL_OPCODE) {
+  subop_code: RootcanalOpCode,
+  _payload_,
+}
+
+packet RootcanalCommandComplete : CommandComplete (command_op_code = ROOTCANAL_OPCODE) {
+  status: ErrorCode,
+  subop_code: RootcanalOpCode,
+}
+
+packet RootcanalSendHciEvent : RootcanalCommand (subop_code = SEND_HCI_EVENT) {
+  event_code : EventCode,
+  _size_(_payload_) : 8,
+  _payload_,
+}
+
+packet RootcanalSendHciAclData : RootcanalCommand (subop_code = SEND_HCI_ACL_DATA) {
+  handle : 12,
+  packet_boundary_flag : PacketBoundaryFlag,
+  broadcast_flag : BroadcastFlag,
+  _size_(_payload_) : 16,
+  _payload_,
+}
+
+// -----------------------------------------------------------------------------
 //  LE Get Vendor Capabilities Command
 //  https://source.android.com/docs/core/connect/bluetooth/hci_requirements#vendor-specific-capabilities
 // -----------------------------------------------------------------------------
@@ -6440,6 +6515,31 @@ struct VendorCapabilities_V_1_03 {
   a2dp_source_offload_capability_mask: 32,
   bluetooth_quality_report_support: 8,
   dynamic_audio_buffer_support: 32,
+}
+
+struct VendorCapabilities_V_1_06 {
+  _reserved_ : 8,
+  _reserved_ : 8,
+  total_scan_results_storage: 16,
+  max_irk_list_sz: 8,
+  filtering_support: 8,
+  max_filter: 8,
+  activity_energy_info_support: 8,
+  _fixed_ = 0x0106 : 16, // v1.03
+  total_num_of_advt_tracked: 16,
+  extended_scan_support: 8,
+  debug_logging_supported: 8,
+  _reserved_ : 8,
+  a2dp_source_offload_capability_mask: 32,
+  bluetooth_quality_report_support: 8,
+  dynamic_audio_buffer_support: 32,
+  a2dp_offload_v2_support: 8,
+  iso_link_feedback_support: 8,
+  sniff_offload_support: 8,
+  big_set_channel_map_classification_support: 16,
+  vendor_connection_handle_min : 16,
+  vendor_connection_handle_max : 16,
+  connection_proximity_threshold_support : 8,
 }
 
 // -----------------------------------------------------------------------------

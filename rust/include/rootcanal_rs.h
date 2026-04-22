@@ -34,6 +34,7 @@ struct ControllerOps {
   void (*send_hci_event)(void* user, const uint8_t* data, uintptr_t len);
   void (*send_lmp_packet)(void* user, const uint8_t (*to)[6], const uint8_t* data, uintptr_t len);
   void (*send_llcp_packet)(void* user, uint16_t handle, const uint8_t* data, uintptr_t len);
+  bool (*get_advertiser_info)(void* user, uint8_t advertising_handle, bool* periodic_enabled);
 };
 
 extern "C" {

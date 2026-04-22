@@ -15,7 +15,7 @@
 macro_rules! sequence_body {
         ($ctx:ident, ) => { None };
         ($ctx:ident, Lower Tester -> IUT: $packet:ident {
-            $($name:ident: $value:expr),* $(,)?
+            $($name:ident: $value:expr_2021),* $(,)?
         } $($tail:tt)*) => {{
             use crate::packets::lmp::*;
 
@@ -35,7 +35,7 @@ macro_rules! sequence_body {
             sequence_body!($ctx, $($tail)*).or(Some(poll))
         }};
         ($ctx:ident, Upper Tester -> IUT: $packet:ident {
-            $($name:ident: $value:expr),* $(,)?
+            $($name:ident: $value:expr_2021),* $(,)?
         } $($tail:tt)*) => {{
             use crate::packets::hci::*;
 
@@ -55,7 +55,7 @@ macro_rules! sequence_body {
             sequence_body!($ctx, $($tail)*).or(Some(poll))
         }};
         ($ctx:ident, IUT -> Upper Tester: $packet:ident {
-            $($name:ident: $expected_value:expr),* $(,)?
+            $($name:ident: $expected_value:expr_2021),* $(,)?
         } $($tail:tt)*) => {{
             use crate::packets::hci::*;
 
@@ -73,7 +73,7 @@ macro_rules! sequence_body {
             sequence_body!($ctx, $($tail)*)
         }};
         ($ctx:ident, IUT -> Lower Tester: $packet:ident {
-            $($name:ident: $expected_value:expr),* $(,)?
+            $($name:ident: $expected_value:expr_2021),* $(,)?
         } $($tail:tt)*) => {{
             use crate::packets::lmp::*;
 
@@ -90,7 +90,7 @@ macro_rules! sequence_body {
 
             sequence_body!($ctx, $($tail)*)
         }};
-        ($ctx:ident, repeat $number:literal times with ($var:ident in $iterable:expr) {
+        ($ctx:ident, repeat $number:literal times with ($var:ident in $iterable:expr_2021) {
             $($inner:tt)*
         } $($tail:tt)*) => {{
             println!("repeat {}", $number);

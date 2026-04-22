@@ -20,9 +20,6 @@
 
 namespace rootcanal {
 
-// CSR Vendor command opcode.
-static constexpr uint16_t CSR_VENDOR = 0xfc00;
-
 enum CsrVarid : uint16_t {
   CSR_VARID_BUILDID = 0x2819,
   CSR_VARID_PS = 0x7003,

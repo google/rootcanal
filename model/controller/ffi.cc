@@ -19,6 +19,7 @@
 #include <iostream>
 
 #include "model/controller/dual_mode_controller.h"
+#include "rootcanal/configuration.pb.h"
 
 using namespace rootcanal;
 using bluetooth::hci::Address;
@@ -43,8 +44,17 @@ __attribute__((visibility("default"))) void* ffi_controller_new(
         void (*send_ll)(void* cookie, uint8_t const* data, size_t data_len, int phy, int tx_power),
         void (*invalid_packet_handler)(void* cookie, int reason, char const* message,
                                        uint8_t const* data, size_t data_len),
-        void* cookie) {
-  DualModeController* controller = new DualModeController();
+        unsigned (*ranging_estimator)(void* cookie1, void* cookie2), void* cookie,
+        const uint8_t* proto_bytes, size_t proto_len) {
+  rootcanal::ControllerProperties properties;
+  if (proto_bytes != nullptr && proto_len > 0) {
+    rootcanal::configuration::Controller config;
+    if (config.ParseFromArray(proto_bytes, proto_len)) {
+      properties = rootcanal::ControllerProperties(config);
+    }
+  }
+
+  DualModeController* controller = new DualModeController(properties);
   controller->SetAddress(
           Address({address[0], address[1], address[2], address[3], address[4], address[5]}));
   controller->RegisterEventChannel([=](std::shared_ptr<std::vector<uint8_t>> data) {
@@ -71,6 +81,13 @@ __attribute__((visibility("default"))) void* ffi_controller_new(
       invalid_packet_handler(cookie, static_cast<int>(reason), message.c_str(), packet.data(),
                              packet.size());
     });
+  }
+
+  if (ranging_estimator) {
+    controller->RegisterRangingEstimator(
+            [=](void const* cookie1, void const* cookie2) {
+              return ranging_estimator(const_cast<void*>(cookie1), const_cast<void*>(cookie2));
+            });
   }
 
   return controller;

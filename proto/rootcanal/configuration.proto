@@ -38,6 +38,8 @@ message ControllerFeatures {
   // and LL Connected Isochronous Stream Peripheral.
   optional bool le_connected_isochronous_stream = 6;
   optional bool le_connection_subrating = 7;
+  optional bool le_channel_sounding = 8;
+  optional bool le_power_control_request = 9;
 }
 
 message ControllerQuirks {

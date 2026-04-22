@@ -48,6 +48,40 @@ struct ControllerQuirks {
   bool hardware_error_before_reset{false};
 };
 
+// Channel Sounding capabilities (Core Spec Vol 4, Part E § 7.8.130).
+struct CsLocalSupportedCapabilities {
+  uint8_t num_config_supported{3};
+  uint16_t max_consecutive_procedures_supported{1};
+  uint8_t num_antennae_supported{1};
+  uint8_t max_antenna_paths_supported{1};
+  uint8_t roles_supported{static_cast<uint8_t>(bluetooth::hci::CsRolesSupported::INITIATOR) |
+                        static_cast<uint8_t>(bluetooth::hci::CsRolesSupported::REFLECTOR)};
+  uint8_t modes_supported{static_cast<uint8_t>(bluetooth::hci::CsModesSupported::MODE_3)};
+  uint8_t rtt_capability{static_cast<uint8_t>(bluetooth::hci::CsRttCapability::RTT_AA_ONLY_N) |
+                         static_cast<uint8_t>(bluetooth::hci::CsRttCapability::RTT_SOUNDING_N) |
+                         static_cast<uint8_t>(bluetooth::hci::CsRttCapability::RTT_RANDOM_PAYLOAD_N)};
+  uint8_t rtt_aa_only_n{1};
+  uint8_t rtt_sounding_n{1};
+  uint8_t rtt_random_sequence_n{1};
+  uint16_t nadm_sounding_capability{0};
+  uint16_t nadm_random_capability{0};
+  uint8_t cs_sync_phys_supported{
+          static_cast<uint8_t>(bluetooth::hci::CsSyncPhysSupported::LE_2M_PHY)};
+  uint16_t subfeatures_supported{
+          static_cast<uint16_t>(bluetooth::hci::CsSubfeaturesSupported::CHANNEL_SELECTION_ALGORITHM) |
+          static_cast<uint16_t>(bluetooth::hci::CsSubfeaturesSupported::PHASE_BASED_RANGING)};
+  uint16_t t_ip1_times_supported{
+          static_cast<uint16_t>(bluetooth::hci::CsTIp1TimesSupported::SUPPORT_10_MICROSECOND)};
+  uint16_t t_ip2_times_supported{
+          static_cast<uint16_t>(bluetooth::hci::CsTIp2TimesSupported::SUPPORT_10_MICROSECOND)};
+  uint16_t t_fcs_times_supported{
+          static_cast<uint16_t>(bluetooth::hci::CsTFcsTimesSupported::SUPPORT_15_MICROSECOND)};
+  uint16_t t_pm_times_supported{
+          static_cast<uint16_t>(bluetooth::hci::CsTPmTimesSupported::SUPPORT_10_MICROSECOND)};
+  uint8_t t_sw_time_supported{0x0A};  // 10 us
+  uint8_t tx_snr_capability{static_cast<uint8_t>(bluetooth::hci::CsTxSnrCapability::SUPPORT_18DB)};
+};
+
 // Local controller information.
 //
 // Provide the Informational Parameters returned by HCI commands
@@ -156,6 +190,9 @@ public:
 
   // LE Periodic Advertiser List Size (Vol 4, Part E § 7.8.73).
   uint8_t le_periodic_advertiser_list_size{8};
+
+  // Channel Sounding Capabilities.(Core Spec Vol 4, Part E § 7.8.130)
+  CsLocalSupportedCapabilities cs_local_supported_capabilities{};
 
   // Android Vendor Capabilities.
   // https://source.android.com/docs/core/connect/bluetooth/hci_requirements#vendor-specific-capabilities

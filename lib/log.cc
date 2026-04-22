@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <iterator>
 #include <optional>
 
 namespace rootcanal::log {
@@ -71,26 +72,33 @@ void VLog(Verbosity verb, char const* file, int line, std::optional<int> instanc
   char file_str[40];  // file:line limited to 40 characters
   snprintf(file_str, sizeof(file_str), "%.35s:%d", file_name, line);
 
-  fmt::print("root-canal {} {} {:<35.35} ", verbosity_tag[verb], time_str, file_str);
+  // Use a memory buffer to format the message to avoid fmt::print assertions on redirected stdout.
+  fmt::memory_buffer buffer;
+  auto out = std::back_inserter(buffer);
+  fmt::format_to(out, "root-canal {} {} {:<35} ", verbosity_tag[verb], time_str, file_str);
 
   if (instance.has_value() && enable_log_color) {
     fmt::color instance_color = text_color[*instance % text_color.size()];
-    fmt::print(fmt::bg(instance_color) | fmt::fg(fmt::color::black), " {:>2} ", *instance);
-    fmt::print(" ");
+    fmt::format_to(out, fmt::bg(instance_color) | fmt::fg(fmt::color::black), " {:>2} ", *instance);
+    fmt::format_to(out, " ");
   } else if (instance.has_value()) {
-    fmt::print(" {:>2}  ", *instance);
+    fmt::format_to(out, " {:>2}  ", *instance);
   } else {
-    fmt::print("     ");
+    fmt::format_to(out, "     ");
   }
 
+  // Format the actual message
   if (enable_log_color) {
     fmt::text_style style = text_style[verb];
-    fmt::vprint(stdout, style, format, args);
+    fmt::vformat_to(out, style, format, args);
   } else {
-    fmt::vprint(stdout, format, args);
+    fmt::vformat_to(out, format, args);
   }
+  fmt::format_to(out, "\n");
 
-  fmt::print("\n");
+  // Write to stdout using fwrite
+  fwrite(buffer.data(), 1, buffer.size(), stdout);
+  fflush(stdout);
 
   if (verb == Verbosity::kFatal) {
     std::abort();

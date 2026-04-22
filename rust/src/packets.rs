@@ -102,3 +102,11 @@ pub mod llcp {
 
     include!(concat!(env!("OUT_DIR"), "/llcp_packets.rs"));
 }
+
+pub mod link_layer {
+    #![allow(clippy::all)]
+    #![allow(unused)]
+    #![allow(missing_docs)]
+
+    include!(concat!(env!("OUT_DIR"), "/link_layer_packets.rs"));
+}

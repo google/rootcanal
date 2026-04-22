@@ -21,6 +21,7 @@ fn main() {
     generate_module(&PathBuf::from("lmp_packets.pdl").canonicalize().unwrap());
     generate_module(&PathBuf::from("llcp_packets.pdl").canonicalize().unwrap());
     generate_module(&PathBuf::from("hci_packets.pdl").canonicalize().unwrap());
+    generate_module(&PathBuf::from("link_layer_packets.pdl").canonicalize().unwrap());
 }
 
 fn generate_module(in_file: &Path) {

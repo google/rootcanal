@@ -59,11 +59,12 @@ impl Link {
     fn poll_hci_command<C: TryFrom<hci::Command>>(&self) -> Poll<C> {
         let command = self.hci.take();
 
-        if let Some(command) = command.clone().and_then(|c| c.try_into().ok()) {
-            Poll::Ready(command)
-        } else {
-            self.hci.set(command);
-            Poll::Pending
+        match command.clone().and_then(|c| c.try_into().ok()) {
+            Some(command) => Poll::Ready(command),
+            _ => {
+                self.hci.set(command);
+                Poll::Pending
+            }
         }
     }
 
@@ -310,18 +311,16 @@ struct LinkContext {
 
 impl procedure::Context for LinkContext {
     fn poll_hci_command<C: TryFrom<hci::Command>>(&self) -> Poll<C> {
-        if let Some(manager) = self.manager.upgrade() {
-            manager.link(self.index).poll_hci_command()
-        } else {
-            Poll::Pending
+        match self.manager.upgrade() {
+            Some(manager) => manager.link(self.index).poll_hci_command(),
+            _ => Poll::Pending,
         }
     }
 
     fn poll_lmp_packet<P: TryFrom<lmp::LmpPacket>>(&self) -> Poll<P> {
-        if let Some(manager) = self.manager.upgrade() {
-            manager.link(self.index).poll_lmp_packet()
-        } else {
-            Poll::Pending
+        match self.manager.upgrade() {
+            Some(manager) => manager.link(self.index).poll_lmp_packet(),
+            _ => Poll::Pending,
         }
     }
 
@@ -340,26 +339,23 @@ impl procedure::Context for LinkContext {
     }
 
     fn peer_address(&self) -> hci::Address {
-        if let Some(manager) = self.manager.upgrade() {
-            manager.link(self.index).peer.get()
-        } else {
-            hci::EMPTY_ADDRESS
+        match self.manager.upgrade() {
+            Some(manager) => manager.link(self.index).peer.get(),
+            _ => hci::EMPTY_ADDRESS,
         }
     }
 
     fn peer_handle(&self) -> u16 {
-        if let Some(manager) = self.manager.upgrade() {
-            manager.ops.get_handle(self.peer_address())
-        } else {
-            0
+        match self.manager.upgrade() {
+            Some(manager) => manager.ops.get_handle(self.peer_address()),
+            _ => 0,
         }
     }
 
     fn extended_features(&self, features_page: u8) -> u64 {
-        if let Some(manager) = self.manager.upgrade() {
-            manager.ops.get_extended_features(features_page)
-        } else {
-            0
+        match self.manager.upgrade() {
+            Some(manager) => manager.ops.get_extended_features(features_page),
+            _ => 0,
         }
     }
 }

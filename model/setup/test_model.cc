@@ -44,7 +44,7 @@ TestModel::TestModel(
         std::function<void(AsyncTaskId)> cancel,
         std::function<std::shared_ptr<Device>(const std::string&, int, Phy::Type)>
                 connect_to_remote,
-        std::array<uint8_t, 5> bluetooth_address_prefix)
+        std::array<uint8_t, 4> bluetooth_address_prefix)
     : bluetooth_address_prefix_(std::move(bluetooth_address_prefix)),
       get_user_id_(std::move(get_user_id)),
       schedule_task_(std::move(event_scheduler)),
@@ -93,7 +93,7 @@ std::shared_ptr<PhyDevice> TestModel::CreatePhyDevice(std::string type,
 Address TestModel::GenerateBluetoothAddress(uint32_t device_id) const {
   Address address({
           static_cast<uint8_t>(device_id),
-          bluetooth_address_prefix_[4],
+          static_cast<uint8_t>(device_id >> 8),
           bluetooth_address_prefix_[3],
           bluetooth_address_prefix_[2],
           bluetooth_address_prefix_[1],
@@ -102,8 +102,9 @@ Address TestModel::GenerateBluetoothAddress(uint32_t device_id) const {
 
   if (reuse_device_addresses_) {
     // Find the first unused address.
-    for (uint16_t b0 = 0; b0 <= 0xff; b0++) {
+    for (uint16_t b0 = 0; b0 <= 0xffff; b0++) {
       address.address[0] = b0;
+      address.address[1] = b0 >> 8;
       bool used = std::any_of(phy_devices_.begin(), phy_devices_.end(), [address](auto& device) {
         return device.second->GetAddress() == address;
       });

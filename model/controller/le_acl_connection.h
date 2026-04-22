@@ -16,10 +16,15 @@
 
 #pragma once
 
+#include <array>
 #include <chrono>
 #include <cstdint>
+#include <optional>
+#include <vector>
 
 #include "hci/address_with_type.h"
+#include "model/controller/controller_properties.h"
+#include "model/controller/le_cs_parameters.h"
 #include "packets/hci_packets.h"
 
 namespace rootcanal {
@@ -74,7 +79,10 @@ public:
   const bluetooth::hci::Role role;
 
   LeAclConnectionParameters parameters;
+  std::optional<uint64_t> remote_supported_features;
   LeAclSubrateParameters subrate_parameters;
+  LeCsParameters cs_parameters;
+  std::optional<std::array<uint8_t, 16>> ltk;
 
   LeAclConnection(uint16_t handle, AddressWithType address, AddressWithType own_address,
                   AddressWithType resolved_address, bluetooth::hci::Role role,
