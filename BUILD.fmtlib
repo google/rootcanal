@@ -8,6 +8,7 @@ cc_library(
         "include/fmt/format-inl.h",
     ],
     hdrs = [
+        "include/fmt/base.h",
         "include/fmt/chrono.h",
         "include/fmt/color.h",
         "include/fmt/compile.h",
