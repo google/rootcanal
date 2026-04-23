@@ -324,10 +324,12 @@ pub unsafe extern "C" fn link_layer_ingest_hci(
     let ll = Rc::get_mut(&mut ll).unwrap();
     let data = unsafe { slice::from_raw_parts(data, len) };
 
-    if let Ok(packet) = hci::Command::decode_full(data) {
-        ll.ingest_hci(packet).is_ok()
-    } else {
-        false
+    match hci::Command::decode_full(data) {
+        Ok(packet) => ll.ingest_hci(packet).is_ok(),
+        Err(err) => {
+            println!("failed to decode LL HCI command: {}", err);
+            false
+        }
     }
 }
 
