@@ -98,7 +98,10 @@ impl LinkLayer {
             Ok(LeRemoveIsoDataPath(packet)) => self.iso.hci_le_remove_iso_data_path(packet),
             Ok(LeCreateBig(packet)) => self.iso.hci_le_create_big(packet),
             Ok(LeTerminateBig(packet)) => self.iso.hci_le_terminate_big(packet),
-            _ => Err(LinkLayerError::UnhandledHciPacket)?,
+            _ => {
+                println!("Unhandled LL HCI command {:?}", packet.op_code);
+                Err(LinkLayerError::UnhandledHciPacket)?
+            }
         };
         Ok(())
     }
