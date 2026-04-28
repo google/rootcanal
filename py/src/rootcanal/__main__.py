@@ -16,7 +16,6 @@ import rootcanal.binaries
 import subprocess
 import sys
 
-
 sys.exit(
     subprocess.call(
         [

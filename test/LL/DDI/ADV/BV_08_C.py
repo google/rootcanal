@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import unittest
-from hci_packets import ErrorCode
-from py.bluetooth import Address
-from py.controller import ControllerTest
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
 
 
 class Test(ControllerTest):
@@ -29,26 +29,36 @@ class Test(ControllerTest):
         LL_advertiser_advInterval_MAX = 0x200
         LL_advertiser_Adv_Channel_Map = 0x7
         controller = self.controller
-        public_peer_address = Address('aa:bb:cc:dd:ee:ff')
-        random_peer_address = Address('00:bb:cc:dd:ee:ff')
-        invalid_peer_address = Address('aa:bb:cc:dd:ee:00')
+        public_peer_address = Address("aa:bb:cc:dd:ee:ff")
+        random_peer_address = Address("00:bb:cc:dd:ee:ff")
+        invalid_peer_address = Address("aa:bb:cc:dd:ee:00")
 
         # Test preparation.
         controller.send_cmd(
-            hci.LeAddDeviceToFilterAcceptList(address=public_peer_address,
-                                              address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS))
+            hci.LeAddDeviceToFilterAcceptList(
+                address=public_peer_address,
+                address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeAddDeviceToFilterAcceptListComplete(status=ErrorCode.SUCCESS,
-                                                      num_hci_command_packets=1))
+            hci.LeAddDeviceToFilterAcceptListComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(
-            hci.LeAddDeviceToFilterAcceptList(address=random_peer_address,
-                                              address_type=hci.AddressType.RANDOM_DEVICE_ADDRESS))
+            hci.LeAddDeviceToFilterAcceptList(
+                address=random_peer_address,
+                address_type=hci.AddressType.RANDOM_DEVICE_ADDRESS,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeAddDeviceToFilterAcceptListComplete(status=ErrorCode.SUCCESS,
-                                                      num_hci_command_packets=1))
+            hci.LeAddDeviceToFilterAcceptListComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 1. Upper Tester enables undirected advertising in the IUT using public address type, all supported
         # advertising channels, an advertising interval between the minimum and maximum advertising
@@ -61,24 +71,36 @@ class Test(ControllerTest):
                 advertising_type=hci.AdvertisingType.ADV_IND,
                 own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
                 advertising_channel_map=LL_advertiser_Adv_Channel_Map,
-                advertising_filter_policy=hci.AdvertisingFilterPolicy.LISTED_SCAN_AND_CONNECT))
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.LISTED_SCAN_AND_CONNECT,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS,
-                                                   num_hci_command_packets=1))
+            hci.LeSetAdvertisingParametersComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 2. Upper Tester sends an HCI_LE_Set_Scan_Response_Data command with data set to “IUT” and
         # receives an HCI_Command_Complete event from the IUT.
-        scan_response_data = [ord('I'), ord('U'), ord('T')]
-        controller.send_cmd(hci.LeSetScanResponseData(advertising_data=scan_response_data))
+        scan_response_data = [ord("I"), ord("U"), ord("T")]
+        controller.send_cmd(
+            hci.LeSetScanResponseData(advertising_data=scan_response_data)
+        )
 
         await self.expect_evt(
-            hci.LeSetScanResponseDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetScanResponseDataComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 3. Lower Tester address type is set to Public Address type.
         # 4. Configure Lower Tester to monitor the advertising and scan response procedures of the IUT and
@@ -91,16 +113,23 @@ class Test(ControllerTest):
         # 7. Repeat steps 5–6 30 times.
         for n in range(2):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
-            controller.send_ll(ll.LeScan(source_address=invalid_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=-16)
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=invalid_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.PUBLIC,
+                ),
+                rssi=-16,
+            )
 
         # 8. Configure Lower Tester to monitor the advertising and scan response procedures of the IUT and
         # send a SCAN_REQ packet on the selected supported advertising channel (defined as an IXIT)
@@ -108,16 +137,23 @@ class Test(ControllerTest):
         # 9. Repeat steps 5–6 30 times.
         for n in range(2):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
-            controller.send_ll(ll.LeScan(source_address=public_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=-16)
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=public_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.RANDOM,
+                ),
+                rssi=-16,
+            )
 
         # 10. Configure Lower Tester to monitor the advertising and scan response procedures of the IUT and
         # send a SCAN_REQ packet on the selected supported advertising channel (defined as an IXIT)
@@ -129,22 +165,32 @@ class Test(ControllerTest):
         # after the end of the request packet.
         for n in range(2):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
-            controller.send_ll(ll.LeScan(source_address=public_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=-16)
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=public_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.PUBLIC,
+                ),
+                rssi=-16,
+            )
 
             await self.expect_ll(
-                ll.LeScanResponse(source_address=controller.address,
-                                  destination_address=public_peer_address,
-                                  advertising_address_type=ll.AddressType.PUBLIC,
-                                  scan_response_data=scan_response_data))
+                ll.LeScanResponse(
+                    source_address=controller.address,
+                    destination_address=public_peer_address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scan_response_data=scan_response_data,
+                )
+            )
 
         # 13. Upper Tester sends an HCI_LE_Set_Advertising_Enable command to the IUT to disable
         # advertising and receives an HCI_Command_Complete event in response.
@@ -154,48 +200,72 @@ class Test(ControllerTest):
         # 16. Repeat steps 4–13.
         for n in range(2):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
-            controller.send_ll(ll.LeScan(source_address=invalid_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=-16)
-
-        for n in range(2):
-            await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
-
-            controller.send_ll(ll.LeScan(source_address=random_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=-16)
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=invalid_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.RANDOM,
+                ),
+                rssi=-16,
+            )
 
         for n in range(2):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
-            controller.send_ll(ll.LeScan(source_address=random_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=-16)
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=random_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.PUBLIC,
+                ),
+                rssi=-16,
+            )
+
+        for n in range(2):
+            await self.expect_ll(
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
+
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=random_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.RANDOM,
+                ),
+                rssi=-16,
+            )
 
             await self.expect_ll(
-                ll.LeScanResponse(source_address=controller.address,
-                                  destination_address=random_peer_address,
-                                  advertising_address_type=ll.AddressType.PUBLIC,
-                                  scan_response_data=scan_response_data))
+                ll.LeScanResponse(
+                    source_address=controller.address,
+                    destination_address=random_peer_address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scan_response_data=scan_response_data,
+                )
+            )
 
         # 17. Upper Tester enables undirected advertising in the IUT using public address type, all supported
         # advertising channels, an advertising interval between the minimum and maximum advertising
@@ -204,7 +274,10 @@ class Test(ControllerTest):
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=False))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(
             hci.LeSetAdvertisingParameters(
@@ -213,63 +286,94 @@ class Test(ControllerTest):
                 advertising_type=hci.AdvertisingType.ADV_IND,
                 own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
                 advertising_channel_map=LL_advertiser_Adv_Channel_Map,
-                advertising_filter_policy=hci.AdvertisingFilterPolicy.LISTED_SCAN))
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.LISTED_SCAN,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS,
-                                                   num_hci_command_packets=1))
+            hci.LeSetAdvertisingParametersComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 18. Lower Tester address type is set to Public Address type.
         # 19. Repeat steps 4–13.
         for n in range(2):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
-            controller.send_ll(ll.LeScan(source_address=invalid_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=-16)
-
-        for n in range(2):
-            await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
-
-            controller.send_ll(ll.LeScan(source_address=public_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=-16)
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=invalid_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.PUBLIC,
+                ),
+                rssi=-16,
+            )
 
         for n in range(2):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
-            controller.send_ll(ll.LeScan(source_address=public_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=-16)
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=public_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.RANDOM,
+                ),
+                rssi=-16,
+            )
+
+        for n in range(2):
+            await self.expect_ll(
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
+
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=public_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.PUBLIC,
+                ),
+                rssi=-16,
+            )
 
             await self.expect_ll(
-                ll.LeScanResponse(source_address=controller.address,
-                                  destination_address=public_peer_address,
-                                  advertising_address_type=ll.AddressType.PUBLIC,
-                                  scan_response_data=scan_response_data))
+                ll.LeScanResponse(
+                    source_address=controller.address,
+                    destination_address=public_peer_address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scan_response_data=scan_response_data,
+                )
+            )
 
         # 20. Upper Tester enables undirected advertising in the IUT using public address type, all supported
         # advertising channels, an advertising interval between the minimum and maximum advertising
@@ -281,45 +385,69 @@ class Test(ControllerTest):
         # 22. Repeat steps 4–13.
         for n in range(2):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
-            controller.send_ll(ll.LeScan(source_address=invalid_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=-16)
-
-        for n in range(2):
-            await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
-
-            controller.send_ll(ll.LeScan(source_address=random_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=-16)
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=invalid_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.RANDOM,
+                ),
+                rssi=-16,
+            )
 
         for n in range(2):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
-            controller.send_ll(ll.LeScan(source_address=random_peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.RANDOM),
-                               rssi=-16)
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=random_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.PUBLIC,
+                ),
+                rssi=-16,
+            )
+
+        for n in range(2):
+            await self.expect_ll(
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
+
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=random_peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.RANDOM,
+                ),
+                rssi=-16,
+            )
 
             await self.expect_ll(
-                ll.LeScanResponse(source_address=controller.address,
-                                  destination_address=random_peer_address,
-                                  advertising_address_type=ll.AddressType.PUBLIC,
-                                  scan_response_data=scan_response_data))
+                ll.LeScanResponse(
+                    source_address=controller.address,
+                    destination_address=random_peer_address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scan_response_data=scan_response_data,
+                )
+            )

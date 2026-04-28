@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import asyncio
-import hci_packets as hci
+from rootcanal.packets import hci
 import unittest
-from hci_packets import ErrorCode
-from py.controller import ControllerTest
+from rootcanal.packets.hci import ErrorCode
+from test.controller_test import ControllerTest
 
 
 class Test(ControllerTest):

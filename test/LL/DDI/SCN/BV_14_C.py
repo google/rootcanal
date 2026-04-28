@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import unittest
-from hci_packets import ErrorCode
-from py.bluetooth import Address
-from py.controller import ControllerTest, generate_rpa
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
+from rootcanal.controller import generate_rpa
 
 
 class Test(ControllerTest):
@@ -44,16 +45,25 @@ class Test(ControllerTest):
             self.skipTest("LL privacy not supported")
 
         # 1. The Upper Tester sets a resolvable private address for the IUT to use.
-        controller.send_cmd(hci.LeSetRandomAddress(random_address=local_resolvable_address_1))
+        controller.send_cmd(
+            hci.LeSetRandomAddress(random_address=local_resolvable_address_1)
+        )
 
         await self.expect_evt(
-            hci.LeSetRandomAddressComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetRandomAddressComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
-        controller.send_cmd(hci.LeSetResolvablePrivateAddressTimeout(rpa_timeout=RPA_timeout))
+        controller.send_cmd(
+            hci.LeSetResolvablePrivateAddressTimeout(rpa_timeout=RPA_timeout)
+        )
 
         await self.expect_evt(
-            hci.LeSetResolvablePrivateAddressTimeoutComplete(status=ErrorCode.SUCCESS,
-                                                             num_hci_command_packets=1))
+            hci.LeSetResolvablePrivateAddressTimeoutComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 2. The Upper Tester enables passive scanning using filter policy 0x02 in the IUT.
         controller.send_cmd(
@@ -62,17 +72,27 @@ class Test(ControllerTest):
                 le_scan_interval=LL_scanner_scanInterval_MAX,
                 le_scan_window=LL_scanner_scanWindow_MAX,
                 own_address_type=hci.OwnAddressType.RANDOM_DEVICE_ADDRESS,
-                scanning_filter_policy=hci.LeScanningFilterPolicy.CHECK_INITIATORS_IDENTITY))
+                scanning_filter_policy=hci.LeScanningFilterPolicy.CHECK_INITIATORS_IDENTITY,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetScanParametersComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetScanParametersComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(
-            hci.LeSetScanEnable(le_scan_enable=hci.Enable.ENABLED,
-                                filter_duplicates=hci.Enable.DISABLED))
+            hci.LeSetScanEnable(
+                le_scan_enable=hci.Enable.ENABLED, filter_duplicates=hci.Enable.DISABLED
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetScanEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 3. Configure the Lower Tester to start advertising. The Lower Tester uses a resolvable private
         # address type in the AdvA field. The InitA field also contains a resolvable private address, which
@@ -80,31 +100,41 @@ class Test(ControllerTest):
 
         # 4. The Lower Tester sends an ADV_ DIRECT _IND packet each advertising event using the
         # selected advertising channel only. Repeat for at least 20 advertising intervals.
-        controller.send_ll(ll.LeLegacyAdvertisingPdu(
-            source_address=peer_resolvable_address,
-            destination_address=local_resolvable_address_2,
-            advertising_address_type=ll.AddressType.RANDOM,
-            target_address_type=ll.AddressType.RANDOM,
-            advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
-            advertising_data=[1, 2, 3]),
-                           rssi=-16)
+        controller.send_ll(
+            ll.LeLegacyAdvertisingPdu(
+                source_address=peer_resolvable_address,
+                destination_address=local_resolvable_address_2,
+                advertising_address_type=ll.AddressType.RANDOM,
+                target_address_type=ll.AddressType.RANDOM,
+                advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
+                advertising_data=[1, 2, 3],
+            ),
+            rssi=-16,
+        )
 
         # 5. The Upper Tester receives at least one HCI_LE_Direct_Advertising_Report reporting the
         # advertising packets sent by the Lower Tester.
         await self.expect_evt(
-            hci.LeDirectedAdvertisingReport(responses=[
-                hci.LeDirectedAdvertisingResponse(
-                    event_type=hci.AdvertisingEventType.ADV_DIRECT_IND,
-                    address_type=hci.AddressType.RANDOM_DEVICE_ADDRESS,
-                    address=peer_resolvable_address,
-                    direct_address_type=hci.DirectAddressType.RANDOM_DEVICE_ADDRESS,
-                    direct_address=local_resolvable_address_2,
-                    rssi=0xf0)
-            ]))
+            hci.LeDirectedAdvertisingReport(
+                responses=[
+                    hci.LeDirectedAdvertisingResponse(
+                        event_type=hci.AdvertisingEventType.ADV_DIRECT_IND,
+                        address_type=hci.AddressType.RANDOM_DEVICE_ADDRESS,
+                        address=peer_resolvable_address,
+                        direct_address_type=hci.DirectAddressType.RANDOM_DEVICE_ADDRESS,
+                        direct_address=local_resolvable_address_2,
+                        rssi=0xF0,
+                    )
+                ]
+            )
+        )
 
         # 6. The Upper Tester sends an HCI_LE_Set_Scan_Enable to the IUT to stop the scanning function
         # and receives an HCI_Command_Complete event in response.
         controller.send_cmd(hci.LeSetScanEnable(le_scan_enable=hci.Enable.DISABLED))
 
         await self.expect_evt(
-            hci.LeSetScanEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetScanEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )

@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import unittest
-from hci_packets import ErrorCode
-from py.bluetooth import Address
-from py.controller import ControllerTest, Phy
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
+from rootcanal.controller import Phy
 
 
 class Test(ControllerTest):

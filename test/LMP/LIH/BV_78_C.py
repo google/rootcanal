@@ -13,12 +13,13 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import unittest
-from hci_packets import ErrorCode
-from py.bluetooth import Address
-from py.controller import ControllerTest, Phy
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
+from rootcanal.controller import Phy
 
 
 class Test(ControllerTest):
@@ -27,37 +28,54 @@ class Test(ControllerTest):
     async def test(self):
         # Test parameters.
         controller = self.controller
-        peer_address = Address('11:22:33:44:55:66')
+        peer_address = Address("11:22:33:44:55:66")
 
         controller.send_cmd(
             hci.CreateConnection(
                 bd_addr=peer_address,
-                packet_type=0x7fff,
+                packet_type=0x7FFF,
                 page_scan_repetition_mode=hci.PageScanRepetitionMode.R1,
-                allow_role_switch=hci.CreateConnectionRoleSwitch.ALLOW_ROLE_SWITCH))
+                allow_role_switch=hci.CreateConnectionRoleSwitch.ALLOW_ROLE_SWITCH,
+            )
+        )
 
         await self.expect_evt(
-            hci.CreateConnectionStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.CreateConnectionStatus(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         await self.expect_ll(
-            ll.Page(source_address=controller.address,
-                    destination_address=peer_address,
-                    allow_role_switch=True))
+            ll.Page(
+                source_address=controller.address,
+                destination_address=peer_address,
+                allow_role_switch=True,
+            )
+        )
 
         controller.send_ll(
-            ll.PageResponse(source_address=peer_address,
-                            destination_address=controller.address,
-                            try_role_switch=True),
-            phy=Phy.BrEdr)
+            ll.PageResponse(
+                source_address=peer_address,
+                destination_address=controller.address,
+                try_role_switch=True,
+            ),
+            phy=Phy.BrEdr,
+        )
 
         await self.expect_evt(
-            hci.RoleChange(status=ErrorCode.SUCCESS,
-                           bd_addr=peer_address,
-                           new_role=hci.Role.PERIPHERAL))
+            hci.RoleChange(
+                status=ErrorCode.SUCCESS,
+                bd_addr=peer_address,
+                new_role=hci.Role.PERIPHERAL,
+            )
+        )
 
         await self.expect_evt(
-            hci.ConnectionComplete(status=ErrorCode.SUCCESS,
-                                   connection_handle=self.Any,
-                                   bd_addr=peer_address,
-                                   link_type=hci.LinkType.ACL,
-                                   encryption_enabled=hci.Enable.DISABLED))
+            hci.ConnectionComplete(
+                status=ErrorCode.SUCCESS,
+                connection_handle=self.Any,
+                bd_addr=peer_address,
+                link_type=hci.LinkType.ACL,
+                encryption_enabled=hci.Enable.DISABLED,
+            )
+        )

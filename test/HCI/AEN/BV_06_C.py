@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import unittest
-from hci_packets import ErrorCode
-from py.bluetooth import Address
-from py.controller import ControllerTest
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
 
 
 class Test(ControllerTest):
@@ -32,23 +32,36 @@ class Test(ControllerTest):
         controller.send_cmd(hci.LeReadLocalP256PublicKey())
 
         await self.expect_evt(
-            hci.LeReadLocalP256PublicKeyStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeReadLocalP256PublicKeyStatus(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         first = await self.expect_evt(
-            hci.LeReadLocalP256PublicKeyComplete(status=ErrorCode.SUCCESS,
-                                                 key_x_coordinate=self.Any,
-                                                 key_y_coordinate=self.Any))
+            hci.LeReadLocalP256PublicKeyComplete(
+                status=ErrorCode.SUCCESS,
+                key_x_coordinate=self.Any,
+                key_y_coordinate=self.Any,
+            )
+        )
 
         controller.send_cmd(hci.LeReadLocalP256PublicKey())
 
         await self.expect_evt(
-            hci.LeReadLocalP256PublicKeyStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeReadLocalP256PublicKeyStatus(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         second = await self.expect_evt(
-            hci.LeReadLocalP256PublicKeyComplete(status=ErrorCode.SUCCESS,
-                                                 key_x_coordinate=self.Any,
-                                                 key_y_coordinate=self.Any))
+            hci.LeReadLocalP256PublicKeyComplete(
+                status=ErrorCode.SUCCESS,
+                key_x_coordinate=self.Any,
+                key_y_coordinate=self.Any,
+            )
+        )
 
-        self.assertTrue((first.key_x_coordinate,
-                         first.key_y_coordinate) != (second.key_x_coordinate,
-                                                     second.key_y_coordinate))
+        self.assertTrue(
+            (first.key_x_coordinate, first.key_y_coordinate)
+            != (second.key_x_coordinate, second.key_y_coordinate)
+        )

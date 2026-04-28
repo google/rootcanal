@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import unittest
-from hci_packets import ErrorCode
-from py.bluetooth import Address
-from py.controller import ControllerTest
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
 
 
 class Test(ControllerTest):
@@ -32,7 +32,7 @@ class Test(ControllerTest):
         LL_initiator_connSupervisionTimeout = 0x200
         LL_advertiser_Adv_Channel_Map = 0x7
         controller = self.controller
-        peer_address = Address('aa:bb:cc:dd:ee:ff')
+        peer_address = Address("aa:bb:cc:dd:ee:ff")
         connection_handle = None
 
         # 1. Upper Tester enables undirected advertising in the IUT using all supported advertising channels,
@@ -46,24 +46,36 @@ class Test(ControllerTest):
                 advertising_type=hci.AdvertisingType.ADV_IND,
                 own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
                 advertising_channel_map=LL_advertiser_Adv_Channel_Map,
-                advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES))
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS,
-                                                   num_hci_command_packets=1))
+            hci.LeSetAdvertisingParametersComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 2. Upper Tester sends an HCI_LE_Set_Scan_Response_Data command with data set to “IUT” and
         # receives an HCI_Command_Complete event from the IUT.
-        scan_response_data = [ord('I'), ord('U'), ord('T')]
-        controller.send_cmd(hci.LeSetScanResponseData(advertising_data=scan_response_data))
+        scan_response_data = [ord("I"), ord("U"), ord("T")]
+        controller.send_cmd(
+            hci.LeSetScanResponseData(advertising_data=scan_response_data)
+        )
 
         await self.expect_evt(
-            hci.LeSetScanResponseDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetScanResponseDataComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 3. Configure Lower Tester to monitor the advertising, scan response and connection procedures of
         # the IUT, sending a SCAN_REQ and a CONNECT_IND packet on a supported advertising
@@ -77,50 +89,69 @@ class Test(ControllerTest):
         # 6. Repeat steps 4–5 30 times or until IUT sends SCAN_RSP.
         for n in range(10):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
-            controller.send_ll(ll.LeScan(source_address=peer_address,
-                                         destination_address=controller.address,
-                                         advertising_address_type=ll.AddressType.PUBLIC,
-                                         scanning_address_type=ll.AddressType.PUBLIC),
-                               rssi=-16)
+            controller.send_ll(
+                ll.LeScan(
+                    source_address=peer_address,
+                    destination_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scanning_address_type=ll.AddressType.PUBLIC,
+                ),
+                rssi=-16,
+            )
 
             await self.expect_ll(
-                ll.LeScanResponse(source_address=controller.address,
-                                  destination_address=peer_address,
-                                  advertising_address_type=ll.AddressType.PUBLIC,
-                                  scan_response_data=scan_response_data))
+                ll.LeScanResponse(
+                    source_address=controller.address,
+                    destination_address=peer_address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    scan_response_data=scan_response_data,
+                )
+            )
 
         # 7. Lower Tester receives an ADV_IND packet from the IUT on the selected advertising channel and
         # responds with a CONNECT_IND packet T_IFS after the end of the advertising packet.
         await self.expect_ll(
-            ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                      advertising_address_type=ll.AddressType.PUBLIC,
-                                      advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                      advertising_data=[]))
+            ll.LeLegacyAdvertisingPdu(
+                source_address=controller.address,
+                advertising_address_type=ll.AddressType.PUBLIC,
+                advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                advertising_data=[],
+            )
+        )
 
-        controller.send_ll(ll.LeConnect(
-            source_address=peer_address,
-            destination_address=controller.address,
-            initiating_address_type=ll.AddressType.PUBLIC,
-            advertising_address_type=ll.AddressType.PUBLIC,
-            conn_interval=LL_initiator_connInterval,
-            conn_peripheral_latency=LL_initiator_connPeripheralLatency,
-            conn_supervision_timeout=LL_initiator_connSupervisionTimeout),
-                           rssi=-16)
+        controller.send_ll(
+            ll.LeConnect(
+                source_address=peer_address,
+                destination_address=controller.address,
+                initiating_address_type=ll.AddressType.PUBLIC,
+                advertising_address_type=ll.AddressType.PUBLIC,
+                conn_interval=LL_initiator_connInterval,
+                conn_peripheral_latency=LL_initiator_connPeripheralLatency,
+                conn_supervision_timeout=LL_initiator_connSupervisionTimeout,
+            ),
+            rssi=-16,
+        )
 
         # 8. The Lower Tester receives no ADV_IND packet after advertising interval from the IUT after
         # sending the connection request to indicate that the IUT has stopped advertising.
         # Note: Link layer sends LeConnectComplete here.
         await self.expect_ll(
-            ll.LeConnectComplete(source_address=controller.address,
-                                 destination_address=peer_address,
-                                 conn_interval=LL_initiator_connInterval,
-                                 conn_peripheral_latency=LL_initiator_connPeripheralLatency,
-                                 conn_supervision_timeout=LL_initiator_connSupervisionTimeout))
+            ll.LeConnectComplete(
+                source_address=controller.address,
+                destination_address=peer_address,
+                conn_interval=LL_initiator_connInterval,
+                conn_peripheral_latency=LL_initiator_connPeripheralLatency,
+                conn_supervision_timeout=LL_initiator_connSupervisionTimeout,
+            )
+        )
 
         # 9. Upper Tester receives an HCI_LE_Connection_Complete event from the IUT including the
         # parameters sent to the IUT.
@@ -134,7 +165,9 @@ class Test(ControllerTest):
                 connection_interval=LL_initiator_connInterval,
                 peripheral_latency=LL_initiator_connPeripheralLatency,
                 supervision_timeout=LL_initiator_connSupervisionTimeout,
-                central_clock_accuracy=hci.ClockAccuracy.PPM_500))
+                central_clock_accuracy=hci.ClockAccuracy.PPM_500,
+            )
+        )
 
         connection_handle = evt.connection_handle
 

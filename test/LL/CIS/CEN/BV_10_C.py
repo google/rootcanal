@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hci_packets as hci
-import link_layer_packets as ll
-import llcp_packets as llcp
+from rootcanal.packets import hci
+from rootcanal.packets import ll
+from rootcanal.packets import llcp
 import random
 import unittest
-from hci_packets import ErrorCode
-from py.bluetooth import Address
-from py.controller import ControllerTest
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
 
 
 class Test(ControllerTest):
@@ -52,18 +52,22 @@ class Test(ControllerTest):
         cig_id = 0x12
         cis_id_1 = 0x42
         cis_id_2 = 0x43
-        cis_connection_handle_1 = 0xe00
-        cis_connection_handle_2 = 0xe01
-        peer_address_1 = Address('aa:bb:cc:dd:ee:ff')
-        peer_address_2 = Address('aa:bb:cc:dd:ee:fe')
+        cis_connection_handle_1 = 0xE00
+        cis_connection_handle_2 = 0xE01
+        peer_address_1 = Address("aa:bb:cc:dd:ee:ff")
+        peer_address_2 = Address("aa:bb:cc:dd:ee:fe")
         controller = self.controller
 
         # Enable Connected Isochronous Stream Host Support.
         await self.enable_connected_isochronous_stream_host_support()
 
         # Prelude: Establish ACL connections as central with the IUT.
-        acl_connection_handle_1 = await self.establish_le_connection_central(peer_address_1)
-        acl_connection_handle_2 = await self.establish_le_connection_central(peer_address_2)
+        acl_connection_handle_1 = await self.establish_le_connection_central(
+            peer_address_1
+        )
+        acl_connection_handle_2 = await self.establish_le_connection_central(
+            peer_address_2
+        )
 
         # Prelude: Establish CIS(1) and CIS(2) with connected peers.
         controller.send_cmd(
@@ -78,159 +82,203 @@ class Test(ControllerTest):
                 packing=self.Packing,
                 framing=self.Framing,
                 cis_config=[
-                    hci.LeCisParametersTestConfig(cis_id=cis_id_1,
-                                                  nse=self.NSE,
-                                                  max_sdu_c_to_p=self.Max_SDU_C_TO_P,
-                                                  max_sdu_p_to_c=self.Max_SDU_P_TO_C,
-                                                  max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                                  max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                                  phy_c_to_p=self.PHY_C_TO_P,
-                                                  phy_p_to_c=self.PHY_P_TO_C,
-                                                  bn_c_to_p=self.BN_C_TO_P,
-                                                  bn_p_to_c=self.BN_P_TO_C),
-                    hci.LeCisParametersTestConfig(cis_id=cis_id_2,
-                                                  nse=self.NSE,
-                                                  max_sdu_c_to_p=self.Max_SDU_C_TO_P,
-                                                  max_sdu_p_to_c=self.Max_SDU_P_TO_C,
-                                                  max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                                  max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                                  phy_c_to_p=self.PHY_C_TO_P,
-                                                  phy_p_to_c=self.PHY_P_TO_C,
-                                                  bn_c_to_p=self.BN_C_TO_P,
-                                                  bn_p_to_c=self.BN_P_TO_C)
-                ]))
+                    hci.LeCisParametersTestConfig(
+                        cis_id=cis_id_1,
+                        nse=self.NSE,
+                        max_sdu_c_to_p=self.Max_SDU_C_TO_P,
+                        max_sdu_p_to_c=self.Max_SDU_P_TO_C,
+                        max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                        max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                        phy_c_to_p=self.PHY_C_TO_P,
+                        phy_p_to_c=self.PHY_P_TO_C,
+                        bn_c_to_p=self.BN_C_TO_P,
+                        bn_p_to_c=self.BN_P_TO_C,
+                    ),
+                    hci.LeCisParametersTestConfig(
+                        cis_id=cis_id_2,
+                        nse=self.NSE,
+                        max_sdu_c_to_p=self.Max_SDU_C_TO_P,
+                        max_sdu_p_to_c=self.Max_SDU_P_TO_C,
+                        max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                        max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                        phy_c_to_p=self.PHY_C_TO_P,
+                        phy_p_to_c=self.PHY_P_TO_C,
+                        bn_c_to_p=self.BN_C_TO_P,
+                        bn_p_to_c=self.BN_P_TO_C,
+                    ),
+                ],
+            )
+        )
 
         await self.expect_evt(
             hci.LeSetCigParametersTestComplete(
                 status=ErrorCode.SUCCESS,
                 num_hci_command_packets=1,
                 cig_id=cig_id,
-                connection_handle=[cis_connection_handle_1, cis_connection_handle_2]))
+                connection_handle=[cis_connection_handle_1, cis_connection_handle_2],
+            )
+        )
 
         controller.send_cmd(
-            hci.LeCreateCis(cis_config=[
-                hci.LeCreateCisConfig(cis_connection_handle=cis_connection_handle_1,
-                                      acl_connection_handle=acl_connection_handle_1),
-                hci.LeCreateCisConfig(cis_connection_handle=cis_connection_handle_2,
-                                      acl_connection_handle=acl_connection_handle_2)
-            ]))
+            hci.LeCreateCis(
+                cis_config=[
+                    hci.LeCreateCisConfig(
+                        cis_connection_handle=cis_connection_handle_1,
+                        acl_connection_handle=acl_connection_handle_1,
+                    ),
+                    hci.LeCreateCisConfig(
+                        cis_connection_handle=cis_connection_handle_2,
+                        acl_connection_handle=acl_connection_handle_2,
+                    ),
+                ]
+            )
+        )
 
         await self.expect_evt(
-            hci.LeCreateCisStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeCreateCisStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1)
+        )
 
-        cis_req_1 = await self.expect_llcp(source_address=controller.address,
-                                           destination_address=peer_address_1,
-                                           expected_pdu=llcp.CisReq(
-                                               cig_id=cig_id,
-                                               cis_id=cis_id_1,
-                                               phy_c_to_p=hci.PhyType.LE_1M,
-                                               phy_p_to_c=hci.PhyType.LE_1M,
-                                               framed=self.Framing == hci.Enable.ENABLED,
-                                               max_sdu_c_to_p=self.Max_SDU_C_TO_P,
-                                               max_sdu_p_to_c=self.Max_SDU_P_TO_C,
-                                               sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
-                                               sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
-                                               max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                               max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                               nse=self.NSE,
-                                               sub_interval=self.Any,
-                                               bn_p_to_c=self.BN_C_TO_P,
-                                               bn_c_to_p=self.BN_P_TO_C,
-                                               ft_c_to_p=self.FT_C_TO_P,
-                                               ft_p_to_c=self.FT_P_TO_C,
-                                               iso_interval=self.ISO_Interval,
-                                               cis_offset_min=self.Any,
-                                               cis_offset_max=self.Any,
-                                               conn_event_count=0))
+        cis_req_1 = await self.expect_llcp(
+            source_address=controller.address,
+            destination_address=peer_address_1,
+            expected_pdu=llcp.CisReq(
+                cig_id=cig_id,
+                cis_id=cis_id_1,
+                phy_c_to_p=hci.PhyType.LE_1M,
+                phy_p_to_c=hci.PhyType.LE_1M,
+                framed=self.Framing == hci.Enable.ENABLED,
+                max_sdu_c_to_p=self.Max_SDU_C_TO_P,
+                max_sdu_p_to_c=self.Max_SDU_P_TO_C,
+                sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
+                sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
+                max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                nse=self.NSE,
+                sub_interval=self.Any,
+                bn_p_to_c=self.BN_C_TO_P,
+                bn_c_to_p=self.BN_P_TO_C,
+                ft_c_to_p=self.FT_C_TO_P,
+                ft_p_to_c=self.FT_P_TO_C,
+                iso_interval=self.ISO_Interval,
+                cis_offset_min=self.Any,
+                cis_offset_max=self.Any,
+                conn_event_count=0,
+            ),
+        )
 
-        controller.send_llcp(source_address=peer_address_1,
-                             destination_address=controller.address,
-                             pdu=llcp.CisRsp(cis_offset_min=cis_req_1.cis_offset_min,
-                                             cis_offset_max=cis_req_1.cis_offset_max,
-                                             conn_event_count=0))
+        controller.send_llcp(
+            source_address=peer_address_1,
+            destination_address=controller.address,
+            pdu=llcp.CisRsp(
+                cis_offset_min=cis_req_1.cis_offset_min,
+                cis_offset_max=cis_req_1.cis_offset_max,
+                conn_event_count=0,
+            ),
+        )
 
-        cis_ind_1 = await self.expect_llcp(source_address=controller.address,
-                                           destination_address=peer_address_1,
-                                           expected_pdu=llcp.CisInd(aa=0,
-                                                                    cis_offset=self.Any,
-                                                                    cig_sync_delay=self.Any,
-                                                                    cis_sync_delay=self.Any,
-                                                                    conn_event_count=0))
-
-        await self.expect_evt(
-            hci.LeCisEstablishedV1(status=ErrorCode.SUCCESS,
-                                   connection_handle=cis_connection_handle_1,
-                                   cig_sync_delay=cis_ind_1.cig_sync_delay,
-                                   cis_sync_delay=cis_ind_1.cis_sync_delay,
-                                   transport_latency_c_to_p=self.Any,
-                                   transport_latency_p_to_c=self.Any,
-                                   phy_c_to_p=hci.SecondaryPhyType.LE_1M,
-                                   phy_p_to_c=hci.SecondaryPhyType.LE_1M,
-                                   nse=self.NSE,
-                                   bn_c_to_p=self.BN_C_TO_P,
-                                   bn_p_to_c=self.BN_P_TO_C,
-                                   ft_c_to_p=self.FT_C_TO_P,
-                                   ft_p_to_c=self.FT_P_TO_C,
-                                   max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                   max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                   iso_interval=self.ISO_Interval))
-
-        cis_req_2 = await self.expect_llcp(source_address=controller.address,
-                                           destination_address=peer_address_2,
-                                           expected_pdu=llcp.CisReq(
-                                               cig_id=cig_id,
-                                               cis_id=cis_id_2,
-                                               phy_c_to_p=hci.PhyType.LE_1M,
-                                               phy_p_to_c=hci.PhyType.LE_1M,
-                                               framed=self.Framing == hci.Enable.ENABLED,
-                                               max_sdu_c_to_p=self.Max_SDU_C_TO_P,
-                                               max_sdu_p_to_c=self.Max_SDU_P_TO_C,
-                                               sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
-                                               sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
-                                               max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                               max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                               nse=self.NSE,
-                                               sub_interval=self.Any,
-                                               bn_p_to_c=self.BN_C_TO_P,
-                                               bn_c_to_p=self.BN_P_TO_C,
-                                               ft_c_to_p=self.FT_C_TO_P,
-                                               ft_p_to_c=self.FT_P_TO_C,
-                                               iso_interval=self.ISO_Interval,
-                                               cis_offset_min=self.Any,
-                                               cis_offset_max=self.Any,
-                                               conn_event_count=0))
-
-        controller.send_llcp(source_address=peer_address_2,
-                             destination_address=controller.address,
-                             pdu=llcp.CisRsp(cis_offset_min=cis_req_2.cis_offset_min,
-                                             cis_offset_max=cis_req_2.cis_offset_max,
-                                             conn_event_count=0))
-
-        cis_ind_2 = await self.expect_llcp(source_address=controller.address,
-                                           destination_address=peer_address_2,
-                                           expected_pdu=llcp.CisInd(aa=0,
-                                                                    cis_offset=self.Any,
-                                                                    cig_sync_delay=self.Any,
-                                                                    cis_sync_delay=self.Any,
-                                                                    conn_event_count=0))
+        cis_ind_1 = await self.expect_llcp(
+            source_address=controller.address,
+            destination_address=peer_address_1,
+            expected_pdu=llcp.CisInd(
+                aa=0,
+                cis_offset=self.Any,
+                cig_sync_delay=self.Any,
+                cis_sync_delay=self.Any,
+                conn_event_count=0,
+            ),
+        )
 
         await self.expect_evt(
-            hci.LeCisEstablishedV1(status=ErrorCode.SUCCESS,
-                                   connection_handle=cis_connection_handle_2,
-                                   cig_sync_delay=cis_ind_2.cig_sync_delay,
-                                   cis_sync_delay=cis_ind_2.cis_sync_delay,
-                                   transport_latency_c_to_p=self.Any,
-                                   transport_latency_p_to_c=self.Any,
-                                   phy_c_to_p=hci.SecondaryPhyType.LE_1M,
-                                   phy_p_to_c=hci.SecondaryPhyType.LE_1M,
-                                   nse=self.NSE,
-                                   bn_c_to_p=self.BN_C_TO_P,
-                                   bn_p_to_c=self.BN_P_TO_C,
-                                   ft_c_to_p=self.FT_C_TO_P,
-                                   ft_p_to_c=self.FT_P_TO_C,
-                                   max_pdu_c_to_p=self.Max_PDU_C_TO_P,
-                                   max_pdu_p_to_c=self.Max_PDU_P_TO_C,
-                                   iso_interval=self.ISO_Interval))
+            hci.LeCisEstablishedV1(
+                status=ErrorCode.SUCCESS,
+                connection_handle=cis_connection_handle_1,
+                cig_sync_delay=cis_ind_1.cig_sync_delay,
+                cis_sync_delay=cis_ind_1.cis_sync_delay,
+                transport_latency_c_to_p=self.Any,
+                transport_latency_p_to_c=self.Any,
+                phy_c_to_p=hci.SecondaryPhyType.LE_1M,
+                phy_p_to_c=hci.SecondaryPhyType.LE_1M,
+                nse=self.NSE,
+                bn_c_to_p=self.BN_C_TO_P,
+                bn_p_to_c=self.BN_P_TO_C,
+                ft_c_to_p=self.FT_C_TO_P,
+                ft_p_to_c=self.FT_P_TO_C,
+                max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                iso_interval=self.ISO_Interval,
+            )
+        )
+
+        cis_req_2 = await self.expect_llcp(
+            source_address=controller.address,
+            destination_address=peer_address_2,
+            expected_pdu=llcp.CisReq(
+                cig_id=cig_id,
+                cis_id=cis_id_2,
+                phy_c_to_p=hci.PhyType.LE_1M,
+                phy_p_to_c=hci.PhyType.LE_1M,
+                framed=self.Framing == hci.Enable.ENABLED,
+                max_sdu_c_to_p=self.Max_SDU_C_TO_P,
+                max_sdu_p_to_c=self.Max_SDU_P_TO_C,
+                sdu_interval_c_to_p=self.SDU_Interval_C_TO_P,
+                sdu_interval_p_to_c=self.SDU_Interval_P_TO_C,
+                max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                nse=self.NSE,
+                sub_interval=self.Any,
+                bn_p_to_c=self.BN_C_TO_P,
+                bn_c_to_p=self.BN_P_TO_C,
+                ft_c_to_p=self.FT_C_TO_P,
+                ft_p_to_c=self.FT_P_TO_C,
+                iso_interval=self.ISO_Interval,
+                cis_offset_min=self.Any,
+                cis_offset_max=self.Any,
+                conn_event_count=0,
+            ),
+        )
+
+        controller.send_llcp(
+            source_address=peer_address_2,
+            destination_address=controller.address,
+            pdu=llcp.CisRsp(
+                cis_offset_min=cis_req_2.cis_offset_min,
+                cis_offset_max=cis_req_2.cis_offset_max,
+                conn_event_count=0,
+            ),
+        )
+
+        cis_ind_2 = await self.expect_llcp(
+            source_address=controller.address,
+            destination_address=peer_address_2,
+            expected_pdu=llcp.CisInd(
+                aa=0,
+                cis_offset=self.Any,
+                cig_sync_delay=self.Any,
+                cis_sync_delay=self.Any,
+                conn_event_count=0,
+            ),
+        )
+
+        await self.expect_evt(
+            hci.LeCisEstablishedV1(
+                status=ErrorCode.SUCCESS,
+                connection_handle=cis_connection_handle_2,
+                cig_sync_delay=cis_ind_2.cig_sync_delay,
+                cis_sync_delay=cis_ind_2.cis_sync_delay,
+                transport_latency_c_to_p=self.Any,
+                transport_latency_p_to_c=self.Any,
+                phy_c_to_p=hci.SecondaryPhyType.LE_1M,
+                phy_p_to_c=hci.SecondaryPhyType.LE_1M,
+                nse=self.NSE,
+                bn_c_to_p=self.BN_C_TO_P,
+                bn_p_to_c=self.BN_P_TO_C,
+                ft_c_to_p=self.FT_C_TO_P,
+                ft_p_to_c=self.FT_P_TO_C,
+                max_pdu_c_to_p=self.Max_PDU_C_TO_P,
+                max_pdu_p_to_c=self.Max_PDU_P_TO_C,
+                iso_interval=self.ISO_Interval,
+            )
+        )
 
         # 1. The Upper Tester orders the IUT to send a payload of the specified length to the Lower Testers.
         iso_sdu = [random.randint(1, 251) for n in range(self.Max_SDU_C_TO_P)]
@@ -243,21 +291,30 @@ class Test(ControllerTest):
                 pb_flag=hci.IsoPacketBoundaryFlag.COMPLETE_SDU,
                 packet_sequence_number=42,
                 payload=iso_sdu,
-            ))
+            )
+        )
 
         await self.expect_ll(
-            ll.LeConnectedIsochronousPdu(source_address=controller.address,
-                                         destination_address=peer_address_1,
-                                         cig_id=cig_id,
-                                         cis_id=cis_id_1,
-                                         sequence_number=42,
-                                         data=iso_sdu))
+            ll.LeConnectedIsochronousPdu(
+                source_address=controller.address,
+                destination_address=peer_address_1,
+                cig_id=cig_id,
+                cis_id=cis_id_1,
+                sequence_number=42,
+                data=iso_sdu,
+            )
+        )
 
         await self.expect_evt(
-            hci.NumberOfCompletedPackets(completed_packets=[
-                hci.CompletedPackets(connection_handle=cis_connection_handle_1,
-                                     host_num_of_completed_packets=1)
-            ]))
+            hci.NumberOfCompletedPackets(
+                completed_packets=[
+                    hci.CompletedPackets(
+                        connection_handle=cis_connection_handle_1,
+                        host_num_of_completed_packets=1,
+                    )
+                ]
+            )
+        )
 
         # 4. Lower Tester 2 receives the payload PDU in the first subevent on CIS(2).
         # 5. Lower Tester 2 sends an Ack T_IFS after receiving the payload PDU.
@@ -267,21 +324,30 @@ class Test(ControllerTest):
                 pb_flag=hci.IsoPacketBoundaryFlag.COMPLETE_SDU,
                 packet_sequence_number=42,
                 payload=iso_sdu,
-            ))
+            )
+        )
 
         await self.expect_ll(
-            ll.LeConnectedIsochronousPdu(source_address=controller.address,
-                                         destination_address=peer_address_2,
-                                         cig_id=cig_id,
-                                         cis_id=cis_id_2,
-                                         sequence_number=42,
-                                         data=iso_sdu))
+            ll.LeConnectedIsochronousPdu(
+                source_address=controller.address,
+                destination_address=peer_address_2,
+                cig_id=cig_id,
+                cis_id=cis_id_2,
+                sequence_number=42,
+                data=iso_sdu,
+            )
+        )
 
         await self.expect_evt(
-            hci.NumberOfCompletedPackets(completed_packets=[
-                hci.CompletedPackets(connection_handle=cis_connection_handle_2,
-                                     host_num_of_completed_packets=1)
-            ]))
+            hci.NumberOfCompletedPackets(
+                completed_packets=[
+                    hci.CompletedPackets(
+                        connection_handle=cis_connection_handle_2,
+                        host_num_of_completed_packets=1,
+                    )
+                ]
+            )
+        )
 
         # 6. If Table 4.139 specifies a BN of 2 or 3, when CIS(1) subevent interval ends, repeat steps 1–3 in
         # the next subevent.

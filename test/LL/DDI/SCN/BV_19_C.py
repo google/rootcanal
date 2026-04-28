@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import math
 import random
 from dataclasses import dataclass
-from hci_packets import ErrorCode
-from py.bluetooth import Address
-from py.controller import ControllerTest
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
 from typing import Optional
 
 ADV_IND = 0x13
@@ -58,7 +58,7 @@ class Test(ControllerTest):
             TestRound(0x0, ADV_EXT_IND, invalid_address, 0),
             TestRound(0x0, ADV_EXT_IND, None, 191),
             TestRound(0x0, ADV_EXT_IND, None, 382),
-            TestRound(0x1f4, ADV_EXT_IND, controller.address, 0),
+            TestRound(0x1F4, ADV_EXT_IND, controller.address, 0),
             TestRound(0x0, ADV_EXT_IND, None, 31),
             TestRound(0x0, ADV_EXT_IND, None, 1645),
         ]
@@ -67,8 +67,13 @@ class Test(ControllerTest):
         for test_round in test_rounds:
             await self.steps_1_6(**vars(test_round))
 
-    async def steps_1_6(self, duration: int, advertising_event_properties: int,
-                        target_address: Optional[Address], advertising_data_length: int):
+    async def steps_1_6(
+        self,
+        duration: int,
+        advertising_event_properties: int,
+        target_address: Optional[Address],
+        advertising_data_length: int,
+    ):
 
         controller = self.controller
         lower_tester_address = Address("ca:fe:ca:fe:00:01")
@@ -84,27 +89,38 @@ class Test(ControllerTest):
                 scanning_filter_policy=hci.LeScanningFilterPolicy.ACCEPT_ALL,
                 scanning_phys=0x1,
                 scanning_phy_parameters=[
-                    hci.ScanningPhyParameters(le_scan_type=hci.LeScanType.PASSIVE,
-                                              le_scan_interval=0x0010,
-                                              le_scan_window=0x0010)
-                ]))
+                    hci.ScanningPhyParameters(
+                        le_scan_type=hci.LeScanType.PASSIVE,
+                        le_scan_interval=0x0010,
+                        le_scan_window=0x0010,
+                    )
+                ],
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetExtendedScanParametersComplete(status=ErrorCode.SUCCESS,
-                                                    num_hci_command_packets=1))
+            hci.LeSetExtendedScanParametersComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 2. The Upper Tester sends an HCI_LE_Set_Extended_Scan_Enable command to the IUT to enable
         # scanning. Filter_Duplicates and Period shall be set to zero. The Duration parameter shall be set
         # to the value specified in Table 4.30 for this round.
         controller.send_cmd(
-            hci.LeSetExtendedScanEnable(enable=hci.Enable.ENABLED,
-                                        filter_duplicates=hci.Enable.DISABLED,
-                                        duration=duration,
-                                        period=0))
+            hci.LeSetExtendedScanEnable(
+                enable=hci.Enable.ENABLED,
+                filter_duplicates=hci.Enable.DISABLED,
+                duration=duration,
+                period=0,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetExtendedScanEnableComplete(status=ErrorCode.SUCCESS,
-                                                num_hci_command_packets=1))
+            hci.LeSetExtendedScanEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 3. The Lower Tester begins advertising using the PDU Type specified in Table 4.30 for this round. If
         # AUX_ADV_IND is included in the round, the ADV_EXT_IND shall include an AuxPtr that refers to
@@ -132,25 +148,29 @@ class Test(ControllerTest):
                 advertising_type = ll.LegacyAdvertisingType.ADV_SCAN_IND
             elif advertising_event_properties == ADV_NONCONN_IND:
                 advertising_type = ll.LegacyAdvertisingType.ADV_NONCONN_IND
-            pdu = ll.LeLegacyAdvertisingPdu(source_address=lower_tester_address,
-                                            destination_address=target_address or Address(),
-                                            advertising_address_type=ll.AddressType.PUBLIC,
-                                            target_address_type=ll.AddressType.PUBLIC,
-                                            advertising_type=advertising_type,
-                                            advertising_data=[])
+            pdu = ll.LeLegacyAdvertisingPdu(
+                source_address=lower_tester_address,
+                destination_address=target_address or Address(),
+                advertising_address_type=ll.AddressType.PUBLIC,
+                target_address_type=ll.AddressType.PUBLIC,
+                advertising_type=advertising_type,
+                advertising_data=[],
+            )
         else:
-            pdu = ll.LeExtendedAdvertisingPdu(source_address=lower_tester_address,
-                                              destination_address=target_address or Address(),
-                                              advertising_address_type=ll.AddressType.PUBLIC,
-                                              target_address_type=ll.AddressType.PUBLIC,
-                                              connectable=connectable,
-                                              scannable=scannable,
-                                              directed=not target_address is None,
-                                              sid=0,
-                                              tx_power=0x7f,
-                                              primary_phy=ll.PhyType.LE_1M,
-                                              secondary_phy=ll.PhyType.NO_PACKETS,
-                                              advertising_data=[])
+            pdu = ll.LeExtendedAdvertisingPdu(
+                source_address=lower_tester_address,
+                destination_address=target_address or Address(),
+                advertising_address_type=ll.AddressType.PUBLIC,
+                target_address_type=ll.AddressType.PUBLIC,
+                connectable=connectable,
+                scannable=scannable,
+                directed=not target_address is None,
+                sid=0,
+                tx_power=0x7F,
+                primary_phy=ll.PhyType.LE_1M,
+                secondary_phy=ll.PhyType.NO_PACKETS,
+                advertising_data=[],
+            )
 
         # 4. For undirected advertisements or advertisements directed at the IUT, the Upper Tester receives
         # one or more HCI_LE_Extended_Advertising_Report events from the IUT with an advertising
@@ -164,14 +184,16 @@ class Test(ControllerTest):
         # Upper Tester receives the Direct Address Type and Direct Address used to direct the
         # advertisement at the IUT.
         for n in range(3):
-            advertising_data = [random.randint(1, 254) for n in range(advertising_data_length)]
+            advertising_data = [
+                random.randint(1, 254) for n in range(advertising_data_length)
+            ]
             pdu.advertising_data = advertising_data
 
             if not legacy:
                 sid = random.randint(0, 15)
                 pdu.sid = sid
             else:
-                sid = 0xff
+                sid = 0xFF
 
             controller.send_ll(pdu, rssi=0)
 
@@ -182,34 +204,48 @@ class Test(ControllerTest):
 
             offset = 0
             max_fragment_length = 229
-            num_fragments = math.ceil(advertising_data_length / max_fragment_length) or 1
+            num_fragments = (
+                math.ceil(advertising_data_length / max_fragment_length) or 1
+            )
             for n in range(num_fragments):
                 remaining_length = advertising_data_length - offset
                 fragment_length = min(max_fragment_length, remaining_length)
-                data_status = hci.DataStatus.CONTINUING if remaining_length > max_fragment_length else hci.DataStatus.COMPLETE
+                data_status = (
+                    hci.DataStatus.CONTINUING
+                    if remaining_length > max_fragment_length
+                    else hci.DataStatus.COMPLETE
+                )
                 await self.expect_evt(
-                    hci.LeExtendedAdvertisingReport(responses=[
-                        hci.LeExtendedAdvertisingResponse(
-                            connectable=connectable,
-                            scannable=scannable,
-                            directed=not target_address is None,
-                            scan_response=False,
-                            legacy=legacy,
-                            data_status=data_status,
-                            address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
-                            address=lower_tester_address,
-                            primary_phy=hci.PrimaryPhyType.LE_1M,
-                            secondary_phy=hci.SecondaryPhyType.NO_PACKETS,
-                            advertising_sid=sid,
-                            tx_power=0x7f,
-                            rssi=0,
-                            periodic_advertising_interval=0,
-                            direct_address_type=hci.DirectAdvertisingAddressType.
-                            NO_ADDRESS_PROVIDED if not target_address else hci.
-                            DirectAdvertisingAddressType.PUBLIC_DEVICE_ADDRESS,
-                            direct_address=target_address or Address(),
-                            advertising_data=advertising_data[offset:offset + fragment_length])
-                    ]))
+                    hci.LeExtendedAdvertisingReport(
+                        responses=[
+                            hci.LeExtendedAdvertisingResponse(
+                                connectable=connectable,
+                                scannable=scannable,
+                                directed=not target_address is None,
+                                scan_response=False,
+                                legacy=legacy,
+                                data_status=data_status,
+                                address_type=hci.AddressType.PUBLIC_DEVICE_ADDRESS,
+                                address=lower_tester_address,
+                                primary_phy=hci.PrimaryPhyType.LE_1M,
+                                secondary_phy=hci.SecondaryPhyType.NO_PACKETS,
+                                advertising_sid=sid,
+                                tx_power=0x7F,
+                                rssi=0,
+                                periodic_advertising_interval=0,
+                                direct_address_type=(
+                                    hci.DirectAdvertisingAddressType.NO_ADDRESS_PROVIDED
+                                    if not target_address
+                                    else hci.DirectAdvertisingAddressType.PUBLIC_DEVICE_ADDRESS
+                                ),
+                                direct_address=target_address or Address(),
+                                advertising_data=advertising_data[
+                                    offset : offset + fragment_length
+                                ],
+                            )
+                        ]
+                    )
+                )
                 offset += fragment_length
 
         if duration > 0:
@@ -228,5 +264,7 @@ class Test(ControllerTest):
             controller.send_cmd(hci.LeSetExtendedScanEnable(enable=hci.Enable.DISABLED))
 
             await self.expect_evt(
-                hci.LeSetExtendedScanEnableComplete(status=ErrorCode.SUCCESS,
-                                                    num_hci_command_packets=1))
+                hci.LeSetExtendedScanEnableComplete(
+                    status=ErrorCode.SUCCESS, num_hci_command_packets=1
+                )
+            )

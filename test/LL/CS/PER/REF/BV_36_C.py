@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hci_packets as hci
-from hci_packets import ErrorCode
-import link_layer_packets as ll
-from py.bluetooth import Address
-from py.controller import ControllerTest
+from rootcanal.packets import hci
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.packets import ll
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
+
 
 class Test(ControllerTest):
     REMOTE_CS_CAPABILITIES = {
@@ -85,7 +86,7 @@ class Test(ControllerTest):
         "t_ip2_time": 0,
         "t_fcs_time": 0,
         "t_pm_time": 0,
-        **LE_CS_CREATE_CONFIG_PARAMS
+        **LE_CS_CREATE_CONFIG_PARAMS,
     }
 
     # LL/CS/PER/REF/BV-36-C [Remove CS Configuration]
@@ -353,7 +354,7 @@ class Test(ControllerTest):
                 source_address=controller.address,
                 destination_address=peer_address,
                 config_id=config_id,
-                action=0, # Remove
+                action=0,  # Remove
                 channel_map=self.Any,
                 channel_map_repetition=self.Any,
                 main_mode_type=self.Any,

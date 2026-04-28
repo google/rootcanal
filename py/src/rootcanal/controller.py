@@ -15,22 +15,21 @@
 import asyncio
 import enum
 import os
-from .packets import hci
-from .packets import ll
-from .packets import llcp
-from .packets.hci import ErrorCode
-from . import bluetooth
-from . import binaries
+import random
 import sys
 import typing
 import unittest
+from ctypes import *
+from importlib import resources
 from typing import Optional, Tuple, Union
 
-from ctypes import *
+from . import binaries
+from .packets import hci, ll, llcp
 
-librootcanal_ffi_path = binaries.get_package_binary_resource_path("librootcanal_ffi.so")
-rootcanal = cdll.LoadLibrary(librootcanal_ffi_path)
-rootcanal.ffi_controller_new.restype = c_void_p
+with binaries.get_package_binary_resource_path("librootcanal_ffi.so") as so_path:
+    rootcanal = cdll.LoadLibrary(str(so_path))
+    rootcanal.ffi_controller_new.restype = c_void_p
+
 
 SEND_HCI_FUNC = CFUNCTYPE(None, c_void_p, c_int, POINTER(c_ubyte), c_size_t)
 SEND_LL_FUNC = CFUNCTYPE(None, c_void_p, POINTER(c_ubyte), c_size_t, c_int, c_int)
@@ -300,6 +299,9 @@ class Controller:
     async def receive_evt(self):
         return await self.evt_queue.get()
 
+    async def receive_acl(self):
+        return await self.acl_queue.get()
+
     async def receive_iso(self):
         return await self.iso_queue.get()
 
@@ -355,7 +357,7 @@ class Controller:
         """
         evt = await self.expect_evt(expected_evt, timeout=timeout)
 
-        if evt.status != ErrorCode.SUCCESS:
+        if evt.status != hci.ErrorCode.SUCCESS:
             raise ValueError(
                 "received command complete event with the"
                 + f" error status {evt.status}"
