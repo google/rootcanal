@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hci_packets as hci
-from hci_packets import ErrorCode
-import link_layer_packets as ll
-from py.bluetooth import Address
-from py.controller import ControllerTest
+from rootcanal.packets import hci
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.packets import ll
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
 
 
 class Test(ControllerTest):
@@ -293,4 +293,3 @@ class Test(ControllerTest):
                 pwr_delta=0,
             )
         )
-

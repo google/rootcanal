@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import unittest
-from hci_packets import ErrorCode
-from py.bluetooth import Address
-from py.controller import ControllerTest
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
 
 
 class Test(ControllerTest):
@@ -29,8 +29,8 @@ class Test(ControllerTest):
     # LL/DDI/ADV/BV-20-C [Advertising Always Using the LE 1M PHY]
     async def test(self):
         controller = self.controller
-        public_peer_address = Address('aa:bb:cc:dd:ee:ff')
-        connection_handle = 0xefe
+        public_peer_address = Address("aa:bb:cc:dd:ee:ff")
+        connection_handle = 0xEFE
 
         # 1. Configure Lower Tester to monitor advertising packets from the IUT. Lower Tester will only
         # accept advertising packets sent using the LE 1M PHY setting. Lower Tester will scan for at least
@@ -40,13 +40,19 @@ class Test(ControllerTest):
         # 2. Upper Tester sends a LE_Set_Default_PHY command to the IUT, with the ALL_PHYS field set to
         # zero, and the TX_PHYS and RX_PHYS fields both set to prefer the LE 2M PHY.
         controller.send_cmd(
-            hci.LeSetDefaultPhy(all_phys_no_transmit_preference=False,
-                                all_phys_no_receive_preference=False,
-                                tx_phys=0x2,
-                                rx_phys=0x2))
+            hci.LeSetDefaultPhy(
+                all_phys_no_transmit_preference=False,
+                all_phys_no_receive_preference=False,
+                tx_phys=0x2,
+                rx_phys=0x2,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetDefaultPhyComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetDefaultPhyComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 3. Upper Tester enables undirected advertising in the IUT using all supported advertising channels
         # and minimum advertising interval.
@@ -57,16 +63,23 @@ class Test(ControllerTest):
                 advertising_type=hci.AdvertisingType.ADV_IND,
                 own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
                 advertising_channel_map=self.LL_advertiser_Adv_Channel_Map,
-                advertising_filter_policy=hci.AdvertisingFilterPolicy.LISTED_SCAN_AND_CONNECT))
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.LISTED_SCAN_AND_CONNECT,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS,
-                                                   num_hci_command_packets=1))
+            hci.LeSetAdvertisingParametersComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 4. Lower Tester expects the IUT to send ADV_IND packets starting an event on an applicable
         # advertising channel using the LE 1M PHY.
@@ -74,14 +87,20 @@ class Test(ControllerTest):
         # on each channel.
         for n in range(3):
             await self.expect_ll(
-                ll.LeLegacyAdvertisingPdu(source_address=controller.address,
-                                          advertising_address_type=ll.AddressType.PUBLIC,
-                                          advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                                          advertising_data=[]))
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                )
+            )
 
         # 6. Upper Tester sends an HCI_LE_Set_Advertising_Enable command to disable advertising in the
         # IUT and receives an HCI_Command_Complete event from the IUT.
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=False))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )

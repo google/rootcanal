@@ -13,15 +13,15 @@
 # limitations under the License.
 
 import asyncio
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import math
 import random
 import unittest
 from dataclasses import dataclass
-from hci_packets import ErrorCode, FragmentPreference
-from py.bluetooth import Address
-from py.controller import ControllerTest
+from rootcanal.packets.hci import ErrorCode, FragmentPreference
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
 from typing import List
 
 
@@ -52,7 +52,9 @@ class Test(ControllerTest):
         # For each round from 1–6 based on Table 4.10.
         controller.send_cmd(hci.LeReadMaximumAdvertisingDataLength())
 
-        event = await self.expect_cmd_complete(hci.LeReadMaximumAdvertisingDataLengthComplete)
+        event = await self.expect_cmd_complete(
+            hci.LeReadMaximumAdvertisingDataLengthComplete
+        )
         maximum_advertising_data_length = event.maximum_advertising_data_length
 
         # Test rounds.
@@ -91,24 +93,33 @@ class Test(ControllerTest):
                 primary_advertising_channel_map=self.LL_advertiser_Adv_Channel_Map,
                 own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
                 advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES,
-                primary_advertising_phy=hci.PrimaryPhyType.LE_1M))
+                primary_advertising_phy=hci.PrimaryPhyType.LE_1M,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingParametersV1Complete(status=ErrorCode.SUCCESS,
-                                                             num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingParametersV1Complete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 4. The Upper Tester sends an HCI_LE_Set_Periodic_Advertising_Parameters command to the IUT
         # using all supported advertising channels and selected periodic interval.
         # Periodic_Advertising_Properties parameter shall be set to 0x0000.
         controller.send_cmd(
-            hci.LeSetPeriodicAdvertisingParametersV1(advertising_handle=0,
-                                                     periodic_advertising_interval_min=0x100,
-                                                     periodic_advertising_interval_max=0x100,
-                                                     include_tx_power=False))
+            hci.LeSetPeriodicAdvertisingParametersV1(
+                advertising_handle=0,
+                periodic_advertising_interval_min=0x100,
+                periodic_advertising_interval_max=0x100,
+                include_tx_power=False,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetPeriodicAdvertisingParametersV1Complete(status=ErrorCode.SUCCESS,
-                                                             num_hci_command_packets=1))
+            hci.LeSetPeriodicAdvertisingParametersV1Complete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 5. The Upper Tester sends one or more HCI_LE_Set_Periodic_Advertising_Data commands to the
         # IUT with values according to Table 4.10 and using random octets from 1 to 254 as the payload. If
@@ -117,8 +128,9 @@ class Test(ControllerTest):
         # (Intermediate Fragment) commands, and a final Operation 0x02 (Last fragment) command.
         # Otherwise the Upper Tester shall send a single command using Operation 0x03 (Complete Data).
         advertising_data = [random.randint(1, 254) for n in range(data_length)]
-        num_fragments = math.ceil(
-            data_length / 251) or 1  # Make sure to set the advertising data if it is empty.
+        num_fragments = (
+            math.ceil(data_length / 251) or 1
+        )  # Make sure to set the advertising data if it is empty.
         for n in range(num_fragments):
             fragment_offset = 251 * n
             fragment_length = min(251, data_length - fragment_offset)
@@ -135,23 +147,32 @@ class Test(ControllerTest):
                 hci.LeSetPeriodicAdvertisingData(
                     advertising_handle=0,
                     operation=operation,
-                    advertising_data=advertising_data[fragment_offset:fragment_offset +
-                                                      fragment_length]))
+                    advertising_data=advertising_data[
+                        fragment_offset : fragment_offset + fragment_length
+                    ],
+                )
+            )
 
             await self.expect_evt(
-                hci.LeSetPeriodicAdvertisingDataComplete(status=ErrorCode.SUCCESS,
-                                                         num_hci_command_packets=1))
+                hci.LeSetPeriodicAdvertisingDataComplete(
+                    status=ErrorCode.SUCCESS, num_hci_command_packets=1
+                )
+            )
 
         # 6. The Upper Tester enables periodic advertising using the
         # HCI_LE_Set_Periodic_Advertising_Enable command with the Enable parameter set to 0x01
         # (Periodic Advertising).
         controller.send_cmd(
-            hci.LeSetPeriodicAdvertisingEnable(enable=True, include_adi=False,
-                                               advertising_handle=0))
+            hci.LeSetPeriodicAdvertisingEnable(
+                enable=True, include_adi=False, advertising_handle=0
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetPeriodicAdvertisingEnableComplete(status=ErrorCode.SUCCESS,
-                                                       num_hci_command_packets=1))
+            hci.LeSetPeriodicAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # Note: no periodic advertising event is expected until extended
         # advertising is also enabled for the advertising set.
@@ -159,16 +180,23 @@ class Test(ControllerTest):
         # 7. The Upper Tester enables advertising using the HCI_LE_Set_Extended_Advertising_Enable
         # command. The Duration[0] parameter is set to 0x0000 (No Advertising Duration).
         controller.send_cmd(
-            hci.LeSetExtendedAdvertisingEnable(enable=hci.Enable.ENABLED,
-                                               enabled_sets=[
-                                                   hci.EnabledSet(advertising_handle=0,
-                                                                  duration=0,
-                                                                  max_extended_advertising_events=0)
-                                               ]))
+            hci.LeSetExtendedAdvertisingEnable(
+                enable=hci.Enable.ENABLED,
+                enabled_sets=[
+                    hci.EnabledSet(
+                        advertising_handle=0,
+                        duration=0,
+                        max_extended_advertising_events=0,
+                    )
+                ],
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingEnableComplete(status=ErrorCode.SUCCESS,
-                                                       num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 8. The Lower Tester receives an ADV_EXT_IND packet from the IUT with AdvMode set to 00b with
         # the AuxPtr Extended Header field present.
@@ -192,26 +220,32 @@ class Test(ControllerTest):
         received_extended_advertising_pdus = 0
         received_periodic_advertising_pdus = 0
         for n in range(15):
-            pdu = await self.expect_ll([
-                ll.LeExtendedAdvertisingPdu(source_address=controller.address,
-                                            advertising_address_type=ll.AddressType.PUBLIC,
-                                            target_address_type=ll.AddressType.PUBLIC,
-                                            connectable=False,
-                                            scannable=False,
-                                            directed=False,
-                                            sid=0,
-                                            tx_power=0,
-                                            primary_phy=ll.PhyType.LE_1M,
-                                            secondary_phy=ll.PhyType.NO_PACKETS,
-                                            periodic_advertising_interval=0x100,
-                                            advertising_data=[]),
-                ll.LePeriodicAdvertisingPdu(source_address=controller.address,
-                                            advertising_address_type=ll.AddressType.PUBLIC,
-                                            sid=0,
-                                            tx_power=0,
-                                            advertising_interval=0x100,
-                                            advertising_data=advertising_data)
-            ])
+            pdu = await self.expect_ll(
+                [
+                    ll.LeExtendedAdvertisingPdu(
+                        source_address=controller.address,
+                        advertising_address_type=ll.AddressType.PUBLIC,
+                        target_address_type=ll.AddressType.PUBLIC,
+                        connectable=False,
+                        scannable=False,
+                        directed=False,
+                        sid=0,
+                        tx_power=0,
+                        primary_phy=ll.PhyType.LE_1M,
+                        secondary_phy=ll.PhyType.NO_PACKETS,
+                        periodic_advertising_interval=0x100,
+                        advertising_data=[],
+                    ),
+                    ll.LePeriodicAdvertisingPdu(
+                        source_address=controller.address,
+                        advertising_address_type=ll.AddressType.PUBLIC,
+                        sid=0,
+                        tx_power=0,
+                        advertising_interval=0x100,
+                        advertising_data=advertising_data,
+                    ),
+                ]
+            )
             if isinstance(pdu, ll.LeExtendedAdvertisingPdu):
                 received_extended_advertising_pdus += 1
             if isinstance(pdu, ll.LePeriodicAdvertisingPdu):
@@ -226,37 +260,51 @@ class Test(ControllerTest):
         # 13. The Upper Tester disables extended advertising using the
         # HCI_LE_Set_Extended_Advertising_Enable command but maintains periodic advertising.
         controller.send_cmd(
-            hci.LeSetExtendedAdvertisingEnable(enable=hci.Enable.DISABLED, enabled_sets=[]))
+            hci.LeSetExtendedAdvertisingEnable(
+                enable=hci.Enable.DISABLED, enabled_sets=[]
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetExtendedAdvertisingEnableComplete(status=ErrorCode.SUCCESS,
-                                                       num_hci_command_packets=1))
+            hci.LeSetExtendedAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 14. The Lower Tester confirms that periodic advertising continues when extended advertising is
         # disabled by repeating steps 10–11 100 times.
         for n in range(10):
             await self.expect_ll(
-                ll.LePeriodicAdvertisingPdu(source_address=controller.address,
-                                            advertising_address_type=ll.AddressType.PUBLIC,
-                                            sid=0,
-                                            tx_power=0,
-                                            advertising_interval=0x100,
-                                            advertising_data=advertising_data))
+                ll.LePeriodicAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    sid=0,
+                    tx_power=0,
+                    advertising_interval=0x100,
+                    advertising_data=advertising_data,
+                )
+            )
 
         # 15. The Upper Tester disables periodic advertising using the
         # HCI_LE_Set_Periodic_Advertising_Enable command.
         controller.send_cmd(
-            hci.LeSetPeriodicAdvertisingEnable(enable=False,
-                                               include_adi=False,
-                                               advertising_handle=0))
+            hci.LeSetPeriodicAdvertisingEnable(
+                enable=False, include_adi=False, advertising_handle=0
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetPeriodicAdvertisingEnableComplete(status=ErrorCode.SUCCESS,
-                                                       num_hci_command_packets=1))
+            hci.LeSetPeriodicAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 16. The Upper Tester clears the advertising configuration using the HCI_LE_Clear_Advertising_Sets
         # command.
         controller.send_cmd(hci.LeClearAdvertisingSets())
 
         await self.expect_evt(
-            hci.LeClearAdvertisingSetsComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeClearAdvertisingSetsComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )

@@ -13,15 +13,16 @@
 # limitations under the License.
 
 import asyncio
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import math
 import random
 import unittest
 from dataclasses import dataclass
-from hci_packets import ErrorCode, FragmentPreference
-from py.bluetooth import Address
-from py.controller import ControllerTest, generate_rpa
+from rootcanal.packets.hci import ErrorCode, FragmentPreference
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
+from rootcanal.controller import generate_rpa
 from typing import List
 
 
@@ -54,7 +55,7 @@ class Test(ControllerTest):
         local_irk = bytes([1] * 16)
         peer_irk = bytes([2] * 16)
         random_irk = bytes([3] * 16)
-        peer_address = Address('aa:bb:cc:dd:ee:ff')
+        peer_address = Address("aa:bb:cc:dd:ee:ff")
 
         # 1. The Lower Tester adds the Device Identity of the IUT to its resolving list.
         # 2. Configure the Lower Tester to initiate a connection while using a resolvable private address.
@@ -67,17 +68,23 @@ class Test(ControllerTest):
                 peer_irk=peer_irk,
                 local_irk=local_irk,
                 peer_identity_address=peer_address,
-                peer_identity_address_type=hci.PeerAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS))
+                peer_identity_address_type=hci.PeerAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeAddDeviceToResolvingListComplete(status=ErrorCode.SUCCESS,
-                                                   num_hci_command_packets=1))
+            hci.LeAddDeviceToResolvingListComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(hci.LeSetResolvablePrivateAddressTimeout(rpa_timeout=0x10))
 
         await self.expect_evt(
-            hci.LeSetResolvablePrivateAddressTimeoutComplete(status=ErrorCode.SUCCESS,
-                                                             num_hci_command_packets=1))
+            hci.LeSetResolvablePrivateAddressTimeoutComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 4. The Upper Tester enables resolving list and directed connectable advertising in the IUT.
         controller.send_cmd(
@@ -89,39 +96,57 @@ class Test(ControllerTest):
                 peer_address=peer_address,
                 peer_address_type=hci.PeerAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
                 advertising_channel_map=0x7,
-                advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES))
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.ALL_DEVICES,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS,
-                                                   num_hci_command_packets=1))
+            hci.LeSetAdvertisingParametersComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(hci.LeSetAdvertisingData())
 
         await self.expect_evt(
-            hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingDataComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(
-            hci.LeSetAddressResolutionEnable(address_resolution_enable=hci.Enable.ENABLED))
+            hci.LeSetAddressResolutionEnable(
+                address_resolution_enable=hci.Enable.ENABLED
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetAddressResolutionEnableComplete(status=ErrorCode.SUCCESS,
-                                                     num_hci_command_packets=1))
+            hci.LeSetAddressResolutionEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 5. The Lower Tester expects the IUT to send ADV_DIRECT_IND packets on an applicable
         # advertising channel.
-        direct_ind = await self.expect_ll(ll.LeLegacyAdvertisingPdu(
-            source_address=self.Any,
-            destination_address=self.Any,
-            advertising_address_type=ll.AddressType.RANDOM,
-            target_address_type=ll.AddressType.RANDOM,
-            advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
-            advertising_data=[]),
-                                          timeout=5)
+        direct_ind = await self.expect_ll(
+            ll.LeLegacyAdvertisingPdu(
+                source_address=self.Any,
+                destination_address=self.Any,
+                advertising_address_type=ll.AddressType.RANDOM,
+                target_address_type=ll.AddressType.RANDOM,
+                advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
+                advertising_data=[],
+            ),
+            timeout=5,
+        )
 
         self.assertTrue(direct_ind.source_address.is_resolvable())
         self.assertTrue(direct_ind.destination_address.is_resolvable())
@@ -134,22 +159,28 @@ class Test(ControllerTest):
         # channel selection parameters.
         init_a = generate_rpa(peer_irk)
         controller.send_ll(
-            ll.LeConnect(source_address=init_a,
-                         destination_address=direct_ind.source_address,
-                         initiating_address_type=ll.AddressType.RANDOM,
-                         advertising_address_type=ll.AddressType.RANDOM,
-                         conn_interval=Test.LL_initiator_connInterval,
-                         conn_peripheral_latency=0x6,
-                         conn_supervision_timeout=0xc80))
+            ll.LeConnect(
+                source_address=init_a,
+                destination_address=direct_ind.source_address,
+                initiating_address_type=ll.AddressType.RANDOM,
+                advertising_address_type=ll.AddressType.RANDOM,
+                conn_interval=Test.LL_initiator_connInterval,
+                conn_peripheral_latency=0x6,
+                conn_supervision_timeout=0xC80,
+            )
+        )
 
         await self.expect_ll(
-            ll.LeConnectComplete(source_address=direct_ind.source_address,
-                                 destination_address=init_a,
-                                 initiating_address_type=ll.AddressType.RANDOM,
-                                 advertising_address_type=ll.AddressType.RANDOM,
-                                 conn_interval=Test.LL_initiator_connInterval,
-                                 conn_peripheral_latency=0x6,
-                                 conn_supervision_timeout=0xc80))
+            ll.LeConnectComplete(
+                source_address=direct_ind.source_address,
+                destination_address=init_a,
+                initiating_address_type=ll.AddressType.RANDOM,
+                advertising_address_type=ll.AddressType.RANDOM,
+                conn_interval=Test.LL_initiator_connInterval,
+                conn_peripheral_latency=0x6,
+                conn_supervision_timeout=0xC80,
+            )
+        )
 
         connection_complete_evt = await self.expect_evt(
             hci.LeEnhancedConnectionCompleteV1(
@@ -162,35 +193,51 @@ class Test(ControllerTest):
                 peer_resolvable_private_address=init_a,
                 connection_interval=0x200,
                 peripheral_latency=0x6,
-                supervision_timeout=0xc80,
+                supervision_timeout=0xC80,
                 central_clock_accuracy=hci.ClockAccuracy.PPM_500,
-            ))
+            )
+        )
 
         # 8. The Upper Tester terminates the connection.
         controller.send_cmd(
-            hci.Disconnect(connection_handle=connection_complete_evt.connection_handle,
-                           reason=hci.DisconnectReason.REMOTE_USER_TERMINATED_CONNECTION))
+            hci.Disconnect(
+                connection_handle=connection_complete_evt.connection_handle,
+                reason=hci.DisconnectReason.REMOTE_USER_TERMINATED_CONNECTION,
+            )
+        )
 
         await self.expect_evt(
-            hci.DisconnectStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.DisconnectStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1)
+        )
 
         await self.expect_ll(
-            ll.Disconnect(source_address=direct_ind.source_address,
-                          destination_address=init_a,
-                          reason=hci.DisconnectReason.REMOTE_USER_TERMINATED_CONNECTION))
+            ll.Disconnect(
+                source_address=direct_ind.source_address,
+                destination_address=init_a,
+                reason=hci.DisconnectReason.REMOTE_USER_TERMINATED_CONNECTION,
+            )
+        )
 
         await self.expect_evt(
-            hci.DisconnectionComplete(status=ErrorCode.SUCCESS,
-                                      connection_handle=connection_complete_evt.connection_handle,
-                                      reason=ErrorCode.CONNECTION_TERMINATED_BY_LOCAL_HOST))
+            hci.DisconnectionComplete(
+                status=ErrorCode.SUCCESS,
+                connection_handle=connection_complete_evt.connection_handle,
+                reason=ErrorCode.CONNECTION_TERMINATED_BY_LOCAL_HOST,
+            )
+        )
 
         # 9. The Upper Tester disables address resolution in the IUT.
         controller.send_cmd(
-            hci.LeSetAddressResolutionEnable(address_resolution_enable=hci.Enable.DISABLED))
+            hci.LeSetAddressResolutionEnable(
+                address_resolution_enable=hci.Enable.DISABLED
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetAddressResolutionEnableComplete(status=ErrorCode.SUCCESS,
-                                                     num_hci_command_packets=1))
+            hci.LeSetAddressResolutionEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 10. Repeat steps 11–14 at least 20 times.
 
@@ -198,18 +245,24 @@ class Test(ControllerTest):
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 12. The Lower Tester expects the IUT to send ADV_DIRECT_IND packets on an applicable
         # advertising channel. The Lower Tester resolves the AdvA address and identifies the IUT.
-        direct_ind = await self.expect_ll(ll.LeLegacyAdvertisingPdu(
-            source_address=self.Any,
-            destination_address=self.Any,
-            advertising_address_type=ll.AddressType.RANDOM,
-            target_address_type=ll.AddressType.RANDOM,
-            advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
-            advertising_data=[]),
-                                          timeout=5)
+        direct_ind = await self.expect_ll(
+            ll.LeLegacyAdvertisingPdu(
+                source_address=self.Any,
+                destination_address=self.Any,
+                advertising_address_type=ll.AddressType.RANDOM,
+                target_address_type=ll.AddressType.RANDOM,
+                advertising_type=ll.LegacyAdvertisingType.ADV_DIRECT_IND,
+                advertising_data=[],
+            ),
+            timeout=5,
+        )
 
         self.assertTrue(direct_ind.source_address.is_resolvable())
         self.assertTrue(direct_ind.destination_address.is_resolvable())
@@ -219,18 +272,26 @@ class Test(ControllerTest):
         # the InitA field. No connection event is sent to the Upper Tester.
         init_a = generate_rpa(local_irk)
         controller.send_ll(
-            ll.LeConnect(source_address=init_a,
-                         destination_address=direct_ind.source_address,
-                         initiating_address_type=ll.AddressType.RANDOM,
-                         advertising_address_type=ll.AddressType.RANDOM,
-                         conn_interval=0x200,
-                         conn_peripheral_latency=0x6,
-                         conn_supervision_timeout=0xc80))
+            ll.LeConnect(
+                source_address=init_a,
+                destination_address=direct_ind.source_address,
+                initiating_address_type=ll.AddressType.RANDOM,
+                advertising_address_type=ll.AddressType.RANDOM,
+                conn_interval=0x200,
+                conn_peripheral_latency=0x6,
+                conn_supervision_timeout=0xC80,
+            )
+        )
 
         # 14. The Upper Tester receives an HCI_LE_Connection_Complete event or an
         # HCI_LE_Enhanced_Connection_Complete event with the Status code set to Advertising Timeout
         # (0x3C).
-        await self.expect_evt(hci.LeConnectionComplete(status=hci.ErrorCode.ADVERTISING_TIMEOUT,))
+        await self.expect_evt(
+            hci.LeConnectionComplete(
+                status=hci.ErrorCode.ADVERTISING_TIMEOUT,
+            )
+        )
 
         # Empty the LL queue.
-        controller.ll_queue.clear()
+        while not controller.ll_queue.empty():
+            _ = controller.ll_queue.get_nowait()

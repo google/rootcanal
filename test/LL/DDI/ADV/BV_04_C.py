@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import hci_packets as hci
-import link_layer_packets as ll
+from rootcanal.packets import hci
+from rootcanal.packets import ll
 import unittest
-from hci_packets import ErrorCode
-from py.bluetooth import Address
-from py.controller import ControllerTest
+from rootcanal.packets.hci import ErrorCode
+from rootcanal.bluetooth import Address
+from test.controller_test import ControllerTest
 
 
 class Test(ControllerTest):
@@ -41,11 +41,15 @@ class Test(ControllerTest):
                 advertising_type=hci.AdvertisingType.ADV_IND,
                 own_address_type=hci.OwnAddressType.PUBLIC_DEVICE_ADDRESS,
                 advertising_channel_map=LL_advertiser_Adv_Channel_Map,
-                advertising_filter_policy=hci.AdvertisingFilterPolicy.LISTED_SCAN_AND_CONNECT))
+                advertising_filter_policy=hci.AdvertisingFilterPolicy.LISTED_SCAN_AND_CONNECT,
+            )
+        )
 
         await self.expect_evt(
-            hci.LeSetAdvertisingParametersComplete(status=ErrorCode.SUCCESS,
-                                                   num_hci_command_packets=1))
+            hci.LeSetAdvertisingParametersComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 3. Upper Tester sends an HCI_LE_Set_Advertising_Data command to the IUT and receives an
         # HCI_Command_Complete in response. The data element used in the command is the length of
@@ -54,14 +58,20 @@ class Test(ControllerTest):
         controller.send_cmd(hci.LeSetAdvertisingData(advertising_data=advertising_data))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingDataComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 4. Upper Tester sends an HCI_LE_Set_Advertising_Enable command to the IUT to enable
         # advertising and receives an HCI_Command_Complete event in response.
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 5. Lower Tester expects the IUT to send ADV_IND packets including the data submitted in step 3
         # starting an event on the selected advertising channel.
@@ -69,33 +79,45 @@ class Test(ControllerTest):
         # first packet.
         # 7. Repeat steps 5–6 until a number of advertising intervals (50) have been detected.
         for n in range(10):
-            await self.expect_ll(ll.LeLegacyAdvertisingPdu(
-                source_address=controller.address,
-                advertising_address_type=ll.AddressType.PUBLIC,
-                advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                advertising_data=advertising_data),
-                                 timeout=5)
+            await self.expect_ll(
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=advertising_data,
+                ),
+                timeout=5,
+            )
 
         # 8. Upper Tester sends an HCI_LE_Set_Advertising_Enable command to the IUT to disable
         # advertising function and receives an HCI_Command_Complete event in response.
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=False))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 9. Upper Tester sends an HCI_LE_Set_Advertising_Data to configure the IUT to send advertising
         # packets without advertising data and receives an HCI_Command_Complete event in response.
         controller.send_cmd(hci.LeSetAdvertisingData(advertising_data=[]))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingDataComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 10. Upper Tester sends an HCI_LE_Set_Advertising_Enable command to the IUT to enable
         # advertising and receives an HCI_Command_Complete event in response.
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 11. Lower Tester expects the IUT to send ADV_IND packets including no advertising data starting an
         # event on the selected advertising channel.
@@ -103,19 +125,25 @@ class Test(ControllerTest):
         # packet.
         # 13. Repeat steps 11–12 until a number of advertising intervals (50) have been detected.
         for n in range(10):
-            await self.expect_ll(ll.LeLegacyAdvertisingPdu(
-                source_address=controller.address,
-                advertising_address_type=ll.AddressType.PUBLIC,
-                advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                advertising_data=[]),
-                                 timeout=5)
+            await self.expect_ll(
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                ),
+                timeout=5,
+            )
 
         # 14. Upper Tester sends an HCI_LE_Set_Advertising_Enable command to the IUT to disable
         # advertising and receives an HCI_Command_Complete event in response.
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=False))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 15. Upper Tester sends an HCI_LE_Set_Advertising_Data command to the IUT and receives an
         # HCI_Command_Complete in response. The data element is a number indicating the length of the
@@ -125,46 +153,70 @@ class Test(ControllerTest):
         controller.send_cmd(hci.LeSetAdvertisingData(advertising_data=advertising_data))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingDataComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         # 16. Repeat steps 4–14.
         for n in range(10):
-            await self.expect_ll(ll.LeLegacyAdvertisingPdu(
-                source_address=controller.address,
-                advertising_address_type=ll.AddressType.PUBLIC,
-                advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                advertising_data=advertising_data),
-                                 timeout=5)
+            await self.expect_ll(
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=advertising_data,
+                ),
+                timeout=5,
+            )
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=False))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(hci.LeSetAdvertisingData(advertising_data=[]))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingDataComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingDataComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=True))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
 
         for n in range(10):
-            await self.expect_ll(ll.LeLegacyAdvertisingPdu(
-                source_address=controller.address,
-                advertising_address_type=ll.AddressType.PUBLIC,
-                advertising_type=ll.LegacyAdvertisingType.ADV_IND,
-                advertising_data=[]),
-                                 timeout=5)
+            await self.expect_ll(
+                ll.LeLegacyAdvertisingPdu(
+                    source_address=controller.address,
+                    advertising_address_type=ll.AddressType.PUBLIC,
+                    advertising_type=ll.LegacyAdvertisingType.ADV_IND,
+                    advertising_data=[],
+                ),
+                timeout=5,
+            )
 
         controller.send_cmd(hci.LeSetAdvertisingEnable(advertising_enable=False))
 
         await self.expect_evt(
-            hci.LeSetAdvertisingEnableComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1))
+            hci.LeSetAdvertisingEnableComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
