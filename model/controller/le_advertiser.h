@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cstdint>
 #include <optional>
+#include <random>
 #include <ratio>
 #include <vector>
 
@@ -81,6 +82,13 @@ public:
            advertising_type == AdvertisingType::ADV_DIRECT_IND_LOW;
   }
 
+  std::chrono::milliseconds AdvDelay(std::mt19937_64& rng) const {
+    if (advertising_type == AdvertisingType::ADV_DIRECT_IND_HIGH) {
+      return std::chrono::milliseconds(0);
+    }
+    return std::chrono::milliseconds(std::uniform_int_distribution<int>(0, 10)(rng));
+  }
+
   // Host configuration parameters. Gather the configuration from the
   // legacy advertising HCI commands. The initial configuration
   // matches the default values of the parameters of the HCI command
@@ -127,6 +135,13 @@ public:
   bool IsConnectable() const { return advertising_event_properties.connectable_; }
 
   bool IsDirected() const { return advertising_event_properties.directed_; }
+
+  std::chrono::milliseconds AdvDelay(std::mt19937_64& rng) const {
+    if (advertising_event_properties.high_duty_cycle_) {
+      return std::chrono::milliseconds(0);
+    }
+    return std::chrono::milliseconds(std::uniform_int_distribution<int>(0, 10)(rng));
+  }
 
   // Host configuration parameters. Gather the configuration from the
   // extended advertising HCI commands.

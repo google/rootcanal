@@ -88,16 +88,17 @@ uint16_t AclConnectionHandler::CreateConnection(Address addr, Address own_addr) 
   return handle;
 }
 
-uint16_t AclConnectionHandler::CreateLeConnection(AddressWithType addr,
-                                                  AddressWithType resolved_peer,
-                                                  AddressWithType own_addr,
-                                                  bluetooth::hci::Role role,
-                                                  LeAclConnectionParameters connection_parameters,
-                                                  LeAclSubrateParameters subrate_parameters) {
+uint16_t AclConnectionHandler::CreateLeConnection(
+        AddressWithType addr, AddressWithType resolved_peer, AddressWithType own_addr,
+        bluetooth::hci::Role role, LeAclConnectionParameters connection_parameters,
+        LeAclSubrateParameters subrate_parameters,
+        LePeriodicAdvertisingSyncTransferParameters periodic_advertising_sync_transfer_parameters) {
   uint16_t handle = GetUnusedHandle(le_acl_connections_, ConnectionHandle::kLeAclRangeStart,
                                     ConnectionHandle::kLeAclRangeEnd, last_le_acl_handle_);
-  le_acl_connections_.emplace(handle, LeAclConnection{handle, addr, own_addr, resolved_peer, role,
-                                                      connection_parameters, subrate_parameters});
+  le_acl_connections_.emplace(
+          handle,
+          LeAclConnection{handle, addr, own_addr, resolved_peer, role, connection_parameters,
+                          subrate_parameters, periodic_advertising_sync_transfer_parameters});
   return handle;
 }
 

@@ -82,6 +82,15 @@ impl LinkLayer {
         Ok(())
     }
 
+    pub fn big_sync_lost(
+        &mut self,
+        sync_handle: u16,
+        reason: hci::ErrorCode,
+    ) -> Result<(), LinkLayerError> {
+        self.iso.big_sync_lost(sync_handle, reason);
+        Ok(())
+    }
+
     pub fn tick(&mut self) {}
 
     pub fn ingest_hci(&mut self, packet: hci::Command) -> Result<(), LinkLayerError> {
@@ -98,6 +107,8 @@ impl LinkLayer {
             Ok(LeRemoveIsoDataPath(packet)) => self.iso.hci_le_remove_iso_data_path(packet),
             Ok(LeCreateBig(packet)) => self.iso.hci_le_create_big(packet),
             Ok(LeTerminateBig(packet)) => self.iso.hci_le_terminate_big(packet),
+            Ok(LeBigCreateSync(packet)) => self.iso.hci_le_big_create_sync(packet),
+            Ok(LeBigTerminateSync(packet)) => self.iso.hci_le_big_terminate_sync(packet),
             _ => {
                 println!("Unhandled LL HCI command {:?}", packet.op_code);
                 Err(LinkLayerError::UnhandledHciPacket)?
@@ -135,7 +146,20 @@ impl LinkLayer {
             .get_cis_connection_handle(|cis| cis.cig_id == cig_id && cis.cis_id == cis_id)
     }
 
+    pub fn get_bis_connection_handle(&self, big_id: u8, bis_id: u8) -> Option<u16> {
+        self.iso
+            .get_bis_connection_handle(|bis| bis.big_handle == big_id && bis.bis_id == bis_id)
+    }
+
     pub fn get_cis(&self, cis_connection_handle: u16) -> Option<&iso::Cis> {
         self.iso.get_cis(cis_connection_handle)
+    }
+
+    pub fn get_bis(&self, bis_connection_handle: u16) -> Option<&iso::Bis> {
+        self.iso.get_bis(bis_connection_handle)
+    }
+
+    pub fn get_big_info(&self, advertising_handle: u8) -> Option<&iso::BigConfig> {
+        self.iso.get_big_info(advertising_handle)
     }
 }

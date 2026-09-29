@@ -36,6 +36,20 @@ pub trait Context {
 
     fn extended_features(&self, features_page: u8) -> u64;
 
+    fn event_mask(&self) -> u64;
+    fn event_mask_page_2(&self) -> u64;
+
+    fn is_event_enabled(&self, event_code: hci::EventCode) -> bool {
+        let code = u8::from(event_code);
+        if code > 0 && code <= 64 {
+            (self.event_mask() & (1 << (code - 1))) != 0
+        } else if code > 64 && code <= 128 {
+            (self.event_mask_page_2() & (1 << (code - 64))) != 0
+        } else {
+            false
+        }
+    }
+
     fn receive_hci_command<C: TryFrom<hci::Command>>(&self) -> ReceiveFuture<'_, Self, C> {
         ReceiveFuture(Self::poll_hci_command, self)
     }

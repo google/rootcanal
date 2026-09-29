@@ -80,20 +80,34 @@ struct CigConfig {
 
 /// BIG configuration.
 #[derive(Clone, Debug, Default)]
-struct BigConfig {
+pub struct BigConfig {
     // BIG parameters from LeCreateBig command
+    pub big_handle: u8,
+    pub advertising_handle: u8,
+    pub num_bis: u8,
+    pub sdu_interval: u32,
+    pub max_sdu: u16,
+    pub max_transport_latency: u16,
+    pub rtn: u8,
+    pub phy: u8,
+    pub packing: u8,
+    pub framing: u8,
+    pub encryption: bool,
+    pub broadcast_code: [u8; 16],
+    pub iso_interval: u16,
+    pub bn: u8,
+    pub nse: u8,
+    pub pto: u8,
+    pub irc: u8,
+    pub max_pdu: u16,
+}
+
+/// BIG synchronization configuration.
+#[derive(Clone, Debug, Default)]
+struct BigSyncConfig {
     big_handle: u8,
-    advertising_handle: u8,
-    num_bis: u8,
-    sdu_interval: u32,
-    max_sdu: u16,
-    max_transport_latency: u16,
-    rtn: u8,
-    phy: u8,
-    packing: u8,
-    framing: u8,
-    encryption: bool,
-    broadcast_code: [u8; 16],
+    sync_handle: u16,
+    bis_numbers: Vec<u8>,
 }
 
 /// CIS configuration.
@@ -301,6 +315,8 @@ pub struct IsoManager {
     cig_config: HashMap<u8, CigConfig>,
     /// BIG configuration.
     big_config: HashMap<u8, BigConfig>,
+    /// BIG synchronization configuration.
+    big_sync_config: HashMap<u8, BigSyncConfig>,
     /// CIS configuration.
     cis_config: HashMap<(u8, u8), CisConfig>,
     /// BIS configuration.
@@ -326,6 +342,7 @@ impl IsoManager {
             ops,
             cig_config: Default::default(),
             big_config: Default::default(),
+            big_sync_config: Default::default(),
             cis_config: Default::default(),
             bis_connections: Default::default(),
             acl_connections: Default::default(),
@@ -523,8 +540,30 @@ impl IsoManager {
             .cloned()
     }
 
+    pub fn get_bis_connection_handle<F>(&self, predicate: F) -> Option<u16>
+    where
+        F: Fn(&Bis) -> bool,
+    {
+        self.bis_connections
+            .iter()
+            .filter(|(_, bis)| predicate(bis))
+            .map(|(handle, _)| handle)
+            .next()
+            .cloned()
+    }
+
     pub fn get_cis(&self, cis_connection_handle: u16) -> Option<&Cis> {
         self.cis_connections.get(&cis_connection_handle)
+    }
+
+    pub fn get_bis(&self, bis_connection_handle: u16) -> Option<&Bis> {
+        self.bis_connections.get(&bis_connection_handle)
+    }
+
+    pub fn get_big_info(&self, advertising_handle: u8) -> Option<&BigConfig> {
+        self.big_config
+            .values()
+            .find(|big| big.advertising_handle == advertising_handle)
     }
 
     /// Start the next CIS connection request, if any.
@@ -713,14 +752,16 @@ impl IsoManager {
         }
 
         let Some(iso_interval) = iso_interval(
-            sdu_interval_c_to_p,
-            sdu_interval_p_to_c,
+            configures_c_to_p.then_some(sdu_interval_c_to_p),
+            configures_p_to_c.then_some(sdu_interval_p_to_c),
             framed,
             max_transport_latency_c_to_p as u32 * 1000,
             max_transport_latency_p_to_c as u32 * 1000,
         ) else {
             println!(
-                "ISO_Interval cannot be chosen that fulfills the requirement from the CIG parameters");
+                "ISO_Interval cannot be chosen that fulfills the \
+                 requirement from the CIG parameters"
+            );
             return self.send_hci_event(command_complete(
                 hci::ErrorCode::UnsupportedFeatureOrParameterValue,
             ));
@@ -1198,7 +1239,7 @@ impl IsoManager {
             acl_connection_handle,
             llcp::RejectExtInd {
                 reject_opcode: llcp::Opcode::LlCisReq as u8,
-                error_code: error_code as u8,
+                error_code: error_code.into(),
             },
         );
 
@@ -1296,7 +1337,12 @@ impl IsoManager {
                 || (bis.role == hci::Role::Peripheral
                     && packet.data_path_direction() == hci::DataPathDirection::Input)
             {
-                println!("Attempt to set an invalid data path direction for BIS (Role: {:?}, Direction: {:?}).", bis.role, packet.data_path_direction());
+                println!(
+                    "Attempt to set an invalid data path direction for BIS \
+                     (Role: {:?}, Direction: {:?}).",
+                    bis.role,
+                    packet.data_path_direction()
+                );
                 return self.send_hci_event(command_complete(hci::ErrorCode::CommandDisallowed));
             }
 
@@ -1629,6 +1675,226 @@ impl IsoManager {
         }
     }
 
+    pub fn hci_le_big_create_sync(&mut self, packet: hci::LeBigCreateSync) {
+        let command_status =
+            |status| hci::LeBigCreateSyncStatus { status, num_hci_command_packets: 1 };
+        let big_handle = packet.big_handle();
+        let sync_handle = packet.sync_handle();
+        let _encryption = packet.encryption();
+        let _broadcast_code = packet.broadcast_code();
+        let mse = packet.mse();
+        let big_sync_timeout = packet.big_sync_timeout();
+        let bis = packet.bis();
+
+        // 1. Validate BIG_Handle Range
+        // Spec: "The BIG_Handle parameter shall be in the range 0x00 to 0xEF."
+        if big_handle > 0xEF {
+            println!("LE BIG Create Sync: Invalid BIG_Handle 0x{:02X}", big_handle);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 2. Validate BIG_Handle State
+        // Spec: "If the Host issues this command with a BIG_Handle for a BIG that is already
+        // synchronized or being synchronized to, or is already created, then the Controller
+        // shall return the error code Command Disallowed (0x0C)."
+        if self.big_config.contains_key(&big_handle)
+            || self.big_sync_config.contains_key(&big_handle)
+        {
+            println!("LE BIG Create Sync: BIG_Handle 0x{:02X} is already in use", big_handle);
+            self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
+            return;
+        }
+
+        // 3. Validate Num_BIS
+        // Spec: "The Num_BIS parameter shall be in the range 0x01 to 0x1F."
+        if bis.is_empty() || bis.len() > 0x1F {
+            println!("LE BIG Create Sync: Invalid Num_BIS 0x{:02X}", bis.len());
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 4. Validate Sync_Handle Range
+        // Spec: "The Sync_Handle parameter shall be in the range 0x0000 to 0x0EFF."
+        if sync_handle > 0x0EFF {
+            println!("LE BIG Create Sync: Invalid Sync_Handle 0x{:04X}", sync_handle);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 5. Validate Sync_Handle State (Existence)
+        // Spec: "If the Sync_Handle does not exist, the Controller shall return
+        // the error code Unknown Advertising Identifier (0x42)."
+        if !self.ops.is_sync_handle_valid(sync_handle) {
+            println!("LE BIG Create Sync: Sync_Handle 0x{:04X} does not exist", sync_handle);
+            self.send_hci_event(command_status(hci::ErrorCode::UnknownAdvertisingIdentifier));
+            return;
+        }
+
+        // 6. Validate Sync_Handle State (In Use)
+        // Spec: "If the Controller is already synchronized to the BIG specified by
+        // Sync_Handle, it shall return an error which should use the error code
+        // Command Disallowed (0x0C)."
+        if self
+            .big_sync_config
+            .values()
+            .any(|config| config.sync_handle == sync_handle)
+        {
+            println!("LE BIG Create Sync: Sync_Handle 0x{:04X} is already in use", sync_handle);
+            self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
+            return;
+        }
+
+        // 8. Validate MSE
+        // Spec: "The MSE parameter shall be in the range 0x00 to 0x1F."
+        if mse > 0x1F {
+            println!("LE BIG Create Sync: Invalid MSE 0x{:02X}", mse);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 9. Validate BIG_Sync_Timeout
+        // Spec: "The BIG_Sync_Timeout parameter shall be in the range 0x000A to 0x4000."
+        if !(0x000A..=0x4000).contains(&big_sync_timeout) {
+            println!("LE BIG Create Sync: Invalid BIG_Sync_Timeout 0x{:04X}", big_sync_timeout);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 10. Validate BIS Indices
+        // Spec: "If any of the BIS[i] parameters are not in the range 0x01 to 0x1F
+        // or are not unique, the Controller shall return the error code
+        // Invalid HCI Command Parameters (0x12)."
+        let mut unique_bis = std::collections::HashSet::new();
+        for &bis_id in bis.iter() {
+            if !(1..=31).contains(&bis_id) {
+                println!("LE BIG Create Sync: Invalid BIS_ID 0x{:02X}", bis_id);
+                self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+                return;
+            }
+            if !unique_bis.insert(bis_id) {
+                println!("LE BIG Create Sync: Duplicate BIS_ID 0x{:02X}", bis_id);
+                self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+                return;
+            }
+        }
+
+        // --- Success Path ---
+        self.send_hci_event(command_status(hci::ErrorCode::Success));
+
+        self.big_sync_config.insert(
+            big_handle,
+            BigSyncConfig { big_handle, sync_handle, bis_numbers: bis.clone() },
+        );
+
+        // In RootCanal, we can immediately establish the BIG Sync.
+        let mut num_bis = 0;
+        let mut nse = 0;
+        let mut iso_interval = 0;
+        let mut bn = 0;
+        let mut pto = 0;
+        let mut irc = 0;
+        let mut max_pdu = 0;
+        let mut sdu_interval = 0;
+        let mut max_sdu = 0;
+        let mut phy = 0;
+        let mut _framing = 0;
+        let mut _encryption = 0;
+
+        if !self.ops.get_sync_big_info(
+            sync_handle,
+            &mut num_bis,
+            &mut nse,
+            &mut iso_interval,
+            &mut bn,
+            &mut pto,
+            &mut irc,
+            &mut max_pdu,
+            &mut sdu_interval,
+            &mut max_sdu,
+            &mut phy,
+            &mut _framing,
+            &mut _encryption,
+        ) {
+            self.big_sync_config.remove(&big_handle);
+            self.send_hci_event(hci::LeBigSyncEstablished {
+                status: hci::ErrorCode::ConnectionFailedEstablishment,
+                big_handle,
+                transport_latency_big: 0,
+                nse: 0,
+                bn: 0,
+                pto: 0,
+                irc: 0,
+                max_pdu: 0,
+                iso_interval: 0,
+                connection_handle: vec![],
+            });
+            return;
+        }
+
+        let bis_connection_handles = bis
+            .iter()
+            .map(|bis_id| {
+                let bis_connection_handle = self.new_bis_connection_handle();
+                self.bis_connections.insert(
+                    bis_connection_handle,
+                    Bis {
+                        bis_connection_handle,
+                        big_handle,
+                        bis_id: *bis_id,
+                        advertising_handle: 0,
+                        role: hci::Role::Peripheral,
+                        max_sdu: if max_sdu == 0 { 251 } else { max_sdu },
+                        iso_data_path: None,
+                    },
+                );
+                bis_connection_handle
+            })
+            .collect::<Vec<_>>();
+
+        self.send_hci_event(hci::LeBigSyncEstablished {
+            status: hci::ErrorCode::Success,
+            big_handle,
+            transport_latency_big: sdu_interval,
+            nse,
+            bn,
+            pto,
+            irc,
+            max_pdu,
+            iso_interval,
+            connection_handle: bis_connection_handles,
+        });
+    }
+
+    pub fn hci_le_big_terminate_sync(&mut self, packet: hci::LeBigTerminateSync) {
+        let big_handle = packet.big_handle();
+        let command_complete = move |status| hci::LeBigTerminateSyncComplete {
+            num_hci_command_packets: 1,
+            status,
+            big_handle,
+        };
+        // 1. Validate BIG_Handle Range
+        if big_handle > 0xEF {
+            println!("LE BIG Terminate Sync: Invalid BIG_Handle 0x{:02X}", big_handle);
+            return self
+                .send_hci_event(command_complete(hci::ErrorCode::InvalidHciCommandParameters));
+        }
+
+        // 2. Validate BIG_Handle State (Existence)
+        if self.big_sync_config.remove(&big_handle).is_none() {
+            println!("LE BIG Terminate Sync: BIG_Handle 0x{:02X} is not synchronized", big_handle);
+            return self
+                .send_hci_event(command_complete(hci::ErrorCode::UnknownAdvertisingIdentifier));
+        }
+
+        // 3. State Cleanup
+        self.bis_connections
+            .retain(|_, bis| bis.big_handle != big_handle);
+
+        // 4. Send Complete Event
+        self.send_hci_event(command_complete(hci::ErrorCode::Success));
+    }
+
     pub fn hci_le_create_big(&mut self, packet: hci::LeCreateBig) {
         let command_status = |status| hci::LeCreateBigStatus { status, num_hci_command_packets: 1 };
         let big_handle = packet.big_handle();
@@ -1656,7 +1922,9 @@ impl IsoManager {
         // Spec: "If the Host issues this command with a BIG_Handle for a BIG that is
         // already created, then the Controller shall return the error code
         // Command Disallowed (0x0C)."
-        if self.big_config.contains_key(&big_handle) {
+        if self.big_config.contains_key(&big_handle)
+            || self.big_sync_config.contains_key(&big_handle)
+        {
             println!("LE Create BIG: BIG_Handle 0x{:02X} is already in use", big_handle);
             self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
             return;
@@ -1792,6 +2060,21 @@ impl IsoManager {
         // --- Success Path ---
         self.send_hci_event(command_status(hci::ErrorCode::Success));
 
+        let iso_interval = (sdu_interval as f64 / 1250.0).ceil() as u16;
+
+        // Parameter Derivation
+        let bn = 1;
+        let nse = bn * (rtn + 1);
+        let pto = 0;
+        let irc = rtn + 1;
+        let max_pdu = max_sdu;
+
+        if nse > 31 {
+            println!("LE Create BIG: Invalid NSE 0x{:02X}", nse);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
         let big = BigConfig {
             big_handle,
             advertising_handle,
@@ -1805,6 +2088,12 @@ impl IsoManager {
             framing,
             encryption: encryption != 0,
             broadcast_code: *broadcast_code,
+            iso_interval,
+            bn,
+            nse,
+            pto,
+            irc,
+            max_pdu,
         };
         self.big_config.insert(big_handle, big);
 
@@ -1824,21 +2113,6 @@ impl IsoManager {
                 },
             );
             bis_connection_handles.push(bis_connection_handle);
-        }
-
-        let iso_interval = (sdu_interval as f64 / 1250.0).ceil() as u16;
-
-        // Parameter Derivation
-        let bn = 1;
-        let nse = bn * (rtn + 1);
-        let pto = 0;
-        let irc = rtn + 1;
-        let max_pdu = max_sdu;
-
-        if nse > 31 {
-            println!("LE Create BIG: Invalid NSE 0x{:02X}", nse);
-            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
-            return;
         }
 
         self.send_hci_event(hci::LeCreateBigComplete {
@@ -1871,13 +2145,25 @@ impl IsoManager {
             return;
         }
 
-        // 2. Validate BIG_Handle State (Existence)
+        // 2. Validate BIG_Handle State (Existence & Role)
+        // Spec: "If the Controller is not the Isochronous Broadcaster for the BIG identified by
+        // BIG_Handle, the Controller shall return the error code Command Disallowed (0x0C)."
+        if self.big_sync_config.contains_key(&big_handle) {
+            println!(
+                "LE Terminate BIG: Controller is Synced Receiver, not \
+                 Broadcaster for BIG_Handle 0x{:02X}",
+                big_handle
+            );
+            self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
+            return;
+        }
+
         // Spec: "If the BIG_Handle parameter does not identify a BIG that is
         // currently created, the Controller shall return the error code
         // Unknown Advertising Identifier (0x42)."
-        if self.big_config.remove(&big_handle).is_none() {
-            return self
-                .send_hci_event(command_status(hci::ErrorCode::UnknownAdvertisingIdentifier));
+        let Some(big) = self.big_config.remove(&big_handle) else {
+            self.send_hci_event(command_status(hci::ErrorCode::UnknownAdvertisingIdentifier));
+            return;
         };
 
         // Send Command Status (Success) immediately as the command is pending completion.
@@ -1892,21 +2178,41 @@ impl IsoManager {
         // Spec: "The Controller shall send an HCI_LE_Terminate_BIG_Complete
         // event to the Host."
         self.send_hci_event(hci::LeTerminateBigComplete { big_handle, reason });
+
+        // 5. Transmit LL_BIG_TERMINATE_IND over the Link Layer to Synced Receivers
+        self.ops
+            .send_big_terminate_ind(big.advertising_handle, reason.into());
+    }
+
+    pub fn big_sync_lost(&mut self, sync_handle: u16, reason: hci::ErrorCode) {
+        let sync_key = self
+            .big_sync_config
+            .iter()
+            .find(|(_, config)| config.sync_handle == sync_handle)
+            .map(|(&key, _)| key);
+
+        if let Some(big_handle) = sync_key {
+            self.big_sync_config.remove(&big_handle);
+            self.bis_connections
+                .retain(|_, bis| bis.big_handle != big_handle);
+            self.send_hci_event(hci::LeBigSyncLost { big_handle, reason });
+        }
     }
 }
 
 /// Derive a valid ISO_Interval for a CIG based on the
 /// LE Set Cig Parameters command input. SDU_Interval, Max_Transport_Latency are
-/// provided microseconds.
+/// provided microseconds. SDU_Interval is None if there is no stream in this direction.
 fn iso_interval(
-    sdu_interval_c_to_p: microseconds,
-    sdu_interval_p_to_c: microseconds,
+    sdu_interval_c_to_p: Option<microseconds>,
+    sdu_interval_p_to_c: Option<microseconds>,
     framed: bool,
     max_transport_latency_c_to_p: microseconds,
     max_transport_latency_p_to_c: microseconds,
 ) -> Option<slots> {
     if framed {
-        let iso_interval = std::cmp::max(sdu_interval_c_to_p, sdu_interval_p_to_c);
+        let iso_interval =
+            std::cmp::max(sdu_interval_c_to_p.unwrap_or(0), sdu_interval_p_to_c.unwrap_or(0));
         Some(iso_interval.div_ceil(1250) as u16)
     } else {
         // Unframed PDUs shall only be used when the ISO_Interval is equal to
@@ -1916,21 +2222,26 @@ fn iso_interval(
         let iso_interval = num_integer::lcm(
             1250,
             match (sdu_interval_c_to_p, sdu_interval_p_to_c) {
-                (0, 0) => panic!(),
-                (0, _) => sdu_interval_p_to_c,
-                (_, 0) => sdu_interval_c_to_p,
-                _ => num_integer::lcm(sdu_interval_c_to_p, sdu_interval_p_to_c),
+                (None, None) => panic!(),
+                (None, Some(p_to_c)) => p_to_c,
+                (Some(c_to_p), None) => c_to_p,
+                (Some(c_to_p), Some(p_to_c)) => num_integer::lcm(c_to_p, p_to_c),
             },
         );
-        let min_transport_latency_c_to_p = 2 * iso_interval - sdu_interval_c_to_p;
-        let min_transport_latency_p_to_c = 2 * iso_interval - sdu_interval_p_to_c;
+        if iso_interval / 1250 > u16::MAX as u32 {
+            return None;
+        }
 
-        ((iso_interval / 1250) <= u16::MAX as u32
-            && (sdu_interval_c_to_p == 0
-                || min_transport_latency_c_to_p <= max_transport_latency_c_to_p)
-            && (sdu_interval_p_to_c == 0
-                || min_transport_latency_p_to_c <= max_transport_latency_p_to_c))
-            .then_some((iso_interval / 1250) as u16)
+        let c_to_p_valid = sdu_interval_c_to_p.is_none_or(|sdu_itv| {
+            let min_latency = 2 * iso_interval - sdu_itv;
+            min_latency <= max_transport_latency_c_to_p
+        });
+        let p_to_c_valid = sdu_interval_p_to_c.is_none_or(|sdu_itv| {
+            let min_latency = 2 * iso_interval - sdu_itv;
+            min_latency <= max_transport_latency_p_to_c
+        });
+
+        (c_to_p_valid && p_to_c_valid).then_some((iso_interval / 1250) as u16)
     }
 }
 
@@ -1958,8 +2269,16 @@ mod test {
 
     #[test]
     fn test_iso_interval() {
-        assert!(iso_interval(0x7530, 0x7530, false, 0x7530, 0x7530).is_some());
-        assert!(iso_interval(0x7530, 0, false, 0x7530, 0x7530).is_some());
-        assert!(iso_interval(0x7530, 0x7530, false, 0x7000, 0x7000).is_none());
+        assert!(iso_interval(Some(0x7530), Some(0x7530), false, 0x7530, 0x7530).is_some());
+        assert!(iso_interval(Some(0x7530), None, false, 0x7530, 0x7530).is_some());
+        assert!(iso_interval(Some(0x7530), Some(0x7530), false, 0x7000, 0x7000).is_none());
+    }
+
+    #[test]
+    fn test_transport_latency() {
+        // framed = true: cig_sync_delay + ft * iso_interval + sdu_interval
+        assert_eq!(transport_latency(1000, 10, 2, 5000, true), 1000 + 2 * 12500 + 5000);
+        // framed = false: cig_sync_delay + ft * iso_interval - sdu_interval
+        assert_eq!(transport_latency(10000, 10, 2, 5000, false), 10000 + 2 * 12500 - 5000);
     }
 }

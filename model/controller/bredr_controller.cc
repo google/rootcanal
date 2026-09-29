@@ -68,8 +68,7 @@ bool BrEdrController::IsEventUnmasked(EventCode event) const {
     uint64_t bit = UINT64_C(1) << (evt - 1);
     return (event_mask_ & bit) != 0;
   } else {
-    evt -= 64;
-    uint64_t bit = UINT64_C(1) << (evt - 1);
+    uint64_t bit = UINT64_C(1) << (evt - 64);
     return (event_mask_page_2_ & bit) != 0;
   }
 }
@@ -239,6 +238,9 @@ ErrorCode BrEdrController::AcceptConnectionRequest(Address bd_addr, bool try_rol
       // This implementation considers that a unique HCI Connection Complete
       // event is expected for both the HCI Create Connection and HCI Accept
       // Connection Request commands.
+      // Reset the page scan state.
+      page_scan_ = {};
+
       return ErrorCode::SUCCESS;
     }
 
@@ -1305,6 +1307,18 @@ BrEdrController::BrEdrController(const Address& address, const ControllerPropert
                     return controller->GetLmpFeatures(features_page);
                   },
 
+          .get_event_mask =
+                  [](void* user) {
+                    auto controller = static_cast<BrEdrController*>(user);
+                    return controller->event_mask_;
+                  },
+
+          .get_event_mask_page_2 =
+                  [](void* user) {
+                    auto controller = static_cast<BrEdrController*>(user);
+                    return controller->event_mask_page_2_;
+                  },
+
           .send_hci_event =
                   [](void* user, const uint8_t* data, uintptr_t len) {
                     auto controller = static_cast<BrEdrController*>(user);
@@ -2112,6 +2126,10 @@ void BrEdrController::RejectPeripheralConnection(const Address& addr, uint8_t re
   INFO(id_, "Sending page reject to {} (reason 0x{:02x})", addr, reason);
   SendLinkLayerPacket(model::packets::PageRejectBuilder::Create(GetAddress(), addr, reason));
 
+  if (page_scan_.has_value() && page_scan_->bd_addr == addr) {
+    page_scan_ = {};
+  }
+
   if (IsEventUnmasked(EventCode::CONNECTION_COMPLETE)) {
     send_event_(bluetooth::hci::ConnectionCompleteBuilder::Create(
             static_cast<ErrorCode>(reason), 0xeff, addr, bluetooth::hci::LinkType::ACL,
@@ -2198,10 +2216,21 @@ void BrEdrController::IncomingRoleSwitchResponse(model::packets::LinkLayerPacket
   }
 }
 
-ErrorCode BrEdrController::WriteLinkSupervisionTimeout(uint16_t handle, uint16_t /* timeout */) {
+ErrorCode BrEdrController::WriteLinkSupervisionTimeout(uint16_t handle, uint16_t timeout) {
   if (!connections_.HasAclHandle(handle)) {
     return ErrorCode::UNKNOWN_CONNECTION;
   }
+  if (timeout == 0) {
+    return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
+  }
+
+  auto& connection = connections_.GetAclConnection(handle);
+
+  // The HCI Link Supervision Timeout parameter is expressed in Bluetooth Baseband slots:
+  // - Unit: 1 Baseband slot = 625 microseconds (0.625 ms).
+  // - Range: 0x0001 (0.625 ms) to 0xFFFF (40.9 seconds).
+  auto timeout_duration = std::chrono::microseconds(static_cast<uint64_t>(timeout) * 625);
+  connection.SetTimeout(timeout_duration);
   return ErrorCode::SUCCESS;
 }
 

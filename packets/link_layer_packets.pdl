@@ -75,6 +75,8 @@ enum PacketType : 8 {
     LL_CS_TERMINATE_REQ = 0xFB,
     LL_CS_TERMINATE_RSP = 0xFC,
     LL_CS_CHANNEL_MAP_IND = 0xFD,
+    LL_PERIODIC_SYNC_IND = 0x55,
+    LL_BIG_TERMINATE_IND = 0x56,
 }
 
 packet LinkLayerPacket {
@@ -102,6 +104,10 @@ packet LeConnectedIsochronousPdu : LinkLayerPacket (type = LE_CONNECTED_ISOCHRON
 }
 
 packet LeBroadcastIsochronousPdu : LinkLayerPacket (type = LE_BROADCAST_ISOCHRONOUS_PDU) {
+  big_id: 8,
+  bis_id: 8,
+  sequence_number: 16,
+  data: 8[],
 }
 
 packet Disconnect : LinkLayerPacket (type = DISCONNECT) {
@@ -195,11 +201,27 @@ packet LeExtendedAdvertisingPdu : LinkLayerPacket (type = LE_EXTENDED_ADVERTISIN
   advertising_data: 8[],
 }
 
+struct BigInfo {
+  num_bis: 8,
+  nse: 8,
+  iso_interval: 16,
+  bn: 8,
+  pto: 8,
+  irc: 8,
+  max_pdu: 16,
+  sdu_interval: 24,
+  max_sdu: 16,
+  phy: 8,
+  framing: 8,
+  encryption: 8,
+}
+
 packet LePeriodicAdvertisingPdu : LinkLayerPacket (type = LE_PERIODIC_ADVERTISING_PDU) {
   advertising_address_type: AddressType,
   sid: 8, // 0xff when not provided
   tx_power: 8,
   advertising_interval: 16,
+  big_info: BigInfo,
   advertising_data: 8[],
 }
 
@@ -600,4 +622,27 @@ packet LlCsTerminateRsp : LinkLayerPacket (type = LL_CS_TERMINATE_RSP) {
 packet LlCsChannelMapInd : LinkLayerPacket (type = LL_CS_CHANNEL_MAP_IND) {
   channel_map : 8[10],
   instant : 16,
+}
+
+enum PeriodicSyncType : 8 {
+    SYNC_TRANSFER = 0,
+    SET_INFO_TRANSFER = 1,
+}
+
+packet LlPeriodicSyncInd : LinkLayerPacket (type = LL_PERIODIC_SYNC_IND) {
+    transfer_type: PeriodicSyncType,
+    advertiser_address_type: AddressType,
+    advertiser_address: Address,
+    advertising_sid: 8,
+    advertising_interval: 16,
+    service_data: 16,
+    has_big_info: 8,
+    big_info: BigInfo,
+    phy: PhyType,
+}
+
+packet LlBigTerminateInd : LinkLayerPacket (type = LL_BIG_TERMINATE_IND) {
+    sid: 8,
+    reason: 8,
+    instant: 16,
 }

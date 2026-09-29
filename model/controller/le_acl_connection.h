@@ -69,6 +69,14 @@ struct LeAclSubrateParameters {
   uint16_t supervision_timeout{0x0c80};
 };
 
+/// LE Periodic Advertising Sync Transfer Parameters (Vol 4, Part E § 7.8.89).
+struct LePeriodicAdvertisingSyncTransferParameters {
+  bluetooth::hci::SyncTransferMode mode{bluetooth::hci::SyncTransferMode::SYNC_DISABLED};
+  uint16_t skip{0x0000};
+  uint16_t sync_timeout{0x07D0};
+  bluetooth::hci::CteType cte_type{bluetooth::hci::CteType::AOA_CONSTANT_TONE_EXTENSION};
+};
+
 // Model the LE connection of a device to the controller.
 class LeAclConnection final {
 public:
@@ -82,11 +90,14 @@ public:
   std::optional<uint64_t> remote_supported_features;
   LeAclSubrateParameters subrate_parameters;
   LeCsParameters cs_parameters;
+  LePeriodicAdvertisingSyncTransferParameters periodic_advertising_sync_transfer_parameters;
   std::optional<std::array<uint8_t, 16>> ltk;
 
   LeAclConnection(uint16_t handle, AddressWithType address, AddressWithType own_address,
                   AddressWithType resolved_address, bluetooth::hci::Role role,
-                  LeAclConnectionParameters parameters, LeAclSubrateParameters subrate_parameters);
+                  LeAclConnectionParameters parameters, LeAclSubrateParameters subrate_parameters,
+                  LePeriodicAdvertisingSyncTransferParameters
+                          periodic_advertising_sync_transfer_parameters);
   ~LeAclConnection() = default;
 
   void Encrypt();

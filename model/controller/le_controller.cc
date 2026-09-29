@@ -27,6 +27,7 @@
 #include <cstring>
 #include <functional>
 #include <memory>
+#include <numbers>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -236,6 +237,62 @@ bool LeController::LeFilterAcceptListContainsDevice(AddressWithType address) {
   }
 
   return LeFilterAcceptListContainsDevice(address_type, address.GetAddress());
+}
+
+static std::optional<int8_t> ExtractTxPowerFromAdvData(const std::vector<uint8_t>& data) {
+  size_t i = 0;
+  while (i < data.size()) {
+    uint8_t length = data[i];
+    if (length == 0 || i + length >= data.size()) {
+      break;
+    }
+    uint8_t type = data[i + 1];
+    if (type == 0x0A && length >= 2) {
+      return static_cast<int8_t>(data[i + 2]);
+    }
+    i += length + 1;
+  }
+  return std::nullopt;
+}
+
+bool LeController::LeFilterAcceptListContainsDeviceWithThreshold(
+        AddressWithType address, int8_t rssi, const std::vector<uint8_t>& adv_data,
+        int8_t pdu_tx_power) {
+  FilterAcceptListAddressType address_type;
+  switch (address.GetAddressType()) {
+    case AddressType::PUBLIC_DEVICE_ADDRESS:
+    case AddressType::PUBLIC_IDENTITY_ADDRESS:
+      address_type = FilterAcceptListAddressType::PUBLIC;
+      break;
+    case AddressType::RANDOM_DEVICE_ADDRESS:
+    case AddressType::RANDOM_IDENTITY_ADDRESS:
+      address_type = FilterAcceptListAddressType::RANDOM;
+      break;
+  }
+
+  std::optional<int8_t> tx_power = std::nullopt;
+  if (pdu_tx_power != 127) {
+    tx_power = pdu_tx_power;
+  } else {
+    // TxPower not available in PDU header
+    tx_power = ExtractTxPowerFromAdvData(adv_data);
+  }
+
+  for (auto const& entry : le_filter_accept_list_) {
+    if (entry.address_type == address_type && entry.address == address.GetAddress()) {
+      if (entry.path_loss_threshold != FilterAcceptListEntry::kPathLossThresholdNoFiltering) {
+        if (tx_power.has_value()) {
+          int16_t path_loss = static_cast<int16_t>(tx_power.value()) - static_cast<int16_t>(rssi);
+          return path_loss <= entry.path_loss_threshold;
+        }
+      }
+      if (entry.rssi_threshold != FilterAcceptListEntry::kRssiThresholdNoFiltering) {
+        return rssi >= entry.rssi_threshold;
+      }
+      return true;
+    }
+  }
+  return false;
 }
 
 bool LeController::ResolvingListBusy() {
@@ -1212,6 +1269,121 @@ ErrorCode LeController::LePeriodicAdvertisingTerminateSync(uint16_t sync_handle)
   }
 
   synchronized_.erase(sync_handle);
+  return ErrorCode::SUCCESS;
+}
+
+ErrorCode LeController::LeSetDefaultPeriodicAdvertisingSyncTransferParameters(
+        bluetooth::hci::SyncTransferMode mode, uint16_t skip, uint16_t sync_timeout,
+        bluetooth::hci::CteType cte_type) {
+  // Vol 4, Part E § 7.8.90:
+  // If the Host sets all the non-reserved bits of CTE_Type to 1, then the
+  // Controller should return an error using the error code Command Disallowed (0x0C).
+  if ((static_cast<uint8_t>(cte_type) & 0x0F) == 0x0F) {
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+  // If the Host sets Mode to 0x03 and the Controller does not support the
+  // Periodic Advertising ADI Support feature, then the Controller shall return
+  // an error which should use the error code Unsupported Feature or Parameter Value (0x11).
+  if (mode == bluetooth::hci::SyncTransferMode::
+                      SYNC_ENABLED_REPORTS_ENABLED_WITH_DUPLICATE_FILTERING &&
+      !properties_.SupportsLLFeature(LLFeaturesBits::PERIODIC_ADVERTISING_ADI_SUPPORT)) {
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  default_periodic_advertising_sync_transfer_parameters_ = {
+          .mode = mode,
+          .skip = skip,
+          .sync_timeout = sync_timeout,
+          .cte_type = cte_type,
+  };
+  return ErrorCode::SUCCESS;
+}
+
+ErrorCode LeController::LeSetPeriodicAdvertisingSyncTransferParameters(
+        uint16_t connection_handle, bluetooth::hci::SyncTransferMode mode, uint16_t skip,
+        uint16_t sync_timeout, bluetooth::hci::CteType cte_type) {
+  if (!connections_.HasLeAclHandle(connection_handle)) {
+    return ErrorCode::UNKNOWN_CONNECTION;
+  }
+  // Vol 4, Part E § 7.8.89:
+  // If the Host sets all the non-reserved bits of CTE_Type to 1, then the
+  // Controller should return an error using the error code Command Disallowed (0x0C).
+  if ((static_cast<uint8_t>(cte_type) & 0x0F) == 0x0F) {
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+  // If the Host sets Mode to 0x03 and the Controller does not support the
+  // Periodic Advertising ADI Support feature, then the Controller shall return
+  // an error which should use the error code Unsupported Feature or Parameter Value (0x11).
+  if (mode == bluetooth::hci::SyncTransferMode::
+                      SYNC_ENABLED_REPORTS_ENABLED_WITH_DUPLICATE_FILTERING &&
+      !properties_.SupportsLLFeature(LLFeaturesBits::PERIODIC_ADVERTISING_ADI_SUPPORT)) {
+    return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
+  }
+
+  auto& connection = connections_.GetLeAclConnection(connection_handle);
+  connection.periodic_advertising_sync_transfer_parameters = {
+          .mode = mode,
+          .skip = skip,
+          .sync_timeout = sync_timeout,
+          .cte_type = cte_type,
+  };
+  return ErrorCode::SUCCESS;
+}
+
+ErrorCode LeController::LePeriodicAdvertisingSyncTransfer(uint16_t connection_handle,
+                                                          uint16_t service_data,
+                                                          uint16_t sync_handle) {
+  if (!connections_.HasLeAclHandle(connection_handle)) {
+    return ErrorCode::UNKNOWN_CONNECTION;
+  }
+  if (synchronized_.count(sync_handle) == 0) {
+    return ErrorCode::UNKNOWN_ADVERTISING_IDENTIFIER;
+  }
+  auto const& sync = synchronized_.at(sync_handle);
+  auto& connection = connections_.GetLeAclConnection(connection_handle);
+
+  SendLeLinkLayerPacket(model::packets::LlPeriodicSyncIndBuilder::Create(
+          connection.own_address.GetAddress(), connection.address.GetAddress(),
+          model::packets::PeriodicSyncType::SYNC_TRANSFER,
+          static_cast<model::packets::AddressType>(sync.advertiser_address_type),
+          sync.advertiser_address, sync.advertising_sid, sync.advertising_interval, service_data,
+          sync.big_info.has_value(), sync.big_info.value_or(model::packets::BigInfo{}),
+          static_cast<model::packets::PhyType>(sync.secondary_phy)));
+
+  return ErrorCode::SUCCESS;
+}
+
+ErrorCode LeController::LePeriodicAdvertisingSetInfoTransfer(uint16_t connection_handle,
+                                                             uint16_t service_data,
+                                                             uint8_t advertising_handle) {
+  if (!connections_.HasLeAclHandle(connection_handle)) {
+    return ErrorCode::UNKNOWN_CONNECTION;
+  }
+  auto it = extended_advertisers_.find(advertising_handle);
+  if (it == extended_advertisers_.end()) {
+    return ErrorCode::UNKNOWN_ADVERTISING_IDENTIFIER;
+  }
+  auto const& advertiser = it->second;
+  auto& connection = connections_.GetLeAclConnection(connection_handle);
+
+  uint8_t num_bis = 0, nse = 0, bn = 0, pto = 0, irc = 0, phy = 0, framing = 0, encryption = 0;
+  uint16_t iso_interval = 0, max_pdu = 0, max_sdu = 0;
+  uint32_t sdu_interval = 0;
+  bool has_big_info = link_layer_get_big_info(ll_.get(), advertiser.advertising_handle, &num_bis,
+                                              &nse, &iso_interval, &bn, &pto, &irc, &max_pdu,
+                                              &sdu_interval, &max_sdu, &phy, &framing, &encryption);
+
+  model::packets::BigInfo big_info(num_bis, nse, iso_interval, bn, pto, irc, max_pdu, sdu_interval,
+                                   max_sdu, phy, framing, encryption);
+
+  SendLeLinkLayerPacket(model::packets::LlPeriodicSyncIndBuilder::Create(
+          connection.own_address.GetAddress(), connection.address.GetAddress(),
+          model::packets::PeriodicSyncType::SET_INFO_TRANSFER,
+          static_cast<model::packets::AddressType>(advertiser.advertising_address.GetAddressType()),
+          advertiser.advertising_address.GetAddress(), advertiser.advertising_sid,
+          advertiser.periodic_advertising_interval.count(), service_data, has_big_info ? 1 : 0,
+          big_info, static_cast<model::packets::PhyType>(advertiser.secondary_advertising_phy)));
+
   return ErrorCode::SUCCESS;
 }
 
@@ -2816,8 +2988,8 @@ ErrorCode LeController::LeCsCreateConfig(
     return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
   }
 
-  if (channel_selection_type != bluetooth::hci::CsChannelSelectionType::TYPE_3C) {  // Algorithm #3c
-    // Local only supports #3c in this implementation
+  if (!(channel_selection_type == bluetooth::hci::CsChannelSelectionType::TYPE_3C ||
+        channel_selection_type == bluetooth::hci::CsChannelSelectionType::TYPE_3B)) {
     return ErrorCode::UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE;
   }
 
@@ -2933,6 +3105,8 @@ ErrorCode LeController::LeCsRemoveConfig(uint16_t connection_handle, uint8_t con
     return ErrorCode::INVALID_HCI_COMMAND_PARAMETERS;
   }
 
+  connection.cs_parameters.config_map.erase(it);
+
   SendLeLinkLayerPacket(model::packets::LlCsConfigReqBuilder::Create(
           connection.own_address.GetAddress(), connection.address.GetAddress(), config_id,
           0 /* Delete */, std::array<uint8_t, 10>{} /* channel_map */,
@@ -2941,8 +3115,6 @@ ErrorCode LeController::LeCsRemoveConfig(uint16_t connection_handle, uint8_t con
           0 /* mode_0_steps */, 1 /* cs_sync_phy */, 0 /* rtt_type */, 0 /* role */,
           0 /* channel_selection_type */, 0 /* ch3c_shape */, 0 /* ch3c_jump */, 0 /* t_ip1_time */,
           0 /* t_ip2_time */, 0 /* t_fcs_time */, 0 /* t_pm_time */));
-
-  connection.cs_parameters.config_map.erase(it);
 
   return ErrorCode::SUCCESS;
 }
@@ -3128,8 +3300,12 @@ ErrorCode LeController::LeCsProcedureEnable(uint16_t connection_handle, uint8_t 
   // If the Host issues this command to enable a CS configuration identified by the Config_ID
   // parameter that is already enabled using the HCI_LE_CS_Procedure_Enable command, then the
   // Controller shall return the error code Command Disallowed (0x0C).
-  if (cs_config.enabled) {
+  if (enable == bluetooth::hci::Enable::ENABLED && cs_config.enabled) {
     return ErrorCode::COMMAND_DISALLOWED;
+  }
+  if (enable == bluetooth::hci::Enable::DISABLED && !cs_config.enabled) {
+    DEBUG(id_, "CS procedure is already disabled");
+    return ErrorCode::SUCCESS;
   }
 
   // If the number of channels available for Channel Sounding before the start of a new CS procedure
@@ -3395,14 +3571,20 @@ void LeController::IncomingLlCsConfigReq(LeAclConnection& connection,
   }
 
   // Check if modes are supported by local
-  auto check_mode_supported = [](bluetooth::hci::CsModesSupported mode, uint8_t supported_mask) {
-    if (mode == bluetooth::hci::CsModesSupported::MODE_3) {
-      return (supported_mask & 0x01) != 0;
+  auto check_mode_supported = [](bluetooth::hci::CsMainModeType mode, uint8_t supported_mask) {
+    switch (mode) {
+      case bluetooth::hci::CsMainModeType::MODE_1:
+      case bluetooth::hci::CsMainModeType::MODE_2:
+        return true;
+      case bluetooth::hci::CsMainModeType::MODE_3:
+        return (supported_mask & static_cast<uint8_t>(bluetooth::hci::CsMainModeType::MODE_3)) != 0;
+      default:
+        return false;
     }
     return false;
   };
 
-  if (!check_mode_supported(static_cast<bluetooth::hci::CsModesSupported>(req.GetMainModeType()),
+  if (!check_mode_supported(static_cast<bluetooth::hci::CsMainModeType>(req.GetMainModeType()),
                             local_caps.modes_supported)) {
     INFO(id_, "Rejecting LL_CS_CONFIG_REQ because main mode {} is not supported",
          req.GetMainModeType());
@@ -3474,8 +3656,8 @@ void LeController::IncomingLlCsConfigReq(LeAclConnection& connection,
     return;
   }
 
-  if (req.GetChannelSelectionType() != 0x01) {
-    // Channel Selection Type 0x01 is the only supported value.
+  auto channel_selection_type = req.GetChannelSelectionType();
+  if (!(channel_selection_type == 0x01 || channel_selection_type == 0x00)) {
     INFO(id_, "Rejecting LL_CS_CONFIG_REQ because channel selection type {} is not supported",
          req.GetChannelSelectionType());
     SendLeLinkLayerPacket(model::packets::LlCsConfigRspBuilder::Create(
@@ -3551,41 +3733,37 @@ void LeController::IncomingLlCsConfigReq(LeAclConnection& connection,
   // is created only with local context.
   if (IsLeEventUnmasked(SubeventCode::LE_CS_CONFIG_COMPLETE)) {
     auto build_cs_config_event = [&](bluetooth::hci::CsAction action_type) {
+      bluetooth::hci::CsMainModeType main_mode = bluetooth::hci::CsMainModeType::MODE_1;
+      bluetooth::hci::CsSubModeType sub_mode = bluetooth::hci::CsSubModeType::UNUSED;
+      bluetooth::hci::CsRole role = bluetooth::hci::CsRole::INITIATOR;
+      bluetooth::hci::CsRttType rtt = bluetooth::hci::CsRttType::RTT_AA_ONLY;
+      bluetooth::hci::CsSyncPhy sync_phy = bluetooth::hci::CsSyncPhy::LE_1M_PHY;
+      bluetooth::hci::CsChannelSelectionType channel_selection =
+              bluetooth::hci::CsChannelSelectionType::TYPE_3B;
+      bluetooth::hci::CsCh3cShape shape = bluetooth::hci::CsCh3cShape::HAT_SHAPE;
 
-    bluetooth::hci::CsMainModeType main_mode = bluetooth::hci::CsMainModeType::MODE_1;
-    bluetooth::hci::CsSubModeType sub_mode = bluetooth::hci::CsSubModeType::UNUSED;
-    bluetooth::hci::CsRole role = bluetooth::hci::CsRole::INITIATOR;
-    bluetooth::hci::CsRttType rtt = bluetooth::hci::CsRttType::RTT_AA_ONLY;
-    bluetooth::hci::CsSyncPhy sync_phy = bluetooth::hci::CsSyncPhy::LE_1M_PHY;
-    bluetooth::hci::CsChannelSelectionType channel_selection =
-        bluetooth::hci::CsChannelSelectionType::TYPE_3B;
-    bluetooth::hci::CsCh3cShape shape = bluetooth::hci::CsCh3cShape::HAT_SHAPE;
+      if (action_type == bluetooth::hci::CsAction::CONFIG_CREATED) {
+        main_mode = static_cast<bluetooth::hci::CsMainModeType>(req.GetMainModeType());
+        sub_mode = static_cast<bluetooth::hci::CsSubModeType>(req.GetSubModeType());
+        role = static_cast<bluetooth::hci::CsRole>(local_role);
+        rtt = static_cast<bluetooth::hci::CsRttType>(req.GetRttType());
+        sync_phy = static_cast<bluetooth::hci::CsSyncPhy>(req.GetCsSyncPhy());
+        channel_selection =
+                static_cast<bluetooth::hci::CsChannelSelectionType>(req.GetChannelSelectionType());
+        shape = static_cast<bluetooth::hci::CsCh3cShape>(req.GetCh3CShape());
+      }
 
-
-    if (action_type == bluetooth::hci::CsAction::CONFIG_CREATED) {
-      main_mode = static_cast<bluetooth::hci::CsMainModeType>(req.GetMainModeType());
-      sub_mode = static_cast<bluetooth::hci::CsSubModeType>(req.GetSubModeType());
-      role = static_cast<bluetooth::hci::CsRole>(local_role);
-      rtt = static_cast<bluetooth::hci::CsRttType>(req.GetRttType());
-      sync_phy = static_cast<bluetooth::hci::CsSyncPhy>(req.GetCsSyncPhy());
-      channel_selection =
-          static_cast<bluetooth::hci::CsChannelSelectionType>(req.GetChannelSelectionType());
-      shape = static_cast<bluetooth::hci::CsCh3cShape>(req.GetCh3CShape());
-    }
-
-    return bluetooth::hci::LeCsConfigCompleteBuilder::Create(
-        ErrorCode::SUCCESS, connection.handle, config_id, action_type,
-        main_mode, sub_mode, req.GetMinMainModeSteps(), req.GetMaxMainModeSteps(),
-        req.GetMainModeRepetition(), req.GetMode0Steps(), role, rtt, sync_phy,
-        req.GetChannelMap(), req.GetChannelMapRepetition(), channel_selection, shape,
-        0 /*reserved*/, req.GetCh3CJump(), req.GetTIp1(), req.GetTIp2(), req.GetTFcs(),
-        req.GetTPm());
-};
-
+      return bluetooth::hci::LeCsConfigCompleteBuilder::Create(
+              ErrorCode::SUCCESS, connection.handle, config_id, action_type, main_mode, sub_mode,
+              req.GetMinMainModeSteps(), req.GetMaxMainModeSteps(), req.GetMainModeRepetition(),
+              req.GetMode0Steps(), role, rtt, sync_phy, req.GetChannelMap(),
+              req.GetChannelMapRepetition(), channel_selection, shape, 0 /*reserved*/,
+              req.GetCh3CJump(), req.GetTIp1(), req.GetTIp2(), req.GetTFcs(), req.GetTPm());
+    };
 
     bluetooth::hci::CsAction final_action = (action == 1)
-    ? bluetooth::hci::CsAction::CONFIG_CREATED
-    : bluetooth::hci::CsAction::CONFIG_REMOVED;
+                                                    ? bluetooth::hci::CsAction::CONFIG_CREATED
+                                                    : bluetooth::hci::CsAction::CONFIG_REMOVED;
 
     send_event_(build_cs_config_event(final_action));
   }
@@ -3604,25 +3782,23 @@ void LeController::IncomingLlCsConfigRsp(LeAclConnection& connection,
   auto it = connection.cs_parameters.config_map.find(config_id);
 
   if (it == connection.cs_parameters.config_map.end()) {
+    DEBUG("Config removed or never existed (fallback)!");
     if (IsLeEventUnmasked(SubeventCode::LE_CS_CONFIG_COMPLETE)) {
       send_event_(bluetooth::hci::LeCsConfigCompleteBuilder::Create(
               error_code, connection.handle, config_id, bluetooth::hci::CsAction::CONFIG_REMOVED,
-              static_cast<bluetooth::hci::CsMainModeType>(0) /*main_mode_type*/,
-              static_cast<bluetooth::hci::CsSubModeType>(0) /*sub_mode_type*/,
+              bluetooth::hci::CsMainModeType::MODE_1, bluetooth::hci::CsSubModeType::UNUSED,
               0 /*min_main_mode_steps*/, 0 /*max_main_mode_steps*/, 0 /*main_mode_repetition*/,
-              0 /*mode_0_steps*/, static_cast<bluetooth::hci::CsRole>(0) /*role*/,
-              static_cast<bluetooth::hci::CsRttType>(0) /*rtt_type*/,
-              static_cast<bluetooth::hci::CsSyncPhy>(0) /*cs_sync_phy*/, {} /*channel_map*/,
-              0 /*channel_map_repetition*/,
-              static_cast<bluetooth::hci::CsChannelSelectionType>(0) /*channel_selection_type*/,
-              static_cast<bluetooth::hci::CsCh3cShape>(0) /*ch3c_shape*/, 0 /*ch3c_jump*/,
-              0 /*reserved*/, 0 /*t_ip1*/, 0 /*t_ip2*/, 0 /*tfcs*/, 0 /*tpm*/));
+              0 /*mode_0_steps*/, bluetooth::hci::CsRole::INITIATOR,
+              bluetooth::hci::CsRttType::RTT_AA_ONLY, bluetooth::hci::CsSyncPhy::LE_1M_PHY,
+              {} /*channel_map*/, 0 /*channel_map_repetition*/,
+              bluetooth::hci::CsChannelSelectionType::TYPE_3B,
+              bluetooth::hci::CsCh3cShape::HAT_SHAPE, 0 /*ch3c_jump*/, 0 /*reserved*/, 0 /*t_ip1*/,
+              0 /*t_ip2*/, 0 /*tfcs*/, 0 /*tpm*/));
+      return;
     }
-    return;
   }
 
   const auto config = it->second;
-
   if (error_code != ErrorCode::SUCCESS) {
     connection.cs_parameters.config_map.erase(it);
   }
@@ -3774,6 +3950,21 @@ void LeController::IncomingLlCsReq(LeAclConnection& connection,
   // the LL_CS_REQ PDU or chooses to select alternative parameters, then it shall send an
   // LL_CS_RSP PDU.
   if (connection.role == bluetooth::hci::Role::PERIPHERAL) {
+    it->second.procedure_parameters = LeCsProcedureParameters{
+            .max_procedure_len = req.GetMaxProcedureLen(),
+            .min_procedure_interval = req.GetProcedureInterval(),
+            .max_procedure_interval = req.GetProcedureInterval(),
+            .max_procedure_count = req.GetProcedureCount(),
+            .min_subevent_len = req.GetSubeventLen(),
+            .max_subevent_len = req.GetSubeventLen(),
+            .tone_antenna_config_selection = req.GetAci(),
+            .phy = static_cast<bluetooth::hci::CsPhy>(req.GetPhy()),
+            .tx_power_delta = static_cast<uint8_t>(req.GetPwrDelta()),
+            .preferred_peer_antenna =
+                    static_cast<bluetooth::hci::CsPreferredPeerAntenna>(req.GetPreferredPeerAnt()),
+            .snr_control_initiator = static_cast<bluetooth::hci::CsSnrControl>(req.GetTxSnrI()),
+            .snr_control_reflector = static_cast<bluetooth::hci::CsSnrControl>(req.GetTxSnrR())};
+
     SendLeLinkLayerPacket(model::packets::LlCsRspBuilder::Create(
             connection.own_address.GetAddress(), connection.address.GetAddress(),
             static_cast<uint8_t>(ErrorCode::SUCCESS), config_id, req.GetConnEventCount(),
@@ -3794,17 +3985,38 @@ void LeController::IncomingLlCsReq(LeAclConnection& connection,
     // HCI_LE_CS_Procedure_Enable_Complete event shall be sent to the Host after the LL_CS_IND is
     // transmitted and before any CS subevent results are available.
     if (IsLeEventUnmasked(SubeventCode::LE_CS_PROCEDURE_ENABLE_COMPLETE)) {
-      uint8_t config_id = req.GetConfigId();
-      auto config_it = connection.cs_parameters.config_map.find(config_id);
-      if (config_it != connection.cs_parameters.config_map.end()) {
-        const auto& params = config_it->second.procedure_parameters.value();
-        send_event_(bluetooth::hci::LeCsProcedureEnableCompleteBuilder::Create(
-                ErrorCode::SUCCESS, connection.handle, config_id, bluetooth::hci::Enable::ENABLED,
-                params.tone_antenna_config_selection, params.tx_power_delta, req.GetSubeventLen(),
-                req.GetSubeventsPerEvent(), req.GetSubeventInterval(), req.GetEventInterval(),
-                params.min_procedure_interval, params.max_procedure_count,
-                params.max_procedure_len));
+      uint8_t tone_antenna_config_selection = 0;
+      int8_t tx_power_delta = 0;
+      uint16_t min_procedure_interval = 0;
+      uint16_t max_procedure_count = 0;
+      uint16_t max_procedure_len = 0;
+
+      if (it->second.procedure_parameters.has_value()) {
+        const auto& params = it->second.procedure_parameters.value();
+        tone_antenna_config_selection = params.tone_antenna_config_selection;
+        tx_power_delta = params.tx_power_delta;
+        min_procedure_interval = params.min_procedure_interval;
+        max_procedure_count = params.max_procedure_count;
+        max_procedure_len = params.max_procedure_len;
+      } else {
+        tone_antenna_config_selection = req.GetAci();
+        tx_power_delta = req.GetPwrDelta();
       }
+
+      send_event_(bluetooth::hci::LeCsProcedureEnableCompleteBuilder::Create(
+              ErrorCode::SUCCESS, connection.handle, config_id, bluetooth::hci::Enable::ENABLED,
+              tone_antenna_config_selection, tx_power_delta, req.GetSubeventLen(),
+              req.GetSubeventsPerEvent(), req.GetSubeventInterval(), req.GetEventInterval(),
+              min_procedure_interval, max_procedure_count, max_procedure_len));
+    }
+
+    if (it != connection.cs_parameters.config_map.end()) {
+      it->second.enabled = true;
+      it->second.remaining_procedure_count =
+              it->second.procedure_parameters.has_value()
+                      ? it->second.procedure_parameters->max_procedure_count
+                      : 1;
+      it->second.result_timeout = std::chrono::steady_clock::now() + kCsProcedureInterval;
     }
   }
 }
@@ -3818,9 +4030,12 @@ void LeController::IncomingLlCsRsp(LeAclConnection& connection,
   auto rsp = model::packets::LlCsRspView::Create(incoming);
   ASSERT(rsp.IsValid());
 
-  // If the receiving Link Layer is in the Peripheral role ...
+  uint8_t config_id = rsp.GetConfigId();
+  auto config_it = connection.cs_parameters.config_map.find(config_id);
+  // If the receiving Link Layer is in the Peripheral role
   // This packet is sent by Peripheral to Central.
   // So we are Central.
+
   if (connection.role == bluetooth::hci::Role::CENTRAL) {
     // When a Link Layer in the Central role receives either an LL_CS_REQ PDU or an LL_CS_RSP PDU,
     // it shall either prepare to start the CS procedure by replying with an LL_CS_IND PDU or it
@@ -3834,17 +4049,42 @@ void LeController::IncomingLlCsRsp(LeAclConnection& connection,
             rsp.GetPwrDelta()));
 
     if (IsLeEventUnmasked(SubeventCode::LE_CS_PROCEDURE_ENABLE_COMPLETE)) {
-      uint8_t config_id = rsp.GetConfigId();
-      auto config_it = connection.cs_parameters.config_map.find(config_id);
       if (config_it != connection.cs_parameters.config_map.end()) {
-        const auto& params = config_it->second.procedure_parameters.value();
+        uint8_t tone_antenna_config_selection = 0;
+        int8_t tx_power_delta = 0;
+        uint16_t min_procedure_interval = 0;
+        uint16_t max_procedure_count = 0;
+        uint16_t max_procedure_len = 0;
+
+        if (config_it->second.procedure_parameters.has_value()) {
+          const auto& params = config_it->second.procedure_parameters.value();
+          tone_antenna_config_selection = params.tone_antenna_config_selection;
+          tx_power_delta = params.tx_power_delta;
+          min_procedure_interval = params.min_procedure_interval;
+          max_procedure_count = params.max_procedure_count;
+          max_procedure_len = params.max_procedure_len;
+        } else {
+          tone_antenna_config_selection = rsp.GetAci();
+          tx_power_delta = rsp.GetPwrDelta();
+          // max_procedure_len, min_procedure_interval, max_procedure_count
+          // should not be 0 here ideally but they are not available directly
+          // from rsp in this path unless stored via LL_CS_REQ
+        }
+
         send_event_(bluetooth::hci::LeCsProcedureEnableCompleteBuilder::Create(
                 ErrorCode::SUCCESS, connection.handle, config_id, bluetooth::hci::Enable::ENABLED,
-                params.tone_antenna_config_selection, params.tx_power_delta, rsp.GetSubeventLen(),
+                tone_antenna_config_selection, tx_power_delta, rsp.GetSubeventLen(),
                 rsp.GetSubeventsPerEvent(), rsp.GetSubeventInterval(), rsp.GetEventInterval(),
-                params.min_procedure_interval, params.max_procedure_count,
-                params.max_procedure_len));
+                min_procedure_interval, max_procedure_count, max_procedure_len));
       }
+    }
+    if (config_it != connection.cs_parameters.config_map.end()) {
+      config_it->second.enabled = true;
+      config_it->second.remaining_procedure_count =
+              config_it->second.procedure_parameters.has_value()
+                      ? config_it->second.procedure_parameters->max_procedure_count
+                      : 1;
+      config_it->second.result_timeout = std::chrono::steady_clock::now() + kCsProcedureInterval;
     }
   }
 }
@@ -3870,21 +4110,46 @@ void LeController::IncomingLlCsInd(LeAclConnection& connection,
   auto ind = model::packets::LlCsIndView::Create(incoming);
   ASSERT(ind.IsValid());
 
+  uint8_t config_id = ind.GetConfigId();
+  auto config_it = connection.cs_parameters.config_map.find(config_id);
   if (connection.role == bluetooth::hci::Role::PERIPHERAL) {
-    INFO(id_, "CS procedure started (Config ID: {})", ind.GetConfigId());
+    INFO(id_, "CS procedure started (Config ID: {})", config_id);
 
     if (IsLeEventUnmasked(SubeventCode::LE_CS_PROCEDURE_ENABLE_COMPLETE)) {
-      uint8_t config_id = ind.GetConfigId();
-      auto config_it = connection.cs_parameters.config_map.find(config_id);
       if (config_it != connection.cs_parameters.config_map.end()) {
-        const auto& params = config_it->second.procedure_parameters.value();
+        uint8_t tone_antenna_config_selection = 0;
+        int8_t tx_power_delta = 0;
+        uint16_t min_procedure_interval = 0;
+        uint16_t max_procedure_count = 0;
+        uint16_t max_procedure_len = 0;
+
+        if (config_it->second.procedure_parameters.has_value()) {
+          const auto& params = config_it->second.procedure_parameters.value();
+          tone_antenna_config_selection = params.tone_antenna_config_selection;
+          tx_power_delta = params.tx_power_delta;
+          min_procedure_interval = params.min_procedure_interval;
+          max_procedure_count = params.max_procedure_count;
+          max_procedure_len = params.max_procedure_len;
+        } else {
+          tone_antenna_config_selection = ind.GetAci();
+          tx_power_delta = ind.GetPwrDelta();
+        }
+
         send_event_(bluetooth::hci::LeCsProcedureEnableCompleteBuilder::Create(
                 ErrorCode::SUCCESS, connection.handle, config_id, bluetooth::hci::Enable::ENABLED,
-                params.tone_antenna_config_selection, params.tx_power_delta, ind.GetSubeventLen(),
+                tone_antenna_config_selection, tx_power_delta, ind.GetSubeventLen(),
                 ind.GetSubeventsPerEvent(), ind.GetSubeventInterval(), ind.GetEventInterval(),
-                params.min_procedure_interval, params.max_procedure_count,
-                params.max_procedure_len));
+                min_procedure_interval, max_procedure_count, max_procedure_len));
       }
+    }
+
+    if (config_it != connection.cs_parameters.config_map.end()) {
+      config_it->second.enabled = true;
+      config_it->second.remaining_procedure_count =
+              config_it->second.procedure_parameters.has_value()
+                      ? config_it->second.procedure_parameters->max_procedure_count
+                      : 1;
+      config_it->second.result_timeout = std::chrono::steady_clock::now() + kCsProcedureInterval;
     }
   }
 }
@@ -3903,6 +4168,8 @@ void LeController::IncomingLlCsTerminateReq(LeAclConnection& connection,
   if (config_it == connection.cs_parameters.config_map.end()) {
     DEBUG(id_, "Config ID {} not found", terminate_req.GetConfigId());
     error_code = static_cast<uint8_t>(ErrorCode::COMMAND_DISALLOWED);
+  } else if (error_code == static_cast<uint8_t>(ErrorCode::SUCCESS)) {
+    config_it->second.enabled = false;
   }
 
   SendLeLinkLayerPacket(model::packets::LlCsTerminateRspBuilder::Create(
@@ -3931,6 +4198,234 @@ void LeController::IncomingLlCsTerminateRsp(LeAclConnection& connection,
             0 /* tone_antenna_config_selection */, 0 /* selected_tx_power */, 0 /* subevent_len */,
             0 /* subevents_per_event */, 0 /* subevent_interval */, 0 /* event_interval */,
             0 /*procedure_interval */, 0 /*procedure_count*/, 0 /*max_procedure_len*/));
+  }
+}
+
+void LeController::LeChannelSounding() {
+  auto now = std::chrono::steady_clock::now();
+  for (auto handle : connections_.GetLeAclHandles()) {
+    auto& connection = connections_.GetLeAclConnection(handle);
+    for (auto& [config_id, config] : connection.cs_parameters.config_map) {
+      if (config.enabled && config.remaining_procedure_count > 0 &&
+          config.result_timeout.has_value() && now >= config.result_timeout.value()) {
+        DEBUG(id_, "Sending CS subevent result; procedures remaining: {}",
+              config.remaining_procedure_count);
+        config.remaining_procedure_count--;
+        SendLeCsSubeventResult(connection, config);
+        if (config.remaining_procedure_count > 0) {
+          config.result_timeout = now + kCsProcedureInterval;
+        } else {
+          config.enabled = false;
+        }
+      }
+    }
+  }
+}
+
+void LeController::SendLeCsSubeventResult(LeAclConnection& connection, LeCsConfig& config) {
+  if (!IsLeEventUnmasked(SubeventCode::LE_CS_SUBEVENT_RESULT)) {
+    return;
+  }
+
+  unsigned simulated_distance_cm = 10;
+  if (ranging_estimator_) {
+    simulated_distance_cm = ranging_estimator_(connection.own_address.GetAddress(),
+                                               connection.address.GetAddress());
+  }
+
+  auto connection_handle = connection.handle;
+
+  std::vector<bluetooth::hci::LeCsResultDataStructure> results;
+  uint16_t total_steps_requested = config.max_main_mode_steps;
+  uint8_t main_mode_type = config.main_mode_type;
+  uint16_t kMinMainModeSteps = 48;
+  if (total_steps_requested < kMinMainModeSteps) {
+    total_steps_requested = kMinMainModeSteps;
+  }
+  bool is_initiator = config.role == static_cast<uint8_t>(bluetooth::hci::CsRole::INITIATOR);
+  bool has_sounding_sequence =
+          (config.rtt_type ==
+                   static_cast<uint8_t>(
+                           bluetooth::hci::CsRttType::RTT_WITH_32_BIT_SOUNDING_SEQUENCE) ||
+           config.rtt_type ==
+                   static_cast<uint8_t>(
+                           bluetooth::hci::CsRttType::RTT_WITH_96_BIT_SOUNDING_SEQUENCE));
+  uint8_t num_antenna_paths = 1;
+  uint16_t num_tone_data = num_antenna_paths + 1;
+
+  // 1. Hoist Invariants: Calculate sizes outside the loop
+  // Please refer Core Spec Vol 4, Part E § 7.7.6.44 for calculation of data size based on main mode
+  // type.
+  uint8_t mode1_size = has_sounding_sequence ? 14 : 6;
+  uint8_t mode2_size = 1 + (4 * num_tone_data);
+  uint8_t step_data_size;
+
+  switch (main_mode_type) {
+    case 0:
+      step_data_size = is_initiator ? 5 : 3;
+      break;
+    case 1:
+      step_data_size = mode1_size;
+      break;
+    case 2:
+      step_data_size = mode2_size;
+      break;
+    case 3:
+      step_data_size = mode1_size + mode2_size;
+      break;
+    default:
+      step_data_size = 5;
+      break;
+  }
+
+  double distance_meters = simulated_distance_cm / 100.0;
+  double speed_of_light = 299792458.0;
+  double time_delay_s = distance_meters / speed_of_light;
+  uint16_t toa_tod = static_cast<uint16_t>((simulated_distance_cm * 2) / 15);
+
+  // 3. Define helper lambdas for bit-packing
+  auto pack_mode1 = [&](std::vector<uint8_t>& data_out, size_t offset) {
+    data_out[offset + 0] = 0;     // Packet_Quality
+    data_out[offset + 1] = 0xFF;  // Packet_NADM
+    data_out[offset + 2] = 0x7F;  // Packet_RSSI
+    data_out[offset + 3] = static_cast<uint8_t>(toa_tod & 0xFF);
+    data_out[offset + 4] = static_cast<uint8_t>((toa_tod >> 8) & 0xFF);
+    data_out[offset + 5] = 1;  // Packet_Antenna
+    if (has_sounding_sequence) {
+      // Cleanly fill the 8 bytes of PCT1 and PCT2 with 0xFF
+      std::fill(data_out.begin() + offset + 6, data_out.begin() + offset + 14, 0xFF);
+    }
+  };
+
+  auto pack_mode2 = [&](std::vector<uint8_t>& data_out, size_t offset, int16_t i_val,
+                        int16_t q_val) {
+    data_out[offset] = 0;  // Antenna_Path_Permutation_Index
+    for (int k = 0; k < num_tone_data; k++) {
+      int t_offset = offset + 1 + (k * 4);
+      data_out[t_offset] = i_val & 0xFF;
+      data_out[t_offset + 1] = ((q_val & 0xF) << 4) | ((i_val >> 8) & 0xF);
+      data_out[t_offset + 2] = (q_val >> 4) & 0xFF;
+      data_out[t_offset + 3] = 0;  // Tone Quality Indicator
+    }
+  };
+
+  // 4. Flattened Iteration Loop
+  while (results.size() < total_steps_requested) {
+    config.last_rotated_channel = (config.last_rotated_channel + 1) % 80;
+    uint8_t current_ch = config.last_rotated_channel;
+
+    if (!(config.channel_map[current_ch / 8] & (1 << (current_ch % 8)))) {
+      continue;
+    }
+    // Calculate channel-specific physics
+    double freq_mhz = 2402.0 + current_ch;
+    double freq_hz = freq_mhz * 1000000.0;
+    // The Host CS distance algorithm adds up phases from both initiator and reflector:
+    // (Phase_Initiator + Phase_Reflector_Turnaround).
+    // If we specify a 2-way delay for each Endpoint here, the Host perceives double the physical
+    // distance because it inherently factors both endpoint measurements as part of a single
+    // Roundtrip link! To correct this, we report a realistic independent measurement (one-way
+    // physical delay)
+    double phase = -2.0 * std::numbers::pi * freq_hz * time_delay_s;
+    int16_t i_sample = static_cast<int16_t>(cos(phase) * 2047.0);
+    int16_t q_sample = static_cast<int16_t>(sin(phase) * 2047.0);
+
+    std::vector<uint8_t> data(step_data_size, 0);
+
+    switch (main_mode_type) {
+      case 0:
+        data[0] = 0;     // Packet_Quality
+        data[1] = 0x7F;  // Packet_RSSI
+        data[2] = 1;     // Packet_Antenna
+        if (is_initiator) {
+          data[3] = 0;  // Measured_Freq_Offset LSB
+          data[4] = 0;  // Measured_Freq_Offset MSB
+        }
+        break;
+      case 1:
+        pack_mode1(data, 0);
+        break;
+      case 2:
+        pack_mode2(data, 0, i_sample, q_sample);
+        break;
+      case 3:
+        pack_mode1(data, 0);
+        pack_mode2(data, mode1_size, i_sample, q_sample);
+        break;
+    }
+
+    bluetooth::hci::LeCsResultDataStructure res;
+    res.step_mode_ = static_cast<uint8_t>(main_mode_type);
+    res.step_channel_ = current_ch;
+    res.step_data_ = std::move(data);
+
+    results.push_back(std::move(res));
+  }
+
+  const size_t max_payload = 255;
+  const size_t first_event_header_size = 16;  // Based on PDL fields
+  const size_t continue_event_header_size = 9;
+
+  size_t result_index = 0;
+  size_t current_size = 0;
+  std::vector<bluetooth::hci::LeCsResultDataStructure> current_batch;
+
+  // Fill first packet (LE_CS_SUBEVENT_RESULT)
+
+  size_t result_size = results[result_index].GetSize();
+  for (; result_index < results.size(); ++result_index) {
+    if (first_event_header_size + current_size + result_size > max_payload) {
+      break;
+    }
+    current_size += result_size;
+    current_batch.push_back(std::move(results[result_index]));
+  }
+
+  bool more_results = result_index < results.size();
+  bluetooth::hci::CsSubeventDoneStatus first_status =
+          more_results ? bluetooth::hci::CsSubeventDoneStatus::PARTIAL_RESULTS
+                       : bluetooth::hci::CsSubeventDoneStatus::ALL_RESULTS_COMPLETE;
+  bluetooth::hci::CsProcedureDoneStatus first_proc_status =
+          more_results ? bluetooth::hci::CsProcedureDoneStatus::PARTIAL_RESULTS
+                       : bluetooth::hci::CsProcedureDoneStatus::ALL_RESULTS_COMPLETE;
+
+  send_event_(bluetooth::hci::LeCsSubeventResultBuilder::Create(
+          connection_handle, config.config_id, 0 /* start_acl_conn_event_counter */,
+          connection.cs_parameters.procedure_count, 0xC000 /* frequency_compensation */,
+          0x7f /* reference_power_level */, first_proc_status, first_status,
+          bluetooth::hci::ProcedureAbortReason::NO_ABORT,
+          bluetooth::hci::SubeventAbortReason::NO_ABORT, 1 /* num_antenna_paths */,
+          std::move(current_batch)));
+
+  if (!IsLeEventUnmasked(SubeventCode::LE_CS_SUBEVENT_RESULT_CONTINUE)) {
+    return;
+  }
+  // Fill subsequent packets (LE_CS_SUBEVENT_RESULT_CONTINUE)
+  while (more_results) {
+    current_size = 0;
+    current_batch.clear();
+    for (; result_index < results.size(); ++result_index) {
+      size_t result_size = results[result_index].GetSize();
+      if (continue_event_header_size + current_size + result_size > max_payload) {
+        break;
+      }
+      current_size += result_size;
+      current_batch.push_back(results[result_index]);
+    }
+
+    more_results = result_index < results.size();
+    bluetooth::hci::CsSubeventDoneStatus continue_status =
+            more_results ? bluetooth::hci::CsSubeventDoneStatus::PARTIAL_RESULTS
+                         : bluetooth::hci::CsSubeventDoneStatus::ALL_RESULTS_COMPLETE;
+    bluetooth::hci::CsProcedureDoneStatus continue_proc_status =
+            more_results ? bluetooth::hci::CsProcedureDoneStatus::PARTIAL_RESULTS
+                         : bluetooth::hci::CsProcedureDoneStatus::ALL_RESULTS_COMPLETE;
+
+    send_event_(bluetooth::hci::LeCsSubeventResultContinueBuilder::Create(
+            connection_handle, config.config_id, continue_proc_status, continue_status,
+            bluetooth::hci::ProcedureAbortReason::NO_ABORT,
+            bluetooth::hci::SubeventAbortReason::NO_ABORT, 1 /* num_antenna_paths */,
+            std::move(current_batch)));
   }
 }
 
@@ -4057,13 +4552,64 @@ LeController::LeController(const Address& address, const ControllerProperties& p
 
                     *periodic_enabled = it->second.IsPeriodicEnabled();
                     return true;
+                  },
+
+          .is_sync_handle_valid =
+                  [](void* user, uint16_t sync_handle) {
+                    auto controller = static_cast<LeController*>(user);
+                    return controller->synchronized_.find(sync_handle) !=
+                           controller->synchronized_.end();
+                  },
+
+          .get_sync_big_info =
+                  [](void* user, uint16_t sync_handle, uint8_t* num_bis, uint8_t* nse,
+                     uint16_t* iso_interval, uint8_t* bn, uint8_t* pto, uint8_t* irc,
+                     uint16_t* max_pdu, uint32_t* sdu_interval, uint16_t* max_sdu, uint8_t* phy,
+                     uint8_t* framing, uint8_t* encryption) {
+                    auto controller = static_cast<LeController*>(user);
+                    auto it = controller->synchronized_.find(sync_handle);
+                    if (it == controller->synchronized_.end()) {
+                      return false;
+                    }
+                    if (auto const& big_info = it->second.big_info) {
+                      *num_bis = big_info->num_bis_;
+                      *nse = big_info->nse_;
+                      *iso_interval = big_info->iso_interval_;
+                      *bn = big_info->bn_;
+                      *pto = big_info->pto_;
+                      *irc = big_info->irc_;
+                      *max_pdu = big_info->max_pdu_;
+                      *sdu_interval = big_info->sdu_interval_;
+                      *max_sdu = big_info->max_sdu_;
+                      *phy = big_info->phy_;
+                      *framing = big_info->framing_;
+                      *encryption = big_info->encryption_;
+                      return true;
+                    }
+                    return false;
+                  },
+
+          .send_big_terminate_ind =
+                  [](void* user, uint8_t advertising_handle, uint8_t reason) {
+                    auto controller = static_cast<LeController*>(user);
+                    Address source = controller->address_;
+                    uint8_t sid = 0;
+                    auto it = controller->extended_advertisers_.find(advertising_handle);
+                    if (it != controller->extended_advertisers_.end()) {
+                      source = it->second.GetAdvertisingAddress().GetAddress();
+                      sid = it->second.advertising_sid;
+                    }
+                    controller->SendLeLinkLayerPacket(
+                            model::packets::LlBigTerminateIndBuilder::Create(
+                                    source, bluetooth::hci::Address::kEmpty, sid, reason, 0));
                   }};
 
   ll_.reset(link_layer_create(controller_ops_));
 }
 
 void LeController::RegisterRangingEstimator(
-        std::function<unsigned(void const* cookie1, void const* cookie2)> const& callback) {
+        std::function<unsigned(const Address source_address, const Address target_address)> const&
+                callback) {
   ranging_estimator_ = callback;
 }
 
@@ -4108,10 +4654,14 @@ void LeController::IncomingPacket(model::packets::LinkLayerPacketView incoming, 
       return IncomingLeExtendedAdvertisingPdu(incoming, rssi);
     case model::packets::PacketType::LE_PERIODIC_ADVERTISING_PDU:
       return IncomingLePeriodicAdvertisingPdu(incoming, rssi);
+    case model::packets::PacketType::LL_BIG_TERMINATE_IND:
+      return IncomingLlBigTerminateInd(incoming);
     case model::packets::PacketType::LE_CONNECT:
       return IncomingLeConnectPacket(incoming);
     case model::packets::PacketType::LE_CONNECT_COMPLETE:
       return IncomingLeConnectCompletePacket(incoming);
+    case model::packets::PacketType::LE_BROADCAST_ISOCHRONOUS_PDU:
+      return IncomingLeBroadcastIsochronousPdu(incoming);
     default:
       break;
   }
@@ -4136,6 +4686,9 @@ void LeController::IncomingPacket(model::packets::LinkLayerPacketView incoming, 
       break;
     case model::packets::PacketType::LE_CONNECTED_ISOCHRONOUS_PDU:
       IncomingLeConnectedIsochronousPdu(incoming);
+      break;
+    case model::packets::PacketType::LL_PERIODIC_SYNC_IND:
+      IncomingLlPeriodicSyncInd(connection, incoming);
       break;
     case model::packets::PacketType::DISCONNECT:
       IncomingLeDisconnectPacket(connection, incoming);
@@ -4629,7 +5182,7 @@ void LeController::ScanIncomingLeLegacyAdvertisingPdu(
 }
 
 void LeController::ConnectIncomingLeLegacyAdvertisingPdu(
-        model::packets::LeLegacyAdvertisingPduView& pdu) {
+        model::packets::LeLegacyAdvertisingPduView& pdu, uint8_t rssi) {
   if (!initiator_.IsEnabled()) {
     return;
   }
@@ -4678,10 +5231,12 @@ void LeController::ConnectIncomingLeLegacyAdvertisingPdu(
       }
       break;
     case bluetooth::hci::InitiatorFilterPolicy::USE_FILTER_ACCEPT_LIST_WITH_PEER_ADDRESS:
-      if (!LeFilterAcceptListContainsDevice(resolved_advertising_address)) {
+      if (!LeFilterAcceptListContainsDeviceWithThreshold(resolved_advertising_address,
+                                                         static_cast<int8_t>(rssi),
+                                                         pdu.GetAdvertisingData())) {
         DEBUG(id_,
               "Legacy advertising ignored by initiator because the "
-              "advertising address {} is not in the filter accept list",
+              "advertising address {} is not in the filter accept list or threshold not met",
               resolved_advertising_address);
         return;
       }
@@ -4778,7 +5333,7 @@ void LeController::IncomingLeLegacyAdvertisingPdu(model::packets::LinkLayerPacke
   ASSERT(pdu.IsValid());
 
   ScanIncomingLeLegacyAdvertisingPdu(pdu, rssi);
-  ConnectIncomingLeLegacyAdvertisingPdu(pdu);
+  ConnectIncomingLeLegacyAdvertisingPdu(pdu, rssi);
 }
 
 // Handle legacy advertising PDUs while in the Scanning state.
@@ -5048,7 +5603,7 @@ void LeController::ScanIncomingLeExtendedAdvertisingPdu(
 }
 
 void LeController::ConnectIncomingLeExtendedAdvertisingPdu(
-        model::packets::LeExtendedAdvertisingPduView& pdu) {
+        model::packets::LeExtendedAdvertisingPduView& pdu, uint8_t rssi) {
   if (!initiator_.IsEnabled()) {
     return;
   }
@@ -5094,10 +5649,12 @@ void LeController::ConnectIncomingLeExtendedAdvertisingPdu(
       }
       break;
     case bluetooth::hci::InitiatorFilterPolicy::USE_FILTER_ACCEPT_LIST_WITH_PEER_ADDRESS:
-      if (!LeFilterAcceptListContainsDevice(resolved_advertising_address)) {
+      if (!LeFilterAcceptListContainsDeviceWithThreshold(
+                  resolved_advertising_address, static_cast<int8_t>(rssi), pdu.GetAdvertisingData(),
+                  static_cast<int8_t>(pdu.GetTxPower()))) {
         DEBUG(id_,
               "Extended advertising ignored by initiator because the "
-              "advertising address {} is not in the filter accept list",
+              "advertising address {} is not in the filter accept list or threshold not met",
               resolved_advertising_address);
         return;
       }
@@ -5194,7 +5751,7 @@ void LeController::IncomingLeExtendedAdvertisingPdu(model::packets::LinkLayerPac
   ASSERT(pdu.IsValid());
 
   ScanIncomingLeExtendedAdvertisingPdu(pdu, rssi);
-  ConnectIncomingLeExtendedAdvertisingPdu(pdu);
+  ConnectIncomingLeExtendedAdvertisingPdu(pdu, rssi);
 }
 
 void LeController::IncomingLePeriodicAdvertisingPdu(model::packets::LinkLayerPacketView incoming,
@@ -5202,11 +5759,6 @@ void LeController::IncomingLePeriodicAdvertisingPdu(model::packets::LinkLayerPac
   auto pdu = model::packets::LePeriodicAdvertisingPduView::Create(incoming);
   ASSERT(pdu.IsValid());
 
-  // Synchronization with periodic advertising only occurs while extended
-  // scanning is enabled.
-  if (!scanner_.IsEnabled()) {
-    return;
-  }
   if (!ExtendedAdvertising()) {
     DEBUG(id_, "Extended advertising ignored because the scanner is legacy");
     return;
@@ -5239,10 +5791,80 @@ void LeController::IncomingLePeriodicAdvertisingPdu(model::packets::LinkLayerPac
       break;
   }
 
-  // Check if the periodic advertising PDU matches a pending
-  // LE Periodic Advertising Create Sync command.
-  // The direct parameters or the periodic advertiser list are used
-  // depending on the synchronizing options.
+  // Check if the periodic advertising PDU matches any of the established syncs.
+  // This does NOT require scanning to be enabled.
+  for (auto& [_, sync] : synchronized_) {
+    if (!sync.established_event_sent) {
+      continue;
+    }
+    if (sync.advertiser_address_type != advertiser_address_type ||
+        sync.advertiser_address != resolved_advertiser_address.GetAddress() ||
+        sync.advertising_sid != advertising_sid) {
+      continue;
+    }
+
+    // Send a Periodic Advertising event for the matching Sync,
+    // and refresh the timeout for sync termination. The periodic
+    // advertising event might need to be fragmented to fit the maximum
+    // size of an HCI event.
+
+    if (IsLeEventUnmasked(SubeventCode::LE_PERIODIC_ADVERTISING_REPORT_V1)) {
+      // Each extended advertising report can only pass 229 bytes of
+      // advertising data (255 - 8 = size of report fields).
+      std::vector<uint8_t> advertising_data = pdu.GetAdvertisingData();
+      const size_t max_fragment_size = 247;
+      size_t offset = 0;
+      do {
+        size_t remaining_size = advertising_data.size() - offset;
+        size_t fragment_size = std::min(max_fragment_size, remaining_size);
+
+        bluetooth::hci::DataStatus data_status = remaining_size <= max_fragment_size
+                                                         ? bluetooth::hci::DataStatus::COMPLETE
+                                                         : bluetooth::hci::DataStatus::CONTINUING;
+        std::vector<uint8_t> fragment_data(advertising_data.begin() + offset,
+                                           advertising_data.begin() + offset + fragment_size);
+        offset += fragment_size;
+        send_event_(bluetooth::hci::LePeriodicAdvertisingReportV1Builder::Create(
+                sync.sync_handle, pdu.GetTxPower(), rssi,
+                bluetooth::hci::CteType::NO_CONSTANT_TONE_EXTENSION, data_status, fragment_data));
+      } while (offset < advertising_data.size());
+    }
+
+    // Refresh the timeout for the sync disconnection.
+    sync.timeout = std::chrono::steady_clock::now() + sync.sync_timeout;
+
+    // Send BIG Info report if BIG Info is present.
+    auto big_info = pdu.GetBigInfo();
+    if (big_info.num_bis_ > 0) {
+      sync.big_info = big_info;
+
+      // If the Controller also generates an HCI_LE_Periodic_Advertising_Report
+      // event, the HCI_LE_BIGInfo_Advertising_Report event shall immediately
+      // follow that event.
+      if (IsLeEventUnmasked(SubeventCode::LE_BIG_INFO_ADVERTISING_REPORT)) {
+        send_event_(bluetooth::hci::LeBigInfoAdvertisingReportBuilder::Create(
+                sync.sync_handle, big_info.num_bis_, big_info.nse_, big_info.iso_interval_,
+                big_info.bn_, big_info.pto_, big_info.irc_, big_info.max_pdu_,
+                big_info.sdu_interval_, big_info.max_sdu_,
+                static_cast<bluetooth::hci::SecondaryPhyType>(big_info.phy_),
+                static_cast<bluetooth::hci::Enable>(big_info.framing_),
+                static_cast<bluetooth::hci::Enable>(big_info.encryption_)));
+      }
+    } else if (sync.big_info.has_value()) {
+      // BIG has been terminated by the Broadcaster!
+      link_layer_big_sync_lost(ll_.get(), sync.sync_handle,
+                               static_cast<uint8_t>(ErrorCode::REMOTE_USER_TERMINATED_CONNECTION));
+      sync.big_info = std::nullopt;
+    }
+    return;  // Only match one established sync.
+  }
+
+  // If not matched established sync, we only process it if scanning is enabled
+  // to establish new sync.
+  if (!scanner_.IsEnabled()) {
+    return;
+  }
+
   bool matches_synchronizing = false;
   if (synchronizing_.has_value()) {
     matches_synchronizing =
@@ -5269,12 +5891,15 @@ void LeController::IncomingLePeriodicAdvertisingPdu(model::packets::LinkLayerPac
     }
 
     // Notify of the new Synchronized train.
+    uint16_t advertising_interval = pdu.GetAdvertisingInterval();
+    AddressType addr_type = resolved_advertiser_address.GetAddressType();
+    Address addr = resolved_advertiser_address.GetAddress();
+
     if (IsLeEventUnmasked(SubeventCode::LE_PERIODIC_ADVERTISING_SYNC_ESTABLISHED_V1)) {
       send_event_(bluetooth::hci::LePeriodicAdvertisingSyncEstablishedV1Builder::Create(
-              ErrorCode::SUCCESS, sync_handle, advertising_sid,
-              resolved_advertiser_address.GetAddressType(),
-              resolved_advertiser_address.GetAddress(), bluetooth::hci::SecondaryPhyType::LE_1M,
-              pdu.GetAdvertisingInterval(), bluetooth::hci::ClockAccuracy::PPM_500));
+              ErrorCode::SUCCESS, sync_handle, advertising_sid, addr_type, addr,
+              bluetooth::hci::SecondaryPhyType::LE_1M, advertising_interval,
+              bluetooth::hci::ClockAccuracy::PPM_500));
     }
 
     // Update the synchronization state.
@@ -5287,6 +5912,8 @@ void LeController::IncomingLePeriodicAdvertisingPdu(model::packets::LinkLayerPac
                      .sync_handle = sync_handle,
                      .sync_timeout = synchronizing_->sync_timeout,
                      .timeout = std::chrono::steady_clock::now() + synchronizing_->sync_timeout,
+                     .advertising_interval = pdu.GetAdvertisingInterval(),
+                     .established_event_sent = true,
              }});
 
     // Quit synchronizing state.
@@ -5297,44 +5924,38 @@ void LeController::IncomingLePeriodicAdvertisingPdu(model::packets::LinkLayerPac
     // no need to check again.
     return;
   }
+}
 
-  // Check if the periodic advertising PDU matches any of the established
-  // syncs.
+void LeController::IncomingLlBigTerminateInd(model::packets::LinkLayerPacketView incoming) {
+  auto pdu = model::packets::LlBigTerminateIndView::Create(incoming);
+  if (!pdu.IsValid()) {
+    return;
+  }
+  Address source_address = incoming.GetSourceAddress();
+  uint8_t sid = pdu.GetSid();
+  uint8_t reason = pdu.GetReason();
+  uint16_t instant = pdu.GetInstant();
+
+  AddressType source_type = ((source_address.data()[5] & 0xc0) == 0x40)
+                                    ? AddressType::RANDOM_DEVICE_ADDRESS
+                                    : AddressType::PUBLIC_DEVICE_ADDRESS;
+  AddressWithType source_with_type{source_address, source_type};
+  Address resolved_source =
+          ResolvePrivateAddress(source_with_type).value_or(source_with_type).GetAddress();
+
   for (auto& [_, sync] : synchronized_) {
-    if (sync.advertiser_address_type != advertiser_address_type ||
-        sync.advertiser_address != resolved_advertiser_address.GetAddress() ||
-        sync.advertising_sid != advertising_sid) {
-      continue;
+    if (sync.big_info.has_value()) {
+      if ((sync.advertiser_address == source_address ||
+           sync.advertiser_address == resolved_source) &&
+          sync.advertising_sid == sid) {
+        INFO(id_,
+             "Received LL_BIG_TERMINATE_IND from {} (sid: {}, reason: 0x{:x}, "
+             "instant: {})",
+             source_address, sid, reason, instant);
+        link_layer_big_sync_lost(ll_.get(), sync.sync_handle, reason);
+        sync.big_info = std::nullopt;
+      }
     }
-
-    // Send a Periodic Advertising event for the matching Sync,
-    // and refresh the timeout for sync termination. The periodic
-    // advertising event might need to be fragmented to fit the maximum
-    // size of an HCI event.
-    if (IsLeEventUnmasked(SubeventCode::LE_PERIODIC_ADVERTISING_REPORT_V1)) {
-      // Each extended advertising report can only pass 229 bytes of
-      // advertising data (255 - 8 = size of report fields).
-      std::vector<uint8_t> advertising_data = pdu.GetAdvertisingData();
-      const size_t max_fragment_size = 247;
-      size_t offset = 0;
-      do {
-        size_t remaining_size = advertising_data.size() - offset;
-        size_t fragment_size = std::min(max_fragment_size, remaining_size);
-
-        bluetooth::hci::DataStatus data_status = remaining_size <= max_fragment_size
-                                                         ? bluetooth::hci::DataStatus::COMPLETE
-                                                         : bluetooth::hci::DataStatus::CONTINUING;
-        std::vector<uint8_t> fragment_data(advertising_data.begin() + offset,
-                                           advertising_data.begin() + offset + fragment_size);
-        offset += fragment_size;
-        send_event_(bluetooth::hci::LePeriodicAdvertisingReportV1Builder::Create(
-                sync.sync_handle, pdu.GetTxPower(), rssi,
-                bluetooth::hci::CteType::NO_CONSTANT_TONE_EXTENSION, data_status, fragment_data));
-      } while (offset < advertising_data.size());
-    }
-
-    // Refresh the timeout for the sync disconnection.
-    sync.timeout = std::chrono::steady_clock::now() + sync.sync_timeout;
   }
 }
 
@@ -5353,6 +5974,46 @@ void LeController::IncomingLlcpPacket(model::packets::LinkLayerPacketView incomi
   }
 
   ASSERT(link_layer_ingest_llcp(ll_.get(), *acl_connection_handle, packet.data(), packet.size()));
+}
+
+void LeController::IncomingLeBroadcastIsochronousPdu(LinkLayerPacketView incoming) {
+  auto pdu = model::packets::LeBroadcastIsochronousPduView::Create(incoming);
+  ASSERT(pdu.IsValid());
+  auto data = pdu.GetData();
+  auto packet = std::vector(data.begin(), data.end());
+  uint8_t big_id = pdu.GetBigId();
+  uint8_t bis_id = pdu.GetBisId();
+  uint16_t bis_connection_handle = 0;
+  uint16_t iso_sdu_length = packet.size();
+
+  if (!link_layer_get_bis_connection_handle(ll_.get(), big_id, bis_id, &bis_connection_handle)) {
+    INFO(id_, "Ignoring BIS pdu since BIG big_id={} bis_id={} is not synchronized", big_id, bis_id);
+    return;
+  }
+
+  // Fragment the ISO SDU if larger than the maximum payload size (4095).
+  constexpr size_t kMaxPayloadSize = 4095 - 4;  // remove sequence_number and
+                                                // iso_sdu_length
+  size_t remaining_size = packet.size();
+  size_t offset = 0;
+  auto packet_boundary_flag = remaining_size <= kMaxPayloadSize
+                                      ? bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU
+                                      : bluetooth::hci::IsoPacketBoundaryFlag::FIRST_FRAGMENT;
+
+  do {
+    size_t fragment_size = std::min(kMaxPayloadSize, remaining_size);
+    std::vector<uint8_t> fragment(packet.data() + offset, packet.data() + offset + fragment_size);
+
+    send_iso_(bluetooth::hci::IsoWithoutTimestampBuilder::Create(
+            bis_connection_handle, packet_boundary_flag, pdu.GetSequenceNumber(), iso_sdu_length,
+            bluetooth::hci::IsoPacketStatusFlag::VALID, std::move(fragment)));
+
+    remaining_size -= fragment_size;
+    offset += fragment_size;
+    packet_boundary_flag = remaining_size <= kMaxPayloadSize
+                                   ? bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT
+                                   : bluetooth::hci::IsoPacketBoundaryFlag::CONTINUATION_FRAGMENT;
+  } while (remaining_size > 0);
 }
 
 void LeController::IncomingLeConnectedIsochronousPdu(LinkLayerPacketView incoming) {
@@ -5395,6 +6056,67 @@ void LeController::IncomingLeConnectedIsochronousPdu(LinkLayerPacketView incomin
   } while (remaining_size > 0);
 }
 
+// Link Layer LL_PERIODIC_SYNC_IND Control PDU (Vol 6, Part B § 2.4.2.30).
+void LeController::IncomingLlPeriodicSyncInd(LeAclConnection& connection,
+                                             model::packets::LinkLayerPacketView incoming) {
+  auto pdu = model::packets::LlPeriodicSyncIndView::Create(incoming);
+  ASSERT(pdu.IsValid());
+
+  LePeriodicAdvertisingSyncTransferParameters periodic_advertising_sync_transfer_params =
+          connection.periodic_advertising_sync_transfer_parameters;
+  if (periodic_advertising_sync_transfer_params.mode ==
+      bluetooth::hci::SyncTransferMode::SYNC_DISABLED) {
+    INFO(id_, "PAST received but disabled on this connection");
+    return;
+  }
+
+  // Find an unused sync_handle.
+  uint16_t sync_handle = 0;
+  for (; synchronized_.count(sync_handle) != 0; sync_handle++) {
+  }
+
+  AddressWithType advertiser_address{pdu.GetAdvertiserAddress(),
+                                     static_cast<AddressType>(pdu.GetAdvertiserAddressType())};
+  AddressWithType resolved_advertiser_address =
+          ResolvePrivateAddress(advertiser_address).value_or(advertiser_address);
+
+  bluetooth::hci::AdvertiserAddressType advertiser_address_type =
+          static_cast<bluetooth::hci::AdvertiserAddressType>(
+                  resolved_advertiser_address.GetAddressType());
+
+  bluetooth::hci::SecondaryPhyType secondary_phy =
+          static_cast<bluetooth::hci::SecondaryPhyType>(pdu.GetPhy());
+
+  if (IsLeEventUnmasked(SubeventCode::LE_PERIODIC_ADVERTISING_SYNC_TRANSFER_RECEIVED_V1)) {
+    AddressType addr_type = static_cast<AddressType>(resolved_advertiser_address.GetAddressType());
+    send_event_(bluetooth::hci::LePeriodicAdvertisingSyncTransferReceivedV1Builder::Create(
+            ErrorCode::SUCCESS, connection.handle, pdu.GetServiceData(), sync_handle,
+            pdu.GetAdvertisingSid(), addr_type, resolved_advertiser_address.GetAddress(),
+            secondary_phy, pdu.GetAdvertisingInterval(), ClockAccuracy::PPM_500));
+  }
+
+  std::optional<model::packets::BigInfo> big_info;
+  if (pdu.GetHasBigInfo() != 0) {
+    big_info = pdu.GetBigInfo();
+  }
+
+  synchronized_.insert(
+          {sync_handle,
+           Synchronized{
+                   .advertiser_address_type = advertiser_address_type,
+                   .advertiser_address = resolved_advertiser_address.GetAddress(),
+                   .advertising_sid = pdu.GetAdvertisingSid(),
+                   .sync_handle = sync_handle,
+                   .sync_timeout = 10ms * periodic_advertising_sync_transfer_params.sync_timeout,
+                   .timeout = std::chrono::steady_clock::now() +
+                              10ms * periodic_advertising_sync_transfer_params.sync_timeout,
+                   .advertising_interval = pdu.GetAdvertisingInterval(),
+                   .secondary_phy = secondary_phy,
+                   .big_info = big_info,
+                   .established_event_sent = true,
+           }});
+}
+
 void LeController::HandleAcl(bluetooth::hci::AclView acl) {
   uint16_t connection_handle = acl.GetHandle();
   auto pb_flag = acl.GetPacketBoundaryFlag();
@@ -5431,14 +6153,14 @@ void LeController::HandleAcl(bluetooth::hci::AclView acl) {
 }
 
 void LeController::HandleIso(bluetooth::hci::IsoView iso) {
-  uint16_t cis_connection_handle = iso.GetConnectionHandle();
+  uint16_t connection_handle = iso.GetConnectionHandle();
   auto pb_flag = iso.GetPbFlag();
   auto ts_flag = iso.GetTsFlag();
   auto iso_data_load = iso.GetPayload();
 
-  ScheduleTask(kNoDelayMs, [this, cis_connection_handle]() {
+  ScheduleTask(kNoDelayMs, [this, connection_handle]() {
     send_event_(bluetooth::hci::NumberOfCompletedPacketsBuilder::Create(
-            {bluetooth::hci::CompletedPackets(cis_connection_handle, 1)}));
+            {bluetooth::hci::CompletedPackets(connection_handle, 1)}));
   });
 
   // In the Host to Controller direction, ISO_Data_Load_Length
@@ -5461,28 +6183,12 @@ void LeController::HandleIso(bluetooth::hci::IsoView iso) {
           "expected");
   }
 
-  uint8_t cig_id = 0;
-  uint8_t cis_id = 0;
-  uint16_t acl_connection_handle = -1;
-  uint16_t packet_sequence_number = 0;
-  uint16_t max_sdu_length = 0;
-
-  if (!link_layer_get_cis_information(ll_.get(), cis_connection_handle, &acl_connection_handle,
-                                      &cig_id, &cis_id, &max_sdu_length)) {
-    INFO(id_, "Ignoring CIS pdu received on disconnected CIS handle={}", cis_connection_handle);
-    return;
-  }
-
-  if (!connections_.HasLeAclHandle(acl_connection_handle)) {
-    ERROR(id_, "Invalid LE-ACL connection handle returned from ISO manager");
-    return;
-  }
-
   if (pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::FIRST_FRAGMENT ||
       pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU) {
     iso_sdu_.clear();
   }
 
+  uint16_t packet_sequence_number = 0;
   switch (ts_flag) {
     case bluetooth::hci::TimeStampFlag::PRESENT: {
       auto iso_with_timestamp = bluetooth::hci::IsoWithTimestampView::Create(iso);
@@ -5502,23 +6208,76 @@ void LeController::HandleIso(bluetooth::hci::IsoView iso) {
       break;
     }
   }
+  if (IsCisConnectionHandle(connection_handle)) {
+    uint8_t cig_id = 0;
+    uint8_t cis_id = 0;
+    uint16_t acl_connection_handle = -1;
+    uint16_t max_sdu_length = 0;
 
-  if (pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT ||
-      pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU) {
-    // Validate that the Host stack is not sending ISO SDUs that are larger
-    // that what was configured for the CIS.
-    if (iso_sdu_.size() > max_sdu_length) {
-      WARNING(id_,
-              "attempted to send an SDU of length {} that exceeds the configure "
-              "Max_SDU_Length ({})",
-              iso_sdu_.size(), max_sdu_length);
+    if (!link_layer_get_cis_information(ll_.get(), connection_handle, &acl_connection_handle,
+                                        &cig_id, &cis_id, &max_sdu_length)) {
+      INFO(id_, "Ignoring CIS pdu received on disconnected CIS handle={}", connection_handle);
       return;
     }
 
-    auto const& connection = connections_.GetLeAclConnection(acl_connection_handle);
-    SendLeLinkLayerPacket(model::packets::LeConnectedIsochronousPduBuilder::Create(
-            connection.own_address.GetAddress(), connection.address.GetAddress(), cig_id, cis_id,
-            packet_sequence_number, std::move(iso_sdu_)));
+    if (!connections_.HasLeAclHandle(acl_connection_handle)) {
+      ERROR(id_, "Invalid LE-ACL connection handle returned from ISO manager");
+      return;
+    }
+
+    if (pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT ||
+        pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU) {
+      // Validate that the Host stack is not sending ISO SDUs that are larger
+      // that what was configured for the CIS.
+      if (iso_sdu_.size() > max_sdu_length) {
+        WARNING(id_,
+                "attempted to send an SDU of length {} that exceeds the configure "
+                "Max_SDU_Length ({})",
+                iso_sdu_.size(), max_sdu_length);
+        return;
+      }
+
+      auto const& connection = connections_.GetLeAclConnection(acl_connection_handle);
+      SendLeLinkLayerPacket(model::packets::LeConnectedIsochronousPduBuilder::Create(
+              connection.own_address.GetAddress(), connection.address.GetAddress(), cig_id, cis_id,
+              packet_sequence_number, std::move(iso_sdu_)));
+    }
+  } else if (IsBisConnectionHandle(connection_handle)) {
+    uint8_t big_id = 0;
+    uint8_t bis_id = 0;
+    uint8_t advertising_handle = 0;
+    uint16_t max_sdu_length = 0;
+
+    if (!link_layer_get_bis_information(ll_.get(), connection_handle, &big_id, &bis_id,
+                                        &advertising_handle, &max_sdu_length)) {
+      INFO(id_, "Ignoring BIS pdu received on disconnected BIS handle={}", connection_handle);
+      return;
+    }
+
+    if (pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::LAST_FRAGMENT ||
+        pb_flag == bluetooth::hci::IsoPacketBoundaryFlag::COMPLETE_SDU) {
+      // Validate that the Host stack is not sending ISO SDUs that are larger
+      // that what was configured for the CIS.
+      if (iso_sdu_.size() > max_sdu_length) {
+        WARNING(id_,
+                "attempted to send an SDU of length {} that exceeds the configure "
+                "Max_SDU_Length ({})",
+                iso_sdu_.size(), max_sdu_length);
+        return;
+      }
+      auto advertiser = extended_advertisers_.find(advertising_handle);
+      if (advertiser == extended_advertisers_.end()) {
+        ERROR(id_, "Invalid advertising handle returned from ISO manager");
+        return;
+      }
+
+      SendLeLinkLayerPacket(model::packets::LeBroadcastIsochronousPduBuilder::Create(
+              advertiser->second.advertising_address.GetAddress(), Address::kEmpty, big_id, bis_id,
+              packet_sequence_number, std::move(iso_sdu_)));
+      iso_sdu_.clear();
+    }
+  } else {
+    ERROR(id_, "Invalid connection handle returned from ISO manager");
   }
 }
 
@@ -5540,7 +6299,7 @@ uint16_t LeController::HandleLeConnection(AddressWithType address, AddressWithTy
                                     .conn_subrate_factor = 1,
                                     .conn_peripheral_latency = connection_latency,
                                     .conn_supervision_timeout = supervision_timeout},
-          default_subrate_parameters_);
+          default_subrate_parameters_, default_periodic_advertising_sync_transfer_parameters_);
 
   // Start the keepalive timer for the connection.
   CheckExpiringConnection(handle);
@@ -6306,12 +7065,14 @@ void LeController::LeScanning() {
 void LeController::LeSynchronization() {
   std::vector<uint16_t> removed_sync_handles;
   for (auto& [_, sync] : synchronized_) {
-    if (sync.timeout > std::chrono::steady_clock::now()) {
+    if (sync.timeout <= std::chrono::steady_clock::now()) {
       INFO(id_, "Periodic advertising sync with handle 0x{:x} lost", sync.sync_handle);
       removed_sync_handles.push_back(sync.sync_handle);
-    }
-    if (IsLeEventUnmasked(SubeventCode::LE_PERIODIC_ADVERTISING_SYNC_LOST)) {
-      send_event_(bluetooth::hci::LePeriodicAdvertisingSyncLostBuilder::Create(sync.sync_handle));
+      if (IsLeEventUnmasked(SubeventCode::LE_PERIODIC_ADVERTISING_SYNC_LOST)) {
+        send_event_(bluetooth::hci::LePeriodicAdvertisingSyncLostBuilder::Create(sync.sync_handle));
+      }
+      // Note: Losing synchronization with the Periodic Advertising train does not
+      // terminate synchronization with the BIG (Core Spec Vol 6, Part B, 4.4.6).
     }
   }
 
@@ -6324,6 +7085,8 @@ void LeController::Tick() {
   RunPendingTasks();
   LeAdvertising();
   LeScanning();
+  LeSynchronization();
+  LeChannelSounding();
 }
 
 void LeController::Close() {
@@ -6490,6 +7253,11 @@ ErrorCode LeController::LeRemoteConnectionParameterRequestNegativeReply(
 
 bool LeController::HasLeAclConnection(uint16_t connection_handle) {
   return connections_.HasLeAclHandle(connection_handle);
+}
+
+std::optional<uint16_t> LeController::GetLeAclConnectionHandle(
+        bluetooth::hci::Address local_address, bluetooth::hci::Address remote_address) const {
+  return connections_.GetLeAclConnectionHandle(local_address, remote_address);
 }
 
 void LeController::HandleLeEnableEncryption(uint16_t handle, std::array<uint8_t, 8> rand,
@@ -6705,6 +7473,38 @@ void LeController::RunPendingTasks() {
       task_queue_.insert(task);
     }
   }
+}
+
+// =============================================================================
+//  Android Vendor Extension Commands
+// =============================================================================
+
+ErrorCode LeController::LeAddDeviceToFilterAcceptListWithProximityThreshold(
+        FilterAcceptListAddressType address_type, Address address, int8_t path_loss_threshold,
+        int8_t rssi_threshold) {
+  if (FilterAcceptListBusy()) {
+    INFO(id_,
+         "device is currently advertising, scanning,"
+         " or establishing an LE connection using the filter accept list");
+    return ErrorCode::COMMAND_DISALLOWED;
+  }
+
+  for (auto& entry : le_filter_accept_list_) {
+    if (entry.address_type == address_type && entry.address == address) {
+      entry.path_loss_threshold = path_loss_threshold;
+      entry.rssi_threshold = rssi_threshold;
+      return ErrorCode::SUCCESS;
+    }
+  }
+
+  if (le_filter_accept_list_.size() >= properties_.le_filter_accept_list_size) {
+    INFO(id_, "filter accept list is full");
+    return ErrorCode::MEMORY_CAPACITY_EXCEEDED;
+  }
+
+  le_filter_accept_list_.emplace_back(
+          FilterAcceptListEntry{address_type, address, path_loss_threshold, rssi_threshold});
+  return ErrorCode::SUCCESS;
 }
 
 }  // namespace rootcanal

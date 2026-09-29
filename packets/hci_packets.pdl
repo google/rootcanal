@@ -420,6 +420,7 @@ enum OpCode : 16 {
   LE_GET_CONTROLLER_ACTIVITY_ENERGY_INFO = 0xFD59,
   LE_EX_SET_SCAN_PARAMETERS = 0xFD5A,
   GET_CONTROLLER_DEBUG_INFO = 0xFD5B,
+  LE_ADD_DEVICE_TO_FILTER_ACCEPT_LIST_WITH_PROXIMITY_THRESHOLD = 0xFD66,
   // MSFT_OPCODE_xxxx below are needed for the tests.
   MSFT_OPCODE_MEDIATEK = 0xFD30,
   MSFT_OPCODE_QUALCOMM = 0xFD70,
@@ -959,6 +960,7 @@ enum ErrorCode: 8 {
   ROLE_SWITCH_FAILED = 0x35,
   HOST_BUSY = 0x38,
   CONTROLLER_BUSY = 0x3A,
+  UNACCEPTABLE_CONNECTION_PARAMETERS = 0x3B,
   ADVERTISING_TIMEOUT = 0x3C,
   CONNECTION_FAILED_ESTABLISHMENT = 0x3E,
   UNKNOWN_ADVERTISING_IDENTIFIER = 0x42,
@@ -966,6 +968,8 @@ enum ErrorCode: 8 {
   OPERATION_CANCELLED_BY_HOST = 0x44,
   PACKET_TOO_LONG = 0x45,
   INSUFFICIENT_CHANNELS = 0x48,
+
+  UNKNOWN_ERROR_CODE = ..,
 }
 
 // Events that are defined with their respective commands
@@ -3463,6 +3467,17 @@ packet LeAddDeviceToFilterAcceptListComplete : CommandComplete (command_op_code 
   status : ErrorCode,
 }
 
+packet LeAddDeviceToFilterAcceptListWithProximityThreshold : Command (op_code = LE_ADD_DEVICE_TO_FILTER_ACCEPT_LIST_WITH_PROXIMITY_THRESHOLD) {
+  address_type : FilterAcceptListAddressType,
+  address : Address,
+  connection_path_loss_threshold : 8,
+  connection_rssi_threshold : 8,
+}
+
+packet LeAddDeviceToFilterAcceptListWithProximityThresholdComplete : CommandComplete (command_op_code = LE_ADD_DEVICE_TO_FILTER_ACCEPT_LIST_WITH_PROXIMITY_THRESHOLD) {
+  status : ErrorCode,
+}
+
 packet LeRemoveDeviceFromFilterAcceptList : Command (op_code = LE_REMOVE_DEVICE_FROM_FILTER_ACCEPT_LIST) {
   address_type : FilterAcceptListAddressType,
   address : Address,
@@ -4421,9 +4436,10 @@ packet LePeriodicAdvertisingSetInfoTransferComplete : CommandComplete (command_o
 }
 
 enum SyncTransferMode : 8 {
-  NO_SYNC = 0,
-  SEND_SYNC_RECEIVED_DISABLE_REPORTS = 1,
-  SEND_SYNC_RECEIVED_SEND_REPORTS = 2,
+  SYNC_DISABLED = 0,
+  SYNC_ENABLED_REPORTS_DISABLED = 1,
+  SYNC_ENABLED_REPORTS_ENABLED = 2,
+  SYNC_ENABLED_REPORTS_ENABLED_WITH_DUPLICATE_FILTERING = 3,
 }
 
 enum CteType : 8 {
@@ -5350,39 +5366,75 @@ packet LeCsTestEndComplete : LeMetaEvent (subevent_code = LE_CS_TEST_END_COMPLET
   status : ErrorCode,
 }
 
-struct CsStepData {
+enum CsProcedureDoneStatus : 4 {
+  ALL_RESULTS_COMPLETE = 0x0,
+  PARTIAL_RESULTS = 0x1,
+  ABORTED = 0xF,
+}
+
+enum CsSubeventDoneStatus : 4 {
+  ALL_RESULTS_COMPLETE = 0x0,
+  PARTIAL_RESULTS = 0x1,
+  ABORTED = 0xF,
+}
+
+struct LeCsResultDataStructure {
   step_mode : 8,
   step_channel : 8,
   _size_(step_data) : 8,
   step_data : 8[],
 }
 
+enum ProcedureAbortReason : 4 {
+  NO_ABORT = 0x0,
+  LOCAL_HOST_OR_REMOTE = 0x1,
+  INSUFFICIENT_FILTERED_CHANNELS = 0x2,
+  INSTANT_HAS_PASSED = 0x3,
+  UNSPECIFIED = 0xF,
+}
+
+enum SubeventAbortReason : 4 {
+  NO_ABORT = 0x0,
+  LOCAL_HOST_OR_REMOTE = 0x1,
+  NO_CS_SYNC_RECEIVED = 0x2,
+  SCHEDULING_CONFLICTS_OR_LIMITED_RESOURCES = 0x3,
+  UNSPECIFIED = 0xF,
+}
+
 packet LeCsSubeventResult : LeMetaEvent (subevent_code = LE_CS_SUBEVENT_RESULT) {
   connection_handle : 12,
   _reserved_ : 4,
-  config_id : 8,
+  config_id : 2,
+  _reserved_ : 6,
   start_acl_conn_event_counter : 16,
   procedure_counter : 16,
   frequency_compensation : 16,
   reference_power_level : 8,
-  procedure_done_status : 4,
-  subevent_done_status : 4,
-  abort_reason : 8,
+  procedure_done_status : CsProcedureDoneStatus,
+  _reserved_ : 4,
+  subevent_done_status : CsSubeventDoneStatus,
+  _reserved_ : 4,
+  procedure_abort_reason : ProcedureAbortReason,
+  subevent_abort_reason : SubeventAbortReason,
   num_antenna_paths : 8,
-  _count_(steps) : 8,
-  steps : CsStepData[],
+  _count_(cs_step) : 8,
+  cs_step : LeCsResultDataStructure[],
 }
 
 packet LeCsSubeventResultContinue : LeMetaEvent (subevent_code = LE_CS_SUBEVENT_RESULT_CONTINUE) {
   connection_handle : 12,
   _reserved_ : 4,
-  config_id : 8,
-  procedure_done_status : 4,
-  subevent_done_status : 4,
-  abort_reason : 8,
+  config_id : 2,
+  _reserved_ : 6,
+  procedure_done_status : CsProcedureDoneStatus,
+  _reserved_ : 4,
+  subevent_done_status : CsSubeventDoneStatus,
+  _reserved_ : 4,
+  procedure_abort_reason : ProcedureAbortReason,
+  subevent_abort_reason : SubeventAbortReason,
   num_antenna_paths : 8,
-  _count_(steps) : 8,
-  steps : CsStepData[],
+  _count_(cs_step) : 8,
+  cs_step : LeCsResultDataStructure[],
 }
 
 // HCI Event Packets
@@ -6227,7 +6279,7 @@ packet LeCreateBigComplete : LeMetaEvent (subevent_code = LE_CREATE_BIG_COMPLETE
   irc : 8,
   max_pdu : 16,
   iso_interval : 16,
-  _size_(connection_handle) : 8,
+  _count_(connection_handle) : 8,
   connection_handle : 16[],
 }
 
@@ -6246,7 +6298,7 @@ packet LeBigSyncEstablished : LeMetaEvent (subevent_code = LE_BIG_SYNC_ESTABLISH
   irc : 8,
   max_pdu : 16,
   iso_interval : 16,
-  _size_(connection_handle) : 8,
+  _count_(connection_handle) : 8,
   connection_handle : 16[],
 }
 

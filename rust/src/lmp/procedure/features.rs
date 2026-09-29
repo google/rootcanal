@@ -51,11 +51,19 @@ async fn supported_on_both_page(ctx: &impl Context, page_number: u8, feature_mas
         let page = if let Some(page) = ctx.peer_extended_features(page_number) {
             page
         } else {
-            crate::lmp::procedure::features::initiate(ctx, page_number).await
+            initiate(ctx, page_number).await
         };
         page & feature_mask != 0
     };
     local_supported && peer_supported.await
+}
+
+#[allow(dead_code)]
+pub async fn supported_on_both_page0(
+    ctx: &impl Context,
+    feature: crate::packets::hci::LMPFeaturesPage0Bits,
+) -> bool {
+    supported_on_both_page(ctx, 0, feature.into()).await
 }
 
 pub async fn supported_on_both_page1(

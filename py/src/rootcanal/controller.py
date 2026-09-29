@@ -75,18 +75,6 @@ def generate_rpa(irk: bytes) -> hci.Address:
     return hci.Address(bytes(rpa))
 
 
-class Any:
-    """Helper class that will match all other values.
-    Use an instance of this class in expected packets to match any value
-    returned by the Controller stack."""
-
-    def __eq__(self, other) -> bool:
-        return True
-
-    def __format__(self, format_spec: str) -> str:
-        return "_"
-
-
 class Controller:
     """Binder class over RootCanal's ffi interfaces.
     The methods send_cmd, send_hci, send_ll are used to inject HCI or LL
@@ -290,8 +278,8 @@ class Controller:
             try:
                 print("ll queue not empty at stop():")
                 while packet := self.ll_queue.get_nowait():
-                    ll = hci.Event.parse_all(packet)
-                    ll.show()
+                    ll_packet = ll.LinkLayerPacket.parse_all(packet)
+                    ll_packet.show()
             except asyncio.QueueEmpty:
                 pass
             raise Exception("ll queue not empty at stop()")
@@ -318,133 +306,3 @@ class Controller:
             print("received event:")
             evt.show()
             raise Exception(f"unexpected evt {evt.__class__.__name__}")
-
-    async def expect_evt(
-        self, expected_evt: typing.Union[hci.Event, type], timeout: float = 3.0
-    ) -> hci.Event:
-        """Wait for an event being sent from the controller.
-
-        Raises ValueError if the event does not match the expected type or value.
-        Raises TimeoutError if no event is received after `timeout` seconds.
-        Returns the received event on success.
-        """
-        packet = await asyncio.wait_for(self.receive_evt(), timeout=timeout)
-        evt = hci.Event.parse_all(packet)
-
-        if isinstance(expected_evt, type) and not isinstance(evt, expected_evt):
-            raise ValueError(
-                f"received unexpected event {evt.__class__.__name__},"
-                + f" expected {expected_evt.__name__}"
-            )
-
-        if isinstance(expected_evt, hci.Event) and evt != expected_evt:
-            raise ValueError(
-                f"received unexpected event {evt.__class__.__name__},"
-                + f" expected {expected_evt.__name__}"
-            )
-
-        return evt
-
-    async def expect_cmd_complete(
-        self, expected_evt: type, timeout: float = 3.0
-    ) -> hci.Event:
-        """Wait for an event being sent from the controller.
-
-        Raises ValueError if the event does not match the expected type, or
-        has an invalid status or number of completed packets.
-        Raises TimeoutError if no event is received after `timeout` seconds.
-        Returns the received event on success.
-        """
-        evt = await self.expect_evt(expected_evt, timeout=timeout)
-
-        if evt.status != hci.ErrorCode.SUCCESS:
-            raise ValueError(
-                "received command complete event with the"
-                + f" error status {evt.status}"
-            )
-
-        if evt.num_hci_command_packets != 1:
-            raise ValueError(
-                "received command complete event with an invalid number"
-                + f" of completed packets {evt.num_hci_command_packets}"
-            )
-
-        return evt
-
-    async def expect_ll(
-        self,
-        expected_pdus: typing.Union[list, typing.Union[ll.LinkLayerPacket, type]],
-        timeout: float = 3.0,
-    ) -> ll.LinkLayerPacket:
-        """Wait for a link layer packet being sent from the controller.
-
-        Raises ValueError if the event does not match the expected types or values.
-        Raises TimeoutError if no event is received after `timeout` seconds.
-        Returns the received event on success.
-        """
-        if not isinstance(expected_pdus, list):
-            expected_pdus = [expected_pdus]
-
-        packet = await asyncio.wait_for(self.receive_ll(), timeout=timeout)
-        pdu = ll.LinkLayerPacket.parse_all(packet)
-
-        for expected_pdu in expected_pdus:
-            if isinstance(expected_pdu, type) and isinstance(pdu, expected_pdu):
-                return pdu
-            if isinstance(expected_pdu, ll.LinkLayerPacket) and pdu == expected_pdu:
-                return pdu
-
-        raise ValueError(f"received unexpected pdu {pdu.__class__.__name__}")
-
-    async def expect_llcp(
-        self,
-        source_address: hci.Address,
-        destination_address: hci.Address,
-        expected_pdu: typing.Union[llcp.LlcpPacket, type],
-        timeout: float = 3.0,
-    ) -> llcp.LlcpPacket:
-        """Wait for a LLCP packet being sent from the controller.
-
-        Raises ValueError if the event does not match the expected type or value.
-        Raises TimeoutError if no event is received after `timeout` seconds.
-        Returns the received event on success.
-        """
-        packet = await asyncio.wait_for(self.controller.receive_ll(), timeout=timeout)
-        pdu = ll.LinkLayerPacket.parse_all(packet)
-
-        if pdu.type != ll.PacketType.LLCP:
-            raise ValueError(f"received unexpected pdu {pdu.__class__.__name__}")
-
-        if (
-            pdu.source_address != source_address
-            or pdu.destination_address != destination_address
-        ):
-            raise ValueError(
-                f"received unexpected pdu addressed from"
-                + f" {source_address} to {destination_address}"
-            )
-
-        pdu = llcp.LlcpPacket.parse_all(pdu.payload)
-
-        if isinstance(expected_pdu, type) and not isinstance(pdu, expected_pdu):
-            raise ValueError(
-                f"received unexpected pdu {pdu.__class__.__name__},"
-                + f" expected {expected_pdu.__name__}"
-            )
-
-        if isinstance(expected_pdu, hci.LlcpPacket) and pdu != expected_pdu:
-            raise ValueError(
-                f"received unexpected pdu {pdu.__class__.__name__},"
-                + f" expected {expected_pdu.__name__}"
-            )
-
-        return pdu
-
-    async def expect_iso(self, expected_iso: hci.Iso, timeout: float = 3.0) -> hci.Iso:
-        packet = await asyncio.wait_for(self.receive_iso(), timeout=timeout)
-        iso = hci.Iso.parse_all(packet)
-
-        if iso != expected_iso:
-            raise ValueError("received unexpected iso packet")
-
-        return iso

@@ -152,7 +152,7 @@ pub async fn respond(ctx: &impl Context) {
                     // Link Key is missing.
                     ctx.send_lmp_packet(lmp::NotAccepted {
                         not_accepted_opcode: lmp::Opcode::AuRand,
-                        error_code: hci::ErrorCode::PinOrKeyMissing as u8,
+                        error_code: hci::ErrorCode::PinOrKeyMissing.into(),
                         transaction_id: 0
                     })
                 }

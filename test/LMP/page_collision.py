@@ -166,7 +166,7 @@ class Test(ControllerTest):
             )
         )
 
-        await self.expect_evt(
+        conn_complete = await self.expect_evt(
             hci.ConnectionComplete(
                 status=ErrorCode.SUCCESS,
                 connection_handle=self.Any,
@@ -179,5 +179,60 @@ class Test(ControllerTest):
         await self.expect_evt(
             hci.AcceptConnectionRequestStatus(
                 status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
+
+        # Terminate the connection.
+        controller.send_cmd(
+            hci.Disconnect(
+                connection_handle=conn_complete.connection_handle,
+                reason=hci.DisconnectReason.REMOTE_USER_TERMINATED_CONNECTION,
+            )
+        )
+
+        await self.expect_evt(
+            hci.DisconnectStatus(status=ErrorCode.SUCCESS, num_hci_command_packets=1)
+        )
+
+        await self.expect_ll(
+            ll.Disconnect(
+                source_address=controller.address,
+                destination_address=peer_address,
+                reason=hci.DisconnectReason.REMOTE_USER_TERMINATED_CONNECTION,
+            )
+        )
+
+        await self.expect_evt(
+            hci.DisconnectionComplete(
+                status=ErrorCode.SUCCESS,
+                connection_handle=conn_complete.connection_handle,
+                reason=ErrorCode.CONNECTION_TERMINATED_BY_LOCAL_HOST,
+            )
+        )
+
+        # Reconnect to the same peer address.
+        # Verify that the pending page scan state was cleared during collision
+        # resolution and subsequent CreateConnection commands are accepted without
+        # returning CONNECTION_ALREADY_EXISTS.
+        controller.send_cmd(
+            hci.CreateConnection(
+                bd_addr=peer_address,
+                packet_type=0,
+                page_scan_repetition_mode=hci.PageScanRepetitionMode.R1,
+                allow_role_switch=hci.CreateConnectionRoleSwitch.ALLOW_ROLE_SWITCH,
+            )
+        )
+
+        await self.expect_evt(
+            hci.CreateConnectionStatus(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
+
+        await self.expect_ll(
+            ll.Page(
+                source_address=controller.address,
+                destination_address=peer_address,
+                allow_role_switch=True,
             )
         )

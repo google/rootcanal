@@ -20,6 +20,7 @@
 #include <fmt/core.h>
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -27,13 +28,16 @@
 #include <ctime>
 #include <iterator>
 #include <optional>
+#include <string_view>
 
 namespace rootcanal::log {
 
 // Enable flag for log styling.
-static bool enable_log_color = true;
+static std::atomic<bool> enable_log_color = true;
+static std::atomic<LogCallback> log_callback = nullptr;
 
 void SetLogColorEnable(bool enable) { enable_log_color = enable; }
+void SetLogCallback(LogCallback callback) { log_callback = callback; }
 
 static std::array<char, 5> verbosity_tag = {'D', 'I', 'W', 'E', 'F'};
 
@@ -54,8 +58,36 @@ static std::array<fmt::color, 16> text_color = {
         fmt::color::turquoise,
 };
 
+static char const* BaseName(char const* path) {
+  if (path == nullptr) {
+    return "";
+  }
+  std::string_view p(path);
+  auto pos = p.find_last_of("/\\");
+  return pos == std::string_view::npos ? path : path + pos + 1;
+}
+
 void VLog(Verbosity verb, char const* file, int line, std::optional<int> instance,
           char const* format, fmt::format_args args) {
+  char const* file_name = BaseName(file);
+
+  LogCallback callback = log_callback.load();
+  if (callback != nullptr) {
+    fmt::memory_buffer buffer;
+    auto out = std::back_inserter(buffer);
+    if (instance.has_value()) {
+      fmt::format_to(out, "[{}] ", *instance);
+    }
+    fmt::vformat_to(out, format, args);
+    buffer.push_back('\0');
+
+    callback(static_cast<int>(verb), file_name, line, buffer.data());
+
+    if (verb == Verbosity::kFatal) {
+      std::abort();
+    }
+    return;
+  }
   // Generate the time label.
   auto now = std::chrono::system_clock::now();
   auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
@@ -66,18 +98,17 @@ void VLog(Verbosity verb, char const* file, int line, std::optional<int> instanc
            static_cast<unsigned int>(now_ms.time_since_epoch().count() % 1000));
 
   // Generate the file label.
-  char delimiter = '/';
-  char const* file_name = ::strrchr(file, delimiter);
-  file_name = file_name == nullptr ? file : file_name + 1;
   char file_str[40];  // file:line limited to 40 characters
   snprintf(file_str, sizeof(file_str), "%.35s:%d", file_name, line);
+
+  bool const log_color = enable_log_color.load();
 
   // Use a memory buffer to format the message to avoid fmt::print assertions on redirected stdout.
   fmt::memory_buffer buffer;
   auto out = std::back_inserter(buffer);
   fmt::format_to(out, "root-canal {} {} {:<35} ", verbosity_tag[verb], time_str, file_str);
 
-  if (instance.has_value() && enable_log_color) {
+  if (instance.has_value() && log_color) {
     fmt::color instance_color = text_color[*instance % text_color.size()];
     fmt::format_to(out, fmt::bg(instance_color) | fmt::fg(fmt::color::black), " {:>2} ", *instance);
     fmt::format_to(out, " ");
@@ -88,7 +119,7 @@ void VLog(Verbosity verb, char const* file, int line, std::optional<int> instanc
   }
 
   // Format the actual message
-  if (enable_log_color) {
+  if (log_color) {
     fmt::text_style style = text_style[verb];
     fmt::vformat_to(out, style, format, args);
   } else {

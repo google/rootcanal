@@ -64,7 +64,9 @@ public:
                               bluetooth::hci::AddressWithType resolved_addr,
                               bluetooth::hci::AddressWithType own_addr, bluetooth::hci::Role role,
                               LeAclConnectionParameters connection_parameters,
-                              LeAclSubrateParameters subrate_parameters);
+                              LeAclSubrateParameters subrate_parameters,
+                              LePeriodicAdvertisingSyncTransferParameters
+                                      periodic_advertising_sync_transfer_parameters);
 
   bool Disconnect(uint16_t handle, std::function<void(TaskId)> stopStream);
 

@@ -21,11 +21,11 @@ from test.controller_test import ControllerTest
 
 class Test(ControllerTest):
     REMOTE_CS_CAPABILITIES = {
-        "num_config_supported": 3,
+        "num_config_supported": 4,
         "max_consecutive_procedures_supported": 1,
         "num_antennae_supported": 1,
         "max_antenna_paths_supported": 1,
-        "roles_supported": 0x02,  # Reflector
+        "roles_supported": 0x01,  # Initiator (since IUT is Reflector)
         "modes_supported": 0x01,
         "rtt_capability": 0x01,
         "rtt_aa_only_n": 10,
@@ -43,14 +43,15 @@ class Test(ControllerTest):
         "tx_snr_capability": 0,
     }
 
-    # LL/CS/CEN/INI/BV-01-C [CS Procedure Start and Stop, Central, Initiator]
+    # LL/CS/CEN/REF/BV-24-C [Channel Sounding Config Channel Classification Update]
     async def test(self):
         """
-        Test the CS Procedure Start and Stop initiated by the local controller.
+        Test the CS Config Channel Classification Update.
         """
         # Test parameters.
         peer_address = Address("aa:bb:cc:dd:ee:ff")
         controller = self.controller
+        config_id = 0
 
         # Enable Channel Sounding Host Support.
         await self.enable_channel_sounding_host_support()
@@ -76,11 +77,48 @@ class Test(ControllerTest):
 
         await self.le_start_encryption(acl_connection_handle, peer_address)
 
-        # 1. The Upper Tester sends an HCI_LE_CS_Set_Default_Settings command
+        # CS Security Enable: Lower Tester (Central) initiates
+        controller.send_cmd(
+            hci.LeCsSecurityEnable(connection_handle=acl_connection_handle)
+        )
+        await self.expect_evt(
+            hci.LeCsSecurityEnableStatus(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
+        )
+
+        await self.expect_ll(
+            ll.LlCsSecurityEnableReq(
+                source_address=controller.address,
+                destination_address=peer_address,
+                cs_iv_c=self.Any,
+                cs_in_c=self.Any,
+                cs_pv_c=self.Any,
+            )
+        )
+
+        controller.send_ll(
+            ll.LlCsSecurityEnableRsp(
+                source_address=peer_address,
+                destination_address=controller.address,
+                status=ErrorCode.SUCCESS,
+                cs_iv_p=0x1234567890ABCDEF,
+                cs_in_p=0x12345678,
+                cs_pv_p=0xFEDCBA0987654321,
+            )
+        )
+
+        await self.expect_evt(
+            hci.LeCsSecurityEnableComplete(
+                status=ErrorCode.SUCCESS, connection_handle=acl_connection_handle
+            )
+        )
+
+        # Set Default Settings
         controller.send_cmd(
             hci.LeCsSetDefaultSettings(
                 connection_handle=acl_connection_handle,
-                role_enable=0x01,  # Initiator
+                role_enable=0x02,  # Reflector
                 cs_sync_antenna_selection=0x01,  # ANTENNA_1
                 max_tx_power=10,
             )
@@ -93,21 +131,24 @@ class Test(ControllerTest):
             )
         )
 
-        # 2. The Upper Tester sends an HCI_LE_CS_Create_Config command
+
+        # 1. The Upper Tester sends an HCI_LE_CS_Create_Config command to the IUT
+        # with Config_ID set to 0, parameters specified in Section 4.14.2.2, and
+        # Role as specified in Table 4.14-33.
         channel_map_bytes = [0xFC, 0xFF, 0x7F, 0xFC, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x1F]
 
         controller.send_cmd(
             hci.LeCsCreateConfig(
                 connection_handle=acl_connection_handle,
-                config_id=2,
+                config_id=config_id,
                 create_context=hci.CsCreateContext.BOTH_LOCAL_AND_REMOTE_CONTROLLER,
-                main_mode_type=hci.CsMainModeType.MODE_1,
-                sub_mode_type=hci.CsSubModeType.UNUSED,
-                min_main_mode_steps=0,
-                max_main_mode_steps=0,
-                main_mode_repetition=0,
-                mode_0_steps=3,
-                role=hci.CsRole.INITIATOR,
+                main_mode_type=hci.CsMainModeType.MODE_2,
+                sub_mode_type=hci.CsSubModeType.MODE_1,
+                min_main_mode_steps=3,
+                max_main_mode_steps=5,
+                main_mode_repetition=1,
+                mode_0_steps=1,
+                role=hci.CsRole.REFLECTOR,
                 rtt_type=hci.CsRttType.RTT_AA_ONLY,
                 cs_sync_phy=hci.CsSyncPhy.LE_1M_PHY,
                 channel_map=channel_map_bytes,
@@ -118,31 +159,35 @@ class Test(ControllerTest):
                 reserved=0,
             )
         )
+
+        # 2. The IUT sends a successful HCI_Command_Status event to the Upper Tester.
         await self.expect_evt(
             hci.LeCsCreateConfigStatus(
                 status=ErrorCode.SUCCESS, num_hci_command_packets=1
             )
         )
 
-        # 3. The IUT sends an LL_CS_CONFIG_REQ PDU
+        # 3. The IUT sends an LL_CS_CONFIG_REQ PDU to the Lower Tester with
+        # valid parameters and Role as specified in Table 4.14-33 and Config_ID
+        # set to 0.
         await self.expect_ll(
             ll.LlCsConfigReq(
                 source_address=controller.address,
                 destination_address=peer_address,
-                config_id=2,
+                config_id=config_id,
                 action=1,
                 channel_map=channel_map_bytes,
                 channel_map_repetition=1,
-                main_mode_type=1,
-                sub_mode_type=0xFF,
-                min_main_mode_steps=0,
-                max_main_mode_steps=0,
-                main_mode_repetition=0,
-                mode_0_steps=3,
+                main_mode_type=2,
+                sub_mode_type=1,
+                min_main_mode_steps=3,
+                max_main_mode_steps=5,
+                main_mode_repetition=1,
+                mode_0_steps=1,
                 cs_sync_phy=1,
                 rtt_type=0,
-                role=0,
-                channel_selection_type=1,  # Rootcanal forces 3c
+                role=1,
+                channel_selection_type=1,
                 ch3c_shape=0,
                 ch3c_jump=2,
                 t_ip1=0,
@@ -152,30 +197,30 @@ class Test(ControllerTest):
             )
         )
 
-        # 4. The Lower Tester sends an LL_CS_CONFIG_RSP PDU
+        # 4. The Lower Tester sends an LL_CS_CONFIG_RSP PDU to the IUT.
         controller.send_ll(
             ll.LlCsConfigRsp(
                 source_address=peer_address,
                 destination_address=controller.address,
                 status=ErrorCode.SUCCESS,
-                config_id=2,
+                config_id=config_id,
             )
         )
 
-        # 5. The IUT sends a successful HCI_LE_CS_Config_Complete event
+        # 5. The IUT sends an HCI_LE_CS_Config_Complete event to the Upper Tester
         await self.expect_evt(
             hci.LeCsConfigComplete(
                 status=ErrorCode.SUCCESS,
                 connection_handle=acl_connection_handle,
-                config_id=2,
+                config_id=config_id,
                 action=hci.CsAction.CONFIG_CREATED,
-                main_mode_type=hci.CsMainModeType.MODE_1,
-                sub_mode_type=hci.CsSubModeType.UNUSED,
-                min_main_mode_steps=0,
-                max_main_mode_steps=0,
-                main_mode_repetition=0,
-                mode_0_steps=3,
-                role=hci.CsRole.INITIATOR,
+                main_mode_type=hci.CsMainModeType.MODE_2,
+                sub_mode_type=hci.CsSubModeType.MODE_1,
+                min_main_mode_steps=3,
+                max_main_mode_steps=5,
+                main_mode_repetition=1,
+                mode_0_steps=1,
+                role=hci.CsRole.REFLECTOR,
                 rtt_type=hci.CsRttType.RTT_AA_ONLY,
                 cs_sync_phy=hci.CsSyncPhy.LE_1M_PHY,
                 channel_map=channel_map_bytes,
@@ -191,11 +236,64 @@ class Test(ControllerTest):
             )
         )
 
-        # 6. The Upper Tester sends an HCI_LE_CS_Set_Procedure_Parameters
+        # 6. The Upper Tester sends an HCI_LE_CS_Set_Channel_Classification
+        # command to the IUT with the Channel_Classification odd bits set to 1.
+        # Odd bits set to 1, while respecting reserved bits.
+        new_channel_classification = [0xAA] * 10
+        new_channel_classification[0] &= ~0x03  # 0xA8
+        new_channel_classification[2] &= ~0x80  # 0x2A
+        new_channel_classification[3] &= ~0x03  # 0xA8
+        new_channel_classification[9] &= ~0xE0  # 0x0A
+
+        controller.send_cmd(
+            hci.LeCsSetChannelClassification(
+                channel_classification=new_channel_classification,
+            )
+        )
+
+        # 7. The IUT sends a successful HCI_Command_Complete event to the Upper Tester.
+        await self.expect_evt(
+            hci.LeCsSetChannelClassificationComplete(
+                status=ErrorCode.SUCCESS,
+                num_hci_command_packets=1,
+            )
+        )
+
+        # 8. Anytime between Steps 7 and 12, the IUT sends an LL_CS_CHANNEL_MAP_IND PDU to the
+        # Lower Tester with the odd bits set in ChM.
+        await self.expect_ll(
+            ll.LlCsChannelMapInd(
+                source_address=controller.address,
+                destination_address=peer_address,
+                channel_map=new_channel_classification,
+                instant=self.Any,
+            )
+        )
+
+        # 9. The Upper Tester sends an HCI_LE_CS_Set_Default_Settings command to the IUT with
+        # Role_Enable set to the role in Table 4.14-33 and receives a successful HCI_Command_Complete
+        controller.send_cmd(
+            hci.LeCsSetDefaultSettings(
+                connection_handle=acl_connection_handle,
+                role_enable=0x02,  # Reflector
+                cs_sync_antenna_selection=0x01,  # ANTENNA_1
+                max_tx_power=10,
+            )
+        )
+        await self.expect_evt(
+            hci.LeCsSetDefaultSettingsComplete(
+                status=ErrorCode.SUCCESS,
+                num_hci_command_packets=1,
+                connection_handle=acl_connection_handle,
+            )
+        )
+
+        # 10. The Upper Tester sends an HCI_LE_CS_Set_Procedure_Parameters with Config_ID set to the
+        # value from Step 1
         controller.send_cmd(
             hci.LeCsSetProcedureParameters(
                 connection_handle=acl_connection_handle,
-                config_id=2,
+                config_id=config_id,
                 max_procedure_len=0x07D0,
                 min_procedure_interval=0x32,
                 max_procedure_interval=0x32,
@@ -210,8 +308,6 @@ class Test(ControllerTest):
                 snr_control_reflector=hci.CsSnrControl.NOT_APPLIED,
             )
         )
-
-        # 7. The IUT sends an HCI_Command_Complete event
         await self.expect_evt(
             hci.LeCsSetProcedureParametersComplete(
                 status=ErrorCode.SUCCESS,
@@ -220,68 +316,29 @@ class Test(ControllerTest):
             )
         )
 
-        # 8. The Upper Tester sends an HCI_LE_CS_Security_Enable command
-        controller.send_cmd(
-            hci.LeCsSecurityEnable(connection_handle=acl_connection_handle)
-        )
-        await self.expect_evt(
-            hci.LeCsSecurityEnableStatus(
-                status=ErrorCode.SUCCESS, num_hci_command_packets=1
-            )
-        )
-
-        # 9. The IUT sends an LL_CS_SEC_REQ PDU
-        await self.expect_ll(
-            ll.LlCsSecurityEnableReq(
-                source_address=controller.address,
-                destination_address=peer_address,
-                cs_iv_c=self.Any,
-                cs_in_c=self.Any,
-                cs_pv_c=self.Any,
-            )
-        )
-
-        # 10. The Lower Tester sends an LL_CS_SEC_RSP PDU
-        controller.send_ll(
-            ll.LlCsSecurityEnableRsp(
-                source_address=peer_address,
-                destination_address=controller.address,
-                status=ErrorCode.SUCCESS,
-                cs_iv_p=0x1234567890ABCDEF,
-                cs_in_p=0x12345678,
-                cs_pv_p=0xFEDCBA0987654321,
-            )
-        )
-
-        # 11. The IUT sends a successful HCI_LE_CS_Security_Enable_Complete event
-        await self.expect_evt(
-            hci.LeCsSecurityEnableComplete(
-                status=ErrorCode.SUCCESS, connection_handle=acl_connection_handle
-            )
-        )
-
-        # 12. The Upper Tester sends an HCI_LE_CS_Procedure_Enable
+        # 11. The Upper Tester sends an HCI_LE_CS_Procedure_Enable to the IUT
+        # with Config_ID set to the value from Step 1 and Enable set to 0x01 and
+        # receives a successful HCI_Command_Status event.
         controller.send_cmd(
             hci.LeCsProcedureEnable(
                 connection_handle=acl_connection_handle,
-                config_id=2,
+                config_id=config_id,
                 procedure_enable=hci.Enable.ENABLED,
             )
         )
-
-        # 13. The IUT sends a successful HCI_Command_Status event
         await self.expect_evt(
             hci.LeCsProcedureEnableStatus(
                 status=ErrorCode.SUCCESS, num_hci_command_packets=1
             )
         )
 
-        # 14. The IUT sends an LL_CS_REQ PDU
+        # 12. The IUT sends an LL_CS_REQ PDU to the Lower Tester with Config_ID
+        # set to the value from Step 11.
         await self.expect_ll(
             ll.LlCsReq(
                 source_address=controller.address,
                 destination_address=peer_address,
-                config_id=2,
+                config_id=config_id,
                 conn_event_count=self.Any,
                 offset_min=self.Any,
                 offset_max=self.Any,
@@ -301,16 +358,14 @@ class Test(ControllerTest):
             )
         )
 
-        # 15. The Lower Tester sends an LL_CS_RSP PDU Rootcanal doesn't
-        # explicitly validate these for the response, but they must match the
-        # REQ in a real trace. Since this is sent BY the test, we'll just use 0,
-        # except where we want to pass specific values.
+        # 13A.1 The Lower Tester sends an LL_CS_RSP PDU to the IUT with
+        # Config_ID set to the value from Step 12.
         controller.send_ll(
             ll.LlCsRsp(
                 source_address=peer_address,
                 destination_address=controller.address,
                 status=ErrorCode.SUCCESS,
-                config_id=2,
+                config_id=config_id,
                 conn_event_count=0,
                 offset_min=0,
                 offset_max=0,
@@ -324,13 +379,14 @@ class Test(ControllerTest):
             )
         )
 
-        # 16. The IUT sends an LL_CS_IND PDU
+        # 13A.2 The IUT sends an LL_CS_IND PDU to the Lower Tester with
+        # Config_ID set to the value from Step 12.
         await self.expect_ll(
             ll.LlCsInd(
                 source_address=controller.address,
                 destination_address=peer_address,
                 status=ErrorCode.SUCCESS,
-                config_id=2,
+                config_id=config_id,
                 conn_event_count=self.Any,
                 offset=self.Any,
                 event_interval=0,
@@ -343,12 +399,13 @@ class Test(ControllerTest):
             )
         )
 
-        # 17. The IUT sends an HCI_LE_CS_Procedure_Enable_Complete event
+        # 14. The IUT sends an HCI_LE_CS_Procedure_Enable_Complete event to the
+        # Upper Tester with Config_ID set to the value from Step 12.
         await self.expect_evt(
             hci.LeCsProcedureEnableComplete(
                 status=ErrorCode.SUCCESS,
                 connection_handle=acl_connection_handle,
-                config_id=2,
+                config_id=config_id,
                 state=hci.Enable.ENABLED,
                 tone_antenna_config_selection=self.Any,
                 selected_tx_power=self.Any,
@@ -362,127 +419,59 @@ class Test(ControllerTest):
             )
         )
 
-        # 18. The Lower Tester and the IUT execute the Mode-0 and Mode-1 channel
-        # sounding procedures.
-        # Rootcanal defaults to a minimum of 48 steps if max_main_mode_steps < 48.
-        # Mode 1 has a step size of 9 bytes. Max HCI payload is 255 bytes.
-        # The first LeCsSubeventResult packet (16-byte header) fits 26 steps.
-        # The remaining 22 steps easily fit in a single
-        # LeCsSubeventResultContinue packet (9-byte header, handles up to 27
-        # steps). Since max_procedure_count=2, we expect 2 total bursts of these
-        # 2 packets.
+        # Calculation for Subevent Results:
+        # 1. Total Number of Steps: The config sets max_main_mode_steps=5.
+        # However, le_controller.cc enforces a minimum of 48 steps.
+        # 2. Size of a Single Result Step: The step data size is 9 bytes since main_mode_type=2.
+        # Adding the mode (1 byte), channel (1 byte), and length (1 byte) makes each step 12 bytes.
+        # 3. Payload Splitting (255 byte max):
+        #    - First Event (LeCsSubeventResult): Header size is 16 bytes.
+        #    - Max steps that fit = int((255 - 16) / 12) = 19.
+        #    - Second Event (LeCsSubeventResultContinue): Header size is 9 bytes.
+        #    - Max steps that fit = int((255 - 9) / 12) = 20.
+        #    - Remaining = 48 - 19 = 29.
+        #    - Third Event (LeCsSubeventResultContinue): Only 9 steps remain (29 - 20).
+        # This full block of 3 events is expected twice because max_procedure_count=2.
         for _ in range(2):
             await self.expect_evt(
                 hci.LeCsSubeventResult(
                     connection_handle=acl_connection_handle,
-                    config_id=2,
+                    config_id=config_id,
+                    start_acl_conn_event_counter=self.Any,
                     procedure_counter=self.Any,
                     frequency_compensation=self.Any,
                     reference_power_level=self.Any,
-                    procedure_done_status=self.Any,
-                    subevent_done_status=self.Any,
-                    procedure_abort_reason=self.Any,
-                    subevent_abort_reason=self.Any,
+                    procedure_done_status=hci.CsProcedureDoneStatus.PARTIAL_RESULTS,
+                    subevent_done_status=hci.CsSubeventDoneStatus.PARTIAL_RESULTS,
+                    procedure_abort_reason=hci.ProcedureAbortReason.NO_ABORT,
+                    subevent_abort_reason=hci.SubeventAbortReason.NO_ABORT,
                     num_antenna_paths=self.Any,
                     cs_step=self.Any,
                 )
             )
+
             await self.expect_evt(
                 hci.LeCsSubeventResultContinue(
                     connection_handle=acl_connection_handle,
-                    config_id=2,
-                    procedure_done_status=self.Any,
-                    subevent_done_status=self.Any,
-                    procedure_abort_reason=self.Any,
-                    subevent_abort_reason=self.Any,
+                    config_id=config_id,
+                    procedure_done_status=hci.CsProcedureDoneStatus.PARTIAL_RESULTS,
+                    subevent_done_status=hci.CsSubeventDoneStatus.PARTIAL_RESULTS,
+                    procedure_abort_reason=hci.ProcedureAbortReason.NO_ABORT,
+                    subevent_abort_reason=hci.SubeventAbortReason.NO_ABORT,
                     num_antenna_paths=self.Any,
                     cs_step=self.Any,
                 )
             )
 
-        # 20. The Upper Tester sends an HCI_LE_CS_Security_Enable command
-        controller.send_cmd(
-            hci.LeCsSecurityEnable(connection_handle=acl_connection_handle)
-        )
-
-        # 21A.1 The IUT sends a successful HCI_Command_Status
-        await self.expect_evt(
-            hci.LeCsSecurityEnableStatus(
-                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            await self.expect_evt(
+                hci.LeCsSubeventResultContinue(
+                    connection_handle=acl_connection_handle,
+                    config_id=config_id,
+                    procedure_done_status=hci.CsProcedureDoneStatus.ALL_RESULTS_COMPLETE,
+                    subevent_done_status=hci.CsSubeventDoneStatus.ALL_RESULTS_COMPLETE,
+                    procedure_abort_reason=hci.ProcedureAbortReason.NO_ABORT,
+                    subevent_abort_reason=hci.SubeventAbortReason.NO_ABORT,
+                    num_antenna_paths=self.Any,
+                    cs_step=self.Any,
+                )
             )
-        )
-
-        # 25. The IUT sends an LL_CS_SEC_REQ PDU to the Lower Tester.
-        # (Due to Rootcanal implementation, it immediately sends LL_CS_SEC_REQ without queueing)
-        await self.expect_ll(
-            ll.LlCsSecurityEnableReq(
-                source_address=controller.address,
-                destination_address=peer_address,
-                cs_iv_c=self.Any,
-                cs_in_c=self.Any,
-                cs_pv_c=self.Any,
-            )
-        )
-
-        # 22. The Lower Tester sends an LL_CS_TERMINATE_REQ PDU
-        controller.send_ll(
-            ll.LlCsTerminateReq(
-                source_address=peer_address,
-                destination_address=controller.address,
-                config_id=2,
-                procedure_count=0,
-                error_code=ErrorCode.SUCCESS,
-            )
-        )
-
-        # IUT responds with LL_CS_TERMINATE_RSP
-        await self.expect_ll(
-            ll.LlCsTerminateRsp(
-                source_address=controller.address,
-                destination_address=peer_address,
-                config_id=2,
-                procedure_count=0,
-                error_code=ErrorCode.SUCCESS,
-            )
-        )
-
-        # 23. The IUT sends an HCI_LE_CS_Procedure_Enable_Complete event
-        await self.expect_evt(
-            hci.LeCsProcedureEnableComplete(
-                status=ErrorCode.SUCCESS,
-                connection_handle=acl_connection_handle,
-                config_id=2,
-                state=hci.Enable.DISABLED,
-                tone_antenna_config_selection=0,
-                selected_tx_power=0,
-                subevent_len=0,
-                subevents_per_event=0,
-                subevent_interval=0,
-                event_interval=0,
-                procedure_interval=0,
-                procedure_count=0,
-                max_procedure_len=0,
-            )
-        )
-
-        # 24. (Rootcanal already sent the request at step 20/25, no command needed here)
-
-        # 26. The Lower Tester sends an LL_CS_SEC_RSP PDU to the IUT.
-        controller.send_ll(
-            ll.LlCsSecurityEnableRsp(
-                source_address=peer_address,
-                destination_address=controller.address,
-                status=ErrorCode.SUCCESS,
-                cs_iv_p=0x1234567890ABCDEF,
-                cs_in_p=0x12345678,
-                cs_pv_p=0xFEDCBA0987654321,
-            )
-        )
-
-        # 27. The IUT sends a successful HCI_LE_CS_Security_Enable_Complete
-        # event to the Upper Tester.
-        await self.expect_evt(
-            hci.LeCsSecurityEnableComplete(
-                status=ErrorCode.SUCCESS, connection_handle=acl_connection_handle
-            )
-        )
