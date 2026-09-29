@@ -40,6 +40,8 @@ message ControllerFeatures {
   optional bool le_connection_subrating = 7;
   optional bool le_channel_sounding = 8;
   optional bool le_power_control_request = 9;
+  optional bool le_isochronous_broadcaster = 10;
+  optional bool le_synchronized_receiver = 11;
 }
 
 message ControllerQuirks {

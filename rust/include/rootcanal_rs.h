@@ -29,12 +29,20 @@ struct ControllerOps {
   uint16_t (*get_handle)(void* user, const uint8_t (*address)[6]);
   void (*get_address)(void* user, uint16_t handle, uint8_t (*result)[6]);
   uint64_t (*get_extended_features)(void* user, uint8_t features_page);
+  uint64_t (*get_event_mask)(void* user);
+  uint64_t (*get_event_mask_page_2)(void* user);
   uint64_t (*get_le_features)(void* user);
   uint64_t (*get_le_event_mask)(void* user);
   void (*send_hci_event)(void* user, const uint8_t* data, uintptr_t len);
   void (*send_lmp_packet)(void* user, const uint8_t (*to)[6], const uint8_t* data, uintptr_t len);
   void (*send_llcp_packet)(void* user, uint16_t handle, const uint8_t* data, uintptr_t len);
   bool (*get_advertiser_info)(void* user, uint8_t advertising_handle, bool* periodic_enabled);
+  bool (*is_sync_handle_valid)(void* user, uint16_t sync_handle);
+  bool (*get_sync_big_info)(void* user, uint16_t sync_handle, uint8_t* num_bis, uint8_t* nse,
+                            uint16_t* iso_interval, uint8_t* bn, uint8_t* pto, uint8_t* irc,
+                            uint16_t* max_pdu, uint32_t* sdu_interval, uint16_t* max_sdu,
+                            uint8_t* phy, uint8_t* framing, uint8_t* encryption);
+  void (*send_big_terminate_ind)(void* user, uint8_t advertising_handle, uint8_t reason);
 };
 
 extern "C" {
@@ -138,6 +146,17 @@ bool link_layer_add_link(const LinkLayer* ll, uint16_t handle, const uint8_t (*p
 /// - `peer` must be valid for reads for 6 bytes
 bool link_layer_remove_link(const LinkLayer* ll, uint16_t handle, uint8_t reason);
 
+/// Notify the link layer that a synchronized BIG has been lost
+/// Returns true if successful
+/// # Arguments
+/// * `ll` - link layer pointer
+/// * `sync_handle` - periodic advertising sync train handle
+/// * `reason` - disconnect/termination reason code
+/// # Safety
+/// - This should be called from the thread of creation
+/// - `ll` must be a valid pointer
+bool link_layer_big_sync_lost(const LinkLayer* ll, uint16_t sync_handle, uint8_t reason);
+
 /// Run the Link Manager procedures
 /// # Arguments
 /// * `ll` - link layer pointer
@@ -186,6 +205,47 @@ bool link_layer_ingest_llcp(const LinkLayer* ll, uint16_t handle, const uint8_t*
 bool link_layer_get_cis_connection_handle(const LinkLayer* ll, uint8_t cig_id, uint8_t cis_id,
                                           uint16_t* cis_connection_handle);
 
+/// Query the connection handle for a BIS established with
+/// the input BIG and BIS identifiers.
+/// Returns true if successful
+/// # Arguments
+/// * `ll` - link layer pointer
+/// * `big_id` - Identifier of the established BIG
+/// * `bis_id` - Identifier of the established BIS
+/// * `bis_connection_handle` - Returns the handle of the BIS if connected
+/// # Safety
+/// - This should be called from the thread of creation
+/// - `ll` must be a valid pointers
+bool link_layer_get_bis_connection_handle(const LinkLayer* ll, uint8_t big_id, uint8_t bis_id,
+                                          uint16_t* bis_connection_handle);
+
+/// Query the BIG configuration for a BIG established with
+/// the input advertising handle.
+/// Returns true if successful
+/// # Arguments
+/// * `ll` - link layer pointer
+/// * `advertising_handle` - Advertising handle
+/// * `num_bis` - Returns the number of BIS
+/// * `nse` - Returns the number of subevents
+/// * `iso_interval` - Returns the ISO interval
+/// * `bn` - Returns the burst number
+/// * `pto` - Returns the pre-transmission offset
+/// * `irc` - Returns the immediate repetition count
+/// * `max_pdu` - Returns the maximum PDU size
+/// * `sdu_interval` - Returns the SDU interval
+/// * `max_sdu` - Returns the maximum SDU size
+/// * `phy` - Returns the PHY
+/// * `framing` - Returns the framing
+/// * `encryption` - Returns the encryption
+/// # Safety
+/// - This should be called from the thread of creation
+/// - `ll` must be a valid pointer
+bool link_layer_get_big_info(const LinkLayer* ll, uint8_t advertising_handle, uint8_t* num_bis,
+                             uint8_t* nse, uint16_t* iso_interval, uint8_t* bn, uint8_t* pto,
+                             uint8_t* irc, uint16_t* max_pdu, uint32_t* sdu_interval,
+                             uint16_t* max_sdu, uint8_t* phy, uint8_t* framing,
+                             uint8_t* encryption);
+
 /// Query the CIS and CIG identifiers for a CIS established with
 /// the input CIS connection handle.
 /// Returns true if successful
@@ -200,6 +260,23 @@ bool link_layer_get_cis_connection_handle(const LinkLayer* ll, uint8_t cig_id, u
 bool link_layer_get_cis_information(const LinkLayer* ll, uint16_t cis_connection_handle,
                                     uint16_t* acl_connection_handle, uint8_t* cig_id,
                                     uint8_t* cis_id, uint16_t* max_sdu_tx);
+
+/// Query the BIS and BIG identifiers for a BIS established with
+/// the input BIS connection handle.
+/// Returns true if successful
+/// # Arguments
+/// * `ll` - link layer pointer
+/// * `bis_connection_handle` - BIS connection handle
+/// * `big_id` - Returns the BIG identifier
+/// * `bis_id` - Returns the BIS identifier
+/// * `advertising_handle` - Returns the advertising handle
+/// * `max_sdu_tx` - Returns the Max_SDU_Length
+/// # Safety
+/// - This should be called from the thread of creation
+/// - `ll` must be a valid pointers
+bool link_layer_get_bis_information(const LinkLayer* ll, uint16_t bis_connection_handle,
+                                    uint8_t* big_id, uint8_t* bis_id, uint8_t* advertising_handle,
+                                    uint16_t* max_sdu_tx);
 
 /// Deallocate the link layer instance
 /// # Arguments

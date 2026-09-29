@@ -358,4 +358,18 @@ impl procedure::Context for LinkContext {
             _ => 0,
         }
     }
+
+    fn event_mask(&self) -> u64 {
+        match self.manager.upgrade() {
+            Some(manager) => manager.ops.get_event_mask(),
+            _ => 0,
+        }
+    }
+
+    fn event_mask_page_2(&self) -> u64 {
+        match self.manager.upgrade() {
+            Some(manager) => manager.ops.get_event_mask_page_2(),
+            _ => 0,
+        }
+    }
 }

@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from rootcanal.packets import hci
-from rootcanal.packets.hci import ErrorCode
-from rootcanal.packets import ll
 from rootcanal.bluetooth import Address
+from rootcanal.packets import hci
+from rootcanal.packets import ll
+from rootcanal.packets.hci import ErrorCode
 from test.controller_test import ControllerTest
 
 
@@ -48,7 +48,7 @@ class Test(ControllerTest):
         "main_mode_type": 1,
         "sub_mode_type": 0xFF,
         "min_main_mode_steps": 0,
-        "max_main_mode_steps": 0,
+        "max_main_mode_steps": 100,
         "main_mode_repetition": 0,
         "mode_0_steps": 3,
         "cs_sync_phy": 1,
@@ -67,7 +67,7 @@ class Test(ControllerTest):
         "main_mode_type": hci.CsMainModeType.MODE_1,
         "sub_mode_type": hci.CsSubModeType.UNUSED,
         "min_main_mode_steps": 0,
-        "max_main_mode_steps": 0,
+        "max_main_mode_steps": 100,
         "main_mode_repetition": 0,
         "mode_0_steps": 3,
         "role": hci.CsRole.REFLECTOR,
@@ -81,7 +81,6 @@ class Test(ControllerTest):
     }
 
     LE_CS_CONFIG_COMPLETE_PARAMS = {
-        "action": hci.CsAction.CONFIG_CREATED,
         "t_ip1_time": 0,
         "t_ip2_time": 0,
         "t_fcs_time": 0,
@@ -217,6 +216,7 @@ class Test(ControllerTest):
                 connection_handle=acl_connection_handle,
                 config_id=config_id,
                 channel_map=channel_map_bytes,
+                action=hci.CsAction.CONFIG_CREATED,
                 **self.LE_CS_CONFIG_COMPLETE_PARAMS,
             )
         )
@@ -330,8 +330,42 @@ class Test(ControllerTest):
             )
         )
 
-        # 6. Channel sounding execution (skipped)
-        # 7. Subevent result (skipped)
+        # Rootcanal generates CS step data based on max_main_mode_steps (100).
+        # Mode 1 has a step size of 9 bytes. Max HCI payload is 255 bytes.
+        # The first LeCsSubeventResult packet (16-byte header) fits 26 steps.
+        # The remaining 74 steps are split across LeCsSubeventResultContinue
+        # packets (9-byte header), each fitting 27 steps. Thus, 3 continue
+        # packets are needed (27 + 27 + 20 steps). Since max_procedure_count=2,
+        # we expect 2 total bursts of these 4 packets.
+        for _ in range(2):
+            await self.expect_evt(
+                hci.LeCsSubeventResult(
+                    connection_handle=acl_connection_handle,
+                    config_id=config_id,
+                    procedure_counter=self.Any,
+                    frequency_compensation=self.Any,
+                    reference_power_level=self.Any,
+                    procedure_done_status=self.Any,
+                    subevent_done_status=self.Any,
+                    procedure_abort_reason=self.Any,
+                    subevent_abort_reason=self.Any,
+                    num_antenna_paths=self.Any,
+                    cs_step=self.Any,
+                )
+            )
+            for _ in range(3):
+                await self.expect_evt(
+                    hci.LeCsSubeventResultContinue(
+                        connection_handle=acl_connection_handle,
+                        config_id=config_id,
+                        procedure_done_status=self.Any,
+                        subevent_done_status=self.Any,
+                        procedure_abort_reason=self.Any,
+                        subevent_abort_reason=self.Any,
+                        num_antenna_paths=self.Any,
+                        cs_step=self.Any,
+                    )
+                )
 
         # 8. The Upper Tester sends an HCI_LE_CS_Remove_Config command
         controller.send_cmd(
@@ -394,25 +428,25 @@ class Test(ControllerTest):
                 connection_handle=acl_connection_handle,
                 config_id=config_id,
                 action=hci.CsAction.CONFIG_REMOVED,
-                main_mode_type=self.Any,
-                sub_mode_type=self.Any,
-                min_main_mode_steps=self.Any,
-                max_main_mode_steps=self.Any,
-                main_mode_repetition=self.Any,
-                mode_0_steps=self.Any,
-                role=self.Any,
-                rtt_type=self.Any,
-                cs_sync_phy=self.Any,
-                channel_map=self.Any,
-                channel_map_repetition=self.Any,
-                channel_selection_type=self.Any,
-                ch3c_shape=self.Any,
-                ch3c_jump=self.Any,
-                reserved=self.Any,
-                t_ip1_time=self.Any,
-                t_ip2_time=self.Any,
-                t_fcs_time=self.Any,
-                t_pm_time=self.Any,
+                main_mode_type         = hci.CsMainModeType.MODE_1,
+                sub_mode_type          = hci.CsSubModeType.UNUSED,
+                min_main_mode_steps    = 0,
+                max_main_mode_steps    = 0,
+                main_mode_repetition   = 0,
+                mode_0_steps           = 0,
+                role                   = hci.CsRole.INITIATOR,
+                rtt_type               = hci.CsRttType.RTT_AA_ONLY,
+                cs_sync_phy            = hci.CsSyncPhy.LE_1M_PHY,
+                channel_map            = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                channel_map_repetition = 0,
+                channel_selection_type = hci.CsChannelSelectionType.TYPE_3B,
+                ch3c_shape             = hci.CsCh3cShape.HAT_SHAPE,
+                ch3c_jump              = 0,
+                reserved               = 0,
+                t_ip1_time             = 0,
+                t_ip2_time             = 0,
+                t_fcs_time             = 0,
+                t_pm_time              = 0,
             )
         )
 

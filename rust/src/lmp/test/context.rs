@@ -33,6 +33,8 @@ pub struct TestContext {
     private_key: RefCell<Option<PrivateKey>>,
     features_pages: [u64; 3],
     peer_features_pages: [u64; 3],
+    event_mask: u64,
+    event_mask_page_2: u64,
 }
 
 impl TestContext {
@@ -40,6 +42,7 @@ impl TestContext {
         Self::default()
             .with_page_1_feature(hci::LMPFeaturesPage1Bits::SecureSimplePairingHostSupport)
             .with_peer_page_1_feature(hci::LMPFeaturesPage1Bits::SecureSimplePairingHostSupport)
+            .with_event_enabled(hci::EventCode::EncryptionChange)
     }
 
     pub fn with_page_1_feature(mut self, feature: hci::LMPFeaturesPage1Bits) -> Self {
@@ -59,6 +62,16 @@ impl TestContext {
 
     pub fn with_peer_page_2_feature(mut self, feature: hci::LMPFeaturesPage2Bits) -> Self {
         self.peer_features_pages[2] |= u64::from(feature);
+        self
+    }
+
+    pub fn with_event_enabled(mut self, event_code: hci::EventCode) -> Self {
+        let code = u8::from(event_code);
+        if 0 < code && code <= 64 {
+            self.event_mask |= 1 << (code - 1);
+        } else if 64 < code && code <= 128 {
+            self.event_mask_page_2 |= 1 << (code - 64);
+        }
         self
     }
 }
@@ -122,6 +135,14 @@ impl Context for TestContext {
 
     fn extended_features(&self, features_page: u8) -> u64 {
         self.features_pages[features_page as usize]
+    }
+
+    fn event_mask(&self) -> u64 {
+        self.event_mask
+    }
+
+    fn event_mask_page_2(&self) -> u64 {
+        self.event_mask_page_2
     }
 
     fn get_private_key(&self) -> Option<PrivateKey> {

@@ -15,7 +15,7 @@ cc_library(
     srcs = ["lib/log.cc"],
     hdrs = ["include/log.h"],
     includes = ["include"],
-    copts = ["-std=c++17"],
+    copts = ["-std=c++20"],
     deps = [
         "@fmtlib",
     ],
@@ -75,7 +75,7 @@ cc_binary(
         "//rust:include/rootcanal_rs.h",
     ],
     copts = [
-        "-std=c++17",
+        "-std=c++20",
         "-Wno-c99-designator",
         "-Wno-google3-literal-operator",
         "-Wno-pessimizing-move",
@@ -191,6 +191,7 @@ cc_binary(
         "//rust:include/rootcanal_rs.h",
     ],
     copts = [
+	"-std=c++20",
         "-Wno-c99-designator",
         "-Wno-google3-literal-operator",
         "-Wno-pessimizing-move",

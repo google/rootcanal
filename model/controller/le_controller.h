@@ -26,6 +26,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <random>
 #include <set>
 #include <unordered_map>
 #include <utility>
@@ -144,7 +145,8 @@ public:
                                    Phy::Type, int8_t)>& send_to_remote);
 
   void RegisterRangingEstimator(
-          std::function<unsigned(void const* cookie1, void const* cookie2)> const& callback);
+          std::function<unsigned(const Address source_address, const Address target_address)> const&
+                  callback);
 
   void Reset();
 
@@ -174,6 +176,9 @@ public:
 
   bool LeFilterAcceptListContainsDevice(FilterAcceptListAddressType address_type, Address address);
   bool LeFilterAcceptListContainsDevice(AddressWithType address);
+  bool LeFilterAcceptListContainsDeviceWithThreshold(AddressWithType address, int8_t rssi,
+                                                     const std::vector<uint8_t>& adv_data,
+                                                     int8_t pdu_tx_power = 127);
 
   bool LePeriodicAdvertiserListContainsDevice(
           bluetooth::hci::AdvertiserAddressType advertiser_address_type, Address advertiser_address,
@@ -234,6 +239,11 @@ public:
 
   // Returns true if the specified ACL connection handle is valid.
   bool HasLeAclConnection(uint16_t connection_handle);
+
+  // Return the connection handle for a LE ACL connection identified with
+  // local and remote addresses.
+  std::optional<uint16_t> GetLeAclConnectionHandle(bluetooth::hci::Address local_address,
+                                                   bluetooth::hci::Address remote_address) const;
 
   void HandleAcl(bluetooth::hci::AclView acl);
   void HandleIso(bluetooth::hci::IsoView iso);
@@ -459,6 +469,27 @@ public:
   // § 7.8.69).
   ErrorCode LePeriodicAdvertisingTerminateSync(uint16_t sync_handle);
 
+  // HCI LE Set Default Periodic Advertising Sync Transfer Parameters command
+  // (Vol 4, Part E § 7.8.90).
+  ErrorCode LeSetDefaultPeriodicAdvertisingSyncTransferParameters(
+          bluetooth::hci::SyncTransferMode mode, uint16_t skip, uint16_t sync_timeout,
+          bluetooth::hci::CteType cte_type);
+
+  // HCI LE Set Periodic Advertising Sync Transfer Parameters command
+  // (Vol 4, Part E § 7.8.89).
+  ErrorCode LeSetPeriodicAdvertisingSyncTransferParameters(uint16_t connection_handle,
+                                                           bluetooth::hci::SyncTransferMode mode,
+                                                           uint16_t skip, uint16_t sync_timeout,
+                                                           bluetooth::hci::CteType cte_type);
+
+  // HCI LE Periodic Advertising Sync Transfer command (Vol 4, Part E § 7.8.91).
+  ErrorCode LePeriodicAdvertisingSyncTransfer(uint16_t connection_handle, uint16_t service_data,
+                                              uint16_t sync_handle);
+
+  // HCI LE Periodic Advertising Set Info Transfer command (Vol 4, Part E § 7.8.92).
+  ErrorCode LePeriodicAdvertisingSetInfoTransfer(uint16_t connection_handle, uint16_t service_data,
+                                                 uint8_t advertising_handle);
+
   // Periodic Advertiser List
 
   // HCI LE Add Device To Periodic Advertiser List command (Vol 4, Part E
@@ -529,6 +560,9 @@ public:
   ErrorCode LeCsProcedureEnable(uint16_t connection_handle, uint8_t config_id,
                                 bluetooth::hci::Enable enable);
 
+  void LeChannelSounding();
+  void SendLeCsSubeventResult(LeAclConnection& connection, LeCsConfig& config);
+
   // LE APCF
 
   ErrorCode LeApcfEnable(bool apcf_enable);
@@ -578,6 +612,10 @@ public:
                                std::vector<uint8_t> apcf_ad_data_mask,
                                uint8_t* apcf_available_spaces);
 
+  ErrorCode LeAddDeviceToFilterAcceptListWithProximityThreshold(
+          FilterAcceptListAddressType address_type, Address address, int8_t path_loss_threshold,
+          int8_t rssi_threshold);
+
 protected:
   void SendLeLinkLayerPacket(std::unique_ptr<model::packets::LinkLayerPacketBuilder> packet,
                              int8_t tx_power = 0);
@@ -587,18 +625,24 @@ protected:
   void IncomingLeDisconnectPacket(LeAclConnection& connection,
                                   model::packets::LinkLayerPacketView incoming);
   void IncomingLlcpPacket(model::packets::LinkLayerPacketView incoming);
+  void IncomingLeBroadcastIsochronousPdu(model::packets::LinkLayerPacketView incoming);
   void IncomingLeConnectedIsochronousPdu(model::packets::LinkLayerPacketView incoming);
+  void IncomingLlPeriodicSyncInd(LeAclConnection& connection,
+                                 model::packets::LinkLayerPacketView incoming);
 
   void ScanIncomingLeLegacyAdvertisingPdu(model::packets::LeLegacyAdvertisingPduView& pdu,
                                           uint8_t rssi);
   void ScanIncomingLeExtendedAdvertisingPdu(model::packets::LeExtendedAdvertisingPduView& pdu,
                                             uint8_t rssi);
-  void ConnectIncomingLeLegacyAdvertisingPdu(model::packets::LeLegacyAdvertisingPduView& pdu);
-  void ConnectIncomingLeExtendedAdvertisingPdu(model::packets::LeExtendedAdvertisingPduView& pdu);
+  void ConnectIncomingLeLegacyAdvertisingPdu(model::packets::LeLegacyAdvertisingPduView& pdu,
+                                             uint8_t rssi);
+  void ConnectIncomingLeExtendedAdvertisingPdu(model::packets::LeExtendedAdvertisingPduView& pdu,
+                                               uint8_t rssi);
 
   void IncomingLeLegacyAdvertisingPdu(model::packets::LinkLayerPacketView incoming, uint8_t rssi);
   void IncomingLeExtendedAdvertisingPdu(model::packets::LinkLayerPacketView incoming, uint8_t rssi);
   void IncomingLePeriodicAdvertisingPdu(model::packets::LinkLayerPacketView incoming, uint8_t rssi);
+  void IncomingLlBigTerminateInd(model::packets::LinkLayerPacketView incoming);
 
   void IncomingLeConnectPacket(model::packets::LinkLayerPacketView incoming);
   void IncomingLeConnectCompletePacket(model::packets::LinkLayerPacketView incoming);
@@ -660,12 +704,9 @@ protected:
                                model::packets::LinkLayerPacketView incoming);
   void IncomingLlCsSecurityRsp(LeAclConnection& connection,
                                model::packets::LinkLayerPacketView incoming);
-  void IncomingLlCsReq(LeAclConnection& connection,
-                               model::packets::LinkLayerPacketView incoming);
-  void IncomingLlCsRsp(LeAclConnection& connection,
-                               model::packets::LinkLayerPacketView incoming);
-  void IncomingLlCsInd(LeAclConnection& connection,
-                               model::packets::LinkLayerPacketView incoming);
+  void IncomingLlCsReq(LeAclConnection& connection, model::packets::LinkLayerPacketView incoming);
+  void IncomingLlCsRsp(LeAclConnection& connection, model::packets::LinkLayerPacketView incoming);
+  void IncomingLlCsInd(LeAclConnection& connection, model::packets::LinkLayerPacketView incoming);
   void IncomingLlCsTerminateReq(LeAclConnection& connection,
                                 model::packets::LinkLayerPacketView incoming);
   void IncomingLlCsTerminateRsp(LeAclConnection& connection,
@@ -756,6 +797,10 @@ private:
   // LE Default Subrate parameters (Vol 4, Part E § 7.8.123).
   LeAclSubrateParameters default_subrate_parameters_{};
 
+  // LE Default PAST parameters (Vol 4, Part E § 7.8.90).
+  LePeriodicAdvertisingSyncTransferParameters
+          default_periodic_advertising_sync_transfer_parameters_{};
+
   // LE CS Channel Classification (Vol 4, Part E § 7.8.139).
   std::array<uint8_t, 10> le_cs_channel_classification_{0xfc, 0xff, 0x7f, 0xfc, 0xff,
                                                         0xff, 0xff, 0xff, 0xff, 0x1f};
@@ -773,7 +818,8 @@ private:
   std::function<void(std::shared_ptr<bluetooth::hci::IsoBuilder>)> send_iso_;
 
   // Ranging estimator callback.
-  std::function<unsigned(void const* cookie1, void const* cookie2)> ranging_estimator_{};
+  std::function<unsigned(const Address source_address, const Address target_address)>
+          ranging_estimator_{};
 
   // Callback to send packets to remote devices.
   std::function<void(std::shared_ptr<model::packets::LinkLayerPacketBuilder>, Phy::Type phy_type,
@@ -781,8 +827,13 @@ private:
           send_to_remote_;
 
   struct FilterAcceptListEntry {
+    static constexpr int8_t kPathLossThresholdNoFiltering = 127;
+    static constexpr int8_t kRssiThresholdNoFiltering = 127;
+
     FilterAcceptListAddressType address_type;
     Address address;
+    int8_t path_loss_threshold{kPathLossThresholdNoFiltering};
+    int8_t rssi_threshold{kRssiThresholdNoFiltering};
   };
 
   std::vector<FilterAcceptListEntry> le_filter_accept_list_;
@@ -945,6 +996,11 @@ private:
     uint16_t sync_handle;
     std::chrono::steady_clock::duration sync_timeout;
     std::chrono::steady_clock::time_point timeout;
+    uint16_t advertising_interval{0};
+    bluetooth::hci::SecondaryPhyType secondary_phy{bluetooth::hci::SecondaryPhyType::LE_1M};
+    // BIG configuration fetched from BIGInfo.
+    std::optional<model::packets::BigInfo> big_info;
+    bool established_event_sent{false};
   };
 
   // Periodic advertising synchronizing and synchronized states.
@@ -997,6 +1053,9 @@ private:
 
   // Return the next valid unused task identifier.
   TaskId NextTaskId();
+
+  // Pseudo-random generator for BLE link layer random delays (e.g. advDelay).
+  std::mt19937_64 random_generator_{};
 };
 
 }  // namespace rootcanal

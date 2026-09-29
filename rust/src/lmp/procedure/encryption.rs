@@ -56,15 +56,24 @@ pub async fn initiate(ctx: &impl Context) {
     let aes_ccm = features::supported_on_both_page1(ctx, SecureConnectionsHostSupport).await
         && features::supported_on_both_page2(ctx, SecureConnectionsControllerSupport).await;
 
-    ctx.send_hci_event(hci::EncryptionChange {
-        status: hci::ErrorCode::Success,
-        connection_handle: ctx.peer_handle(),
-        encryption_enabled: if aes_ccm {
-            hci::EncryptionEnabled::BrEdrAesCcm
-        } else {
-            hci::EncryptionEnabled::On
-        },
-    });
+    let encryption_enabled =
+        if aes_ccm { hci::EncryptionEnabled::BrEdrAesCcm } else { hci::EncryptionEnabled::On };
+
+    if ctx.is_event_enabled(hci::EventCode::EncryptionChangeV2) {
+        ctx.send_hci_event(hci::EncryptionChangeV2 {
+            status: hci::ErrorCode::Success,
+            connection_handle: ctx.peer_handle(),
+            encryption_enabled,
+            // TODO: derive actual key size.
+            key_size: 16,
+        });
+    } else if ctx.is_event_enabled(hci::EventCode::EncryptionChange) {
+        ctx.send_hci_event(hci::EncryptionChange {
+            status: hci::ErrorCode::Success,
+            connection_handle: ctx.peer_handle(),
+            encryption_enabled,
+        });
+    }
 }
 
 pub async fn respond(ctx: &impl Context) {
@@ -90,15 +99,24 @@ pub async fn respond(ctx: &impl Context) {
     let aes_ccm = features::supported_on_both_page1(ctx, SecureConnectionsHostSupport).await
         && features::supported_on_both_page2(ctx, SecureConnectionsControllerSupport).await;
 
-    ctx.send_hci_event(hci::EncryptionChange {
-        status: hci::ErrorCode::Success,
-        connection_handle: ctx.peer_handle(),
-        encryption_enabled: if aes_ccm {
-            hci::EncryptionEnabled::BrEdrAesCcm
-        } else {
-            hci::EncryptionEnabled::On
-        },
-    });
+    let encryption_enabled =
+        if aes_ccm { hci::EncryptionEnabled::BrEdrAesCcm } else { hci::EncryptionEnabled::On };
+
+    if ctx.is_event_enabled(hci::EventCode::EncryptionChangeV2) {
+        ctx.send_hci_event(hci::EncryptionChangeV2 {
+            status: hci::ErrorCode::Success,
+            connection_handle: ctx.peer_handle(),
+            encryption_enabled,
+            // TODO: derive actual key size.
+            key_size: 16,
+        });
+    } else if ctx.is_event_enabled(hci::EventCode::EncryptionChange) {
+        ctx.send_hci_event(hci::EncryptionChange {
+            status: hci::ErrorCode::Success,
+            connection_handle: ctx.peer_handle(),
+            encryption_enabled,
+        });
+    }
 }
 
 #[cfg(test)]

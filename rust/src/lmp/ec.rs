@@ -22,7 +22,8 @@
 use num_bigint::{BigInt, Sign};
 use num_integer::Integer;
 use num_traits::{One, Signed, Zero};
-use rand::{thread_rng, Rng};
+use rand::prelude::*;
+use rand::rng;
 use std::convert::TryInto;
 use std::marker::PhantomData;
 
@@ -109,7 +110,7 @@ impl DhKey {
 impl PrivateKey {
     // Generate a private key in range[1,2**191]
     pub fn generate_p192() -> Self {
-        let random_bytes: [u8; P192r1::PRIVATE_KEY_SIZE] = thread_rng().r#gen();
+        let random_bytes: [u8; P192r1::PRIVATE_KEY_SIZE] = rng().random();
         let mut key = BigInt::from_signed_bytes_le(&random_bytes);
 
         if key.is_negative() {
@@ -125,7 +126,7 @@ impl PrivateKey {
     }
 
     pub fn generate_p256() -> Self {
-        let random_bytes: [u8; P256r1::PRIVATE_KEY_SIZE] = thread_rng().r#gen();
+        let random_bytes: [u8; P256r1::PRIVATE_KEY_SIZE] = rng().random();
         let mut key = BigInt::from_signed_bytes_le(&random_bytes);
 
         if key.is_negative() {

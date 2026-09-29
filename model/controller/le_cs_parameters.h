@@ -17,6 +17,7 @@
 #pragma once
 
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <optional>
 #include <unordered_map>
@@ -30,6 +31,8 @@ namespace rootcanal {
 //
 // Channel Sounding configuration and settings.
 //
+
+const auto kCsProcedureInterval = std::chrono::milliseconds(50);
 
 struct LeCsDefaultSettings {
   uint8_t role_enable{};
@@ -71,6 +74,9 @@ struct LeCsConfig {
   uint8_t ch3c_jump;
   bool enabled{};
   std::optional<LeCsProcedureParameters> procedure_parameters;
+  uint8_t last_rotated_channel{};
+  uint16_t remaining_procedure_count{};
+  std::optional<std::chrono::steady_clock::time_point> result_timeout{};
 };
 
 struct LeCsParameters {
@@ -78,6 +84,7 @@ struct LeCsParameters {
   std::optional<std::array<uint8_t, 72>> remote_fae_table;
   LeCsDefaultSettings default_settings;
   std::unordered_map<uint8_t, LeCsConfig> config_map;
+  uint8_t procedure_count{};
 
   // CS Security
   bool security_enabled{};

@@ -23,11 +23,11 @@
 
 namespace rootcanal {
 
-LeAclConnection::LeAclConnection(uint16_t handle, AddressWithType address,
-                                 AddressWithType own_address, AddressWithType resolved_address,
-                                 bluetooth::hci::Role role,
-                                 LeAclConnectionParameters connection_parameters,
-                                 LeAclSubrateParameters subrate_parameters)
+LeAclConnection::LeAclConnection(
+        uint16_t handle, AddressWithType address, AddressWithType own_address,
+        AddressWithType resolved_address, bluetooth::hci::Role role,
+        LeAclConnectionParameters connection_parameters, LeAclSubrateParameters subrate_parameters,
+        LePeriodicAdvertisingSyncTransferParameters periodic_advertising_sync_transfer_parameters)
     : handle(handle),
       address(address),
       own_address(own_address),
@@ -35,6 +35,7 @@ LeAclConnection::LeAclConnection(uint16_t handle, AddressWithType address,
       role(role),
       parameters(connection_parameters),
       subrate_parameters(subrate_parameters),
+      periodic_advertising_sync_transfer_parameters(periodic_advertising_sync_transfer_parameters),
       last_packet_timestamp_(std::chrono::steady_clock::now()),
       timeout_(std::chrono::seconds(3)) {}
 

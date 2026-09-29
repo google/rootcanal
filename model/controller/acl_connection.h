@@ -35,6 +35,9 @@ enum AclConnectionState {
 // Model the BR/EDR connection of a device to the controller.
 class AclConnection final {
 public:
+  static constexpr std::chrono::seconds LSTO_DEFAULT{3};
+  static constexpr std::chrono::seconds LSTO_MINIMUM{1};
+
   const uint16_t handle;
   const Address address;
   const Address own_address;
@@ -65,6 +68,10 @@ public:
   bool IsNearExpiring() const;
   bool HasExpired() const;
 
+  // Sets the Link Supervision Timeout (LSTO) for this connection.
+  // A minimum timeout of LSTO_MINIMUM is enforced.
+  void SetTimeout(std::chrono::steady_clock::duration timeout);
+
 private:
   // Reports the RSSI measured for the last packet received on
   // this connection.
@@ -76,6 +83,8 @@ private:
   AclConnectionState state_{kActiveMode};
   bluetooth::hci::Role role_{bluetooth::hci::Role::CENTRAL};
   std::chrono::steady_clock::time_point last_packet_timestamp_;
+
+  // Link supervision timeout (LSTO) for the connection.
   std::chrono::steady_clock::duration timeout_;
 };
 

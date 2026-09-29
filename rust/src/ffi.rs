@@ -33,6 +33,8 @@ pub struct ControllerOps {
     get_handle: unsafe extern "C" fn(user: *mut (), address: *const [u8; 6]) -> u16,
     get_address: unsafe extern "C" fn(user: *mut (), handle: u16, result: *mut [u8; 6]),
     get_extended_features: unsafe extern "C" fn(user: *mut (), features_page: u8) -> u64,
+    get_event_mask: unsafe extern "C" fn(user: *mut ()) -> u64,
+    get_event_mask_page_2: unsafe extern "C" fn(user: *mut ()) -> u64,
     get_le_features: unsafe extern "C" fn(user: *mut ()) -> u64,
     get_le_event_mask: unsafe extern "C" fn(user: *mut ()) -> u64,
     send_hci_event: unsafe extern "C" fn(user: *mut (), data: *const u8, len: usize),
@@ -47,9 +49,45 @@ pub struct ControllerOps {
         advertising_handle: u8,
         periodic_enabled: *mut bool,
     ) -> bool,
+    // SAFETY:
+    // - `user` must be exactly the value `ControllerOps::user_pointer`.
+    is_sync_handle_valid: unsafe extern "C" fn(user: *mut (), sync_handle: u16) -> bool,
+    // SAFETY:
+    // - `user` must be exactly the value `ControllerOps::user_pointer`.
+    // - `num_bis`, `nse`, `iso_interval`, `bn`, `pto`, `irc`, `max_pdu`,
+    //   `sdu_interval`, `max_sdu`, `phy`, `framing`, `encryption` must be
+    //   valid non-null pointers for writes.
+    get_sync_big_info: unsafe extern "C" fn(
+        user: *mut (),
+        sync_handle: u16,
+        num_bis: *mut u8,
+        nse: *mut u8,
+        iso_interval: *mut u16,
+        bn: *mut u8,
+        pto: *mut u8,
+        irc: *mut u8,
+        max_pdu: *mut u16,
+        sdu_interval: *mut u32,
+        max_sdu: *mut u16,
+        phy: *mut u8,
+        framing: *mut u8,
+        encryption: *mut u8,
+    ) -> bool,
+    // SAFETY:
+    // - `user` must be exactly the value `ControllerOps::user_pointer`.
+    send_big_terminate_ind: unsafe extern "C" fn(user: *mut (), advertising_handle: u8, reason: u8),
 }
 
 impl ControllerOps {
+    pub(crate) fn send_big_terminate_ind(&self, advertising_handle: u8, reason: u8) {
+        // SAFETY:
+        // - `self.user_pointer` is the value provided when the callbacks are registered.
+        //    The value is not manipulated in the rust module.
+        // - `self.send_big_terminate_ind` is a valid function pointer
+        //    enforced by requirements on ControllerOps.
+        unsafe { (self.send_big_terminate_ind)(self.user_pointer, advertising_handle, reason) }
+    }
+
     pub(crate) fn get_address(&self, handle: u16) -> Option<hci::Address> {
         let mut result = [0; 6];
         unsafe { (self.get_address)(self.user_pointer, handle, &mut result as *mut _) };
@@ -64,6 +102,22 @@ impl ControllerOps {
 
     pub(crate) fn get_extended_features(&self, features_page: u8) -> u64 {
         unsafe { (self.get_extended_features)(self.user_pointer, features_page) }
+    }
+
+    pub(crate) fn get_event_mask(&self) -> u64 {
+        // SAFETY: `self.user_pointer` is the value provided when the
+        // callbacks are registered. The value is not manipulated in
+        // the rust module. `self.get_event_mask` is a valid
+        // function pointer enforced by requirements on ControllerOps.
+        unsafe { (self.get_event_mask)(self.user_pointer) }
+    }
+
+    pub(crate) fn get_event_mask_page_2(&self) -> u64 {
+        // SAFETY: `self.user_pointer` is the value provided when the
+        // callbacks are registered. The value is not manipulated in
+        // the rust module. `self.get_event_mask_page_2` is a valid
+        // function pointer enforced by requirements on ControllerOps.
+        unsafe { (self.get_event_mask_page_2)(self.user_pointer) }
     }
 
     pub(crate) fn get_le_features(&self) -> u64 {
@@ -109,6 +163,60 @@ impl ControllerOps {
         //    enforced by requirements on ControllerOps.
         unsafe {
             (self.get_advertiser_info)(self.user_pointer, advertising_handle, periodic_enabled)
+        }
+    }
+
+    pub(crate) fn is_sync_handle_valid(&self, sync_handle: u16) -> bool {
+        // SAFETY:
+        // - `self.user_pointer` is the value provided when the callbacks are registered.
+        //    The value is not manipulated in the rust module.
+        // - `self.is_sync_handle_valid` is a valid function pointer
+        //    enforced by requirements on ControllerOps.
+        unsafe { (self.is_sync_handle_valid)(self.user_pointer, sync_handle) }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn get_sync_big_info(
+        &self,
+        sync_handle: u16,
+        num_bis: &mut u8,
+        nse: &mut u8,
+        iso_interval: &mut u16,
+        bn: &mut u8,
+        pto: &mut u8,
+        irc: &mut u8,
+        max_pdu: &mut u16,
+        sdu_interval: &mut u32,
+        max_sdu: &mut u16,
+        phy: &mut u8,
+        framing: &mut u8,
+        encryption: &mut u8,
+    ) -> bool {
+        // SAFETY:
+        // - `self.user_pointer` is the value provided when the callbacks are registered.
+        //    The value is not manipulated in the rust module.
+        // - `num_bis`, `nse`, `iso_interval`, `bn`, `pto`, `irc`, `max_pdu`,
+        //   `sdu_interval`, `max_sdu`, `phy`, `framing`, `encryption` are
+        //   valid references.
+        // - `self.get_sync_big_info` is a valid function pointer
+        //    enforced by requirements on ControllerOps.
+        unsafe {
+            (self.get_sync_big_info)(
+                self.user_pointer,
+                sync_handle,
+                num_bis,
+                nse,
+                iso_interval,
+                bn,
+                pto,
+                irc,
+                max_pdu,
+                sdu_interval,
+                max_sdu,
+                phy,
+                framing,
+                encryption,
+            )
         }
     }
 }
@@ -291,6 +399,27 @@ pub unsafe extern "C" fn link_layer_remove_link(
     ll.remove_link(handle, reason).is_ok()
 }
 
+/// Notify the link layer that a synchronized BIG has been lost
+/// Returns true if successful
+/// # Arguments
+/// * `ll` - link layer pointer
+/// * `sync_handle` - periodic advertising sync train handle
+/// * `reason` - disconnect/termination reason code
+/// # Safety
+/// - This should be called from the thread of creation
+/// - `ll` must be a valid pointer
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn link_layer_big_sync_lost(
+    ll: *const LinkLayer,
+    sync_handle: u16,
+    reason: u8,
+) -> bool {
+    let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
+    let ll = Rc::get_mut(&mut ll).unwrap();
+    let error_code = hci::ErrorCode::try_from(reason).unwrap_or(hci::ErrorCode::ConnectionTimeout);
+    ll.big_sync_lost(sync_handle, error_code).is_ok()
+}
+
 /// Run the Link Manager procedures
 /// # Arguments
 /// * `ll` - link layer pointer
@@ -389,6 +518,91 @@ pub unsafe extern "C" fn link_layer_get_cis_connection_handle(
         .is_some()
 }
 
+/// Query the connection handle for a BIS established with
+/// the input BIG and BIS identifiers.
+/// Returns true if successful
+/// # Arguments
+/// * `ll` - link layer pointer
+/// * `big_id` - Identifier of the established BIG
+/// * `bis_id` - Identifier of the established BIS
+/// * `bis_connection_handle` - Returns the handle of the BIS if connected
+/// # Safety
+/// - This should be called from the thread of creation
+/// - `ll` must be a valid pointer
+/// - `bis_connection_handle` must be a valid pointer
+#[no_mangle]
+pub unsafe extern "C" fn link_layer_get_bis_connection_handle(
+    ll: *const LinkLayer,
+    big_id: u8,
+    bis_id: u8,
+    bis_connection_handle: *mut u16,
+) -> bool {
+    let mut ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
+    let ll = Rc::get_mut(&mut ll).unwrap();
+    ll.get_bis_connection_handle(big_id, bis_id)
+        .map(|handle| unsafe {
+            *bis_connection_handle = handle;
+        })
+        .is_some()
+}
+
+/// Query the BIG configuration for a BIG established with
+/// the input advertising handle.
+/// Returns true if successful
+/// # Arguments
+/// * `ll` - link layer pointer
+/// * `advertising_handle` - Advertising handle
+/// * `num_bis` - Returns the number of BIS
+/// * `nse` - Returns the number of subevents
+/// * `iso_interval` - Returns the ISO interval
+/// * `bn` - Returns the burst number
+/// * `pto` - Returns the pre-transmission offset
+/// * `irc` - Returns the immediate repetition count
+/// * `max_pdu` - Returns the maximum PDU size
+/// * `sdu_interval` - Returns the SDU interval
+/// * `max_sdu` - Returns the maximum SDU size
+/// * `phy` - Returns the PHY
+/// * `framing` - Returns the framing
+/// * `encryption` - Returns the encryption
+/// # Safety
+/// - This should be called from the thread of creation
+/// - `ll` must be a valid pointer
+#[no_mangle]
+pub unsafe extern "C" fn link_layer_get_big_info(
+    ll: *const LinkLayer,
+    advertising_handle: u8,
+    num_bis: *mut u8,
+    nse: *mut u8,
+    iso_interval: *mut u16,
+    bn: *mut u8,
+    pto: *mut u8,
+    irc: *mut u8,
+    max_pdu: *mut u16,
+    sdu_interval: *mut u32,
+    max_sdu: *mut u16,
+    phy: *mut u8,
+    framing: *mut u8,
+    encryption: *mut u8,
+) -> bool {
+    let ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
+    ll.get_big_info(advertising_handle)
+        .map(|big| unsafe {
+            *num_bis = big.num_bis;
+            *nse = big.nse;
+            *iso_interval = big.iso_interval;
+            *bn = big.bn;
+            *pto = big.pto;
+            *irc = big.irc;
+            *max_pdu = big.max_pdu;
+            *sdu_interval = big.sdu_interval;
+            *max_sdu = big.max_sdu;
+            *phy = big.phy;
+            *framing = big.framing;
+            *encryption = big.encryption as u8;
+        })
+        .is_some()
+}
+
 /// Query the CIS and CIG identifiers for a CIS established with
 /// the input CIS connection handle.
 /// Returns true if successful
@@ -423,6 +637,41 @@ pub unsafe extern "C" fn link_layer_get_cis_information(
                 *cis_id = cis.cis_id;
                 *max_sdu_tx = cis.max_sdu_tx().unwrap_or(0);
             }
+        })
+        .is_some()
+}
+
+/// Query the BIS and BIG identifiers for a BIS established with
+/// the input BIS connection handle.
+/// Returns true if successful
+/// # Arguments
+/// * `ll` - link layer pointer
+/// * `bis_connection_handle` - BIS connection handle
+/// * `big_id` - Returns the BIG identifier
+/// * `bis_id` - Returns the BIS identifier
+/// # Safety
+/// - This should be called from the thread of creation
+/// - `ll` must be a valid pointer
+/// - `big_id` must be a valid pointer
+/// - `bis_id` must be a valid pointer
+/// - `advertising_handle` must be a valid pointer
+/// - `max_sdu_tx` must be a valid pointer
+#[no_mangle]
+pub unsafe extern "C" fn link_layer_get_bis_information(
+    ll: *const LinkLayer,
+    bis_connection_handle: u16,
+    big_id: *mut u8,
+    bis_id: *mut u8,
+    advertising_handle: *mut u8,
+    max_sdu_tx: *mut u16,
+) -> bool {
+    let ll = ManuallyDrop::new(unsafe { Rc::from_raw(ll) });
+    ll.get_bis(bis_connection_handle)
+        .map(|bis| unsafe {
+            *big_id = bis.big_handle;
+            *bis_id = bis.bis_id;
+            *advertising_handle = bis.advertising_handle;
+            *max_sdu_tx = bis.max_sdu;
         })
         .is_some()
 }

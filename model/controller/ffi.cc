@@ -18,6 +18,7 @@
 
 #include <iostream>
 
+#include "log.h"
 #include "model/controller/dual_mode_controller.h"
 #include "rootcanal/configuration.pb.h"
 
@@ -44,8 +45,9 @@ __attribute__((visibility("default"))) void* ffi_controller_new(
         void (*send_ll)(void* cookie, uint8_t const* data, size_t data_len, int phy, int tx_power),
         void (*invalid_packet_handler)(void* cookie, int reason, char const* message,
                                        uint8_t const* data, size_t data_len),
-        unsigned (*ranging_estimator)(void* cookie1, void* cookie2), void* cookie,
-        const uint8_t* proto_bytes, size_t proto_len) {
+        unsigned (*ranging_estimator)(void* cookie, const uint8_t source_address[6],
+                                      const uint8_t target_address[6]),
+        void* cookie, const uint8_t* proto_bytes, size_t proto_len) {
   rootcanal::ControllerProperties properties;
   if (proto_bytes != nullptr && proto_len > 0) {
     rootcanal::configuration::Controller config;
@@ -85,8 +87,8 @@ __attribute__((visibility("default"))) void* ffi_controller_new(
 
   if (ranging_estimator) {
     controller->RegisterRangingEstimator(
-            [=](void const* cookie1, void const* cookie2) {
-              return ranging_estimator(const_cast<void*>(cookie1), const_cast<void*>(cookie2));
+            [=](const Address source_address, const Address target_address) {
+              return ranging_estimator(cookie, source_address.data(), target_address.data());
             });
   }
 
@@ -140,6 +142,19 @@ __attribute__((visibility("default"))) void ffi_controller_receive_ll(void* cont
   controller->ReceiveLinkLayerPacket(packet, Phy::Type(phy), rssi);
 }
 
+__attribute__((visibility("default"))) bool ffi_controller_set_properties(
+        void* controller_, uint8_t const* proto_bytes, size_t proto_len) {
+  DualModeController* controller = reinterpret_cast<DualModeController*>(controller_);
+  if (proto_bytes != nullptr && proto_len > 0) {
+    rootcanal::configuration::Controller config;
+    if (config.ParseFromArray(proto_bytes, proto_len)) {
+      controller->SetProperties(rootcanal::ControllerProperties(config));
+      return true;
+    }
+  }
+  return false;
+}
+
 __attribute__((visibility("default"))) void ffi_controller_tick(void* controller_) {
   DualModeController* controller = reinterpret_cast<DualModeController*>(controller_);
   controller->Tick();
@@ -151,6 +166,18 @@ __attribute__((visibility("default"))) void ffi_generate_rpa(uint8_t const irk_[
   memcpy(irk.data(), irk_, LeController::kIrkSize);
   Address address = LeController::generate_rpa(irk);
   memcpy(rpa, address.data(), Address::kLength);
+}
+
+__attribute__((visibility("default"))) bool ffi_controller_has_le_connection(
+        void* controller_, const uint8_t source_address[6], const uint8_t target_address[6]) {
+  DualModeController* controller = reinterpret_cast<DualModeController*>(controller_);
+  Address src(*reinterpret_cast<const uint8_t (*)[Address::kLength]>(source_address));
+  Address dst(*reinterpret_cast<const uint8_t (*)[Address::kLength]>(target_address));
+  return controller->GetLeAclConnectionHandle(dst, src).has_value();
+}
+
+__attribute__((visibility("default"))) void ffi_set_log_callback(ffi_log_callback_t callback) {
+  rootcanal::log::SetLogCallback(callback);
 }
 
 };  // extern "C"

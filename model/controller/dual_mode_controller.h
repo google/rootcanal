@@ -26,8 +26,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "log.h"
 #include "hci/address.h"
+#include "log.h"
 #include "model/controller/bredr_controller.h"
 #include "model/controller/controller_properties.h"
 #include "model/controller/le_controller.h"
@@ -87,6 +87,9 @@ public:
   void HandleSco(std::shared_ptr<std::vector<uint8_t>> sco_packet);
   void HandleIso(std::shared_ptr<std::vector<uint8_t>> iso_packet);
 
+  std::optional<uint16_t> GetLeAclConnectionHandle(const Address source_address,
+                                                   const Address target_address) const;
+
   /// Report invalid packets received for this controller instance
   /// to an external tracker. Packets are rejected if they failed to
   /// be parsed, or run into an unimplemented part of the controller.
@@ -108,7 +111,8 @@ public:
           const std::function<void(std::shared_ptr<std::vector<uint8_t>>)>& send_iso);
 
   void RegisterRangingEstimator(
-          std::function<unsigned(void const* cookie1, void const* cookie2)> const& callback);
+          std::function<unsigned(const Address source_address, const Address target_address)> const&
+                  callback);
 
   // Controller commands. For error codes, see the Bluetooth Core Specification,
   // Version 4.2, Volume 2, Part D (page 370).
@@ -524,6 +528,12 @@ public:
   // 7.8.77
   void LeSetPrivacyMode(CommandView command);
 
+  // 7.8.89 - 7.8.92
+  void LeSetPeriodicAdvertisingSyncTransferParameters(CommandView command);
+  void LeSetDefaultPeriodicAdvertisingSyncTransferParameters(CommandView command);
+  void LePeriodicAdvertisingSyncTransfer(CommandView command);
+  void LePeriodicAdvertisingSetInfoTransfer(CommandView command);
+
   // 7.8.108
   void LeRequestPeerSca(CommandView command);
 
@@ -567,6 +577,7 @@ public:
   void GetControllerDebugInfo(CommandView command);
   void IntelDdcConfigRead(CommandView command);
   void IntelDdcConfigWrite(CommandView command);
+  void LeAddDeviceToFilterAcceptListWithProximityThreshold(CommandView command);
 
   // CSR vendor command.
   // Implement the command specific to the CSR controller
