@@ -106,6 +106,7 @@ impl LinkLayer {
             Ok(LeSetupIsoDataPath(packet)) => self.iso.hci_le_setup_iso_data_path(packet),
             Ok(LeRemoveIsoDataPath(packet)) => self.iso.hci_le_remove_iso_data_path(packet),
             Ok(LeCreateBig(packet)) => self.iso.hci_le_create_big(packet),
+            Ok(LeCreateBigTest(packet)) => self.iso.hci_le_create_big_test(packet),
             Ok(LeTerminateBig(packet)) => self.iso.hci_le_terminate_big(packet),
             Ok(LeBigCreateSync(packet)) => self.iso.hci_le_big_create_sync(packet),
             Ok(LeBigTerminateSync(packet)) => self.iso.hci_le_big_terminate_sync(packet),

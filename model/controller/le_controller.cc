@@ -7294,27 +7294,39 @@ ErrorCode LeController::LeLongTermKeyRequestReply(uint16_t handle,
   }
 
   auto& connection = connections_.GetLeAclConnection(handle);
+  auto status = ErrorCode::SUCCESS;
+  auto encryption_enabled = bluetooth::hci::EncryptionEnabled::ON;
 
-  // TODO: Check keys
+  // The Long Term Key provided by the Host must match the Long Term Key used
+  // by the peer Central to start the encryption procedure, otherwise the
+  // session keys differ and the authentication of the encryption start
+  // procedure fails on both sides.
+  if (connection.ltk.has_value() && connection.ltk.value() != ltk) {
+    INFO(id_, "Long Term Key mismatch for connection {:04x}", handle);
+    status = ErrorCode::AUTHENTICATION_FAILURE;
+    encryption_enabled = bluetooth::hci::EncryptionEnabled::OFF;
+  }
+
   if (connection.IsEncrypted()) {
     if (IsEventUnmasked(EventCode::ENCRYPTION_KEY_REFRESH_COMPLETE)) {
-      send_event_(bluetooth::hci::EncryptionKeyRefreshCompleteBuilder::Create(ErrorCode::SUCCESS,
-                                                                              handle));
+      send_event_(bluetooth::hci::EncryptionKeyRefreshCompleteBuilder::Create(status, handle));
     }
   } else {
-    connection.Encrypt();
+    uint8_t key_size = (status == ErrorCode::SUCCESS) ? 0x10 : 0;
+    if (status == ErrorCode::SUCCESS) {
+      connection.Encrypt();
+    }
     if (IsEventUnmasked(EventCode::ENCRYPTION_CHANGE_V2)) {
-      send_event_(bluetooth::hci::EncryptionChangeV2Builder::Create(
-              ErrorCode::SUCCESS, handle, bluetooth::hci::EncryptionEnabled::ON,
-              0x10 /* key_size */));
+      send_event_(bluetooth::hci::EncryptionChangeV2Builder::Create(status, handle,
+                                                                    encryption_enabled, key_size));
     } else if (IsEventUnmasked(EventCode::ENCRYPTION_CHANGE)) {
-      send_event_(bluetooth::hci::EncryptionChangeBuilder::Create(
-              ErrorCode::SUCCESS, handle, bluetooth::hci::EncryptionEnabled::ON));
+      send_event_(
+              bluetooth::hci::EncryptionChangeBuilder::Create(status, handle, encryption_enabled));
     }
   }
   SendLeLinkLayerPacket(model::packets::LeEncryptConnectionResponseBuilder::Create(
           connection.own_address.GetAddress(), connection.address.GetAddress(),
-          static_cast<uint8_t>(ErrorCode::SUCCESS), std::array<uint8_t, 8>(), uint16_t(), ltk));
+          static_cast<uint8_t>(status), std::array<uint8_t, 8>(), uint16_t(), ltk));
 
   return ErrorCode::SUCCESS;
 }

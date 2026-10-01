@@ -54,9 +54,11 @@ class Test(ControllerTest):
 
         # Set LE Event Mask to allow BIG Info reports.
         # This must be done after Reset (which occurs in asyncSetUp).
-        controller.send_cmd(hci.LeSetEventMask(le_event_mask=0xffffffffffffffff))
+        controller.send_cmd(hci.LeSetEventMask(le_event_mask=0xFFFFFFFFFFFFFFFF))
         await self.expect_evt(
-            hci.LeSetEventMaskComplete(status=ErrorCode.SUCCESS, num_hci_command_packets=1)
+            hci.LeSetEventMaskComplete(
+                status=ErrorCode.SUCCESS, num_hci_command_packets=1
+            )
         )
 
         # Enable Scanning
@@ -120,8 +122,7 @@ class Test(ControllerTest):
             hci.LePeriodicAdvertisingCreateSync(
                 options=self.Periodic_Sync_Options,
                 advertising_sid=self.Extended_Advertising_SID,
-                advertiser_address_type=hci.AdvertiserAddressType.
-                PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
+                advertiser_address_type=hci.AdvertiserAddressType.PUBLIC_DEVICE_OR_IDENTITY_ADDRESS,
                 advertiser_address=peer_address,
                 skip=0x0000,
                 sync_timeout=self.Sync_Timeout,
@@ -301,7 +302,9 @@ class Test(ControllerTest):
         # Spec verification (Status match)
         status_received = False
         while not status_received:
-            matched = await self.expect_evt([periodic_report, hci.LeSetupIsoDataPathComplete])
+            matched = await self.expect_evt(
+                [periodic_report, hci.LeSetupIsoDataPathComplete]
+            )
             if isinstance(matched, hci.LeSetupIsoDataPathComplete):
                 self.assertEqual(matched.status, ErrorCode.COMMAND_DISALLOWED)
                 status_received = True
@@ -321,7 +324,9 @@ class Test(ControllerTest):
         )
         status_received = False
         while not status_received:
-            matched = await self.expect_evt([periodic_report, hci.LeSetupIsoDataPathComplete])
+            matched = await self.expect_evt(
+                [periodic_report, hci.LeSetupIsoDataPathComplete]
+            )
             if isinstance(matched, hci.LeSetupIsoDataPathComplete):
                 self.assertEqual(matched.status, ErrorCode.SUCCESS)
                 status_received = True
@@ -357,7 +362,9 @@ class Test(ControllerTest):
         # and receives a successful HCI_Command_Complete event in response.
         status_received = False
         while not status_received:
-            matched = await self.expect_evt([periodic_report, hci.LeBigTerminateSyncComplete])
+            matched = await self.expect_evt(
+                [periodic_report, hci.LeBigTerminateSyncComplete]
+            )
             if isinstance(matched, hci.LeBigTerminateSyncComplete):
                 self.assertEqual(matched.status, ErrorCode.SUCCESS)
                 status_received = True

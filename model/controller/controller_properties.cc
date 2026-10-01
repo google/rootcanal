@@ -429,7 +429,7 @@ static std::array<uint8_t, 64> SupportedCommands() {
           OpCodeIndex::LE_ACCEPT_CIS_REQUEST,
           OpCodeIndex::LE_REJECT_CIS_REQUEST,
           OpCodeIndex::LE_CREATE_BIG,
-          // OpCodeIndex::LE_CREATE_BIG_TEST,
+          OpCodeIndex::LE_CREATE_BIG_TEST,
           OpCodeIndex::LE_TERMINATE_BIG,
           OpCodeIndex::LE_BIG_CREATE_SYNC,
           OpCodeIndex::LE_BIG_TERMINATE_SYNC,

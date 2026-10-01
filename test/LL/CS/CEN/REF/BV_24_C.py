@@ -131,7 +131,6 @@ class Test(ControllerTest):
             )
         )
 
-
         # 1. The Upper Tester sends an HCI_LE_CS_Create_Config command to the IUT
         # with Config_ID set to 0, parameters specified in Section 4.14.2.2, and
         # Role as specified in Table 4.14-33.
