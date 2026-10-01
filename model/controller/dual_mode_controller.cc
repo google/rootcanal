@@ -4534,7 +4534,7 @@ DualModeController::GetHciCommandHandlers() {
           {OpCode::LE_ACCEPT_CIS_REQUEST, &DualModeController::ForwardToLl},
           {OpCode::LE_REJECT_CIS_REQUEST, &DualModeController::ForwardToLl},
           {OpCode::LE_CREATE_BIG, &DualModeController::ForwardToLl},
-          //{OpCode::LE_CREATE_BIG_TEST, &DualModeController::ForwardToLl},
+          {OpCode::LE_CREATE_BIG_TEST, &DualModeController::ForwardToLl},
           {OpCode::LE_TERMINATE_BIG, &DualModeController::ForwardToLl},
           {OpCode::LE_BIG_CREATE_SYNC, &DualModeController::ForwardToLl},
           {OpCode::LE_BIG_TERMINATE_SYNC, &DualModeController::ForwardToLl},

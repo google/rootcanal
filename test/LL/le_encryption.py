@@ -436,3 +436,135 @@ class Test(ControllerTest):
                 encryption_enabled=hci.EncryptionEnabled.OFF,
             )
         )
+
+    # Verify that the Peripheral accepts the encryption procedure when the
+    # Long Term Key provided by the Host matches the key used by the peer
+    # Central.
+    async def test_le_encryption_peripheral_success(self):
+        controller = self.controller
+        peer_address = Address("aa:bb:cc:dd:ee:04")
+        ltk = [0x11] * 16
+        rand = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]
+        ediv = 0x1234
+
+        handle = await self.establish_le_connection_peripheral(peer_address)
+
+        # 1. The peer Central starts the encryption procedure.
+        controller.send_ll(
+            ll.LeEncryptConnection(
+                source_address=peer_address,
+                destination_address=controller.address,
+                rand=rand,
+                ediv=ediv,
+                ltk=ltk,
+            )
+        )
+
+        await self.expect_evt(
+            hci.LeLongTermKeyRequest(
+                connection_handle=handle,
+                random_number=rand,
+                encrypted_diversifier=ediv,
+            )
+        )
+
+        # 2. The Host replies with the matching Long Term Key.
+        controller.send_cmd(
+            hci.LeLongTermKeyRequestReply(connection_handle=handle, long_term_key=ltk)
+        )
+
+        # 3. Encryption is enabled and the peer Central is notified.
+        await self.expect_evt(
+            hci.EncryptionChange(
+                status=ErrorCode.SUCCESS,
+                connection_handle=handle,
+                encryption_enabled=hci.EncryptionEnabled.ON,
+            )
+        )
+
+        await self.expect_evt(
+            hci.LeLongTermKeyRequestReplyComplete(
+                status=ErrorCode.SUCCESS,
+                num_hci_command_packets=1,
+                connection_handle=handle,
+            )
+        )
+
+        await self.expect_ll(
+            ll.LeEncryptConnectionResponse(
+                source_address=controller.address,
+                destination_address=peer_address,
+                status=0,  # SUCCESS
+                rand=[0] * 8,
+                ediv=0,
+                ltk=ltk,
+            )
+        )
+
+    # Verify that the Peripheral rejects the encryption procedure when the
+    # Long Term Key provided by the Host does not match the key used by the
+    # peer Central, and that the failure is reported to both sides.
+    async def test_le_encryption_peripheral_key_mismatch(self):
+        controller = self.controller
+        peer_address = Address("aa:bb:cc:dd:ee:05")
+        central_ltk = [0x22] * 16
+        peripheral_ltk = [0x11] * 16
+        rand = [0] * 8
+        ediv = 0
+
+        handle = await self.establish_le_connection_peripheral(peer_address)
+
+        # 1. The peer Central starts the encryption procedure.
+        controller.send_ll(
+            ll.LeEncryptConnection(
+                source_address=peer_address,
+                destination_address=controller.address,
+                rand=rand,
+                ediv=ediv,
+                ltk=central_ltk,
+            )
+        )
+
+        await self.expect_evt(
+            hci.LeLongTermKeyRequest(
+                connection_handle=handle,
+                random_number=rand,
+                encrypted_diversifier=ediv,
+            )
+        )
+
+        # 2. The Host replies with a DIFFERENT Long Term Key.
+        controller.send_cmd(
+            hci.LeLongTermKeyRequestReply(
+                connection_handle=handle, long_term_key=peripheral_ltk
+            )
+        )
+
+        # 3. Encryption is not enabled, and the failure is reported to the
+        # Host and to the peer Central.
+        await self.expect_evt(
+            hci.EncryptionChange(
+                status=ErrorCode.AUTHENTICATION_FAILURE,
+                connection_handle=handle,
+                encryption_enabled=hci.EncryptionEnabled.OFF,
+            )
+        )
+
+        await self.expect_evt(
+            hci.LeLongTermKeyRequestReplyComplete(
+                status=ErrorCode.SUCCESS,
+                num_hci_command_packets=1,
+                connection_handle=handle,
+            )
+        )
+
+        await self.expect_ll(
+            ll.LeEncryptConnectionResponse(
+                source_address=controller.address,
+                destination_address=peer_address,
+                status=int(ErrorCode.AUTHENTICATION_FAILURE),
+                rand=[0] * 8,
+                ediv=0,
+                ltk=peripheral_ltk,
+            )
+        )

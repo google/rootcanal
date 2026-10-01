@@ -2131,6 +2131,273 @@ impl IsoManager {
         });
     }
 
+    pub fn hci_le_create_big_test(&mut self, packet: hci::LeCreateBigTest) {
+        let command_status =
+            |status| hci::LeCreateBigTestStatus { status, num_hci_command_packets: 1 };
+        let big_handle = packet.big_handle();
+        let advertising_handle = packet.advertising_handle();
+        let num_bis = packet.num_bis();
+        let sdu_interval = packet.sdu_interval();
+        let iso_interval = packet.iso_interval();
+        let nse = packet.nse();
+        let max_sdu = packet.max_sdu();
+        let max_pdu = packet.max_pdu();
+        let phy: u8 = packet.phy().into();
+        let packing: u8 = packet.packing().into();
+        let framing: u8 = packet.framing().into();
+        let bn = packet.bn();
+        let irc = packet.irc();
+        let pto = packet.pto();
+        let encryption: u8 = packet.encryption().into();
+        let broadcast_code = packet.broadcast_code();
+
+        // 1. Validate BIG_Handle Range
+        // Spec: "The BIG_Handle parameter shall be in the range 0x00 to 0xEF."
+        if big_handle > 0xEF {
+            println!("LE Create BIG Test: Invalid BIG_Handle 0x{:02X}", big_handle);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 2. Validate BIG_Handle State
+        // Spec: "If the Host issues this command with a BIG_Handle for a BIG that is
+        // already created, the Controller shall return the error code
+        // Command Disallowed (0x0C)."
+        if self.big_config.contains_key(&big_handle)
+            || self.big_sync_config.contains_key(&big_handle)
+        {
+            println!("LE Create BIG Test: BIG_Handle 0x{:02X} is already in use", big_handle);
+            self.send_hci_event(command_status(hci::ErrorCode::CommandDisallowed));
+            return;
+        }
+
+        // 3. Validate Advertising_Handle Range
+        // Spec: "The Advertising_Handle parameter shall be in the range 0x00 to 0xEF."
+        if advertising_handle > 0xEF {
+            println!("LE Create BIG Test: Invalid Advertising_Handle 0x{:02X}", advertising_handle);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 4. Validate Advertising_Handle State
+        // 4-1. If the Advertising_Handle does not identify a periodic advertising train
+        let mut advertising_handle_periodic_enabled = false;
+        if !self
+            .ops
+            .get_advertiser_info(advertising_handle, &mut advertising_handle_periodic_enabled)
+        {
+            println!(
+                "LE Create BIG Test: Advertising_Handle 0x{:02X} is not configured",
+                advertising_handle
+            );
+            self.send_hci_event(command_status(hci::ErrorCode::UnknownAdvertisingIdentifier));
+            return;
+        }
+        if !advertising_handle_periodic_enabled {
+            println!(
+                "LE Create BIG Test: Advertising_Handle 0x{:02X} is not periodic enabled",
+                advertising_handle
+            );
+            self.send_hci_event(command_status(hci::ErrorCode::UnknownAdvertisingIdentifier));
+            return;
+        }
+        // 4-2. the periodic advertising train is associated with another BIG
+        for big in self.big_config.values() {
+            if big.advertising_handle == advertising_handle {
+                println!(
+                    "LE Create BIG Test: Advertising_Handle 0x{:02X} is already in use",
+                    advertising_handle
+                );
+                self.send_hci_event(command_status(hci::ErrorCode::UnknownAdvertisingIdentifier));
+                return;
+            }
+        }
+        // 4-3. or the periodic advertising train has responses and the
+        // Controller does not support PAwR trains associated with BIGs
+        // TODO: skip this check for now
+
+        // 5. Validate Num_BIS
+        // Spec: "The Num_BIS parameter shall be in the range 0x01 to 0x1F."
+        if !(0x01..=0x1F).contains(&num_bis) {
+            println!("LE Create BIG Test: Invalid Num_BIS 0x{:02X}", num_bis);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 6. Validate SDU_Interval
+        // Spec: "The SDU_Interval parameter shall be in the range 0x0000FF to 0x0FFFFF."
+        if !(0x0000FF..=0x0FFFFF).contains(&sdu_interval) {
+            println!("LE Create BIG Test: Invalid SDU_Interval 0x{:06X}", sdu_interval);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 7. Validate ISO_Interval
+        // Spec: "The ISO_Interval parameter shall be in the range 0x0004 to 0x0C80."
+        if !(0x0004..=0x0C80).contains(&iso_interval) {
+            println!("LE Create BIG Test: Invalid ISO_Interval 0x{:04X}", iso_interval);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 8. Validate NSE
+        // Spec: "The NSE parameter shall be in the range 0x01 to 0x1F."
+        if !(0x01..=0x1F).contains(&nse) {
+            println!("LE Create BIG Test: Invalid NSE 0x{:02X}", nse);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 9. Validate Max_SDU
+        // Spec: "The Max_SDU parameter shall be in the range 0x0001 to 0x0FFF."
+        if !(0x0001..=0x0FFF).contains(&max_sdu) {
+            println!("LE Create BIG Test: Invalid Max_SDU 0x{:04X}", max_sdu);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 10. Validate Max_PDU
+        // Spec: "The Max_PDU parameter shall be in the range 0x0001 to 0x00FB."
+        if !(0x0001..=0x00FB).contains(&max_pdu) {
+            println!("LE Create BIG Test: Invalid Max_PDU 0x{:04X}", max_pdu);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 11. Validate PHY
+        // Spec: "The PHY parameter shall be one of the values: 0x01 (LE 1M),
+        // 0x02 (LE 2M), 0x03 (LE Coded)."
+        let phy_enum = hci::SecondaryPhyType::try_from(phy);
+        if phy_enum.is_err() || phy == 0 {
+            println!("LE Create BIG Test: Invalid PHY 0x{:02X}", phy);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 12. Validate Packing
+        // Spec: "The Packing parameter shall be one of the values: 0x00 (Sequential),
+        // 0x01 (Interleaved)."
+        if packing > 0x01 {
+            println!("LE Create BIG Test: Invalid Packing 0x{:02X}", packing);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 13. Validate Framing
+        // Spec: "The Framing parameter shall be one of the values: 0x00
+        // (Unframed), 0x01 (Framed)."
+        if framing > 0x01 {
+            println!("LE Create BIG Test: Invalid Framing 0x{:02X}", framing);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 14. Validate BN
+        // Spec: "The BN parameter shall be in the range 0x01 to 0x07."
+        if !(0x01..=0x07).contains(&bn) {
+            println!("LE Create BIG Test: Invalid BN 0x{:02X}", bn);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 15. Validate IRC
+        // Spec: "The IRC parameter shall be in the range 0x01 to 0x0F."
+        if !(0x01..=0x0F).contains(&irc) {
+            println!("LE Create BIG Test: Invalid IRC 0x{:02X}", irc);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 16. Validate PTO
+        // Spec: "The PTO parameter shall be in the range 0x00 to 0x0F."
+        if pto > 0x0F {
+            println!("LE Create BIG Test: Invalid PTO 0x{:02X}", pto);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 17. Validate Encryption
+        // Spec: "The Encryption parameter shall be one of the values: 0x00 (Unencrypted),
+        // 0x01 (Encrypted)."
+        if encryption > 0x01 {
+            println!("LE Create BIG Test: Invalid Encryption 0x{:02X}", encryption);
+            self.send_hci_event(command_status(hci::ErrorCode::InvalidHciCommandParameters));
+            return;
+        }
+
+        // 18. Validate parameter combinations
+        // Spec: "If the value of the NSE parameter is not an integer multiple of BN,
+        // or NSE is less than (IRC × BN), or the parameters are not in the specified
+        // range, these errors shall use the error code Unsupported Feature or
+        // Parameter Value (0x11)."
+        if !nse.is_multiple_of(bn) || nse < irc * bn {
+            println!(
+                "LE Create BIG Test: Invalid combination of NSE (0x{:02X}), BN (0x{:02X}), IRC (0x{:02X})",
+                nse, bn, irc
+            );
+            self.send_hci_event(command_status(hci::ErrorCode::UnsupportedFeatureOrParameterValue));
+            return;
+        }
+
+        // --- Success Path ---
+        self.send_hci_event(command_status(hci::ErrorCode::Success));
+
+        let big = BigConfig {
+            big_handle,
+            advertising_handle,
+            num_bis,
+            sdu_interval,
+            max_sdu,
+            max_transport_latency: 0,
+            rtn: 0,
+            phy,
+            packing,
+            framing,
+            encryption: encryption != 0,
+            broadcast_code: *broadcast_code,
+            iso_interval,
+            bn,
+            nse,
+            pto,
+            irc,
+            max_pdu,
+        };
+        self.big_config.insert(big_handle, big);
+
+        let mut bis_connection_handles = vec![];
+        for bis_id in 1..=num_bis {
+            let bis_connection_handle = self.new_bis_connection_handle();
+            self.bis_connections.insert(
+                bis_connection_handle,
+                Bis {
+                    bis_connection_handle,
+                    big_handle,
+                    bis_id,
+                    advertising_handle,
+                    role: hci::Role::Central,
+                    max_sdu,
+                    iso_data_path: None,
+                },
+            );
+            bis_connection_handles.push(bis_connection_handle);
+        }
+
+        self.send_hci_event(hci::LeCreateBigComplete {
+            status: hci::ErrorCode::Success,
+            big_handle,
+            big_sync_delay: 0,
+            transport_latency_big: sdu_interval * 2,
+            phy: hci::SecondaryPhyType::try_from(phy).unwrap_or(hci::SecondaryPhyType::Le1m),
+            nse,
+            bn,
+            pto,
+            irc,
+            max_pdu,
+            iso_interval,
+            connection_handle: bis_connection_handles,
+        });
+    }
+
     pub fn hci_le_terminate_big(&mut self, packet: hci::LeTerminateBig) {
         let command_status =
             |status| hci::LeTerminateBigStatus { status, num_hci_command_packets: 1 };

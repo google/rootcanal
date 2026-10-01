@@ -26,7 +26,7 @@ class Test(ControllerTest):
 
     REMOTE_CS_CAPABILITIES = {
         "num_config_supported": 3,
-        "max_consecutive_procedures_supported": 4, # Different than 1
+        "max_consecutive_procedures_supported": 4,  # Different than 1
         "num_antennae_supported": 1,
         "max_antenna_paths_supported": 1,
         "roles_supported": 0x02,  # Reflector
@@ -242,7 +242,7 @@ class Test(ControllerTest):
                 max_procedure_len=0x07D0,
                 min_procedure_interval=0x32,
                 max_procedure_interval=0x32,
-                max_procedure_count=4, # N_Procedure assigned to 4
+                max_procedure_count=4,  # N_Procedure assigned to 4
                 min_subevent_len=2500,
                 max_subevent_len=2500,
                 tone_antenna_config_selection=0,
@@ -268,7 +268,9 @@ class Test(ControllerTest):
         # Repeat Steps 1-7 three times, but in Step 4, the Lower Tester sends the
         # LL_CS_TERMINATE_REQ during a random procedure repetition.
         for iteration in range(4):
-            lt_terminates = (iteration > 0) # Repetition 1, 2, 3 (0-indexed) will have LT terminate
+            lt_terminates = (
+                iteration > 0
+            )  # Repetition 1, 2, 3 (0-indexed) will have LT terminate
 
             # Step 1: Lower Tester sends an LL_CS_REQ PDU
             controller.send_ll(

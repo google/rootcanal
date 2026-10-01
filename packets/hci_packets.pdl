@@ -4672,6 +4672,28 @@ packet LeCreateBig : Command (op_code = LE_CREATE_BIG) {
 packet LeCreateBigStatus : CommandStatus (command_op_code = LE_CREATE_BIG) {
 }
 
+packet LeCreateBigTest : Command (op_code = LE_CREATE_BIG_TEST) {
+  big_handle : 8,
+  advertising_handle : 8,
+  num_bis : 8,
+  sdu_interval : 24,
+  iso_interval : 16,
+  nse : 8,
+  max_sdu : 16,
+  max_pdu : 16,
+  phy : SecondaryPhyType,
+  packing : Packing,
+  framing : Enable,
+  bn : 8,
+  irc : 8,
+  pto : 8,
+  encryption : Enable,
+  broadcast_code: 8[16],
+}
+
+packet LeCreateBigTestStatus : CommandStatus (command_op_code = LE_CREATE_BIG_TEST) {
+}
+
 packet LeTerminateBig : Command (op_code = LE_TERMINATE_BIG) {
   big_handle : 8,
   reason : ErrorCode,
