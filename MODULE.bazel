@@ -50,7 +50,7 @@ crate.from_specs()
 use_repo(crate, "crates")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
-rust.toolchain(edition = "2024", versions = ["1.87.0"])
+rust.toolchain(edition = "2024", versions = ["1.88.0"])
 use_repo(rust, "rust_toolchains")
 
 register_toolchains("@rust_toolchains//:all")
