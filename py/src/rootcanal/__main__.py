@@ -16,11 +16,12 @@ import rootcanal.binaries
 import subprocess
 import sys
 
-sys.exit(
-    subprocess.call(
-        [
-            rootcanal.binaries.get_package_binary_resource_path("rootcanal"),
-            *sys.argv[1:],
-        ]
+with rootcanal.binaries.get_package_binary_resource_path("rootcanal") as path:
+    sys.exit(
+        subprocess.call(
+            [
+                str(path),
+                *sys.argv[1:],
+            ]
+        )
     )
-)

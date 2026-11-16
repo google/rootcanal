@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 import importlib.resources
+import pathlib
 import platform
 import sys
 
@@ -21,9 +23,11 @@ _PLATFORM_TO_OS_NAME_MAP = {
 }
 
 
-def get_package_binary_resource_path(name: str) -> str:
+def get_package_binary_resource_path(
+    name: str,
+) -> contextlib.AbstractContextManager[pathlib.Path]:
     os_name = _PLATFORM_TO_OS_NAME_MAP.get(sys.platform, sys.platform)
-    return str(
+    return importlib.resources.as_file(
         importlib.resources.files(__package__).joinpath(
             f"bin/{os_name}-{platform.machine()}/{name}"
         )
