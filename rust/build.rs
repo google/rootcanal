@@ -18,10 +18,19 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 fn main() {
+    let manifest_dir =
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set"));
+    let root_dir = manifest_dir.parent().expect("manifest dir has no parent");
+    println!("cargo:root={}", root_dir.display());
+
     generate_module(&PathBuf::from("lmp_packets.pdl").canonicalize().unwrap());
     generate_module(&PathBuf::from("llcp_packets.pdl").canonicalize().unwrap());
     generate_module(&PathBuf::from("hci_packets.pdl").canonicalize().unwrap());
-    generate_module(&PathBuf::from("link_layer_packets.pdl").canonicalize().unwrap());
+    generate_module(
+        &PathBuf::from("link_layer_packets.pdl")
+            .canonicalize()
+            .unwrap(),
+    );
 }
 
 fn generate_module(in_file: &Path) {

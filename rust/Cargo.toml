@@ -18,6 +18,7 @@ name = "rootcanal-rs"
 version = "0.1.0"
 edition = "2018"
 build="build.rs"
+links="rootcanal_rs"
 
 [features]
 serde = []
@@ -31,7 +32,7 @@ num-traits = "0.2.14"
 paste = "1.0.4"
 pdl-runtime = "0.4.2"
 pin-utils = "0.1.0"
-rand = "0.8.3"
+rand = "0.9"
 thiserror = "1.0.23"
 
 [build-dependencies]
@@ -39,4 +40,4 @@ pdl-compiler = "0.4.2"
 
 [lib]
 path="src/lib.rs"
-crate-type = ["staticlib"]
+crate-type = ["rlib", "staticlib"]
